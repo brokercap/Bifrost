@@ -1,0 +1,130 @@
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>通用</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <h2><strong>DDL 支持说明</strong></h2>
+                    <p>当前只支持字段在表结构末尾追加新字段，如果配置的二进制位点是在DDL 之前的位点，会出现数据和字段对应不上</p>
+                    <p>数据类型修改之后，如果配置的二进制位点是在DDL 之前的位点，可能会出现数据出错</p>
+                    <p>&nbsp;</p>
+                    <h2><strong>支持存储类型</strong></h2>
+                    <p>TINYINT , SMALLINT , MEDIUMINT , INT , BIGINT<p>
+                    <p>FLOAT , DOUBLE ,REAL </p>
+                    <p>DECIMAL , NUMERIC( 返回string类型 )</p>
+                    <p>DATE , TIME , YEAR , DATETIME , TIMESTAMP   ( string类型 )</p>
+                    <p>CHAR , VARCHAR
+                    <p>TEXT , TINYTEXT , MEDIUMINTTEXT , LONGTEXT</p>
+                    <p>BLOB, TINYBLOB , MEDIUMINTBLOB , LONGBLOB </p>
+                    <p>ENUM ( string类型 )</p>
+                    <p>SET ( []string )</p>
+                    <p>BIT ( int类型 )</p>
+                    <p>&nbsp;</p>
+                    <h2><strong>标签</strong></h2>
+                    <p><strong>$SchemaName : </strong>  数据库名字</p>
+                    <p><strong>$TableName : </strong>  表的名字</p>
+                    <p><strong>$EventType : </strong>  当前记录的增删改事件,新增(20,23,30); 修改(21,24,31) ; 删除(22,25,32)</p>
+                    <p><strong>$字段名 : </strong>  表的字段数据</p>
+                    <p>&nbsp;</p>
+                    <h2><strong>其他配置</strong></h2>
+                    <h3><strong>Type</strong></h3>
+                    <p><strong>set : </strong> 在数据update, del 的时候,可对数据进行更改或者删除操作的情况</p>
+                    <p><strong>list : </strong>用于数据队列情况,数据只增,没法删除,可配合 $EventType 一起使用 </p>
+                    <p>&nbsp;</p>
+
+                    <h3><strong>DataType</strong></h3>
+                    <p><strong>string : </strong> Value 数据自定义</p>
+                    <p><strong>json : </strong> 自定义选择表字段,如果不选择则默认为全部</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>Key</strong></h3>
+                    <p>不同的toServer 配置要求不一样,请参照各toServer 文档</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>Value</strong></h3>
+                    <p>如果Type == string的时候,进行输入,并不同toServer 需求不一样,有些toServer 数据必须要求是json,这个值就得配置成json格式的字符串,请参考 各toServer 文档</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>MustBeSuccess</strong></h3>
+                    <p><strong>Yes : </strong> 当提交到 toServer 返回true 的时候,会进行重试操作,直到成功或者手工设置Miss 错过操作</p>
+                    <p><strong>No : </strong> 不管提交到 toServer 返回true 或者 false,都不进行重试提交</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>AddEventType</strong></h3>
+                    <p><strong>Yes : </strong> 当DataType=json 的时候,会自动往json对象中增加一个key:EventType</p>
+                    <p><strong>No : </strong> 没有任何操作</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>AddSchemaName</strong></h3>
+                    <p><strong>Yes : </strong> 当DataType=json 的时候,会自动往json对象中增加一个key:SchemaName</p>
+                    <p><strong>No : </strong> 没有任何操作</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>AddTableName</strong></h3>
+                    <p><strong>Yes : </strong> 当DataType=json 的时候,会自动往json对象中增加一个key:SchemaName</p>
+                    <p><strong>No : </strong> 没有任何操作</p>
+
+                    <p>&nbsp;</p>
+
+                    <h3><strong>Fields</strong></h3>
+                    <p>如果不选择,默认为全部,DataType == json 是有效</p>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+    <div class="row">
+
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>ToServer 配置</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+
+                {{range $name, $v := .ToServerDocs}}
+                    <a name="{{$name}}"></a>
+                    <h3><strong>{{$name}}</strong></h3>
+                {{$v}}
+                    <p>&nbsp;</p>
+                {{end}}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}

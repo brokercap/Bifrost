@@ -1,0 +1,313 @@
+
+{{template "header" .}}
+		
+
+                <div class="ibox float-e-margins" >
+                  <div class="row">
+                  <div class="col-lg-8"></div>
+                        <div class="col-lg-4"></div>
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-lg-12">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h5>DBLIST</h5>
+                                    <div class="ibox-tools">
+                                        <a class="collapse-link">
+                                            <i class="fa fa-chevron-up"></i>
+                                        </a>
+                                        <a class="close-link">
+                                            <i class="fa fa-times"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="ibox-content">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>name</th>
+                                                    <th>ConnectUri</th>
+                                                    <th>ConnStatus</th>
+                                                    <th>Position</th>
+                                                    <th>MaxPosition</th>
+                                                    <th>ServerId</th>
+                                                    <th>ConnErr</th>
+                                                    <th>ChannelCount</th>
+                                                    <th>TableCount</th>
+                                                    <th>ReplicateDoDb</th>
+                                                    <th>OP</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            	{{range $i, $v := .DBList}}
+                                                <tr>
+                                                    <td>{{$v.Name}}</td>
+                                                    <td>{{$v.ConnectUri}}</td>
+                                                    <td>
+                                                    	{{$v.ConnStatus}} 
+                                                    	{{if eq $v.ConnStatus "close"}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "running"}}
+                                                        <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "stop"}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        {{end}}
+                                                    </td>
+                                                    <td>
+                                                        <p>{{$v.BinlogDumpFileName}}</p>
+                                                        <p>{{$v.BinlogDumpPosition}}</p>
+                                                    </td>
+                                                    <td>
+                                                    {{if ne $v.MaxBinlogDumpFileName ""}}
+                                                        <p>MaxDumpFileName:{{$v.MaxBinlogDumpFileName}}</p>
+                                                        <p>MaxDumpPosition:{{$v.MaxBinlogDumpPosition}}</p>
+                                                    {{end}}
+                                                    </td>
+                                                    <td>{{$v.ServerId}}</td>
+                                                    <td>{{$v.ConnErr}}</td>
+                                                    <td>
+                                                    {{$v.ChannelCount}}
+                                                        <a href="/channel/list?dbname={{$v.Name}}">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
+                                                        </a>
+                                                    </td>
+                                                    <td>{{$v.TableCount}}</td>
+                                                    <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
+                                                    <td>
+                                                        <a href="/db/detail?dbname={{$v.Name}}">
+                                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
+                                                    </a>
+                                                    </td>
+                                                </tr>
+                                                {{end}}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            
+            
+            
+            <div class="ibox float-e-margins" id="addAdminContair">
+            <div class="ibox-title">
+                <h5>Add new DB</h5>
+                <div class="ibox-tools">
+                
+                    <a class="collapse-link">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                    <a class="close-link">
+                        <i class="fa fa-times"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="ibox-content">
+                <div class="row row-lg">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Name：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="dbname" id="dbname" class="form-control" placeholder="Name"> <span class="help-block m-b-none">* 字母,30个字母以内</span>
+                    
+                            </div>
+                        </div>
+                        <div class="form-group" >
+                            <label class="col-sm-3 control-label">ConnUri：</label>
+                            <div class="col-sm-9" style=" position: relative">
+                                <div style="position: absolute; right: -65px; top: 0px;">
+                                    <button data-toggle="button" class="btn btn-warning " id="checkUriBtn" type="button">Check</button>
+                                </div>
+                                <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri"> <span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">BinlogFileName：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="filename" id="filename" class="form-control" placeholder="BinlogFileName"> <span class="help-block m-b-none">*</span>
+                    
+                            </div>
+                        </div>
+                       <div class="form-group">
+                            <label class="col-sm-3 control-label">BinlogPosition：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="position" id="position" class="form-control" placeholder="BinlogPosition"> <span class="help-block m-b-none">*</span>
+                    
+                            </div>
+                        </div>
+                       
+                       <div class="form-group">
+                            <label class="col-sm-3 control-label">ServerId：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="serverid" id="serverid" class="form-control" placeholder="ServerId">
+                                <span class="help-block m-b-none">* 同一个数据库 serverId 不能重复</span>
+                    
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">MaxBinlogFileName：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="max_filename" id="max_filename" class="form-control" placeholder="BinlogFileName">
+                                <span class="help-block m-b-none">读取到的最大位移的文件名</span>
+
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">MaxBinlogPosition：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="max_position" id="max_position" value="0" class="form-control" placeholder="BinlogPosition">
+                                <span class="help-block m-b-none">读取到的最大位移位置</span>
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">&nbsp;</label>
+                            <div class="col-sm-9">
+                                <button data-toggle="button" class="btn btn-primary" id="addNewDBBtn" type="button">提交</button>
+                    
+                            </div>
+                        </div>                        
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+{{template "footer" .}}
+
+<script type="text/javascript">
+    var dbUriChecked = false;
+    $("#uri").change(
+        function(){
+            dbUriChecked = false;
+            $("#checkUriBtn").show();
+        }
+    );
+    $("#checkUriBtn").click(
+        function(){
+            var uri = $("#uri").val();
+            if (uri == ""){
+                return false;
+            }
+            var url = "/db/check_uri";
+            $.post(
+                url,
+                {uri:uri},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    if(!data.status){
+                        alert(data.msg);
+                        return false;
+                    }
+                    alert(data.msg);
+                    dbUriChecked = true;
+                    $("#checkUriBtn").hide();
+                },
+                'json'
+        );
+        }
+    );
+$("#addNewDBBtn").click(
+	function(){
+	    if (dbUriChecked == false){
+	        alert("ConnUri no checked");
+            $("#uri").focus();
+	        return
+        }
+		var dbname = $("#dbname").val();
+		if(dbname=="" || dbname.length > 30){
+			 $("#dbname").focus();
+			 return false;
+		}
+		var uri = $("#uri").val();
+		var filename = $("#filename").val();
+		var position = $("#position").val();
+		var serverid = $("#serverid").val();
+		if( uri == "" || filename=="" || position=="" || serverid==""){
+			return
+		}
+        var max_filename = $("#max_filename").val();
+        var max_position = $("#max_position").val();
+
+		if(isNaN(serverid) || serverid<1 ){
+			alert("serverId must be int");
+			$("#serverid").focus();
+			return
+		}
+
+		var url = "/db/add";
+		$.post(
+			url,
+			{ dbname: dbname,uri:uri,filename:filename,position:position,serverid:serverid,max_filename:max_filename,max_position:max_position},
+			function(data,status){
+				if( status != 'success' ){
+					alert("reqeust error, reqeust status : "+status);
+					return false;
+				}
+				if(!data.status){
+					alert(data.msg);
+					return false;
+				}
+				location.reload();
+			},
+			'json'
+		);
+	}
+);
+
+function DoChangeDbStatus(obj,status){
+	if (status=="stop"){
+		if (!confirm("确定暂停么？暂停连接不会断开，但是业务将受影响")){
+			return
+		}
+	}
+	if (status=="del"){
+		if (!confirm("确定 删除 么？删除将不能恢复")){
+			return
+		}
+	}
+	var url = "/db/"+status;
+	var trObj = $(obj).parent().parent();
+	var dbname = trObj.children().eq(0).html();
+	$.post(
+		url,
+		{dbname: dbname},
+		function(data,status){
+			if( status != 'success' ){
+				alert("reqeust error, reqeust status : "+status);
+				return false;
+			}
+			if(!data.status){
+				alert(data.msg);
+				return false;
+			}
+			if (status == "del"){
+				trObj.remove();
+			}else{
+				location.reload();
+			}
+		},
+		'json'
+	);
+}
+
+</script>

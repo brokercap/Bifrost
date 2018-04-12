@@ -1,0 +1,263 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>ToServer List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>ToServerKey</th>
+                                <th>Type</th>
+                                <th>ConnUri</th>
+                                <th>DataTypeList</th>
+                                <th>Key Example</th>
+                                <th>LastID</th>
+                                <th>CurrentConn</th>
+                                <th>Notes</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .ToServerList}}
+                            <tr>
+                                <td>{{$i}}</td>
+                                <td>{{$v.Type}}</td>
+                                <td>
+                                {{$v.ConnUri}}
+                                </td>
+                                <td>{{$v.TypeAndRule.DataTypeList}}</td>
+                                <td>
+                                {{range $key,$val := $v.TypeAndRule.TypeList}}
+                                    {{if ne $val.Key "" }}
+                                        <p>{{$key}} pattern: {{$val.Key}}</p>
+                                    {{end}}
+                                    {{if ne $val.KeyExample ""}}
+                                        <p>{{$key}} example: {{$val.KeyExample}}</p>
+                                    {{end}}
+                                {{end}}
+                                </td>
+                                <td>{{$v.LastID}}</td>
+                                <td>{{$v.CurrentConn}}</td>
+                                <td>{{$v.Notes}}</td>
+                                <td><button data-toggle="button" class="btn btn-danger delToServerBtn" type="button" >Del</button>
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="ibox float-e-margins" id="addToServerContair">
+    <div class="ibox-title">
+        <h5>Add new Server</h5>
+        <div class="ibox-tools">
+
+            <a class="collapse-link">
+                <i class="fa fa-chevron-up"></i>
+            </a>
+            <a class="close-link">
+                <i class="fa fa-times"></i>
+            </a>
+        </div>
+    </div>
+    <div class="ibox-content">
+        <div class="row row-lg">
+
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">ToServerKey：</label>
+                    <div class="col-sm-9">
+                        <input type="text" name="toserverkey" id="toserverkey" class="form-control" placeholder="ToServerKey"> <span class="help-block m-b-none">* 字母,30个字母以内</span>
+
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Type：</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" name="type" id="conn_type">
+                        {{range $k, $val := .Drivers}}
+                            <option value="{{$val.name}}" example='{{$val.uri}}' > {{$val.name}}</option>
+                        {{end}}
+                        </select><span class="help-block m-b-none"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">ConnUri：</label>
+                    <div class="col-sm-9"  style=" position: relative">
+                        <div style="position: absolute; right: -65px; top: 0px;">
+                            <button data-toggle="button" class="btn btn-warning " id="checkUriBtn" type="button">Check</button>
+                        </div>
+                        <input type="text" name="connuri" id="connuri" class="form-control" placeholder="ConnUri">
+                        <span class="help-block m-b-none" id="connuri_example">*</span>
+
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Notes：</label>
+                    <div class="col-sm-9">
+                        <textarea type="text" name="notes" id="notes" class="form-control" placeholder="Notes"></textarea> <span class="help-block m-b-none"></span>
+
+                    </div>
+                </div>
+
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">&nbsp;</label>
+                    <div class="col-sm-9">
+                        <button data-toggle="button" class="btn btn-primary" id="addNewToServerBtn" type="button">提交</button>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{{template "footer" .}}
+
+<script type="text/javascript">
+    var uriChecked = false;
+    function changeUriExample(){
+        var example = $("#conn_type").find("option:selected").attr("example");
+        $("#connuri_example").text("*eg: "+example)
+    }
+    changeUriExample();
+    $("#conn_type").change(
+        function(){
+            uriChecked = false;
+            $("#checkUriBtn").show();
+            changeUriExample();
+        }
+    );
+    $("#connuri").change(
+        function(){
+            uriChecked = false;
+            $("#checkUriBtn").show();
+        }
+    );
+    $("#checkUriBtn").click(
+            function(){
+                var connuri = $.trim($("#connuri").val());
+                if (connuri == ""){
+                    return false;
+                }
+                var conn_type = $("#conn_type").val();
+                var url = "/toserver/check_uri";
+                $.post(
+                        url,
+                        {connuri:connuri,type:conn_type},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            alert(data.msg);
+                            uriChecked = true;
+                            $("#checkUriBtn").hide();
+                        },
+                        'json'
+                );
+            }
+    );
+
+    $("#addNewToServerBtn").click(
+            function(){
+                var toserverkey = $("#toserverkey").val();
+                if(toserverkey=="" || toserverkey.length > 30){
+                    $("#toserverkey").focus();
+                    return false;
+                }
+                var connuri = $.trim($("#connuri").val());
+                var type = $("#conn_type").val();
+                var notes = $("#notes").val();
+                if( connuri == "" || type=="" || notes==""){
+                    return
+                }
+
+                var url = "/toserver/add";
+                $.post(
+                        url,
+                        { toserverkey: toserverkey,connuri:connuri,type:type,notes:notes},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            location.reload();
+                        },
+                        'json'
+                );
+            }
+    );
+
+    $(".delToServerBtn").click(
+            function(){
+                var trObj = $(this).parent().parent();
+                var toServerKey = trObj.children().eq(0).text()
+                if (!confirm("确定删除 [ "+ toServerKey+" ]?删除后不能恢复!!!!")){
+                    return false;
+                }
+                var url = "/toserver/del";
+                $.post(
+                        url,
+                        { toserverkey: toServerKey},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            trObj.remove();
+                        },
+                        'json'
+                );
+            }
+    );
+
+</script>

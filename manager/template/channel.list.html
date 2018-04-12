@@ -1,0 +1,238 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>{{.DbName}} - Channel List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>channelId</th>
+                                <th>channel_name</th>
+                                <th>MaxThreadNum</th>
+                                <th>CurrentThreadNum</th>
+                                <th>Status</th>
+                                <th>WaitErr</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .ChannelList}}
+                            <tr>
+                                <td>{{$i}}</td>
+                                <td>{{$v.Name}}</td>
+                                <td>{{$v.MaxThreadNum}}</td>
+                                <td>{{$v.CurrentThreadNum}}</td>
+                                <td>{{$v.Status}}</td>
+                                <td>
+                                {{range $key,$val := $v.Errs}}
+                                    <div>
+                                    <p>Errs: {{$val.WaitErr}}</p>
+                                    <p>Data: {{$val.WaitData}} {{if eq $val.WaitDeal 0}}<button data-toggle="button" class="btn-sm btn-primary DealWaitErr" type="button" ErrorId="{{$key}}">Miss</button>{{end}}</p>
+                                    <p>&nbsp;</p>
+                                    </div>
+                                {{end}}
+                                </td>
+                                <td>
+                            {{if eq $v.Status "running"}}
+                                <button data-toggle="button" class="btn-sm btn-danger stopChannelBtn" onclick="DoChangeDbStatus(this,'stop')" type="button" >Stop</button>
+                            {{end}}
+                            {{if eq $v.Status "close"}}
+                                <button data-toggle="button" class="btn-sm btn-danger delChannelBtn" onclick="DoChangeDbStatus(this,'del')" type="button" >Del</button>
+                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeDbStatus(this,'start')" type="button" >Start</button>
+                            {{end}}
+                            {{if eq $v.Status "stop"}}
+                                <button data-toggle="button" class="btn-sm btn-danger closeChannelBtn" onclick="DoChangeDbStatus(this,'close')" type="button" >Close</button>
+                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeDbStatus(this,'start')" type="button" >Start</button>
+                            {{end}}
+                            {{if eq $v.Status "wait"}}
+                                <button data-toggle="button" class="btn-sm btn-warning dealChannelBtn" onclick="DoChangeDbStatus(this,'deal')" type="button" >Deal</button>
+                            {{end}}
+
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="ibox float-e-margins" id="addChannelContair">
+    <div class="ibox-title">
+        <h5>Add new Server</h5>
+        <div class="ibox-tools">
+
+            <a class="collapse-link">
+                <i class="fa fa-chevron-up"></i>
+            </a>
+            <a class="close-link">
+                <i class="fa fa-times"></i>
+            </a>
+        </div>
+    </div>
+    <div class="ibox-content">
+        <div class="row row-lg">
+
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">channel_name：</label>
+                    <div class="col-sm-9">
+                        <input type="text" name="channel_name" id="channel_name" class="form-control" placeholder="channel_name"> <span class="help-block m-b-none">* 字母,30个字母以内</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">CosumerCount：</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" name="cosumercount" id="cosumercount">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select><span class="help-block m-b-none"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">&nbsp;</label>
+                    <div class="col-sm-9">
+
+                        <button data-toggle="button" class="btn btn-primary" id="addNewChannelBtn" type="button">提交</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{{template "footer" .}}
+
+<script type="text/javascript">
+    var dbname = "{{.DbName}}";
+    $("#addNewChannelBtn").click(
+            function(){
+                var channel_name = $("#channel_name").val();
+                if(channel_name=="" || channel_name.length > 30){
+                    $("#channel_name").focus();
+                    return false;
+                }
+                var cosumercount = $("#cosumercount").val()
+                var url = "/channel/add";
+                $.post(
+                        url,
+                        { channel_name: channel_name,cosumercount:cosumercount,dbname:dbname},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            location.reload();
+                        },
+                        'json'
+                );
+            }
+    );
+
+    $(".DealWaitErr").click(
+        function(){
+            var thisButton = $(this);
+            var ErrorId = $(this).attr("ErrorId");
+            var channelid = $(this).parent().parent().parent().parent("tr").children().eq(0).html();
+            var url = "/channel/deal"
+            $.post(
+                    url,
+                    {dbname: dbname,channelid:channelid,error_id:ErrorId},
+                    function(data,status){
+                        if( status != 'success' ){
+                            alert("reqeust error, reqeust status : "+status);
+                            return false;
+                        }
+                        if(!data.status){
+                            alert(data.msg);
+                            return false;
+                        }
+                        thisButton.remove();
+                    },
+                    'json'
+            );
+        }
+    );
+
+    function DoChangeDbStatus(obj,status){
+        if (status=="stop"){
+            if (!confirm("确定暂停么？暂停连接不会断开，但是业务将受影响")){
+                return
+            }
+        }
+        if (status=="del"){
+            if (!confirm("确定 删除 么？删除将不能恢复")){
+                return
+            }
+        }
+        var url = "/channel/"+status;
+        var trObj = $(obj).parent().parent();
+        var channelid = trObj.children().eq(0).html();
+        $.post(
+                url,
+                {dbname: dbname,channelid:channelid},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    if(!data.status){
+                        alert(data.msg);
+                        return false;
+                    }
+                    if (status == "del"){
+                        trObj.remove();
+                    }else{
+                        location.reload();
+                    }
+                },
+                'json'
+        );
+    }
+
+</script>
