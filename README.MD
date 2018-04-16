@@ -1,10 +1,13 @@
-## Bifrost ---- MySQL到其他服务的高性能异构中间件
+# Bifrost ---- MySQL到其他服务的高性能异构中间件
 
 ### 简单  高效
-### 界面化管理
 ### 支持多目标服务( Redis , Mongodb , RabbitMQ , Http 自建服务 等)
-`````
-`````
+
+
+## 界面化管理
+
+![image](http://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
+
 
 ## 更多文件档请查看
 [Bifrost官网](http://www.xbifrost.com/)
