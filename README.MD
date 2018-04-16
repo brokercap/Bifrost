@@ -6,7 +6,7 @@
 
 ## 界面化管理
 
-![image](http://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
+![image](https://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
 
 
 ## 更多文件档请查看
