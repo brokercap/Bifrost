@@ -17,15 +17,20 @@ package server
 
 import (
 	"fmt"
-	"strings"
+	"log"
 	"time"
+	"strings"
+)
 
+import (
 	"github.com/Bifrost/toserver/driver"
 	"github.com/Bifrost/Bristol/mysql"
 	"github.com/Bifrost/toserver"
 	dataDriver "database/sql/driver"
-	"log"
+	"regexp"
 )
+
+const RegularxEpression  = `\{\$([a-zA-Z]+)\}`
 
 func evenTypeName(e mysql.EventType) string {
 	switch e {
@@ -44,6 +49,7 @@ type consume_channel_obj struct {
 	c       *Channel
 	connMap map[string]driver.ConnFun
 	ToserverKey *string
+	rowIndex  int
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
@@ -51,6 +57,7 @@ func NewConsumeChannel(c *Channel) *consume_channel_obj {
 		db:      c.db,
 		c:       c,
 		connMap: make(map[string]driver.ConnFun, 0),
+		rowIndex:0,
 	}
 }
 
@@ -105,6 +112,7 @@ func (This *consume_channel_obj) consume_channel() {
 			var errs error
 			//var KeyConfig1, ValConfig1 string = ""
 			This.checkChannleStatus()
+			This.rowIndex = len(data.Rows) - 1
 			for _, toServer := range toServerList {
 				ToServerKey := toServer.ToServerKey
 				if _, ok := This.connMap[ToServerKey]; !ok {
@@ -121,7 +129,7 @@ func (This *consume_channel_obj) consume_channel() {
 						This.connMap[ToServerKey].SetExpir(toServer.Expir)
 						KeyConfig, ValConfig = This.transferData(&data, &key, &toServer)
 					} else {
-						KeyConfig = This.transferKeyResult(toServer.KeyConfig, &data)
+						KeyConfig = This.transfeResult(toServer.KeyConfig, &data)
 					}
 					break
 				default:
@@ -141,23 +149,19 @@ func (This *consume_channel_obj) consume_channel() {
 					if toServer.Type == "set" {
 						switch data.Header.EventType {
 						case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
-							//result,errs = This.connMap[ToServerKey].Insert(KeyConfig, ValConfig)
 							result,errs = This.sendToServer("insert",&KeyConfig,&ValConfig)
 							break
 						case mysql.UPDATE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv2:
 							result,errs = This.sendToServer("update",&KeyConfig,&ValConfig)
-							//result,errs = This.connMap[ToServerKey].Update(KeyConfig, ValConfig)
 							break
 						case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
 							result,errs = This.sendToServer("del",&KeyConfig,nil)
-							//result,errs = This.connMap[ToServerKey].Del(KeyConfig)
 							break
 						default:
 							break
 						}
 					} else {
 						result,errs = This.sendToServer("list",&KeyConfig,&ValConfig)
-						//result,errs = This.connMap[ToServerKey].SendToList(KeyConfig, ValConfig)
 					}
 					if toServer.MustBeSuccess == true {
 						if result == true{
@@ -191,7 +195,6 @@ func (This *consume_channel_obj) consume_channel() {
 					}
 
 				}
-				//log.Printf("key:%s ,val:%s \r\n", KeyConfig, ValConfig)
 			}
 			This.db.Lock()
 			This.db.binlogDumpFileName = data.BinlogFileName
@@ -223,48 +226,45 @@ func (This *consume_channel_obj) consume_channel() {
 	}
 }
 
-func (This *consume_channel_obj) transferKeyResult(KeyConfig string, data *mysql.EventReslut) string {
-	i := len(data.Rows) - 1
-	keyResult := strings.Replace(KeyConfig, "{$TableName}", data.TableName, -1)
-	keyResult = strings.Replace(keyResult, "{$SchemaName}", data.SchemaName, -1)
-	keyResult = strings.Replace(keyResult, "{$EventType}", evenTypeName(data.Header.EventType), -1)
-	for key, val := range data.Rows[i] {
-		t := fmt.Sprint(val)
-		keyResult = strings.Replace(keyResult, "{$"+key+"}", t, -1)
+
+func (This *consume_channel_obj) transfeResult(val string, data *mysql.EventReslut) string {
+	r, _ := regexp.Compile(RegularxEpression)
+	p := r.FindAllStringSubmatch(val, -1)
+	for _, v := range p {
+		switch v[1] {
+		case "TableName":
+			val = strings.Replace(val, "{$TableName}", data.TableName, -1)
+			break
+		case "SchemaName":
+			val = strings.Replace(val, "{$SchemaName}", data.SchemaName, -1)
+			break
+		case "EventType":
+			val = strings.Replace(val, "{EventType}", evenTypeName(data.Header.EventType), -1)
+			break
+		default:
+			val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[This.rowIndex][v[1]]), -1)
+			break
+		}
 	}
-	return keyResult
+	return val
 }
 
 func (This *consume_channel_obj) transferData(data *mysql.EventReslut, key *string, toServer *ToServer) (string, interface{}) {
-	i := len(data.Rows) - 1
-	Row := data.Rows[i]
+	Row := data.Rows[This.rowIndex]
 	var keyResult string
 	var valResult interface{}
 	if toServer.DataType == "string" {
-		var ValConfig string
+		keyResult = This.transfeResult(toServer.KeyConfig, data)
 		if toServer.ValueConfig == "" {
-			keyResult = This.transferKeyResult(toServer.KeyConfig, data)
-			ValConfig = ""
+			valResult = ""
 		} else {
-			keyResult = strings.Replace(toServer.KeyConfig, "{$TableName}", data.TableName, -1)
-			keyResult = strings.Replace(keyResult, "{$SchemaName}", data.SchemaName, -1)
-			keyResult = strings.Replace(keyResult, "{$EventType}", evenTypeName(data.Header.EventType), -1)
-
-			ValConfig = strings.Replace(toServer.ValueConfig, "{$TableName}", data.TableName, -1)
-			ValConfig = strings.Replace(ValConfig, "{$SchemaName}", data.SchemaName, -1)
-			ValConfig = strings.Replace(ValConfig, "{$EventType}", evenTypeName(data.Header.EventType), -1)
-			for key, val := range Row {
-				t := fmt.Sprint(val)
-				ValConfig = strings.Replace(ValConfig, "{$"+key+"}", t, -1)
-				keyResult = strings.Replace(keyResult, "{$"+key+"}", t, -1)
-			}
+			valResult = This.transfeResult(toServer.ValueConfig, data)
 		}
-		valResult = ValConfig
 		return keyResult, valResult
 	}
 
 	if toServer.DataType == "json" {
-		keyResult = This.transferKeyResult(toServer.KeyConfig, data)
+		keyResult = This.transfeResult(toServer.KeyConfig, data)
 		if len(toServer.FieldList) == 0 {
 			if toServer.AddEventType == true {
 				Row["EventType"] = evenTypeName(data.Header.EventType)
