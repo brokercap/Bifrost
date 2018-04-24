@@ -63,13 +63,23 @@ func index_controller(w http.ResponseWriter,req *http.Request){
 
 func Controller_FirstCallback(w http.ResponseWriter,req *http.Request) bool {
 	var sessionID= sessionMgr.CheckCookieValid(w, req)
-	if sessionID == "" {
+
+	if sessionID != "" {
+		if _,ok:=sessionMgr.GetSessionVal(sessionID,"UserName");ok{
+			return true
+		}else{
+			goto toLogin
+		}
+	}else{
+		goto toLogin
+	}
+
+	toLogin:
 		if req.RequestURI != "/login" && req.RequestURI != "/dologin" && req.RequestURI != "/logout"{
 			http.Redirect(w, req, "/login", http.StatusFound)
 			return false
 		}
-	}
-	return true
+		return true
 }
 
 func Start(IpAndPort string){

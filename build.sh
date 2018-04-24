@@ -6,9 +6,6 @@ case "$mode" in
         ;;
     'linux')
         ;;
-    'mac')
-        $mode="darwin"
-        ;;
     'darwin')
         ;;
     'freebsd')

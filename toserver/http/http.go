@@ -39,7 +39,7 @@ func (MyConn *MyConn) GetUriExample() string{
 
 func (MyConn *MyConn) CheckUri(uri string) error{
 	user,pwd,url := getUriParam(uri)
-	client := &http.Client{}
+	client := &http.Client{Timeout:5}
 	req, err := http.NewRequest("GET", url,nil)
 	if user != ""{
 		req.SetBasicAuth(user,pwd)
@@ -109,6 +109,10 @@ func (This *Conn) SetConnStatus(status string) {
 
 func (This *Conn) SetExpir(TimeOut int) {
 	This.expir = TimeOut
+}
+
+func (This *Conn) SetMustBeSuccess(b bool) {
+	return
 }
 
 func (This *Conn) httpPost(optype string,key string,data string) error {

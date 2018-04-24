@@ -5,10 +5,6 @@ import (
 	"sync"
 
 	"github.com/Bifrost/toserver/driver"
-	_ "github.com/Bifrost/toserver/redis"
-	_ "github.com/Bifrost/toserver/http"
-	_ "github.com/Bifrost/toserver/mongodb"
-	_ "github.com/Bifrost/toserver/rabbitmq"
 )
 
 var l sync.Mutex

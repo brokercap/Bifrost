@@ -24,6 +24,7 @@ import (
 	"github.com/Bifrost/Bristol/mysql"
 	"github.com/Bifrost/toserver"
 	dataDriver "database/sql/driver"
+	"log"
 )
 
 func evenTypeName(e mysql.EventType) string {
@@ -42,6 +43,7 @@ type consume_channel_obj struct {
 	db      *db
 	c       *Channel
 	connMap map[string]driver.ConnFun
+	ToserverKey *string
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
@@ -57,6 +59,32 @@ func (This *consume_channel_obj) checkChannleStatus() {
 		panic("channel closed")
 	}
 }
+
+func (This *consume_channel_obj) sendToServer(Type string,KeyConfig *string, ValConfig *interface{}) (result bool,err error){
+	defer func() {
+		if err2 := recover();err2!=nil{
+			result = false
+			err = fmt.Errorf(fmt.Sprint(err2))
+			log.Println("sendToServer err:",err2)
+		}
+	}()
+	switch Type {
+	case "insert":
+		result,err = This.connMap[*This.ToserverKey].Insert(*KeyConfig, *ValConfig)
+			break
+	case "update":
+		result,err = This.connMap[*This.ToserverKey].Update(*KeyConfig, *ValConfig)
+		break
+	case "del":
+		result,err = This.connMap[*This.ToserverKey].Del(*KeyConfig)
+		break
+	case "list":
+		result,err = This.connMap[*This.ToserverKey].SendToList(*KeyConfig, *ValConfig)
+		break
+	}
+	return
+}
+
 
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
@@ -105,25 +133,31 @@ func (This *consume_channel_obj) consume_channel() {
 
 				var fordo int = 0
 				var lastErrId int = 0
+				This.connMap[ToServerKey].SetMustBeSuccess(toServer.MustBeSuccess)
+				This.ToserverKey = &ToServerKey
 				for {
 					result = false
 					errs = nil
 					if toServer.Type == "set" {
 						switch data.Header.EventType {
 						case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
-							result,errs = This.connMap[ToServerKey].Insert(KeyConfig, ValConfig)
+							//result,errs = This.connMap[ToServerKey].Insert(KeyConfig, ValConfig)
+							result,errs = This.sendToServer("insert",&KeyConfig,&ValConfig)
 							break
 						case mysql.UPDATE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv2:
-							result,errs = This.connMap[ToServerKey].Update(KeyConfig, ValConfig)
+							result,errs = This.sendToServer("update",&KeyConfig,&ValConfig)
+							//result,errs = This.connMap[ToServerKey].Update(KeyConfig, ValConfig)
 							break
 						case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
-							result,errs = This.connMap[ToServerKey].Del(KeyConfig)
+							result,errs = This.sendToServer("del",&KeyConfig,nil)
+							//result,errs = This.connMap[ToServerKey].Del(KeyConfig)
 							break
 						default:
 							break
 						}
 					} else {
-						result,errs = This.connMap[ToServerKey].SendToList(KeyConfig, ValConfig)
+						result,errs = This.sendToServer("list",&KeyConfig,&ValConfig)
+						//result,errs = This.connMap[ToServerKey].SendToList(KeyConfig, ValConfig)
 					}
 					if toServer.MustBeSuccess == true {
 						if result == true{
@@ -142,6 +176,7 @@ func (This *consume_channel_obj) consume_channel() {
 								if dealStatus == 1{
 									c.DelWaitError(lastErrId)
 									lastErrId = 0
+									break
 								}
 							}else{
 								lastErrId = c.AddWaitError(errs,data)
@@ -150,6 +185,7 @@ func (This *consume_channel_obj) consume_channel() {
 						fordo++
 						if fordo==3{
 							This.checkChannleStatus()
+							time.Sleep(2 * time.Second)
 							fordo = 0
 						}
 					}
@@ -167,7 +203,7 @@ func (This *consume_channel_obj) consume_channel() {
 			This.db.Unlock()
 		case <-time.After(5 * time.Second):
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-			//log.Println("nothing ready")
+			//log.Println("count:",count)
 		}
 		for {
 			if c.Status == "stop" {

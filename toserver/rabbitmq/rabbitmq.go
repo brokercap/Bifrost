@@ -7,7 +7,6 @@ import (
 	"strings"
 	"encoding/json"
 	dataDriver "database/sql/driver"
-	"log"
 	"strconv"
 )
 
@@ -40,6 +39,11 @@ func (MyConn *MyConn) GetUriExample() string{
 }
 
 func (MyConn *MyConn) CheckUri(uri string) error{
+	c := newConn(uri)
+	if c.err != nil{
+		return c.err
+	}
+	c.Close()
 	return nil
 }
 
@@ -48,14 +52,19 @@ type Conn struct {
 	status string
 	conn   *amqp.Connection
 	ch 		*amqp.Channel
+	chWait 	*amqp.Channel
+	confirmWait chan amqp.Confirmation
+	returnWait chan amqp.Return
 	err    error
 	expir  string
+	mustBeSuccess bool
 }
 
 func newConn(uri string) *Conn{
 	f := &Conn{
 		Uri:uri,
 		expir:"",
+		mustBeSuccess:false,
 	}
 	f.Connect()
 	return f
@@ -73,20 +82,53 @@ func (This *Conn) Connect() bool {
 	var err error
 	This.conn, err = amqp.Dial(This.Uri)
 	if err != nil{
-		log.Println("rabbitmq conn err:",err)
 		This.err = err
 		This.status = "close"
 		return false
 	}
 	This.ch,err = This.conn.Channel()
+	This.chWait ,err = This.conn.Channel()
 	if err != nil{
-		log.Println("rabbitmq Channel err:",err)
 		This.err = err
 		This.status = "close"
 		This.conn.Close()
 		return false
 	}
 	This.err = nil
+	This.chWait.Confirm(false)
+
+	This.confirmWait = make(chan amqp.Confirmation,1)
+
+	/*
+	waitAck := make(chan uint64,10)
+	waitNack := make(chan uint64,10)
+
+	go func(waitAck chan uint64) {
+		for{
+			d := <-waitAck
+			log.Println("waitAck:",d)
+		}
+	}(waitAck)
+	go func(waitNack chan uint64) {
+		for{
+			d := <-waitNack
+			log.Println("waitNack:",d)
+		}
+	}(waitNack)
+	*/
+	This.chWait.NotifyPublish(This.confirmWait)
+	/*
+	This.chWait.NotifyConfirm(waitAck,waitNack)
+	This.returnWait = make(chan amqp.Return,1)
+	This.chWait.NotifyReturn(This.returnWait)
+	go func(returnWait chan amqp.Return) {
+		for{
+			d := <-returnWait
+			log.Println("returnWait:",d)
+		}
+	}(This.returnWait)
+	*/
+
 	This.status = "running"
 	return true
 }
@@ -138,6 +180,11 @@ func (This *Conn) SetExpir(TimeOut int) {
 	}
 }
 
+func (This *Conn) SetMustBeSuccess(b bool) {
+	This.mustBeSuccess = b
+	return
+}
+
 func (This *Conn) SendToList(key string, data interface{}) (bool,error) {
 	if This.status != "running"{
 		This.ReConnect()
@@ -168,7 +215,6 @@ func (This *Conn) SendToList(key string, data interface{}) (bool,error) {
 		This.status = "error"
 		return false,fmt.Errorf("key must be routingkey[-exchange][-DeliveryMode]")
 	}
-//	exchange = "amq.direct"
 	var c []byte
 	switch data.(type){
 	case string:
@@ -179,21 +225,10 @@ func (This *Conn) SendToList(key string, data interface{}) (bool,error) {
 	default:
 		return false,fmt.Errorf("data must be a string or a map")
 	}
-	err := This.ch.Publish(
-		exchange,     // exchange
-		routingkey, // routing key
-		false,  // mandatory
-		false,  // immediate
-		amqp.Publishing{
-			 ContentType: 	"text/plain",
-					Body:   c,
-			DeliveryMode:	DeliveryMode,
-			  Expiration:	This.expir,
-		})
-	if err != nil{
-		This.err = err
-		This.status = "close"
-		return false,err
+	if This.mustBeSuccess == true{
+		return This.SendAndWait(&exchange,&routingkey,&c,&DeliveryMode)
+	}else{
+		return This.SendAndNoWait(&exchange,&routingkey,&c,&DeliveryMode)
 	}
 	return true,nil
 }

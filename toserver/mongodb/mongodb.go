@@ -49,7 +49,13 @@ func (MyConn *MyConn) GetUriExample() string{
 }
 
 func (MyConn *MyConn) CheckUri(uri string) error{
-	return nil
+	c := newConn(uri)
+	if c.status == "running"{
+		c.Close()
+		return nil
+	}else{
+		return c.err
+	}
 }
 
 type Conn struct {
@@ -117,6 +123,9 @@ func (This *Conn) SetExpir(TimeOut int) {
 	This.expir = TimeOut
 }
 
+func (This *Conn) SetMustBeSuccess(b bool) {
+	return
+}
 
 func (This *Conn) createExpirIndex(s []string) {
 	timeOutKey := s[0]+"-"+s[1]

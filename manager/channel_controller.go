@@ -150,7 +150,7 @@ func channle_deal_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false,"channel not exsit"))
 		return
 	}
-	errorid:= GetFormInt(req,"errorid")
+	errorid:= GetFormInt(req,"error_id")
 	ch.DealWaitError(errorid)
 	w.Write(returnResult(true,"success"))
 	return

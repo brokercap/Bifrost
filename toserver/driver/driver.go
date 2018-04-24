@@ -30,6 +30,7 @@ type ConnFun interface {
 	Del(key string) (bool,error)
 	SendToList(key string, data interface{}) (bool,error)
 	SetExpir(Expir int)
+	SetMustBeSuccess(b bool)
 }
 
 type TypeRule struct {

@@ -50,6 +50,7 @@ func user_do_login(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	w.Write(returnResult(false," user error"))
+	return
 }
 
 func user_logout(w http.ResponseWriter,req *http.Request){

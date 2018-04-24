@@ -166,6 +166,9 @@ func (This *Conn) SetExpir(TimeOut int) {
 	This.expir = TimeOut
 }
 
+func (This *Conn) SetMustBeSuccess(b bool) {
+	return
+}
 
 func (This *Conn) Insert(key string, data interface{}) (bool,error) {
 	return This.Update(key,data)

@@ -6,9 +6,6 @@
     <title>Login - Bifrost</title>
     <link rel="shortcut icon" href="favicon.ico">
     <link href="/css/bootstrap.min14ed.css?v=3.3.6" rel="stylesheet">
-    <link href="/css/font-awesome.min93e3.css?v=4.4.0" rel="stylesheet">
-
-    <link href="/css/animate.min.css" rel="stylesheet">
     <link href="/css/style.min862f.css?v=4.1.0" rel="stylesheet">
     <!--[if lt IE 9]>
     <meta http-equiv="refresh" content="0;ie.html" />
@@ -23,17 +20,14 @@
     <div>
         <h3>Bifrost</h3>
 
-        <form class="m-t" role="form" action="return false">
             <div class="form-group">
                 <input type="text" name="user_name" id="user_name" class="form-control" placeholder="用户名" required="">
             </div>
             <div class="form-group">
                 <input type="password" name="password" id="password" class="form-control" placeholder="密码" required="">
             </div>
-            <button type="submit" class="btn btn-primary block full-width m-b" id="loginBtn">登 录</button>
+            <button type="button" class="btn btn-primary block full-width m-b" id="loginBtn">登 录</button>
             </p>
-
-        </form>
     </div>
 </div>
 <script src="/js/jquery.min.js?v=2.1.4"></script>
@@ -41,6 +35,12 @@
 </body>
 </html>
 <script type="text/javascript">
+    $("#password").keypress(function(e) {
+        // 回车键事件
+        if(e.which == 13) {
+            $("#loginBtn").click();
+        }
+    });
     $("#loginBtn").click(
         function(){
             var user_name = $("#user_name").val();
@@ -60,13 +60,14 @@
                     function(data,status){
                         if( status != 'success' ){
                             alert("reqeust error, reqeust status : "+status);
-                            return false;
+                            return;
                         }
                         if(!data.status){
                             alert(data.msg);
-                            return false;
+                            return;
+                        }else{
+                            window.location.href="/";
                         }
-                        window.location.href="/";
                     },
                     'json');
         }

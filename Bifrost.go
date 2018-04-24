@@ -37,6 +37,7 @@ type recovery struct {
 	ToServer *json.RawMessage
 	DbInfo *json.RawMessage
 }
+
 type recoveryData struct {
 	ToServer interface{}
 	DbInfo interface{}
