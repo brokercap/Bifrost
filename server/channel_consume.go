@@ -30,7 +30,7 @@ import (
 	"regexp"
 )
 
-const RegularxEpression  = `\{\$([a-zA-Z]+)\}`
+const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 
 func evenTypeName(e mysql.EventType) string {
 	switch e {
