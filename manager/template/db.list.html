@@ -82,6 +82,11 @@
                                                     <td>{{$v.TableCount}}</td>
                                                     <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
                                                     <td>
+
+                                                        <a href="/flow/index?dbname={{$v.Name}}" target="_blank">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                                        </a>
+
                                                         <a href="/db/detail?dbname={{$v.Name}}">
                                                         <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
                                                     </a>

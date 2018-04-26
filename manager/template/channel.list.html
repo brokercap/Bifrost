@@ -71,6 +71,11 @@
                                 <button data-toggle="button" class="btn-sm btn-warning dealChannelBtn" onclick="DoChangeDbStatus(this,'deal')" type="button" >Deal</button>
                             {{end}}
 
+
+                                <a href="/flow/index?channelid={{$v.Name}}&dbname={{$.DbName}}" target="_blank">
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                </a>
+
                                 </td>
                             </tr>
                             {{end}}

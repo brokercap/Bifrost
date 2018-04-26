@@ -28,9 +28,11 @@ import (
 	"github.com/Bifrost/toserver"
 	dataDriver "database/sql/driver"
 	"regexp"
+	"github.com/Bifrost/server/count"
+	"unsafe"
 )
 
-const RegularxEpression  = `\{\$([a-zA-Z]+)\}`
+const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 
 func evenTypeName(e mysql.EventType) string {
 	switch e {
@@ -97,6 +99,7 @@ func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
 	//log.Println(time.Now().Format("2006-01-02 15:04:05"))
+
 	for {
 		select {
 		case data = <-This.c.chanName:
@@ -193,7 +196,6 @@ func (This *consume_channel_obj) consume_channel() {
 							fordo = 0
 						}
 					}
-
 				}
 			}
 			This.db.Lock()
@@ -204,6 +206,12 @@ func (This *consume_channel_obj) consume_channel() {
 				break
 			}
 			This.db.Unlock()
+			c.countChan <- &count.FlowCount{
+				Time:"",
+				Count:1,
+				TableId:&key,
+				ByteSize:int64(unsafe.Sizeof(data.Rows))*int64(len(toServerList)),
+			}
 		case <-time.After(5 * time.Second):
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
 			//log.Println("count:",count)

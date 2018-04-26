@@ -19,8 +19,8 @@ import (
 	"sync"
 
 	"github.com/Bifrost/Bristol/mysql"
-	"fmt"
 	"log"
+	"github.com/Bifrost/server/count"
 )
 
 var DbLock sync.Mutex
@@ -38,6 +38,7 @@ func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 		DbList[Name] = NewDb(Name, ConnectUri, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition)
 		r = true
 	}
+	count.SetDB(Name)
 	DbLock.Unlock()
 	if r == true {
 		return DbList[Name]
@@ -59,7 +60,11 @@ func DelDB(Name string) bool {
 	defer DbLock.Unlock()
 	if _, ok := DbList[Name]; ok {
 		if DbList[Name].ConnStatus == "close" {
+			for _,c := range  DbList[Name].channelMap{
+				count.DelChannel(Name,c.Name)
+			}
 			delete(DbList, Name)
+			count.DelDB(Name)
 		} else {
 			return false
 		}
@@ -151,6 +156,7 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 		killStatus:			0,
 	}
 }
+/*
 
 func DelDb(Name string) error{
 	DbLock.Lock()
@@ -165,6 +171,7 @@ func DelDb(Name string) error{
 		return fmt.Errorf(Name+" ConnStatus is not close")
 	}
 }
+*/
 
 func (db *db) SetServerId(serverId uint32) {
 	db.serverId = serverId
@@ -263,6 +270,7 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int) bool
 			ChannelKey:   ChannelKey,
 			ToServerList: make([]ToServer, 0),
 		}
+		count.SetTable(db.Name,schemaName+"-"+tableName)
 	} else {
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
@@ -324,12 +332,14 @@ func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
 	db.Lock()
 	db.LastChannelID++
 	ChannelID := db.LastChannelID
-	c := NewChannel(MaxThreadNum,Name, db)
 	if _, ok := db.channelMap[ChannelID]; ok {
 		db.Unlock()
 		return nil
 	}
+	c := NewChannel(MaxThreadNum,Name, db)
 	db.channelMap[ChannelID] = c
+	ch := count.SetChannel(db.Name,Name)
+	db.channelMap[ChannelID].SetFlowCountChan(ch)
 	db.Unlock()
 	return db.channelMap[ChannelID]
 }

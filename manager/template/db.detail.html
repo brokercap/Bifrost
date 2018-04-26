@@ -1,6 +1,6 @@
 {{template "header" .}}
 
-<link href="/css/plugins/bootstrap-table/bootstrap-table.min.css" rel="stylesheet">
+<link href="/css/plugins/bootstrap-table/bootstrap-table.min.css" rel="stylesheet" xmlns="http://www.w3.org/1999/html">
 <div >
 	<input type="hidden" value="{{.DbName}}" id="dbname" />
     <div class="row">
@@ -43,7 +43,9 @@
         <div class="col-sm-7" style=" padding-left: 0px;">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
-                    <h5>Table ToServer List</h5>
+                    <h5>Table ToServer List
+                        <a style="display: none" href="#" id="tableFlowBtn" target="_blank"><button class="btn-sm btn-primary" type="button" style="margin-top: -8px">Flow</button></a>
+                    </h5>
                 </div>
                 <div class="ibox-content">
 
@@ -352,6 +354,11 @@
 			},
 		'json');
 	}
+
+	function ChangeTableFlowBtnHref(schema_name,table_name){
+        $("#tableFlowBtn").attr("href","/flow/index?dbname="+dbname+"&schema="+schema_name+"&table_name="+table_name);
+        $("#tableFlowBtn").show();
+    }
 	
 	function GetTableToServerList(schema_name,table_name){
         var key = schema_name+"-"+table_name;
@@ -360,6 +367,8 @@
         }
         $("#TableListContair a").removeClass("active");
         $("#"+key).parent("a").addClass("active");
+        ChangeTableFlowBtnHref(schema_name,table_name);
+
 		var url = "/table/toserverlist"
 		$.post(url,
 			{dbname:dbname,schema_name:schema_name,table_name:table_name},

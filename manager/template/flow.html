@@ -1,0 +1,174 @@
+
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>流量趋势图
+                         {{if ne .TableName "" }}
+                         - TableName: {{.TableName}}
+                         {{end}}
+                         
+                         {{if ne .Schema "" }}
+                         - Schema: {{.Schema}}
+                         {{end}}
+                           
+                         {{if ne .ChannelId "" }}
+                         - Channel: {{.ChannelId}}
+                         {{end}}
+                         
+                         {{if ne .DbName "" }}
+                         - DB: {{.DbName}}
+                         {{end}}
+                        </h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+
+                        <div class="ibox-tools" style="width: auto; padding-right:8px;">
+							<select class="form-control" style=" margin-top:-8px;" id="selectLengthsAge">
+                            	<option value="minute">1 分钟</option>
+                            	<option value="tenminute">10 分钟</option>
+                            	<option value="hour">1 小时</option>
+                                <option value="eighthour">8 小时</option>
+                                <option value="day">24 小时</option>
+                            </select>
+                        </div>                                      
+                </div>
+                    
+                    <div class="ibox-content">
+                        <div id="morris-line-chart" style="height:450px;"></div>
+                    </div>
+                    
+                    <div id="monitor_color">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+</div>
+
+
+{{template "footer" .}}
+
+<script src="/js/plugins/morris/raphael-2.1.0.min.js"></script>
+<script src="/js/plugins/morris/morris.js"></script>
+<script type="text/javascript">
+	var dbName = "{{.DbName}}";
+	var ChanneId = "{{.ChannelId}}";
+	var schema = "{{.Schema}}";
+	var tableName = "{{.TableName}}";
+	var key_arr = key = ["Count","ByteSize"];
+	var monitor_color_arr = monitor_color= ["#1ab394","#60C"];
+	var monitor_color_html = "";
+	for(i in monitor_color_arr){
+		monitor_color_html +='<div i="'+i+'" status="y" class="colorDiv" color="'+monitor_color[i]+'" onclick="doSelectMonitorDisplay(this);" style=" cursor:pointer; float:left; display:block; padding:6px 12px; border-bottom:2px '+monitor_color[i]+' solid; margin-right:15px">'+key[i]+'</div>';
+	}
+	$("#monitor_color").html(monitor_color_html);
+
+	function rewrite_data(data){
+	    if (data.length == 0){
+	        return false
+		}
+		$("#morris-line-chart").html('');
+	    Morris.Line({
+        element: "morris-line-chart",
+        data: data,
+		xkey: "time",
+        ykeys: key,
+        resize: !0,
+        lineWidth:2,
+		hideHover: "auto",
+        labels: key,
+        lineColors: monitor_color,
+        pointSize: 2
+	    }
+		);
+	}
+	
+	var data = [];	
+	function doSelectMonitorDisplay(obj){
+		var status = $(obj).attr('status');
+		if(status == 'y'){
+			$(obj).attr('status','n');
+			$(obj).css("text-decoration","line-through");
+		}else{
+			$(obj).attr('status','y');
+			$(obj).css("text-decoration","");
+		}
+		key = [];
+		monitor_color = [];
+		$("#monitor_color .colorDiv").each(
+			function(){
+				if($(this).attr("status") == "y"){
+					key.push($(this).text());
+					monitor_color.push($(this).attr("color"));
+				}	
+			}
+		);
+		rewrite_data(data);
+	}
+	
+	function getFlowData() {
+        data = [];
+
+        $.post(
+                "/flow/get",
+                {
+                    dbname: dbName,
+                    schema: schema,
+                    table_name: tableName,
+                    channelid: ChanneId,
+                    type: $("#selectLengthsAge").val()
+                },
+                function (d, status) {
+                    if (status != "success") {
+                        return false;
+                    }
+                    for (s in d) {
+                        if (d[s].Time != ""){
+                            data.push({
+                                time: d[s].Time,
+                                Count: d[s].Count,
+                                ByteSize: d[s].ByteSize,
+
+                            });
+						}
+                    }
+                    console.log(d);
+                    //console.log(data);
+                    //写入到曲线
+                    rewrite_data(data);
+                }, 'json');
+    }
+	getFlowData();
+
+	$(function(){
+		$("#selectLengthsAge").change(
+			function(){
+                getFlowData();
+			}
+		);
+	});
+	var IntervalFun = getFlowData;
+
+</script>
+
+<script src="/js/timeInterval.js"></script>

@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/Bifrost/Bristol/mysql"
+	"github.com/Bifrost/server/count"
 	"log"
 )
 
@@ -32,6 +33,7 @@ type Channel struct {
 	db               *db
 	Errs 			map[int]*ChannelErr
 	lastErrId 		int
+	countChan		chan  *count.FlowCount
 }
 
 type ChannelErr struct {
@@ -76,6 +78,9 @@ func DelChannel(name string,channelID int) bool{
 	return true
 }
 
+func (Channel *Channel) SetFlowCountChan(flowChan chan *count.FlowCount) {
+	Channel.countChan = flowChan
+}
 
 func (Channel *Channel) Start() chan mysql.EventReslut {
 	Channel.Status = "running"
