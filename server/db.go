@@ -40,6 +40,7 @@ func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 	count.SetDB(Name)
 	DbLock.Unlock()
+	log.Println("Add db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition)
 	if r == true {
 		return DbList[Name]
 	} else {
@@ -65,6 +66,7 @@ func DelDB(Name string) bool {
 			}
 			delete(DbList, Name)
 			count.DelDB(Name)
+			log.Println("delete db:",Name)
 		} else {
 			return false
 		}
@@ -211,6 +213,7 @@ func (db *db) Start() bool {
 		break
 	case "stop":
 		db.ConnStatus = "running"
+		log.Println(db.Name+" monitor:","running")
 		db.binlogDump.Start()
 		break
 	default:
@@ -235,9 +238,15 @@ func (db *db) Close() bool {
 }
 
 func (db *db) monitorDump(reslut chan error) bool {
+	var lastStatus string = ""
 	for {
 		v := <-reslut
-		log.Println(db.Name+" monitor:",v.Error())
+		if v.Error() != lastStatus{
+			log.Println(db.Name+" monitor:",v.Error())
+		}else{
+			lastStatus = v.Error()
+		}
+
 		switch v.Error() {
 		case "starting":
 			db.ConnStatus = "close"
@@ -270,7 +279,8 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int) bool
 			ChannelKey:   ChannelKey,
 			ToServerList: make([]ToServer, 0),
 		}
-		count.SetTable(db.Name,schemaName+"-"+tableName)
+		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
+		count.SetTable(db.Name,key)
 	} else {
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
@@ -296,6 +306,8 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 		db.Lock()
 		delete(db.tableMap,key)
 		db.Unlock()
+		count.DelTable(db.Name,key)
+		log.Println("DelTable",db.Name,schemaName,tableName)
 	}
 	return true
 }
@@ -308,6 +320,7 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver ToS
 		db.Lock()
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
 		db.Unlock()
+		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
 	}
 	return true
 }
@@ -322,8 +335,10 @@ func (db *db) DelTableToServer(schemaName string, tableName string, index int) b
 			db.Unlock()
 			return true
 		}
+		toServerInfo := db.tableMap[key].ToServerList[index]
 		db.tableMap[key].ToServerList=append(db.tableMap[key].ToServerList[:index],db.tableMap[key].ToServerList[index+1:]...)
 		db.Unlock()
+		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 	}
 	return true
 }
@@ -341,6 +356,7 @@ func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
 	ch := count.SetChannel(db.Name,Name)
 	db.channelMap[ChannelID].SetFlowCountChan(ch)
 	db.Unlock()
+	log.Println("AddChannel",db.Name,Name,"MaxThreadNum:",MaxThreadNum)
 	return db.channelMap[ChannelID]
 }
 

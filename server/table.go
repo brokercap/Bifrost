@@ -15,7 +15,9 @@ limitations under the License.
 */
 package server
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func AddTable(db string,schema string,tableName string,channelId int) error{
 	if _,ok:=DbList[db];!ok{
@@ -33,10 +35,7 @@ func DelTable(db string,schema string,tableName string) error{
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+"not exsit")
 	}
-	key := schema+"-"+tableName
-	DbList[db].Lock()
-	delete(DbList[db].tableMap,key)
-	DbList[db].Unlock()
+	DbList[db].DelTable(schema,tableName)
 	return nil
 }
 
@@ -45,12 +44,10 @@ func AddTableToServer(db string,schemaName string,tableName string,ToServerInfo 
 		return fmt.Errorf(db+"not exsit")
 	}
 	key := schemaName + "-" + tableName
-	DbList[db].Lock()
-	defer DbList[db].Unlock()
 	if _, ok := DbList[db].tableMap[key]; !ok {
 		return fmt.Errorf(key+" not exsit")
 	} else {
-		DbList[db].tableMap[key].ToServerList = append(DbList[db].tableMap[key].ToServerList, ToServerInfo)
+		DbList[db].AddTableToServer(schemaName,tableName,ToServerInfo)
 	}
 	return nil
 }

@@ -57,7 +57,7 @@
                                 </td>
                                 <td>
                             {{if eq $v.Status "running"}}
-                                <button data-toggle="button" class="btn-sm btn-danger stopChannelBtn" onclick="DoChangeDbStatus(this,'stop')" type="button" >Stop</button>
+                                <button data-toggle="button" class="btn-sm btn-warning stopChannelBtn" onclick="DoChangeDbStatus(this,'stop')" type="button" >Stop</button>
                             {{end}}
                             {{if eq $v.Status "close"}}
                                 <button data-toggle="button" class="btn-sm btn-danger delChannelBtn" onclick="DoChangeDbStatus(this,'del')" type="button" >Del</button>

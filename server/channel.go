@@ -74,6 +74,7 @@ func DelChannel(name string,channelID int) bool{
 	if _,ok:=DbList[name].channelMap[channelID];!ok{
 		return false
 	}
+	log.Println(DbList[name].Name,"Channel:",DbList[name].channelMap[channelID].Name,"delete")
 	delete(DbList[name].channelMap,channelID)
 	return true
 }
@@ -83,6 +84,7 @@ func (Channel *Channel) SetFlowCountChan(flowChan chan *count.FlowCount) {
 }
 
 func (Channel *Channel) Start() chan mysql.EventReslut {
+	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
 	Channel.Status = "running"
 	for i := 0; i < Channel.MaxThreadNum; i++ {
 		go Channel.channelConsume()
@@ -138,10 +140,12 @@ func (Channel *Channel) GetChannel() chan mysql.EventReslut {
 }
 
 func (Channel *Channel) Stop() {
+	log.Println(Channel.db.Name,"Channel:",Channel.Name,"stop")
 	Channel.Status = "stop"
 }
 
 func (Channel *Channel) Close() {
+	log.Println(Channel.db.Name,"Channel:",Channel.Name,"close")
 	Channel.Status = "close"
 }
 

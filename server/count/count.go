@@ -3,6 +3,7 @@ package count
 import (
 	"time"
 	"sync"
+	"log"
 )
 
 type FlowCount struct {
@@ -33,6 +34,7 @@ type dbCountChild struct {
 	ChannelMap map[string]*CountFlow
 	Flow *CountFlow
 	Content *CountContent
+	doSliceTime string
 }
 
 var l sync.RWMutex
@@ -78,6 +80,7 @@ func SetDB(db string){
 				Count:0,
 				ByteSize:0,
 			},
+			doSliceTime:"",
 		}
 	}
 	l.Unlock()
@@ -124,6 +127,7 @@ func SetChannel(db string,channelId string) chan *FlowCount{
 			},
 		}
 		flowChan := setChannelChan(db+"-"+channelId)
+		log.Println(db,"add channelCount:",channelId)
 		go channel_flowcount_sonsume(db,channelId,flowChan)
 		return flowChan
 	}
@@ -146,6 +150,7 @@ func DelChannel(db string,channelId string){
 	delete(dbCountChanMap[db].ChannelMap,channelId)
 	l.Unlock()
 	delChannelChan(db+"-"+channelId)
+	log.Println(db,"del channelCount:",channelId)
 	return
 }
 
@@ -155,6 +160,7 @@ func SetTable(db string,tableId string){
 	}
 	l.Lock()
 	if _,ok := dbCountChanMap[db].TableMap[tableId];!ok{
+		dbCountChanMap[db].Lock()
 		dbCountChanMap[db].TableMap[tableId] = &CountFlow{
 			Minute:flowContentInit(12),
 			TenMinute:flowContentInit(120),
@@ -166,7 +172,23 @@ func SetTable(db string,tableId string){
 				ByteSize:0,
 			},
 		}
+		dbCountChanMap[db].Unlock()
+		log.Println(db,"add table to channelCount:",tableId)
 	}
+	l.Unlock()
+}
+
+func DelTable(db string,tableId string){
+	if _,ok := dbCountChanMap[db];!ok{
+		return
+	}
+	l.Lock()
+	dbCountChanMap[db].Lock()
+	if _,ok := dbCountChanMap[db].TableMap[tableId];ok{
+		delete(dbCountChanMap[db].TableMap,tableId)
+		log.Println(db,"del table from channelCount:",tableId)
+	}
+	dbCountChanMap[db].Unlock()
 	l.Unlock()
 }
 

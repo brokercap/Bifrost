@@ -207,7 +207,7 @@ func (This *consume_channel_obj) consume_channel() {
 			}
 			This.db.Unlock()
 			c.countChan <- &count.FlowCount{
-				Time:"",
+				//Time:"",
 				Count:1,
 				TableId:&key,
 				ByteSize:int64(unsafe.Sizeof(data.Rows))*int64(len(toServerList)),
