@@ -1,21 +1,34 @@
 # Bifrost ---- MySQL到其他服务的高性能异构中间件
 
-### 简单  高效
-### 支持多目标服务( Redis , Mongodb , RabbitMQ , Http 自建服务 等)
 
 
-## 界面化管理
+*Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
+
+提供 [Linux](https://github.com/jc3wish/Bifrost/releases) , [mac](https://github.com/jc3wish/Bifrost/releases) , [windows](https://github.com/jc3wish/Bifrost/releases) , [freebsd](https://github.com/jc3wish/Bifrost/releases)  平台二进制可执行文件下载.
+
+
+*Bifrsot* 支持同步到多种第三方服务, for example:
+
+* Redis
+* Memcache
+* RabbitMQ
+* ActiveMQ
+* Kafka
+* Mongodb
+* Http 自定义服务
+* [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/master/hprose_server/tcp_server.go)
 
 ![image](https://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
 
 
-## 更多文件档请查看
-[Bifrost官网](http://www.xbifrost.com/)
+### 安装
 
-### QQ群号： 70331601
+##### 编译
 
-#### 编译
-`````shell
+```sh
+
+go get github.com/jc3wish/Bifrost
+
 # windows
 ./build.sh windows
 
@@ -28,10 +41,20 @@
 #freebsd
 ./build.sh freebsd
 
+```
+
+##### 二进制文件下载
+`````sh
+
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0-beta3/Bifrost_v1.0-beta3_bin_linux.zip
+
+unzip Bifrost_v1.0-beta3_bin_linux.zip
+
+cd Bifrost_v1.0-beta3_bin_linux
+
 `````
 
-
-#### 配置
+##### 配置
 `````php
 [user]
 #登入用户名和密码
@@ -49,15 +72,17 @@ data_dir=/data/bifrost/data
 
 `````
 
-#### 启动
+##### 启动
 `````shell
 ./Bifrost -config ./Bifrost.ini
 
 `````
-
-#### 管理
+##### 管理
 http://127.0.0.1:9090
 
 
+### 界面操作文档
+[Bifrost官网](http://www.xbifrost.com/)
 
+### QQ群号： 70331601
 
