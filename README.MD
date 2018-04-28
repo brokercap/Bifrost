@@ -20,6 +20,18 @@
 
 ![image](https://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
 
+### Bifrost 特点
+
+
+* 界面化配置不同的数据表
+
+* 一个数据表可以不同的格式同步到多个第三方服务
+
+* 如果数据允许丢失，可以多通道同步
+
+* 单通道同步数据确保安全，以最后一个表同步成功的位点进行保存位点，kill,服务宕机等重启自动恢复配置
+
+
 
 ### 安装
 
@@ -55,7 +67,10 @@ cd Bifrost_v1.0-beta3_bin_linux
 `````
 
 ##### 配置
-`````php
+`````sh
+
+vim Bifrost.ini
+
 [user]
 #登入用户名和密码
 Bifrost=Bifrost123
