@@ -15,7 +15,7 @@ func main(){
 	pwd := flag.String("pwd", "root", "-pwd")
 	port := flag.String("port", "3306", "-port")
 	table := flag.String("table", "test1", "-test1")
-	schema := flag.String("schema", "test", "-schema")
+	schema := flag.String("schema", "bifrost_test", "-schema")
 	count := flag.Int("count", 100000, "-count")
 	flag.Parse()
 	//root:root@tcp(10.40.2.41:3306)/test

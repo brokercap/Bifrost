@@ -75,6 +75,7 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	if dbConn == nil{
 		return
 	}
+	defer dbConn.Close()
 	type ResultType struct{
 		TableName string
 		AddStatus bool
@@ -110,6 +111,7 @@ func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
 	if dbConn == nil{
 		return
 	}
+	defer dbConn.Close()
 	TableFieldsList := GetSchemaTableFieldList(dbConn,schema_name,table_name)
 	b,_:=json.Marshal(TableFieldsList)
 	w.Write(b)
