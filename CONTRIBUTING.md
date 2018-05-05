@@ -1,2 +1,2 @@
-jc3wish     ---- Zero
-Asolitaire  ---- 想做大牛
+* jc3wish     ---- Zero
+* Asolitaire  ---- 想做大牛
