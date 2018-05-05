@@ -79,7 +79,7 @@
 	var monitor_color_arr = monitor_color= ["#1ab394","#60C"];
 	var monitor_color_html = "";
 	for(i in monitor_color_arr){
-		monitor_color_html +='<div i="'+i+'" status="y" class="colorDiv" color="'+monitor_color[i]+'" onclick="doSelectMonitorDisplay(this);" style=" cursor:pointer; float:left; display:block; padding:6px 12px; border-bottom:2px '+monitor_color[i]+' solid; margin-right:15px">'+key[i]+'</div>';
+		monitor_color_html +='<div i="'+i+'" status="y" class="colorDiv" id="'+key[i]+'" color="'+monitor_color[i]+'" onclick="doSelectMonitorDisplay(this);" style=" cursor:pointer; float:left; display:block; padding:6px 12px; border-bottom:2px '+monitor_color[i]+' solid; margin-right:15px">'+key[i]+'</div>';
 	}
 	$("#monitor_color").html(monitor_color_html);
 
@@ -118,7 +118,7 @@
 		$("#monitor_color .colorDiv").each(
 			function(){
 				if($(this).attr("status") == "y"){
-					key.push($(this).text());
+					key.push($(this).attr("id"));
 					monitor_color.push($(this).attr("color"));
 				}	
 			}
@@ -142,17 +142,60 @@
                     if (status != "success") {
                         return false;
                     }
+                    var CountType = "条"
+                    if (d[0].Count > 100000){
+                        CountType = "k"
+                    }
+                    $("#Count").text('Count( '+CountType+' )')
+
+                    var ByteSizeType = "b"
+
+                    if (d[0].ByteSize >= 1024000 ){
+                        ByteSizeType = "kb"
+                    }
+
+                    if (d[0].ByteSize >= 1024000000 ){
+                        ByteSizeType = "MB"
+                    }
+
+                    if (d[0].ByteSize >= 1024000000000 ){
+                        ByteSizeType = "GB"
+                    }
+
+                    $("#ByteSize").text('ByteSize( '+ByteSizeType+' )')
+
                     for (s in d) {
                         if (d[s].Time != ""){
+                            var Count = 0
+                            if (CountType == "k"){
+                                Count =(d[s].Count/1000).toFixed(2)
+                            }else{
+                                Count = d[s].Count
+                            }
+                            var ByteSize = 0
+                            switch (ByteSizeType){
+                                case "b":
+                                    ByteSize = d[s].ByteSize;
+                                    break
+                                case "kb":
+                                    ByteSize =(d[s].ByteSize/1024).toFixed(2)
+                                    break
+                                case "MB":
+                                    ByteSize =(d[s].ByteSize/1024000).toFixed(2)
+                                    break
+                                case "GB":
+                                    ByteSize =(d[s].ByteSize/1024000000).toFixed(2)
+                                    break
+                            }
+
                             data.push({
                                 time: d[s].Time,
-                                Count: d[s].Count,
-                                ByteSize: d[s].ByteSize,
-
+                                Count: Count,
+                                ByteSize: ByteSize,
                             });
 						}
                     }
-                    console.log(d);
+                    //console.log(d);
                     //console.log(data);
                     //写入到曲线
                     rewrite_data(data);
