@@ -12,10 +12,13 @@ type column_schema_type struct {
 	COLUMN_COMMENT     string
 	COLUMN_KEY         string
 	COLUMN_TYPE        string
+	NUMERIC_SCALE      string  //浮点数精确多少数
 	enum_values        []string
 	set_values         []string
 	is_bool            bool
 	is_primary         bool
+	unsigned 		   bool
+	auto_increment     bool
 }
 
 type MysqlConnection interface {

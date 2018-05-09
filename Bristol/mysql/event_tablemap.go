@@ -129,10 +129,6 @@ func (parser *eventParser) parseTableMapEvent(buf *bytes.Buffer) (event *TableMa
 
 	event = new(TableMapEvent)
 	err = binary.Read(buf, binary.LittleEndian, &event.header)
-	if err != nil {
-		return
-	}
-
 	headerSize := parser.format.eventTypeHeaderLengths[event.header.EventType-1]
 	var tableIdSize int
 	if headerSize == 6 {
@@ -150,6 +146,7 @@ func (parser *eventParser) parseTableMapEvent(buf *bytes.Buffer) (event *TableMa
 	_, err = buf.ReadByte()
 
 	columnCount, _, err = readLengthEncodedInt(buf)
+
 	event.columnTypes = make([]FieldType, columnCount)
 	event.columnMetaData = make([]*ColumnType, columnCount)
 	columnData := buf.Next(int(columnCount))
@@ -167,6 +164,9 @@ func (parser *eventParser) parseTableMapEvent(buf *bytes.Buffer) (event *TableMa
 		err = io.EOF
 	}
 	event.nullBitmap = Bitfield(buf.Next(int((columnCount + 7) / 8)))
+	if parser.binlog_checksum {
+		buf.Next(4)
+	}
 
 	return
 }

@@ -17,7 +17,7 @@ type QueryEvent struct {
 	query         string
 }
 
-func parseQueryEvent(buf *bytes.Buffer) (event *QueryEvent, err error) {
+func (parser *eventParser) parseQueryEvent(buf *bytes.Buffer) (event *QueryEvent, err error) {
 	var schemaLength byte
 	var statusVarsLength uint16
 

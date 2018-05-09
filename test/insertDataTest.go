@@ -68,21 +68,46 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			COLUMN_TYPE := string(dest[4].([]byte))
 			switch fieldType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":
+				var unsigned bool = false
+				if strings.Contains(COLUMN_TYPE,"unsigned"){
+					unsigned = true
+				}
 				//continue
 				if COLUMN_TYPE == "tinyint(1)"{
 					data = append(data,false)
 				}else{
-					data = append(data,"11")
+					b := ""
+					switch fieldType {
+					case "tinyint":
+						b = "1"
+						break
+					case "smallint":
+						b = "2"
+						break
+					case "mediumint":
+						b = "3"
+						break
+					case "int":
+						b = "4"
+						break
+					case "bigint":
+						b = "5"
+						break
+					}
+					if unsigned == false{
+						b = "-"+b
+					}
+					data = append(data,b)
 				}
 				break
 			case "char","varchar":
 				data = append(data,"c")
 				break
 			case "text","tinytext","mediumtext","smalltext":
-				data = append(data,"texttexttexttexttexttexttext")
+				data = append(data,fieldType)
 				break
 			case "blob","tinyblob","mediumblob","smallblob","longblob":
-				data = append(data,"blobblobblobblobblobblobblobblob")
+				data = append(data,fieldType)
 				break
 			case "year":
 				data = append(data,time.Now().Format("2006"))
