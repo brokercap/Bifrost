@@ -89,14 +89,14 @@ vim Bifrost.ini
 Bifrost=Bifrost123
 
 [Bifrostd]
-#log写到入的文件夹，需要获取启的时候指定 -d true 参数才生效，否则默认打印到终端
+#log写到入的文件夹，默认为启动文件所在文件夹
 log_dir=/data/log/
 
-#监听端口,默认 0.0.0.0:1036
-listen=0.0.0.0:9090
+#监听端口,默认 0.0.0.0:21036
+listen=0.0.0.0:21036
 
-#通过界面配置的信息保存文件夹,必须设置
-data_dir=/data/bifrost/data
+#通过界面配置的信息保存文件夹,默认为启动文件所在文件夹
+data_dir=./
 
 `````
 

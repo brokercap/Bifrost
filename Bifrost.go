@@ -96,11 +96,6 @@ func main() {
 		IpAndPort = "0.0.0.0:21036"
 	}
 
-	if dataDir == ""{
-		log.Println("config [ Bifrostd data_dir ] not be empty")
-		os.Exit(1)
-	}
-
 	if *BifrostDaemon == "true"{
 		if config.GetConfigVal("Bifrostd","log_dir") == ""{
 			printLogo(IpAndPort)
@@ -124,17 +119,17 @@ func main() {
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
 			if config.GetConfigVal("Bifrostd","pid") == ""{
-				*BifrostPid = "/tmp/Bifrost.pid"
+				*BifrostPid = dataDir+"/Bifrost.pid"
 			}else{
 				*BifrostPid = config.GetConfigVal("Bifrostd","pid")
 			}
 		}
 		WritePid()
-		defer func() {
-			os.Remove(*BifrostPid)
-		}()
 	}
 
+	if dataDir == ""{
+		dataDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	}
 
 	log.Println("Server started, Bifrost version",config.VERSION)
 
@@ -153,7 +148,9 @@ func initLog(){
 	log_dir := config.GetConfigVal("Bifrostd","log_dir")
 	if log_dir == ""{
 		log.Println("no config [ Bifrostd log_dir ] ")
-		return
+		log_dir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+		log_dir += "/logs"
+		log.Println("log_dir default:",log_dir)
 	}
 	os.MkdirAll(log_dir,0777)
 	t := time.Now().Format("2006-01-02")
@@ -179,7 +176,7 @@ func WritePid(){
 		os.Exit(1)
 	}
 	defer f.Close()
-	io.WriteString(f, string(os.Getppid()))
+	io.WriteString(f, fmt.Sprint(os.Getppid()))
 }
 
 func TimeSleepDoSaveInfo(){
@@ -255,6 +252,7 @@ func ListenSignal(){
 			continue
 		}
 		server.StopAllChannel()
+		os.Remove(*BifrostPid)
 		os.Exit(0)
 	}
 }

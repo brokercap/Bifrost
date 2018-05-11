@@ -521,7 +521,9 @@ func (This *BinlogDump) checksum_enabled() {
 	dest := make([]driver.Value, 2, 2)
 	err = rows.Next(dest)
 	if err != nil {
-		log.Println("checksum_enabled err:",err)
+		if err.Error() != "EOF"{
+			log.Println("checksum_enabled err:",err)
+		}
 		return
 	}
 	if string(dest[1].([]byte)) != ""{
