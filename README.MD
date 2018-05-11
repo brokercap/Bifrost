@@ -42,6 +42,8 @@
 
 * 5.7.18
 
+* 8.0.11
+
 
 
 ### 安装
@@ -69,11 +71,11 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0-beta3/Bifrost_v1.0-beta3_bin_linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0-beta3/Bifrost_v1.0-beta4_bin_linux.zip
 
-unzip Bifrost_v1.0-beta3_bin_linux.zip
+unzip Bifrost_v1.0-beta4_bin_linux.zip
 
-cd Bifrost_v1.0-beta3_bin_linux
+cd Bifrost_v1.0-beta4_bin_linux
 
 `````
 
@@ -87,8 +89,8 @@ vim Bifrost.ini
 Bifrost=Bifrost123
 
 [Bifrostd]
-#log写到入的文件夹，不配置则默认打印到终端
-#log_dir=/data/log/
+#log写到入的文件夹，需要获取启的时候指定 -d true 参数才生效，否则默认打印到终端
+log_dir=/data/log/
 
 #监听端口,默认 0.0.0.0:1036
 listen=0.0.0.0:9090
@@ -100,7 +102,7 @@ data_dir=/data/bifrost/data
 
 ##### 启动
 `````shell
-./Bifrost -config ./Bifrost.ini
+./Bifrost -config ./Bifrost.ini -d true
 
 `````
 ##### 管理

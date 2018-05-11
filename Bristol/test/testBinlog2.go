@@ -16,9 +16,9 @@ func main() {
 	var position uint32 = 120
 
 	/** mysql 5.1.73*/
-	filename = "mysql-bin.000007"
-	position = 261
-	dataSource = "root:root@tcp(127.0.0.1:3306)/bifrost_test"
+	filename = "mysql-bin.000001"
+	position = 106
+	dataSource = "root:root@tcp(10.40.6.232:3306)/test"
 
 
 	/** mysql 5.6.36*/
@@ -32,16 +32,23 @@ func main() {
 	/*
 	filename = "mysql-bin.000007"
 	position = 2928
-	dataSource = "root:root@tcp(127.0.0.1:3306)/bifrost_test"
+	dataSource = "root:root@tcp(10.4.4.200:3306)/bifrost_test"
 	*/
+
 
 	/** mysql 5.6.23*/
 	/*
 	filename = "mysql-bin.000056"
 	position = 1050557687
-	dataSource = "root:root@tcp(127.0.0.13306)/bifrost_test"
+	dataSource = "root:root@tcp(10.40.6.89:3306)/bifrost_test"
 	*/
 
+	/** mysql 8.0.11*/
+	/*
+	filename = "binlog.000002"
+	position = 1565
+	dataSource = "sroot:Xiezuofu_123@tcp(10.4.4.199:3306)/bifrost_test"
+	*/
 
 	reslut := make(chan error, 1)
 	m := make(map[string]uint8, 0)
@@ -54,10 +61,12 @@ func main() {
 	}
 	go BinlogDump.StartDumpBinlog(filename, position, 100,reslut,"",0)
 	go func() {
-		v := <-reslut
-		log.Printf("monitor reslut:%s \r\n", v)
-		if v.Error() == "close"{
-			os.Exit(1)
+		for {
+			v := <-reslut
+			log.Printf("monitor reslut:%s \r\n", v)
+			if v.Error() == "close" {
+				os.Exit(1)
+			}
 		}
 	}()
 	for {

@@ -73,8 +73,9 @@ func (This *consume_channel_obj) sendToServer(Type string,KeyConfig *string, Val
 	defer func() {
 		if err2 := recover();err2!=nil{
 			result = false
-			err = fmt.Errorf(fmt.Sprint(err2))
-			log.Println("sendToServer err:",err2)
+			err = fmt.Errorf(*This.ToserverKey,fmt.Sprint(err2))
+			log.Println(*This.ToserverKey,"sendToServer err:",err2)
+			This.connMap[*This.ToserverKey] = toserver.Start(*This.ToserverKey)
 		}
 	}()
 	switch Type {

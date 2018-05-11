@@ -81,8 +81,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		if err != nil{
 			log.Println("mysql version:",version,"err",err)
 		}
-		//log.Println("binlogVersion:",parser.format.binlogVersion,"server version:",parser.format.mysqlServerVersion," mysqlVersionInt: ",parser.mysqlVersionInt)
 		*/
+		//log.Println("binlogVersion:",parser.format.binlogVersion,"server version:",parser.format.mysqlServerVersion)
 		event = &EventReslut{
 			Header: parser.format.header,
 		}
@@ -187,7 +187,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	}
 	//set dbAndTable Name tableId
 	parser.tableNameMap[database+"."+tablename] = tableId
-	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "'"
+	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
 	stmt, err := parser.conn.Prepare(sql)
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)

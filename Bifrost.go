@@ -31,14 +31,20 @@ import (
 	"io"
 	"sync"
 	"io/ioutil"
+	"fmt"
+	"strings"
+	"path/filepath"
+	"runtime"
 )
 
 type recovery struct {
+	Version string
 	ToServer *json.RawMessage
 	DbInfo *json.RawMessage
 }
 
 type recoveryData struct {
+	Version string
 	ToServer interface{}
 	DbInfo interface{}
 }
@@ -48,36 +54,95 @@ var l sync.Mutex
 var DataFile string
 var DataTmpFile string
 
+var logo = `
+___         ___                   _   
+(  _'\  _  /'___)                 ( )_
+| (_) )(_)| (__  _ __   _     ___ | ,_)      Bifrost {$version} {$system}   Listen {$Port}
+|  _ <'| || ,__)( '__)/'_'\ /',__)| |                            
+| (_) )| || |   | |  ( (_) )\__, \| |_       Pid: {$Pid}
+(____/'(_)(_)   (_)  '\___/'(____/'\__)      http://xbifrost.com
+
+                                       `
+func printLogo(IpAndPort string){
+	logo = strings.Replace(logo,"{$version}",config.VERSION,-1)
+	logo = strings.Replace(logo,"{$Port}",IpAndPort,-1)
+	logo = strings.Replace(logo,"{$Pid}",fmt.Sprint(os.Getpid()),-1)
+	logo = strings.Replace(logo,"{$system}",fmt.Sprint(runtime.GOARCH),-1)
+	fmt.Println(logo)
+}
+
+var BifrostConfigFile *string
+var BifrostDaemon *string
+var BifrostPid *string
+
 func main() {
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
 	}()
+
 	DataFile  = ""
 	DataTmpFile = ""
-	log.Println("Bifrost start...")
-	log.Println("version:",config.VERSION)
-	BifrostConfigFile := flag.String("config", "Bifrost.ini", "Bifrost config file path")
+
+	BifrostConfigFile = flag.String("config", "Bifrost.ini", "Bifrost config file path")
+	BifrostPid = flag.String("pid", "", "pid file path")
+	BifrostDaemon = flag.String("d", "false", "daemon")
 	flag.Parse()
 	config.LoadConf(*BifrostConfigFile)
 
-	initLog()
-
 	dataDir := config.GetConfigVal("Bifrostd","data_dir")
+	IpAndPort := config.GetConfigVal("Bifrostd","listen")
+	if IpAndPort == ""{
+		IpAndPort = "0.0.0.0:21036"
+	}
+
 	if dataDir == ""{
 		log.Println("config [ Bifrostd data_dir ] not be empty")
 		os.Exit(1)
 	}
+
+	if *BifrostDaemon == "true"{
+		if config.GetConfigVal("Bifrostd","log_dir") == ""{
+			printLogo(IpAndPort)
+			log.Println("config [ Bifrostd log_dir ] empty,Can't be daemon")
+		}else{
+			if os.Getppid() != 1{
+				filePath,_:=filepath.Abs(os.Args[0])  //将命令行参数中执行文件路径转换成可用路径
+				args:=append([]string{filePath},os.Args[1:]...)
+				os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
+				return
+			}else{
+				printLogo(IpAndPort)
+				initLog()
+			}
+		}
+	}else{
+		printLogo(IpAndPort)
+		//initLog()
+	}
+
+	if runtime.GOOS != "windows"{
+		if *BifrostPid == ""{
+			if config.GetConfigVal("Bifrostd","pid") == ""{
+				*BifrostPid = "/tmp/Bifrost.pid"
+			}else{
+				*BifrostPid = config.GetConfigVal("Bifrostd","pid")
+			}
+		}
+		WritePid()
+		defer func() {
+			os.Remove(*BifrostPid)
+		}()
+	}
+
+
+	log.Println("Server started, Bifrost version",config.VERSION)
+
 	os.MkdirAll(dataDir, 0777)
 	DataFile = dataDir+"/db.Bifrost"
 	DataTmpFile = dataDir+"/db.Bifrost.tmp"
 
 	doRecovery()
-	IpAndPort := config.GetConfigVal("Bifrostd","listen")
-	if IpAndPort == ""{
-		IpAndPort = "0.0.0.0:1036"
-	}
-	log.Println("Bifrost manager start : ",IpAndPort)
 
 	go TimeSleepDoSaveInfo()
 	go manager.Start(IpAndPort)
@@ -95,9 +160,26 @@ func initLog(){
 	LogFileName := log_dir+"/Bifrost_"+t+".log"
 	f, err := os.OpenFile(LogFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777) //打开文件
 	if err != nil{
-		log.Println("log init error:",err, " Bifrost.go:76")
+		log.Println("log init error:",err)
 	}
 	log.SetOutput(f)
+	fmt.Println("log input to",LogFileName)
+}
+
+func WritePid(){
+	f, err2 := os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0777) //打开文件
+	if err2 !=nil{
+		log.Println("Open BifrostPid Error; File:",*BifrostPid,"; Error:",err2)
+		os.Exit(1)
+		return
+	}
+	pidContent, err2 := ioutil.ReadAll(f)
+	if string(pidContent) != ""{
+		log.Println("Birostd server quit without updating PID file ; File:",*BifrostPid,"; Error:",err2)
+		os.Exit(1)
+	}
+	defer f.Close()
+	io.WriteString(f, string(os.Getppid()))
 }
 
 func TimeSleepDoSaveInfo(){
@@ -108,6 +190,9 @@ func TimeSleepDoSaveInfo(){
 }
 
 func doSaveDbInfo(){
+	if os.Getppid() != 1 && *BifrostDaemon == "true"{
+		return
+	}
 	l.Lock()
 	defer func(){
 		l.Unlock()
@@ -116,6 +201,7 @@ func doSaveDbInfo(){
 		}
 	}()
 	data := recoveryData{
+		Version:config.VERSION,
 		ToServer:toserver.SaveToServerData(),
 		DbInfo:server.SaveDBInfoToFileData(),
 	}
