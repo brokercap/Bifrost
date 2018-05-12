@@ -151,8 +151,8 @@ func callback2(d *mysql.EventReslut) {
 			break
 		case "testmediumint":
 			switch v.(type) {
-			case int:
-				if v.(int) != -3{
+			case int32:
+				if v.(int32) != -3{
 					log.Println(k,-3,"!=",v)
 					noError  = false
 				}
@@ -364,8 +364,8 @@ func callback2(d *mysql.EventReslut) {
 
 		case "test_unsinged_mediumint":
 			switch v.(type) {
-			case uint:
-				if v.(uint) != 3{
+			case uint32:
+				if v.(uint32) != 3{
 					log.Println(k,3,"!=",v)
 					noError  = false
 				}

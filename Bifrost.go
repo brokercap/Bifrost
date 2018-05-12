@@ -79,6 +79,9 @@ func main() {
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
+		if os.Getppid() == 1 && *BifrostPid != ""{
+			os.Remove(*BifrostPid)
+		}
 	}()
 
 	DataFile  = ""
@@ -97,23 +100,17 @@ func main() {
 	}
 
 	if *BifrostDaemon == "true"{
-		if config.GetConfigVal("Bifrostd","log_dir") == ""{
-			printLogo(IpAndPort)
-			log.Println("config [ Bifrostd log_dir ] empty,Can't be daemon")
+		if os.Getppid() != 1{
+			filePath,_:=filepath.Abs(os.Args[0])  //将命令行参数中执行文件路径转换成可用路径
+			args:=append([]string{filePath},os.Args[1:]...)
+			os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
+			return
 		}else{
-			if os.Getppid() != 1{
-				filePath,_:=filepath.Abs(os.Args[0])  //将命令行参数中执行文件路径转换成可用路径
-				args:=append([]string{filePath},os.Args[1:]...)
-				os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
-				return
-			}else{
-				printLogo(IpAndPort)
-				initLog()
-			}
+			printLogo(IpAndPort)
+			initLog()
 		}
 	}else{
 		printLogo(IpAndPort)
-		//initLog()
 	}
 
 	if runtime.GOOS != "windows"{
@@ -252,6 +249,7 @@ func ListenSignal(){
 			continue
 		}
 		server.StopAllChannel()
+		doSaveDbInfo()
 		os.Remove(*BifrostPid)
 		os.Exit(0)
 	}

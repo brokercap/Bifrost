@@ -129,13 +129,13 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			if tableSchemaMap[i].unsigned {
 				var bint uint64
 				bint, e = readFixedLengthInteger(buf, 3)
-				row[column_name] = uint(bint)
+				row[column_name] = uint32(bint)
 			}else{
 				var a,b,c int8
 				binary.Read(buf,binary.LittleEndian,&a)
 				binary.Read(buf,binary.LittleEndian,&b)
 				binary.Read(buf,binary.LittleEndian,&c)
-				row[column_name] = int(a + (b << 8) + (c << 16))
+				row[column_name] = int32(a + (b << 8) + (c << 16))
 			}
 
 
