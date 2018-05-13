@@ -89,7 +89,7 @@ func main() {
 
 	BifrostConfigFile = flag.String("config", "Bifrost.ini", "Bifrost config file path")
 	BifrostPid = flag.String("pid", "", "pid file path")
-	BifrostDaemon = flag.String("d", "false", "daemon")
+	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
 	flag.Parse()
 	config.LoadConf(*BifrostConfigFile)
 

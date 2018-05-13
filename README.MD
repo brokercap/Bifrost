@@ -23,7 +23,7 @@
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/jc3wish/Bifrost/blob/master/diagram.jpg)
+![image](https://github.com/jc3wish/Bifrost/blob/master/diagram.png)
 
 
 ### Bifrost 特点
@@ -77,11 +77,11 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0-beta4/Bifrost_v1.0-beta4_bin_linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.0-release/Bifrost_v1.0.0-release_bin_linux.zip
 
-unzip Bifrost_v1.0-beta4_bin_linux.zip
+unzip Bifrost_v1.0.0-release_bin_linux.zip
 
-cd Bifrost_v1.0-beta4_bin_linux
+cd Bifrost_v1.0.0-release_bin_linux
 
 `````
 
