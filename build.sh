@@ -24,11 +24,13 @@ if [[ "$1" == "windows" ]];then
     cp -rf ./manager/template ./windows/manager/template
     cp -rf ./manager/public ./windows/manager/public
     cp -f ./Bifrost.ini ./windows
+    cp -f ./Bifrost-server ./windows
 else
     mv ./Bifrost ./$1
     cp -rf ./manager/template ./$1/manager/template
     cp -rf ./manager/public ./$1/manager/public
     cp -f ./Bifrost.ini ./$1
+    cp -f ./Bifrost-server ./$1
 fi
 
 echo "$1 build over"

@@ -77,11 +77,11 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.0-release/Bifrost_v1.0.0-release_bin_linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.1-release/Bifrost_v1.0.1-release_bin_linux.zip
 
-unzip Bifrost_v1.0.0-release_bin_linux.zip
+unzip Bifrost_v1.0.1-release_bin_linux.zip
 
-cd Bifrost_v1.0.0-release_bin_linux
+cd Bifrost_v1.0.1-release_bin_linux
 
 `````
 
@@ -96,7 +96,7 @@ Bifrost=Bifrost123
 
 [Bifrostd]
 #log写到入的文件夹，默认为启动文件所在文件夹
-log_dir=/data/log/
+#log_dir=/data/log/
 
 #监听端口,默认 0.0.0.0:21036
 listen=0.0.0.0:21036
@@ -108,9 +108,16 @@ data_dir=./
 
 ##### 启动
 `````shell
-./Bifrost -config ./Bifrost.ini -d true
+./Bifrost-server start
 
 `````
+
+##### 停止
+`````shell
+./Bifrost-server stop
+
+`````
+
 ##### 管理
 http://127.0.0.1:21036
 
