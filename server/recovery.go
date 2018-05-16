@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"fmt"
 )
 
 type dbSaveInfo struct {
@@ -87,6 +88,8 @@ func recoveryData(data map[string]dbSaveInfo){
 			//db close,channel must be close
 			ch.Close()
 		}
+		var BinlogFileNum int = 0
+		var BinlogPosition uint32 = 0
 		for tKey,tInfo := range dbInfo.TableMap{
 			i := strings.IndexAny(tKey, "-")
 			schemaName := tKey[0:i]
@@ -105,8 +108,25 @@ func recoveryData(data map[string]dbSaveInfo){
 						AddSchemaName: toServer.AddSchemaName,
 						AddTableName:  toServer.AddTableName,
 						Expir:		   toServer.Expir,
+						BinlogFileNum: toServer.BinlogFileNum,
+						BinlogPosition:toServer.BinlogPosition,
 					})
+				if BinlogFileNum == 0 || BinlogFileNum < toServer.BinlogFileNum{
+					BinlogFileNum = toServer.BinlogFileNum
+					BinlogPosition = toServer.BinlogPosition
+				}else if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition{
+					BinlogPosition = toServer.BinlogPosition
+				}
 			}
+		}
+		//找到最小的位点位置进行更新到 db 配置中去，进行slave连接
+		if BinlogFileNum > 0 && BinlogPosition > 0{
+			// 二进制文件格式是xxx.000001 ,后面数字是6位数，不够前面补0
+			i := strings.IndexAny(dbInfo.BinlogDumpFileName, ".")
+			binlogPrefix := dbInfo.BinlogDumpFileName[0:i]
+			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",BinlogFileNum)
+			db.binlogDumpPosition = BinlogPosition
+			log.Println("Change binlog postion ",db.Name,"binlogDumpFileName:",db.binlogDumpFileName,"binlogDumpPosition:",db.binlogDumpPosition)
 		}
 		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop"{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{

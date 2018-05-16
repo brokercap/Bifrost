@@ -143,6 +143,8 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		AddSchemaName: AddSchemaNameBool,
 		AddTableName:  AddTableNameBool,
 		Expir:		   Expir,
+		BinlogFileNum: 0,
+		BinlogPosition:0,
 	}
 	dbObj := server.GetDBObj(dbname)
 	r := dbObj.AddTableToServer(schema,tablename,toServer)

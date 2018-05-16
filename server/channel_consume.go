@@ -30,6 +30,7 @@ import (
 	"regexp"
 	"github.com/Bifrost/server/count"
 	"unsafe"
+	"strconv"
 )
 
 const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
@@ -108,10 +109,15 @@ func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
 	//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-
+	var BinlogFileNum int
+	var intString string
 	for {
 		select {
 		case data = <-This.c.chanName:
+			i := strings.IndexAny(data.BinlogFileName, ".")
+			intString = data.BinlogFileName[i+1:]
+			BinlogFileNum,_=strconv.Atoi(intString)
+
 			key := data.SchemaName + "-" + data.TableName
 			This.db.Lock()
 			if This.db.killStatus == 1{
@@ -125,8 +131,15 @@ func (This *consume_channel_obj) consume_channel() {
 			//var KeyConfig1, ValConfig1 string = ""
 			This.checkChannleStatus()
 			This.rowIndex = len(data.Rows) - 1
-			for _, toServer := range toServerList {
-				ToServerKey := toServer.ToServerKey
+			for toServerInfoKey, toServerInfo := range toServerList {
+				if BinlogFileNum < toServerInfo.BinlogFileNum{
+					continue
+				}
+				if BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= data.Header.LogPos{
+					continue
+				}
+
+				ToServerKey := toServerInfo.ToServerKey
 				if _, ok := This.connMap[ToServerKey]; !ok {
 					This.connMap[ToServerKey] = toserver.Start(ToServerKey)
 				}
@@ -136,29 +149,29 @@ func (This *consume_channel_obj) consume_channel() {
 				//Header
 				switch data.Header.EventType {
 				case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
-					if toServer.Type == "list" {
+					if toServerInfo.Type == "list" {
 						//设置ToServerKey msg 过期信息，至于是否数据是否会过期处理，具体由toServer决定
-						This.connMap[ToServerKey].SetExpir(toServer.Expir)
-						KeyConfig, ValConfig = This.transferData(&data, &key, &toServer)
+						This.connMap[ToServerKey].SetExpir(toServerInfo.Expir)
+						KeyConfig, ValConfig = This.transferData(&data, &key, &toServerInfo)
 					} else {
-						KeyConfig = This.transfeResult(toServer.KeyConfig, &data)
+						KeyConfig = This.transfeResult(toServerInfo.KeyConfig, &data)
 					}
 					break
 				default:
 					//设置ToServerKey msg 过期信息，至于是否数据是否会过期处理，具体由toServer决定
-					This.connMap[ToServerKey].SetExpir(toServer.Expir)
-					KeyConfig, ValConfig = This.transferData(&data, &key, &toServer)
+					This.connMap[ToServerKey].SetExpir(toServerInfo.Expir)
+					KeyConfig, ValConfig = This.transferData(&data, &key, &toServerInfo)
 					break
 				}
 
 				var fordo int = 0
 				var lastErrId int = 0
-				This.connMap[ToServerKey].SetMustBeSuccess(toServer.MustBeSuccess)
+				This.connMap[ToServerKey].SetMustBeSuccess(toServerInfo.MustBeSuccess)
 				This.ToserverKey = &ToServerKey
 				for {
 					result = false
 					errs = nil
-					if toServer.Type == "set" {
+					if toServerInfo.Type == "set" {
 						switch data.Header.EventType {
 						case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
 							result,errs = This.sendToServer("insert",&KeyConfig,&ValConfig)
@@ -175,7 +188,7 @@ func (This *consume_channel_obj) consume_channel() {
 					} else {
 						result,errs = This.sendToServer("list",&KeyConfig,&ValConfig)
 					}
-					if toServer.MustBeSuccess == true {
+					if toServerInfo.MustBeSuccess == true {
 						if result == true{
 							if lastErrId > 0 {
 								c.DelWaitError(lastErrId)
@@ -206,7 +219,15 @@ func (This *consume_channel_obj) consume_channel() {
 						}
 					}
 				}
+				//保存位点到toServer配置中，这个 len > toServerInfoKey+1 判断是为了防止在同步过程中 同步配置 被删除所引起的数据不对问题
+				This.db.Lock()
+				if len(This.db.tableMap[key].ToServerList) >= toServerInfoKey+1 && This.db.tableMap[key].ToServerList[toServerInfoKey].ToServerKey == toServerInfo.ToServerKey {
+					This.db.tableMap[key].ToServerList[toServerInfoKey].BinlogFileNum = BinlogFileNum
+					This.db.tableMap[key].ToServerList[toServerInfoKey].BinlogPosition = data.Header.LogPos
+				}
+				This.db.Unlock()
 			}
+			//保存位点,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
 			This.db.Lock()
 			This.db.binlogDumpFileName = data.BinlogFileName
 			This.db.binlogDumpPosition = data.Header.LogPos
@@ -215,6 +236,7 @@ func (This *consume_channel_obj) consume_channel() {
 				break
 			}
 			This.db.Unlock()
+
 			c.countChan <- &count.FlowCount{
 				//Time:"",
 				Count:1,

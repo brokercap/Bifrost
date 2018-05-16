@@ -374,6 +374,7 @@ func (db *db) GetChannel(channelID int) *Channel {
 }
 
 type ToServer struct {
+	sync.RWMutex
 	MustBeSuccess bool
 	Type          string
 	DataType      string //string , json
@@ -385,6 +386,8 @@ type ToServer struct {
 	FieldList     []string
 	ToServerKey   string
 	Expir 		  int
+	BinlogFileNum int
+	BinlogPosition uint32
 }
 
 type Table struct {
