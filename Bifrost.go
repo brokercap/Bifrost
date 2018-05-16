@@ -108,6 +108,7 @@ func main() {
 		}else{
 			printLogo(IpAndPort)
 			initLog()
+			fmt.Printf("Please press the `Enter`\r")
 		}
 	}else{
 		printLogo(IpAndPort)
@@ -173,7 +174,7 @@ func WritePid(){
 		os.Exit(1)
 	}
 	defer f.Close()
-	io.WriteString(f, fmt.Sprint(os.Getppid()))
+	io.WriteString(f, fmt.Sprint(os.Getpid()))
 }
 
 func TimeSleepDoSaveInfo(){
