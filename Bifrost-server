@@ -23,8 +23,6 @@ basepath=$(cd `dirname $0`; pwd)
 
 function __readINI() {
  INIFILE=$1; SECTION=$2; ITEM=$3
- #echo $ITEM
- #_readIni=`awk -F '=' '/\['$SECTION'\]/{a=1}a==1&&$1~/'$ITEM'/{print $2;exit}' $INIFILE`
  _readIni=`cat Bifrost.ini|awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
  echo ${_readIni}
 }
@@ -41,7 +39,7 @@ fi
 
 if test -z "$pid_file"
 then
-  pid_file=( $( __readINI /data/windows/gocode/src/github.com/Bifrost/Bifrost.ini Bifrostd pid ) ) 
+  pid_file=( $( __readINI $config_file Bifrostd pid ) ) 
 fi
 
 if test -z "$pid_file"
@@ -52,16 +50,15 @@ fi
 case "$mode" in
   'start')
     # Start daemon
-    cd $bin_dir
-
     #echo "Starting Bifrost"
     if test -x $bin_dir/Bifrost
     then
-      $bin_dir/Bifrost -d true -config "$config_file"
-      exit 0
+      $bin_dir/Bifrost -d true -config "$config_file" -pid "$pid_file"
     else
       echo "Couldn't find Bifrost server ($bin_dir/Bifrost)"
+      exit 1
     fi
+    exit 0
     ;;
 
   'stop')
@@ -75,9 +72,21 @@ case "$mode" in
       then
         echo "Shutting down Bifrost"
         kill $bifrost_pid
+        for((i=1;i<=3;i++));
+        do
+            sleep 1
+            if !(kill -0 $bifrost_pid 2>/dev/null)
+            then
+               echo "server stop success"
+               exit 0
+            fi
+        done
+        echo "kill $bifrost_pid failed, retry please"
+        exit 1
       else
         echo "Bifrost server process #$bifrost_pid is not running!"
         rm "$pid_file"
+        exit 1
       fi
       exit 0
     else
@@ -89,7 +98,7 @@ case "$mode" in
   'restart')
     # Stop the service and regardless of whether it was
     # running or not, start it again.
-    if $0 stop; then
+    if ($0 stop); then
       $0 start
     else
       echo "Failed to stop running server, so refusing to try to start."
@@ -108,6 +117,9 @@ case "$mode" in
         echo "Bifrost is not running, but PID file exists"
         exit 1
       fi
+    else
+      echo "PID file not exists"
+      exit 1
     fi
     ;;
     *)
