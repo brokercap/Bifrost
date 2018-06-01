@@ -49,7 +49,7 @@ func index_flow_controller(w http.ResponseWriter,req *http.Request){
 		ChannelId:channelId,
 		}
 	FlowIndex.Title = "Flow-Bifrost"
-	t, _ := template.ParseFiles("manager/template/flow.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/flow.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, FlowIndex)
 
 }

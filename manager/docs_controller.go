@@ -32,6 +32,6 @@ func docs_controller(w http.ResponseWriter,req *http.Request){
 	}
 	data := docs{ToServerDocs:driver.GetDocs()}
 	data.Title =  "docs - Bifrost"
-	t, _ := template.ParseFiles("manager/template/docs.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/docs.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)
 }

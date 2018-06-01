@@ -474,8 +474,12 @@
                     $("#TableListContair").html("");
                     $.each(data,function(index,v){
                         var html = "";
-                        html += '<a class="list-group-item "><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
-                        html +=	'<h5 class="left" onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
+                        var title = "";
+                        if (v.ChannelName != ""){
+                            title = " title='Bind Channel : "+v.ChannelName+"' ";
+                        }
+                        html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
+                        html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
                         if (v.AddStatus == false){
                             html+= '<div class="right"><button data-toggle="button" class="btn btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
                         }else{

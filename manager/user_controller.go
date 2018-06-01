@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"html/template"
 	"github.com/Bifrost/config"
+
 )
 
 func init()  {
@@ -29,7 +30,7 @@ func init()  {
 
 func user_login(w http.ResponseWriter,req *http.Request){
 	data := TemplateHeader{Title:"Login - Bifrost"}
-	t, _ := template.ParseFiles("manager/template/login.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/login.html"))
 	t.Execute(w, data)
 }
 

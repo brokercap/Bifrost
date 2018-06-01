@@ -58,7 +58,7 @@ func toserver_list_controller(w http.ResponseWriter,req *http.Request){
 	var data toServerInfo
 	data = toServerInfo{ToServerList: toserver.ToServerMap,Drivers:driver.Drivers()}
 	data.Title = "ToServer List - Bifrost"
-	t, _ := template.ParseFiles("manager/template/toserver.list.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/toserver.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)
 
 }

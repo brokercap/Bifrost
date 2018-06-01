@@ -74,6 +74,7 @@ func printLogo(IpAndPort string){
 var BifrostConfigFile *string
 var BifrostDaemon *string
 var BifrostPid *string
+var BifrostDataDir *string
 
 func main() {
 	defer func() {
@@ -83,21 +84,27 @@ func main() {
 			os.Remove(*BifrostPid)
 		}
 	}()
+	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
 	DataFile  = ""
 	DataTmpFile = ""
 
-	BifrostConfigFile = flag.String("config", "Bifrost.ini", "Bifrost config file path")
+	BifrostConfigFile = flag.String("config", "", "Bifrost config file path")
 	BifrostPid = flag.String("pid", "", "pid file path")
 	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
+	BifrostDataDir = flag.String("data_dir", "", "db.Bifrost data dir")
 	flag.Parse()
+	if *BifrostConfigFile == ""{
+		*BifrostConfigFile = execDir+"/etc/Bifrost.ini"
+		log.Println("*BifrostConfigFile:",*BifrostConfigFile)
+	}
 	config.LoadConf(*BifrostConfigFile)
 
-	dataDir := config.GetConfigVal("Bifrostd","data_dir")
 	IpAndPort := config.GetConfigVal("Bifrostd","listen")
 	if IpAndPort == ""{
 		IpAndPort = "0.0.0.0:21036"
 	}
+
 
 	if *BifrostDaemon == "true"{
 		if os.Getppid() != 1{
@@ -114,6 +121,17 @@ func main() {
 		printLogo(IpAndPort)
 	}
 
+	var dataDir string
+	if *BifrostDataDir == ""{
+		dataDir = config.GetConfigVal("Bifrostd","data_dir")
+	}else{
+		dataDir = *BifrostDataDir
+	}
+	if dataDir == ""{
+		dataDir = execDir+"/data"
+	}
+	os.MkdirAll(dataDir, 0777)
+
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
 			if config.GetConfigVal("Bifrostd","pid") == ""{
@@ -125,13 +143,9 @@ func main() {
 		WritePid()
 	}
 
-	if dataDir == ""{
-		dataDir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	}
-
 	log.Println("Server started, Bifrost version",config.VERSION)
 
-	os.MkdirAll(dataDir, 0777)
+
 	DataFile = dataDir+"/db.Bifrost"
 	DataTmpFile = dataDir+"/db.Bifrost.tmp"
 

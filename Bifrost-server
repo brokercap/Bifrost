@@ -22,8 +22,8 @@ mode=$1    # start or stop or restart
 basepath=$(cd `dirname $0`; pwd)
 
 function __readINI() {
- INIFILE=$1; SECTION=$2; ITEM=$3
- _readIni=`cat Bifrost.ini|awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
+ INIFILE=$1; SECTION=$2; ITEM=$3;
+ _readIni=`cat $INIFILE | awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
  echo ${_readIni}
 }
 
@@ -34,7 +34,7 @@ fi
 
 if test -z "$config_file"
 then
-  config_file="$basepath/Bifrost.ini"
+  config_file="$basepath/etc/Bifrost.ini"
 fi
 
 if test -z "$pid_file"

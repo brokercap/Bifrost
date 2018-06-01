@@ -69,7 +69,7 @@ func channle_list_controller(w http.ResponseWriter,req *http.Request){
 	var data channelResult
 	data = channelResult{ChannelList:server.GetDBObj(dbname).ListChannel(),DbName:dbname}
 	data.Title = dbname +" - Channel List - Bifrost"
-	t, _ := template.ParseFiles("manager/template/channel.list.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/channel.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)
 }
 

@@ -56,7 +56,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	b,_:=json.Marshal(toserver.GetToServerMap())
 	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: string(b),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
-	t, _ := template.ParseFiles("manager/template/db.detail.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
 }
 
@@ -78,16 +78,23 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	defer dbConn.Close()
 	type ResultType struct{
 		TableName string
+		ChannelName string
 		AddStatus bool
 	}
 	var data []ResultType
 	data = make([]ResultType,0)
 	TableList := GetSchemaTableList(dbConn,schema_name)
 	for _,tableName := range TableList{
-		if DBObj.GetTable(schema_name,tableName) == nil{
-			data = append(data,ResultType{TableName:tableName,AddStatus:false})
+		t := DBObj.GetTable(schema_name,tableName)
+		if t == nil{
+			data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false})
 		}else{
-			data = append(data,ResultType{TableName:tableName,AddStatus:true})
+			t2 := DBObj.GetChannel(t.ChannelKey)
+			if t2 == nil{
+				data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false})
+			}else{
+				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true})
+			}
 		}
 	}
 	b,_:=json.Marshal(data)

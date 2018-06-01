@@ -47,7 +47,7 @@ func listDB_Action(w http.ResponseWriter,req *http.Request){
 
 	DbList := dbListStruct{DBList:server.GetListDb()}
 	DbList.Title = "Bifrost"
-	t, _ := template.ParseFiles("manager/template/db.list.html","manager/template/header.html","manager/template/footer.html")
+	t, _ := template.ParseFiles(TemplatePath("manager/template/db.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, DbList)
 }
 

@@ -21,7 +21,21 @@ import (
 	"strconv"
 	"github.com/Bifrost/manager/xgo"
 	"log"
+	"os/exec"
+	"os"
+	"path/filepath"
 )
+
+var execDir string
+
+func init(){
+	execPath, _ := exec.LookPath(os.Args[0])
+	execDir = filepath.Dir(execPath)+"/"
+}
+
+func TemplatePath(fileName string) string{
+	return execDir+fileName
+}
 
 type TemplateHeader struct {
 	Title string
@@ -89,10 +103,10 @@ func Start(IpAndPort string){
 		}
 	}()
 	sessionMgr = xgo.NewSessionMgr("xgo_cookie", 3600)
-	xgo.AddStaticRoute("/css/","manager/public/")
-	xgo.AddStaticRoute("/js/","manager/public/")
-	xgo.AddStaticRoute("/fonts/","manager/public/")
-	xgo.AddStaticRoute("/img/","manager/public/")
+	xgo.AddStaticRoute("/css/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/js/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/fonts/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/img/",TemplatePath("manager/public/"))
 	xgo.SetFirstCallBack(Controller_FirstCallback)
 	xgo.AddRoute("/",index_controller)
 	xgo.Start(IpAndPort)
