@@ -77,11 +77,11 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.1-release/Bifrost_v1.0.1-release_bin_linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.2-release/linux.zip
 
-unzip Bifrost_v1.0.1-release_bin_linux.zip
+unzip linux.zip
 
-cd Bifrost_v1.0.1-release_bin_linux
+cd linux
 
 `````
 
@@ -95,13 +95,13 @@ vim Bifrost.ini
 Bifrost=Bifrost123
 
 [Bifrostd]
-#log写到入的文件夹，默认为启动文件所在文件夹
+#log写到入的文件夹，默认为启动文件所在文件夹下的logs目录
 #log_dir=/data/log/
 
 #监听端口,默认 0.0.0.0:21036
 listen=0.0.0.0:21036
 
-#通过界面配置的信息保存文件夹,默认为启动文件所在文件夹
+#通过界面配置的信息保存文件夹,默认为启动文件所在文件夹下的data目录
 data_dir=./
 
 `````
@@ -116,6 +116,31 @@ data_dir=./
 `````shell
 ./Bifrost-server stop
 
+`````
+
+### Docker
+
+##### Dockerfile
+`````shell
+ FROM centos:centos6.8
+ MAINTAINER jc3wish "jc3wish@126.com"
+ RUN yum install -y wget unzip
+ RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.2-release/linux.zip
+ RUN unzip linux && cd linux && chmod a+x ./Bifrost-server
+ ENTRYPOINT ["linux/Bifrost-server","start"]
+ EXPOSE 21036
+
+`````
+
+`````shell
+ docker build -t bifrost:1.0.2 .
+`````
+
+##### Docker启动
+`````shell
+docker pull jc3wish/bifrost:1.0.2
+
+docker run -d -p21036:21036 jc3wish/bifrost:1.0.2
 `````
 
 ##### 管理
