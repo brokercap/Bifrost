@@ -1,0 +1,23 @@
+language: go
+
+go:
+    - "1.6"
+    - "1.7"
+    - "1.8"
+    - "1.9"
+
+    - master
+
+before_install:
+
+
+install:
+    - go get github.com/mattn/goveralls
+
+script:
+    - go test -v -covermode=count -coverprofile=coverage.out
+    - go build Bifrost.go
+
+
+after_success:
+  - goveralls -coverprofile=full_cov.out -service=travis-ci
