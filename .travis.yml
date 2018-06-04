@@ -7,6 +7,13 @@ go:
     - "1.9"
 
 before_install:
+    - go get github.com/gmallard/stompngo
+    - go get github.com/hprose/hprose-golang
+    - go get github.com/Shopify/sarama
+    - go get github.com/bradfitz/gomemcache
+    - go get gopkg.in/mgo.v2
+    - go get github.com/streadway/amqp
+    - go get github.com/garyburd/redigo
 
 
 install:
