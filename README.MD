@@ -1,5 +1,6 @@
 # Bifrost ---- MySQL到其他服务的高性能异构中间件
 
+[![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=master)](https://travis-ci.org/jc3wish/Bifrost)
 
 
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
@@ -33,9 +34,11 @@
 
 * 一个数据表可以不同的格式同步到多个第三方服务
 
-* 如果数据允许丢失，可以多通道同步
+* kill,服务宕机等重启自动恢复配置
 
-* 单通道同步数据确保安全，以最后一个表同步成功的位点进行保存位点，kill,服务宕机等重启自动恢复配置
+* 每条数据同步完保存位点,数据位点安全,确保不会出现数据重复同步
+
+* 可配置一个表一个线程同步,性能增强并且数据安全
 
 
 ### MySQL 版本（经过测试）
