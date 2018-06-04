@@ -18,10 +18,10 @@ package main
 import (
 	"log"
 
-	"github.com/Bifrost/server"
-	"github.com/Bifrost/toserver"
-	"github.com/Bifrost/manager"
-	"github.com/Bifrost/config"
+	"github.com/jc3wish/Bifrost/server"
+	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/manager"
+	"github.com/jc3wish/Bifrost/config"
 	"flag"
 	"os"
 	"os/signal"

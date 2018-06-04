@@ -23,12 +23,12 @@ import (
 )
 
 import (
-	"github.com/Bifrost/toserver/driver"
-	"github.com/Bifrost/Bristol/mysql"
-	"github.com/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/jc3wish/Bifrost/toserver"
 	dataDriver "database/sql/driver"
 	"regexp"
-	"github.com/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/server/count"
 	"unsafe"
 	"strconv"
 )

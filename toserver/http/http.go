@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"fmt"
 	"encoding/json"
 	"net/http"

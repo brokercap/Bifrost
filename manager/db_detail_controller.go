@@ -19,9 +19,9 @@ import (
 	"net/http"
 	"log"
 	"html/template"
-	"github.com/Bifrost/server"
+	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
-	"github.com/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/toserver"
 )
 
 func init(){

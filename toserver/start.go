@@ -4,10 +4,15 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
+	"log"
 )
 
 var l sync.Mutex
+
+func init(){
+	log.Println("sssssssssssss start init")
+}
 
 type ToServer struct {
 	sync.Mutex

@@ -2,7 +2,7 @@ package redis
 
 import (
 	"log"
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"github.com/garyburd/redigo/redis"
 	"fmt"
 	"encoding/json"

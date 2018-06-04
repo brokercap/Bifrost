@@ -18,9 +18,9 @@ package server
 import (
 	"sync"
 
-	"github.com/Bifrost/Bristol/mysql"
+	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"log"
-	"github.com/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/server/count"
 )
 
 var DbLock sync.Mutex

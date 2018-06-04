@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/Bristol/mysql"
+	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"time"
 )
 

@@ -1,7 +1,7 @@
 package memcache
 
 import (
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"fmt"
 	"encoding/json"
 	dataDriver "database/sql/driver"

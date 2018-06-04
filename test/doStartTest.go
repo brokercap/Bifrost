@@ -1,7 +1,7 @@
 package main
 
-import "github.com/Bifrost/toserver"
-import "github.com/Bifrost/server"
+import "github.com/jc3wish/Bifrost/toserver"
+import "github.com/jc3wish/Bifrost/server"
 
 func main(){
 	doStart()

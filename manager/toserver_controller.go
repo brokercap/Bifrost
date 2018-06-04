@@ -16,8 +16,8 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/Bifrost/toserver"
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"fmt"
 	"html/template"
 )

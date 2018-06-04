@@ -16,8 +16,8 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/Bifrost/server"
-	"github.com/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/server"
+	"github.com/jc3wish/Bifrost/toserver"
 	"fmt"
 	"strings"
 	"encoding/json"

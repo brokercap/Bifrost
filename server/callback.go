@@ -20,7 +20,7 @@ import (
 
 	"time"
 
-	"github.com/Bifrost/Bristol/mysql"
+	"github.com/jc3wish/Bifrost/Bristol/mysql"
 )
 
 func (db *db) Callback(data *mysql.EventReslut) {

@@ -16,7 +16,7 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/Bifrost/server"
+	"github.com/jc3wish/Bifrost/server"
 	"strconv"
 	"log"
 	"html/template"

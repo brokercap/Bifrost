@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"github.com/streadway/amqp"
 	"fmt"
 	"strings"

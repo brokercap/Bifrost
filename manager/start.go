@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"strconv"
-	"github.com/Bifrost/manager/xgo"
+	"github.com/jc3wish/Bifrost/manager/xgo"
 	"log"
 	"os/exec"
 	"os"

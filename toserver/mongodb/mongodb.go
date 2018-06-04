@@ -1,7 +1,7 @@
 package mongodb
 
 import (
-	"github.com/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/toserver/driver"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"fmt"
