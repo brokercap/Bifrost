@@ -11,7 +11,7 @@ before_install:
     - go get github.com/bradfitz/gomemcache/memcache
     - go get gopkg.in/mgo.v2
     - go get github.com/streadway/amqp
-    - go get github.com/garyburd/redigo
+    - go get github.com/garyburd/redigo/redis
 
 
 install:
