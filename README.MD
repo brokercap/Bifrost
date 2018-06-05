@@ -1,6 +1,8 @@
 # Bifrost ---- MySQL到其他服务的高性能异构中间件
 
 [![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=master)](https://travis-ci.org/jc3wish/Bifrost)
+[![Join the chat at https://gitter.im/jc3wish-Bifrost/Lobby](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/jc3wish-Bifrost/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+[![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
