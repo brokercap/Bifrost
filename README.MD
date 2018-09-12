@@ -53,7 +53,7 @@
 
 * 5.7.18
 
-* 8.0.11
+* 8.0.11 (用户密码验证需要采用 mysql_native_password 方式)
 
 
 
@@ -82,7 +82,7 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.2-release/linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.3-release/linux.zip
 
 unzip linux.zip
 
@@ -130,7 +130,7 @@ data_dir=./
  FROM centos:centos6.8
  MAINTAINER jc3wish "jc3wish@126.com"
  RUN yum install -y wget unzip
- RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.2-release/linux.zip
+ RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.3-release/linux.zip
  RUN unzip linux && cd linux && chmod a+x ./Bifrost-server
  ENTRYPOINT ["linux/Bifrost-server","start"]
  EXPOSE 21036
@@ -138,14 +138,14 @@ data_dir=./
 `````
 
 `````shell
- docker build -t bifrost:1.0.2 .
+ docker build -t bifrost:1.0.3 .
 `````
 
 ##### Docker启动
 `````shell
-docker pull jc3wish/bifrost:1.0.2
+docker pull jc3wish/bifrost:1.0.3
 
-docker run -d -p21036:21036 jc3wish/bifrost:1.0.2
+docker run -d -p21036:21036 jc3wish/bifrost:1.0.3
 `````
 
 ##### 管理
