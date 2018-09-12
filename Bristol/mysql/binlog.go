@@ -109,6 +109,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			BinlogFileName: parser.binlogFileName,
 			BinlogPosition: parser.binlogPosition,
 		}
+		parser.tableSchemaMap = make(map[uint64][]*column_schema_type,0)
 		return
 	case TABLE_MAP_EVENT:
 		var table_map_event *TableMapEvent
