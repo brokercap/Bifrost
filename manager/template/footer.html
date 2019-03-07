@@ -28,6 +28,11 @@
                 }
             },
             'json');
+        $(":text").change(
+			function(){
+				$(this).val($.trim($(this).val()));
+			}
+		);
     });
 </script>
 {{end}}
