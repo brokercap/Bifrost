@@ -223,6 +223,15 @@
                         alert(data.msg);
                         return false;
                     }
+                    if($("#filename").val() == ""){
+                        $("#filename").val(data.data.BinlogFile);
+                    }
+                    if($("#position").val() == ""){
+                        $("#position").val(data.data.BinlogPosition);
+                    }
+                    if($("#serverid").val() == ""){
+                        $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
+                    }
                     alert(data.msg);
                     dbUriChecked = true;
                     $("#checkUriBtn").hide();

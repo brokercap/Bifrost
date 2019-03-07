@@ -19,6 +19,7 @@ import (
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"log"
+	"strconv"
 )
 
 func init(){
@@ -39,6 +40,7 @@ func GetSchemaList(db mysql.MysqlConnection) []string{
 		log.Println(err)
 		return databaseList
 	}
+	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	defer rows.Close()
@@ -71,6 +73,7 @@ func GetSchemaTableList(db mysql.MysqlConnection,schema string) []string{
 		log.Println(err)
 		return tableList
 	}
+	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	p = append(p,schema)
 	rows, err := stmt.Query(p)
@@ -104,6 +107,7 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		log.Println(err)
 		return FieldList
 	}
+	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	p = append(p,schema)
 	p = append(p,table)
@@ -126,4 +130,85 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 	}
 	//log.Println(FieldList)
 	return FieldList
+}
+
+type MasterBinlogInfoStruct struct {
+	File string
+	Position int
+	Binlog_Do_DB string
+	Binlog_Ignore_DB string
+	Executed_Gtid_Set string
+}
+
+func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
+	sql := "SHOW MASTER STATUS"
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return MasterBinlogInfoStruct{}
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return MasterBinlogInfoStruct{}
+	}
+	var File string
+	var Position int
+	var Binlog_Do_DB string
+	var Binlog_Ignore_DB string
+	var Executed_Gtid_Set string
+	for {
+		dest := make([]driver.Value, 4, 4)
+		errs := rows.Next(dest)
+		if errs != nil {
+			return MasterBinlogInfoStruct{}
+		}
+		File = string(dest[0].([]byte))
+		Binlog_Do_DB = string(dest[2].([]byte))
+		Binlog_Ignore_DB = string(dest[3].([]byte))
+		Executed_Gtid_Set = ""
+		PositonString := string(dest[1].([]byte))
+		Position,_ = strconv.Atoi(PositonString)
+		break
+	}
+
+	return MasterBinlogInfoStruct{
+		File:File,
+		Position:Position,
+		Binlog_Do_DB:Binlog_Do_DB,
+		Binlog_Ignore_DB:Binlog_Ignore_DB,
+		Executed_Gtid_Set:Executed_Gtid_Set,
+	}
+}
+
+func GetServerId(db mysql.MysqlConnection) int{
+	sql := "show variables like 'server_id'"
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return 0
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return 0
+	}
+	defer rows.Close()
+	var ServerId int
+	for{
+		dest := make([]driver.Value, 2, 2)
+		errs := rows.Next(dest)
+		if errs != nil{
+			return 0
+		}
+		ServerIdString := string(dest[1].([]byte))
+		ServerId,_ = strconv.Atoi(ServerIdString)
+		break
+	}
+	return ServerId
 }

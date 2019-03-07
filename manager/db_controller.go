@@ -22,6 +22,9 @@ import (
 	"encoding/json"
 	"html/template"
 	"fmt"
+	"log"
+	"runtime/debug"
+	"strings"
 )
 
 func init(){
@@ -56,12 +59,12 @@ func addDB_Action(w http.ResponseWriter,req *http.Request){
 	var result resultStruct
 	result.Status = false
 	req.ParseForm()
-	dbname := req.Form.Get("dbname")
-	connuri := req.Form.Get("uri")
-	filename := req.Form.Get("filename")
-	positionString := req.Form.Get("position")
-	serverIdString := req.Form.Get("serverid")
-	max_filename := req.Form.Get("max_filename")
+	dbname := strings.Trim(req.Form.Get("dbname"),"")
+	connuri := strings.Trim(req.Form.Get("uri"),"")
+	filename := strings.Trim(req.Form.Get("filename"),"")
+	positionString := strings.Trim(req.Form.Get("position"),"")
+	serverIdString := strings.Trim(req.Form.Get("serverid"),"")
+	max_filename := strings.Trim(req.Form.Get("max_filename"),"")
 	max_position := uint32(GetFormInt(req,"max_position"))
 
 	position,err:=strconv.Atoi(positionString)
@@ -131,11 +134,17 @@ func closeDB_Action(w http.ResponseWriter,req *http.Request){
 func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbUri := req.Form.Get("uri")
-
+	type dbInfoStruct struct{
+		BinlogFile string
+		BinlogPosition int
+		ServerId int
+	}
+	dbInfo := &dbInfoStruct{}
 	err := func(dbUri string) (e error){
 		e = nil
 		defer func() {
 			if err := recover();err != nil{
+				log.Println(string(debug.Stack()))
 				e = fmt.Errorf(fmt.Sprint(err))
 				return
 			}
@@ -143,16 +152,23 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		dbconn := DBConnect(dbUri)
 		if dbconn != nil{
 			e = nil
-			dbconn.Close()
 		}else{
 			e = fmt.Errorf("db conn ,uknow error")
+		}
+		defer dbconn.Close()
+		MasterBinlogInfo := GetBinLogInfo(dbconn)
+		if MasterBinlogInfo.File != ""{
+			dbInfo.BinlogFile = MasterBinlogInfo.File
+			dbInfo.BinlogPosition = MasterBinlogInfo.Position
+			dbInfo.ServerId = GetServerId(dbconn)
+		}else{
+			e = fmt.Errorf("The binlog maybe not open")
 		}
 		return
 	}(dbUri)
 	if err != nil{
-		w.Write(returnResult(false,err.Error()))
+		w.Write(returnDataResult(false,err.Error(),*dbInfo))
 	}else{
-		w.Write(returnResult(true,"success"))
+		w.Write(returnDataResult(true,"success",*dbInfo))
 	}
-
 }

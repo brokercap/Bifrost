@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var execDir string
@@ -50,6 +51,13 @@ type resultStruct struct {
 	Msg string `json:"msg"`
 }
 
+type resultDataStruct struct {
+	Status bool `json:"status"`
+	Msg string `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
+
 var sessionMgr *xgo.SessionMgr = nil //session管理器
 
 func returnResult(r bool,msg string)[]byte{
@@ -57,8 +65,13 @@ func returnResult(r bool,msg string)[]byte{
 	return  b
 }
 
+func returnDataResult(r bool,msg string,data interface{})[]byte{
+	b,_:=json.Marshal(resultDataStruct{Status:r,Msg:msg,Data:data})
+	return  b
+}
+
 func GetFormInt(req *http.Request,key string) int{
-	v := req.Form.Get(key)
+	v := strings.Trim(req.Form.Get(key),"")
 	intv,err:=strconv.Atoi(v)
 	if err != nil{
 		return 0
