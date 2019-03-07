@@ -35,6 +35,7 @@ import (
 	"strings"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 )
 
 type recovery struct {
@@ -82,6 +83,10 @@ func main() {
 		doSaveDbInfo()
 		if os.Getppid() == 1 && *BifrostPid != ""{
 			os.Remove(*BifrostPid)
+		}
+		if err := recover();err != nil{
+			log.Println(debug.Stack())
+			return
 		}
 	}()
 	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
