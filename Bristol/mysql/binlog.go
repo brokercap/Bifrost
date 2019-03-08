@@ -506,7 +506,7 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 		if first == false{
 			time.Sleep(5 * time.Second)
 		}
-		first = true
+		first = false
 		result <- fmt.Errorf("starting")
 		This.startConnAndDumpBinlog(result)
 	}
