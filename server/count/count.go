@@ -4,6 +4,7 @@ import (
 	"time"
 	"sync"
 	"log"
+	"strings"
 )
 
 type FlowCount struct {
@@ -53,12 +54,14 @@ func DoInit(){
 	go func() {
 		for{
 			time.Sleep(5 * time.Second)
+			l.Lock()
 			for _,c := range dbChannelChanMap{
 				c <- &FlowCount{
 					Time:time.Now().Format("2006-01-02 15:04:05"),
-					Count:-1,
+					Count:-3,
 				}
 			}
+			l.Unlock()
 		}
 	}()
 }
@@ -92,6 +95,12 @@ func DelDB(db string){
 	}
 	l.Lock()
 	delete(dbCountChanMap,db)
+	for key,c := range dbChannelChanMap{
+		if strings.Index(key,db+" # ") == 0{
+			delete(dbChannelChanMap,key)
+			close(c)
+		}
+	}
 	l.Unlock()
 }
 
@@ -126,7 +135,7 @@ func SetChannel(db string,channelId string) chan *FlowCount{
 				ByteSize:0,
 			},
 		}
-		flowChan := setChannelChan(db+"-"+channelId)
+		flowChan := setChannelChan(db+" # "+channelId)
 		log.Println(db,"add channelCount:",channelId)
 		go channel_flowcount_sonsume(db,channelId,flowChan)
 		return flowChan

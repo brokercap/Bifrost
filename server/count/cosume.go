@@ -3,6 +3,7 @@ package count
 import (
 	"time"
 	"log"
+	"runtime"
 )
 
 func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCount){
@@ -29,35 +30,42 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 	var doDbSlice bool = true
 	for {
 		data := <- flowchan
-		if data.Count == -2{
-			log.Println(db,channelId,"channel close")
+		if data == nil{
+			runtime.Goexit()
 			break
 		}
-		if data.Count == -1{
-			//另一个协程定时，每5秒往这个chan里发送一条信息
-			dbCountChanMap[db].Lock()
-			if dbCountChanMap[db].doSliceTime == data.Time{
-				doDbSlice = false
-			}else{
-				dbCountChanMap[db].doSliceTime = data.Time
-				doDbSlice = true
+		if data.Count < 0 {
+			if data.Count == -2 {
+				log.Println(db, channelId, "channel close")
+				runtime.Goexit()
+				break
 			}
-			dbCountChanMap[db].Unlock()
-			seliceTime = &data.Time
-			fori++
-			DoMinuteSlice = true
-			DoTenMinuteSlice = true
-			if fori % 6 == 0{
-				DoHourSlice = true
+			if data.Count == -3 {
+				//count DoInit 里的协程定时，每5秒往这个chan里发送一条信息
+				dbCountChanMap[db].Lock()
+				if dbCountChanMap[db].doSliceTime == data.Time {
+					doDbSlice = false
+				} else {
+					dbCountChanMap[db].doSliceTime = data.Time
+					doDbSlice = true
+				}
+				dbCountChanMap[db].Unlock()
+				seliceTime = &data.Time
+				fori++
+				DoMinuteSlice = true
+				DoTenMinuteSlice = true
+				if fori%6 == 0 {
+					DoHourSlice = true
+				}
+				if fori%60 == 0 {
+					DoEightHourSlice = true
+				}
+				if fori%120 == 0 {
+					fori = 0
+					DoDaySlice = true
+				}
+				continue
 			}
-			if fori % 60 == 0{
-				DoEightHourSlice = true
-			}
-			if fori % 120 == 0{
-				fori = 0
-				DoDaySlice = true
-			}
-			continue
 		}
 		dbCountChanMap[db].Lock()
 		if _,ok:=dbCountChanMap[db].TableMap[*data.TableId];!ok{
