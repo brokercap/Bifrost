@@ -128,6 +128,9 @@ func recoveryData(data map[string]dbSaveInfo){
 			db.binlogDumpPosition = BinlogPosition
 			log.Println("Change binlog postion ",db.Name,"binlogDumpFileName:",db.binlogDumpFileName,"binlogDumpPosition:",db.binlogDumpPosition)
 		}
+		if dbInfo.ConnStatus == "closing"{
+			dbInfo.ConnStatus = "close"
+		}
 		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop"{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 				db.Start()

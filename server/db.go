@@ -206,7 +206,7 @@ func (db *db) Start() (b bool) {
 	}
 	switch db.ConnStatus {
 	case "close":
-		db.ConnStatus = "running"
+		db.ConnStatus = "starting"
 		reslut := make(chan error, 1)
 		db.binlogDump.CallbackFun = db.Callback
 
@@ -234,8 +234,8 @@ func (db *db) Stop() bool {
 }
 
 func (db *db) Close() bool {
+	db.ConnStatus = "closing"
 	db.binlogDump.Close()
-	db.ConnStatus = "close"
 	return true
 }
 
@@ -250,9 +250,6 @@ func (db *db) monitorDump(reslut chan error) bool {
 		}
 
 		switch v.Error() {
-		case "starting":
-			db.ConnStatus = "close"
-			break
 		case "stop":
 			db.ConnStatus = "stop"
 			break

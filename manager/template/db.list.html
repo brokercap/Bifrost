@@ -48,10 +48,19 @@
                                                     <td>{{$v.Name}}</td>
                                                     <td>{{$v.ConnectUri}}</td>
                                                     <td>
-                                                    	{{$v.ConnStatus}} 
+                                                        <strong class="conn_status">{{$v.ConnStatus}}</strong>
                                                     	{{if eq $v.ConnStatus "close"}}
+                                                        	{{if ne $v.ConnErr "running"}}
+                                                            	{{if eq $v.ConnErr ""}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
                                                         <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
+                                                        		{{else if eq $v.ConnErr "close"}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
+                                                        		{{else}}        
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        		{{end}}
+                                                        	{{end}}
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "running"}}
                                                         <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
@@ -60,6 +69,10 @@
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         {{end}}
+                                                        {{if eq $v.ConnStatus "starting"}}
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        {{end}}
+
                                                     </td>
                                                     <td>
                                                         <p>{{$v.BinlogDumpFileName}}</p>
@@ -302,6 +315,7 @@ function DoChangeDbStatus(obj,status){
 	var url = "/db/"+status;
 	var trObj = $(obj).parent().parent();
 	var dbname = trObj.children().eq(0).html();
+	var conn_status = trObj.children().eq(2).find(".conn_status").text();
 	$.post(
 		url,
 		{dbname: dbname},
@@ -317,7 +331,7 @@ function DoChangeDbStatus(obj,status){
 			if (status == "del"){
 				trObj.remove();
 			}else{
-				location.reload();
+                location.reload();
 			}
 		},
 		'json'
