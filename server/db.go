@@ -199,16 +199,19 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 	return true
 }
 
-func (db *db) Start() bool {
+func (db *db) Start() (b bool) {
+	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
-		return false
+		return
 	}
 	switch db.ConnStatus {
 	case "close":
 		db.ConnStatus = "running"
 		reslut := make(chan error, 1)
 		db.binlogDump.CallbackFun = db.Callback
-		go db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut,db.maxBinlogDumpFileName,db.maxBinlogDumpPosition)
+
+		go	db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
+
 		go db.monitorDump(reslut)
 		break
 	case "stop":
@@ -217,9 +220,8 @@ func (db *db) Start() bool {
 		db.binlogDump.Start()
 		break
 	default:
-		return false
+		return
 	}
-
 	return true
 }
 

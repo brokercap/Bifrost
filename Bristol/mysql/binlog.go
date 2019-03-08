@@ -494,6 +494,7 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 	}()
 	This.parser.binlogFileName = filename
 	This.parser.binlogPosition = position
+	first := true
 	for {
 		if This.parser.dumpBinLogStatus == 3 {
 			break
@@ -502,9 +503,12 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 			result <- fmt.Errorf("close")
 			break
 		}
+		if first == false{
+			time.Sleep(5 * time.Second)
+		}
+		first = true
 		result <- fmt.Errorf("starting")
 		This.startConnAndDumpBinlog(result)
-		time.Sleep(2 * time.Second)
 	}
 }
 
@@ -539,7 +543,7 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 	conn, err := dbopen.Open(This.DataSource)
 	if err != nil {
 		result <- err
-		time.Sleep(5 * time.Second)
+		//time.Sleep(5 * time.Second)
 		return
 	}
 	This.mysqlConn = conn.(MysqlConnection)
