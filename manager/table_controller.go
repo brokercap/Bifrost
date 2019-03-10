@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 	"encoding/json"
+	"log"
 )
 
 func init(){
@@ -73,6 +74,12 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	FieldListString := req.Form.Get("fieldlist")
 	Type := req.Form.Get("type")
 	MustBeSuccess := req.Form.Get("mustbe")
+
+	p  := req.Form.Get("param")
+	log.Println("param",p)
+
+	w.Write(returnResult(true,"success"))
+	return
 
 	var toServer server.ToServer
 

@@ -115,40 +115,6 @@
                             </div>
 
 
-                            <div class="form-group" id="AddEventTypeContair">
-                                <label class="col-sm-3 control-label">AddEventType：</label>
-                                <div class="col-sm-9">
-                                    <label class="radio-inline">
-                                        <input type="radio"  value="1" id="AddEventType1" name="AddEventType">Yes</label>
-                                    <label class="radio-inline">
-                                        <input type="radio" value="0"  id="AddEventType2" name="AddEventType" checked="">No</label>
-                                </div>
-                                <p class="help-block m-b-none">Yes: 当DataType=json 的时候,会自动往json对象中增加一个key:EventType </p>
-                            </div>
-
-                            <div class="form-group" id="AddSchemaNameContair">
-                                <label class="col-sm-3 control-label">AddSchemaName：</label>
-                                <div class="col-sm-9">
-                                    <label class="radio-inline">
-                                        <input type="radio"  value="1" id="AddSchemaName1" name="AddSchemaName">Yes</label>
-                                    <label class="radio-inline">
-                                        <input type="radio" value="0"  id="AddSchemaName2" name="AddSchemaName" checked="">No</label>
-                                </div>
-                                <p class="help-block m-b-none">Yes: 当DataType=json 的时候,会自动往json对象中增加一个key:SchemaName </p>
-                            </div>
-
-                            <div class="form-group" id="AddTableNameContair">
-                                <label class="col-sm-3 control-label">AddTableName：</label>
-                                <div class="col-sm-9">
-                                    <label class="radio-inline">
-                                        <input type="radio"  value="1" id="AddTableName1" name="AddTableName">Yes</label>
-                                    <label class="radio-inline">
-                                        <input type="radio" value="0"  id="AddTableName2" name="AddTableName" checked="">No</label>
-                                </div>
-                                <p class="help-block m-b-none">Yes: 当DataType=json 的时候,会自动往json对象中增加一个key:TableName </p>
-                            </div>
-
-
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">&nbsp;</label>
                                 <div class="col-sm-9">
@@ -538,12 +504,6 @@
         }
         doChangeTypeSelectHtml();
 
-        $("#KeyConfig,#ValueConfig").focus(
-            function(){
-                OnFoucsInputId = $(this).attr("id");
-            }
-        );
-
         $("#TableFieldsContair").on("dblclick","p.fieldsname",function(){
             if (OnFoucsInputId == ""){
                 return false;
@@ -556,7 +516,8 @@
             function(){
                 var p = doGetParam();
                 console.log(p);
-                return;
+                //return;
+                var addToServerType = $("#addToServerType").val();
                 var dbname = $("#tableToServerListContair").attr("dbname");
                 var schema_name = $("#tableToServerListContair").attr("schema");
                 var table_name = $("#tableToServerListContair").attr("table_name");
@@ -565,33 +526,14 @@
                     return false;
                 }
 
-                var Expir = $("#Expir").val();
-                if (Expir != "" && Expir != null && isNaN(Expir)){
-                    alert("Expir must be int");
-                    return false;
-                }
-
                 var MustBeSuccess = $("input[name='MustBeSuccess']:checked").val();
-                var AddEventType = $("input[name='AddEventType']:checked").val();
+
                 var addToServerKey = $("#addToServerKey").val();
-                /*
-                var addToServerType = $("#addToServerType").val();
-                var addToServerDataType = $("#addToServerDataType").val();
-                var KeyConfig = $("#KeyConfig").val();
-                var ValueConfig = $("#ValueConfig").val();
-                if (KeyConfig==""){
-                    alert("Key must be not empty!");
-                    return false;
-                }
-                if (addToServerDataType == "string" && ValueConfig==""){
-                    alert("DataType==string,ValueConfig muest be!");
-                    return false;
-                }
-                */
 
                 /**
                  * check key and val rule
                  * */
+                /*
                 if (ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Key != ""){
                     var keyp=new RegExp(ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Key);
                     if (keyp.test(KeyConfig) == false){
@@ -599,34 +541,8 @@
                         return false;
                     }
                 }
-
-                /*
-                if (addToServerDataType == "string"){
-                    var valRule = ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Val;
-                    if (valRule == "json"){
-                        try {
-                            var obj= JSON.parse(ValueConfig);
-                            if(typeof obj != 'object' || !obj ){
-                                alert("ValueConfig rule:"+valRule);
-                                return false;
-                            }
-                        } catch(e) {
-                            alert("ValueConfig rule:"+valRule);
-                            return false;
-                        }
-                    }
-                    if (valRule != ""){
-                        var valp=new RegExp(valRule);
-                        if (valp.test(ValueConfig) == false){
-                            alert("ValueConfig rule:"+valRule);
-                            return false;
-                        }
-                    }
-                }
                 */
 
-                var AddSchemaName = $("input[name='AddSchemaName']:checked").val();
-                var AddTableName = $("input[name='AddTableName']:checked").val();
                 var fieldlist = [];
                 $.each($("#TableFieldsContair input:checkbox:checked"),function(){
                     fieldlist.push($(this).val());
@@ -638,19 +554,10 @@
                     table_name:table_name,
                     toserver_key:addToServerKey,
                     type:addToServerType,
-                    //datatype:addToServerDataType,
                     mustbe:MustBeSuccess,
-                    /*
-                    add_eventtype:AddEventType,
-                    key_config:KeyConfig,
-                    val_config:ValueConfig,
-                    */
-                    add_schemaname:AddSchemaName,
-                    add_tablename:AddTableName,
                     fieldlist:fieldlist.toString(),
-                    //expir:Expir,
+                    param:JSON.stringify(p),
                 }
-
 
                 $.post(url,
                         data,
