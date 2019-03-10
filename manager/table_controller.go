@@ -17,7 +17,7 @@ package manager
 import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/plugin"
 	"fmt"
 	"strings"
 	"encoding/json"
@@ -71,19 +71,12 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 
 	toServerKey := req.Form.Get("toserver_key")
 	FieldListString := req.Form.Get("fieldlist")
-	DataType := req.Form.Get("datatype")
 	Type := req.Form.Get("type")
 	MustBeSuccess := req.Form.Get("mustbe")
-	AddEventType := req.Form.Get("add_eventtype")
-	KeyConfig := req.Form.Get("key_config")
-	ValConfig := req.Form.Get("val_config")
-	AddSchemaName := req.Form.Get("add_schemaname")
-	AddTableName := req.Form.Get("add_tablename")
-	Expir := GetFormInt(req,"expir")
 
 	var toServer server.ToServer
 
-	if toserver.GetToServerInfo(toServerKey) == nil{
+	if plugin.GetToServerInfo(toServerKey) == nil{
 		w.Write(returnResult(false,toServerKey+"not exsit"))
 		return
 	}
@@ -96,55 +89,24 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		}
 	}
 
-	if KeyConfig == ""{
-		w.Write(returnResult(false,"key_config must be"))
-		return
-	}
-
-	if DataType == "string"{
-		if ValConfig == ""{
-			w.Write(returnResult(false,"DataType==stirng,"+ValConfig+" must be"))
-			return
-		}
-	}else{
-		if DataType != "json"{
-			w.Write(returnResult(false,"DataType must be json or string"))
-			return
-		}
-	}
-
 	if Type != "set" && Type != "list"{
 		w.Write(returnResult(false,"type must be set or list"))
 		return
 	}
 
-	var MustBeSuccessBool , AddEventTypeBool,AddSchemaNameBool,AddTableNameBool bool = false,false,false,false
+	var MustBeSuccessBool bool = false
 	if MustBeSuccess == "1"{
 		MustBeSuccessBool = true
 	}
-	if AddEventType == "1"{
-		AddEventTypeBool = true
-	}
-	if AddSchemaName == "1"{
-		AddSchemaNameBool = true
-	}
-	if AddTableName == "1"{
-		AddTableNameBool = true
-	}
+
 	toServer = server.ToServer{
 		MustBeSuccess: MustBeSuccessBool,
 		Type:          Type,
-		DataType:	   DataType,
-		KeyConfig:     KeyConfig,
-		ValueConfig:   ValConfig,
 		ToServerKey:   toServerKey,
 		FieldList:     fileList,
-		AddEventType:  AddEventTypeBool,
-		AddSchemaName: AddSchemaNameBool,
-		AddTableName:  AddTableNameBool,
-		Expir:		   Expir,
 		BinlogFileNum: 0,
 		BinlogPosition:0,
+		Param:			make(map[string]interface{}),
 	}
 	dbObj := server.GetDBObj(dbname)
 	r := dbObj.AddTableToServer(schema,tablename,toServer)

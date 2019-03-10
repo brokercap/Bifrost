@@ -21,7 +21,7 @@ import (
 	"html/template"
 	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
-	"github.com/jc3wish/Bifrost/toserver"
+	toserver "github.com/jc3wish/Bifrost/plugin"
 )
 
 func init(){

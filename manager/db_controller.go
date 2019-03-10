@@ -17,7 +17,7 @@ package manager
 import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/plugin"
 	"strconv"
 	"encoding/json"
 	"html/template"
@@ -43,7 +43,7 @@ type dbListStruct struct{
 }
 
 func listDB_Action(w http.ResponseWriter,req *http.Request){
-	if len(toserver.ToServerMap) == 0{
+	if len(plugin.ToServerMap) == 0{
 		http.Redirect(w, req, "/toserver/list", http.StatusFound)
 		return
 	}

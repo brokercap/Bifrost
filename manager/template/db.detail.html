@@ -99,46 +99,9 @@
                                     </select><span class="help-block m-b-none"></span>
                                 </div>
                             </div>
+<div id="plugin_param_div">
 
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">DataType：</label>
-                                <div class="col-sm-9">
-                                    <select class="form-control" name="addToServerDataType" id="addToServerDataType">
-                                        <option value="string">string</option>
-                                        <option value="json" selected>json</option>
-                                    </select><span class="help-block m-b-none"></span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">Key：</label>
-                                <div class="col-sm-9" style="position: relative">
-                                    <div style="position: absolute ;top: 0px; right: -20px; line-height: 120%;">
-                                        <a href="javascript:return false" id="docBtn">DOC</a>
-                                    </div>
-                                    <input type="text" name="KeyConfig" id="KeyConfig" class="form-control" placeholder="请输入文本">
-                                    <span class="help-block m-b-none">自定义key,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
-                                    <p>&nbsp;</p>
-                                </div>
-                            </div>
-
-                            <div class="form-group" id="ValueConfigContair" style="display: none">
-                                <label class="col-sm-3 control-label">Value：</label>
-                                <div class="col-sm-9">
-                                    <textarea id="ValueConfig" name="ValueConfig" class="form-control" required="" placeholder="{$SchemaName},{$TableName},{$EventType},{$'+filedName+'}" aria-required="true"></textarea> <span class="help-block m-b-none">自定,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
-                                    <p>&nbsp;</p>
-
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">Expir：</label>
-                                <div class="col-sm-9">
-                                    <input type="text" name="Expir" id="Expir" class="form-control" value="0" placeholder="Expir time (s)">
-                                    <span class="help-block m-b-none">消息过期时间,单位秒</span>
-                                    <p>&nbsp;</p>
-                                </div>
-                            </div>
-
+</div>
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">MustBeSuccess：</label>
                                 <div class="col-sm-9">
@@ -278,7 +241,6 @@
     for (var name in ToServerList){
         $("#addToServerKey").append('<option value="'+name+'" toServerType="'+ToServerList[name].Type+'" datatype="'+ToServerList[name].TypeAndRule.DataTypeList+'">'+name+'</option>');
     }
-    //console.log(ToServerList);
 
     function showAddTable(obj){
 		var addTableSchemaName = $("#DatabaseListContair a.active").find("h3").text();
@@ -516,10 +478,13 @@
 		var doChangeTypeRule = function(){
             var toServerKey = $("#addToServerKey").val();
             var dataType = $("#addToServerType").val();
-            var keyRule = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].Key
-            var KeyExample = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].KeyExample
-            $("#KeyConfig").attr("placeholder",KeyExample)
-            $("#KeyConfig").attr("title",KeyExample)
+            var keyRule = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].Key;
+            var KeyExample = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].KeyExample;
+            $("#KeyConfig").attr("placeholder",KeyExample);
+            $("#KeyConfig").attr("title",KeyExample);
+            $("#plugin_param_div").load("/plugin/"+ToServerList[toServerKey].Type+"/param.html");
+
+            $.getScript("/plugin/"+ToServerList[toServerKey].Type+"/"+ToServerList[toServerKey].Type+".js",function(){});
         }
 
 		$("#addToServerType").change(
@@ -589,6 +554,9 @@
 
         $("#addToServerBtn").click(
             function(){
+                var p = doGetParam();
+                console.log(p);
+                return;
                 var dbname = $("#tableToServerListContair").attr("dbname");
                 var schema_name = $("#tableToServerListContair").attr("schema");
                 var table_name = $("#tableToServerListContair").attr("table_name");
@@ -606,6 +574,7 @@
                 var MustBeSuccess = $("input[name='MustBeSuccess']:checked").val();
                 var AddEventType = $("input[name='AddEventType']:checked").val();
                 var addToServerKey = $("#addToServerKey").val();
+                /*
                 var addToServerType = $("#addToServerType").val();
                 var addToServerDataType = $("#addToServerDataType").val();
                 var KeyConfig = $("#KeyConfig").val();
@@ -618,6 +587,7 @@
                     alert("DataType==string,ValueConfig muest be!");
                     return false;
                 }
+                */
 
                 /**
                  * check key and val rule
@@ -629,6 +599,8 @@
                         return false;
                     }
                 }
+
+                /*
                 if (addToServerDataType == "string"){
                     var valRule = ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Val;
                     if (valRule == "json"){
@@ -651,6 +623,7 @@
                         }
                     }
                 }
+                */
 
                 var AddSchemaName = $("input[name='AddSchemaName']:checked").val();
                 var AddTableName = $("input[name='AddTableName']:checked").val();
@@ -665,16 +638,20 @@
                     table_name:table_name,
                     toserver_key:addToServerKey,
                     type:addToServerType,
-                    datatype:addToServerDataType,
+                    //datatype:addToServerDataType,
                     mustbe:MustBeSuccess,
+                    /*
                     add_eventtype:AddEventType,
                     key_config:KeyConfig,
                     val_config:ValueConfig,
+                    */
                     add_schemaname:AddSchemaName,
                     add_tablename:AddTableName,
                     fieldlist:fieldlist.toString(),
-                    expir:Expir,
+                    //expir:Expir,
                 }
+
+
                 $.post(url,
                         data,
                         function(data,status){

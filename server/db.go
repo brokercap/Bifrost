@@ -387,6 +387,7 @@ type ToServer struct {
 	Expir 		  int
 	BinlogFileNum int
 	BinlogPosition uint32
+	Param         interface{}
 }
 
 type Table struct {

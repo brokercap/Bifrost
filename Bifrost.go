@@ -19,7 +19,7 @@ import (
 	"log"
 
 	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/plugin"
 	"github.com/jc3wish/Bifrost/manager"
 	"github.com/jc3wish/Bifrost/config"
 	"flag"
@@ -216,7 +216,7 @@ func doSaveDbInfo(){
 	}()
 	data := recoveryData{
 		Version:config.VERSION,
-		ToServer:toserver.SaveToServerData(),
+		ToServer:plugin.SaveToServerData(),
 		DbInfo:server.SaveDBInfoToFileData(),
 	}
 	b,_:= json.Marshal(data)
@@ -254,7 +254,7 @@ func doRecovery(){
 		log.Printf("recovery error:%s, data:%s \r\n",errors,string(fd))
 	}
 	if string(*data.ToServer) != "{}"{
-		toserver.Recovery(data.ToServer)
+		plugin.Recovery(data.ToServer)
 	}
 	if string(*data.DbInfo) != "{}"{
 		server.Recovery(data.DbInfo)

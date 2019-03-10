@@ -25,7 +25,7 @@ import (
 import (
 	"github.com/jc3wish/Bifrost/toserver/driver"
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
-	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/plugin"
 	dataDriver "database/sql/driver"
 	"regexp"
 	"github.com/jc3wish/Bifrost/server/count"
@@ -141,7 +141,7 @@ func (This *consume_channel_obj) consume_channel() {
 
 				ToServerKey := toServerInfo.ToServerKey
 				if _, ok := This.connMap[ToServerKey]; !ok {
-					This.connMap[ToServerKey] = toserver.Start(ToServerKey)
+					This.connMap[ToServerKey] = plugin.Start(ToServerKey)
 				}
 				var KeyConfig string
 				var ValConfig interface{}
