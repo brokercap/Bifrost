@@ -32,8 +32,6 @@
                                 <th>ToServerKey</th>
                                 <th>Type</th>
                                 <th>ConnUri</th>
-                                <th>DataTypeList</th>
-                                <th>Key Example</th>
                                 <th>LastID</th>
                                 <th>CurrentConn</th>
                                 <th>Notes</th>
@@ -45,19 +43,9 @@
                             <tr>
                                 <td>{{$i}}</td>
                                 <td>{{$v.Type}}</td>
+
                                 <td>
                                 {{$v.ConnUri}}
-                                </td>
-                                <td>{{$v.TypeAndRule.DataTypeList}}</td>
-                                <td>
-                                {{range $key,$val := $v.TypeAndRule.TypeList}}
-                                    {{if ne $val.Key "" }}
-                                        <p>{{$key}} pattern: {{$val.Key}}</p>
-                                    {{end}}
-                                    {{if ne $val.KeyExample ""}}
-                                        <p>{{$key}} example: {{$val.KeyExample}}</p>
-                                    {{end}}
-                                {{end}}
                                 </td>
                                 <td>{{$v.LastID}}</td>
                                 <td>{{$v.CurrentConn}}</td>

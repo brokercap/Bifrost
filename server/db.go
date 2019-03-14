@@ -75,7 +75,7 @@ func DelDB(Name string) bool {
 }
 
 type db struct {
-	sync.Mutex
+	sync.RWMutex
 	Name               string `json:"Name"`
 	ConnectUri         string `json:"ConnectUri"`
 	ConnStatus         string `json:"ConnStatus"` //close,stop,starting,running
@@ -276,11 +276,13 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int) bool
 		db.tableMap[key] = &Table{
 			Name:         tableName,
 			ChannelKey:   ChannelKey,
-			ToServerList: make([]ToServer, 0),
+			ToServerList: make([]*ToServer, 0),
+			LastToServerID: 0,
 		}
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
+		log.Println("key:",key,"db.tableMap[key]：",db.tableMap[key])
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
 		db.Unlock()
@@ -297,47 +299,33 @@ func (db *db) GetTable(schemaName string, tableName string) *Table {
 	}
 }
 
+func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap map[string]*Table) {
+	TableMap = make(map[string]*Table,0)
+	for k,v := range db.tableMap{
+		if v.ChannelKey == ChanneKey && len(v.ToServerList) > 0 {
+			TableMap[k] = v
+		}
+	}
+	return
+}
+
 func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := schemaName + "-" + tableName
 	if _, ok := db.tableMap[key]; !ok {
 		return true
 	} else {
 		db.Lock()
+		for _,toServerInfo := range db.tableMap[key].ToServerList{
+			toServerInfo.Lock()
+			if toServerInfo.Status == "running"{
+				toServerInfo.Status = "deling"
+			}
+			toServerInfo.Unlock()
+		}
 		delete(db.tableMap,key)
 		db.Unlock()
 		count.DelTable(db.Name,key)
 		log.Println("DelTable",db.Name,schemaName,tableName)
-	}
-	return true
-}
-
-func (db *db) AddTableToServer(schemaName string, tableName string, toserver ToServer) bool {
-	key := schemaName + "-" + tableName
-	if _, ok := db.tableMap[key]; !ok {
-		return false
-	} else {
-		db.Lock()
-		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
-		db.Unlock()
-		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
-	}
-	return true
-}
-
-func (db *db) DelTableToServer(schemaName string, tableName string, index int) bool {
-	key := schemaName + "-" + tableName
-	if _, ok := db.tableMap[key]; !ok {
-		return false
-	} else {
-		db.Lock()
-		if len(db.tableMap[key].ToServerList) < index-1{
-			db.Unlock()
-			return true
-		}
-		toServerInfo := db.tableMap[key].ToServerList[index]
-		db.tableMap[key].ToServerList=append(db.tableMap[key].ToServerList[:index],db.tableMap[key].ToServerList[index+1:]...)
-		db.Unlock()
-		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 	}
 	return true
 }
@@ -372,29 +360,11 @@ func (db *db) GetChannel(channelID int) *Channel {
 	return db.channelMap[channelID]
 }
 
-type ToServer struct {
-	sync.RWMutex
-	MustBeSuccess bool
-	Type          string
-	DataType      string //string , json
-	AddEventType  bool
-	AddSchemaName bool
-	AddTableName  bool
-	KeyConfig     string
-	ValueConfig   string
-	FieldList     []string
-	ToServerKey   string
-	Expir 		  int
-	BinlogFileNum int
-	BinlogPosition uint32
-	Param         interface{}
-}
-
 type Table struct {
 	sync.Mutex
-	Name         string
-	ChannelKey   int
-	ToServerList []ToServer
-	//Plugin      string //*.so ,default:default.so
+	Name         	string
+	ChannelKey   	int
+	LastToServerID  int
+	ToServerList 	[]*ToServer
 }
 

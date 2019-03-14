@@ -18,18 +18,18 @@ import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
 	"strconv"
-	"log"
 	"html/template"
+	"fmt"
 )
 
 func init(){
-	AddRoute("/channel/list",channle_list_controller)
-	AddRoute("/channel/add",channle_add_controller)
-	AddRoute("/channel/stop",channle_stop_controller)
-	AddRoute("/channel/start",channle_start_controller)
-	AddRoute("/channel/del",channle_del_controller)
-	AddRoute("/channel/close",channle_close_controller)
-	AddRoute("/channel/deal",channle_deal_controller)
+	addRoute("/channel/list",channle_list_controller)
+	addRoute("/channel/add",channle_add_controller)
+	addRoute("/channel/stop",channle_stop_controller)
+	addRoute("/channel/start",channle_start_controller)
+	addRoute("/channel/del",channle_del_controller)
+	addRoute("/channel/close",channle_close_controller)
+	addRoute("/channel/tablelist",channle_tablelist_controller)
 }
 
 func channle_add_controller(w http.ResponseWriter,req *http.Request){
@@ -54,11 +54,6 @@ func channle_add_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func channle_list_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	type channelResult struct {
 		TemplateHeader
 		DbName string
@@ -74,12 +69,6 @@ func channle_list_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func channle_stop_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-			return
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	channelIDString := req.Form.Get("channelid")
@@ -95,12 +84,6 @@ func channle_stop_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func channle_close_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-			return
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	channelIDString := req.Form.Get("channelid")
@@ -116,11 +99,6 @@ func channle_close_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func channle_start_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			return
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	channelIDString := req.Form.Get("channelid")
@@ -135,36 +113,17 @@ func channle_start_controller(w http.ResponseWriter,req *http.Request){
 	return
 }
 
-func channle_deal_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			return
-		}
-	}()
-	req.ParseForm()
-	dbname := req.Form.Get("dbname")
-	channelIDString := req.Form.Get("channelid")
-	channelID,_:=strconv.Atoi(channelIDString)
-	ch := server.GetChannel(dbname,channelID)
-	if ch == nil{
-		w.Write(returnResult(false,"channel not exsit"))
-		return
-	}
-	errorid:= GetFormInt(req,"error_id")
-	ch.DealWaitError(errorid)
-	w.Write(returnResult(true,"success"))
-	return
-}
-
 func channle_del_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			return
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	channelID:= GetFormInt(req,"channelid")
+	db := server.GetDBObj(dbname)
+	TableMap := db.GetTableByChannelKey(dbname,channelID)
+	n := len(TableMap)
+	if len(TableMap) > 0 {
+		w.Write(returnResult(false,"The channel bind table count:"+fmt.Sprint(n)))
+		return
+	}
 	r := server.DelChannel(dbname,channelID)
 	if r == true{
 		w.Write(returnResult(true,"success"))
@@ -172,4 +131,35 @@ func channle_del_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false,"channel or db not exsit"))
 	}
 	return
+}
+
+
+func channle_tablelist_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	channelID:= GetFormInt(req,"channelid")
+	channelInfo:= server.GetChannel(dbname,channelID)
+	if channelInfo == nil{
+		w.Write(returnResult(false,"channel not exsit"))
+		return
+	}
+	db := server.GetDBObj(dbname)
+	type channelTableResult struct {
+		TemplateHeader
+		ChannelID int
+		DbName string
+		ChannelName string
+		TableList map[string]*server.Table
+	}
+	TableMap := db.GetTableByChannelKey(dbname,channelID)
+	var data channelTableResult
+	data = channelTableResult{
+		TableList:TableMap,
+		DbName:dbname,
+		ChannelName:channelInfo.Name,
+		ChannelID:channelID,
+		}
+	data.Title = dbname +" - Table List - Channel - Bifrost"
+	t, _ := template.ParseFiles(TemplatePath("manager/template/channel.table.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t.Execute(w, data)
 }

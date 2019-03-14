@@ -56,13 +56,12 @@
                                 <thead>
                                 <tr>
                                     <th data-field="sliceid">sliceId</th>
-                                    <th data-field="Type">Type</th>
-                                    <th data-field="DataType">DataType</th>
-                                    <th data-field="KeyConfig">KeyConfig</th>
-                                    <th data-field="ValueConfig">ValueConfig</th>
-                                    <th data-field="FieldList">FieldList</th>
+                                    <th data-field="PluginType">PluginType</th>
                                     <th data-field="ToServerKey">ToServerKey</th>
+                                    <th data-field="FieldList">FieldList</th>
                                     <th data-field="Others">Others</th>
+                                    <th data-field="Plugin">Plugin</th>
+                                    <th data-field="Error">Error</th>
                                     <th data-field="op">op</th>
                                 </tr>
                                 </thead>
@@ -90,18 +89,11 @@
 
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">Type：</label>
-                                <div class="col-sm-9">
-                                    <select class="form-control" name="addToServerType" id="addToServerType">
-                                        <option value="set">set</option>
-                                        <option value="list">list</option>
-                                    </select><span class="help-block m-b-none"></span>
-                                </div>
-                            </div>
-<div id="plugin_param_div">
+                            
+<div id="plugin_param_div" style="padding:10px 0px">
 
 </div>
+
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">MustBeSuccess：</label>
                                 <div class="col-sm-9">
@@ -204,8 +196,9 @@
 	//var ToServer;
     var ToServerList;
     ToServerList = $.parseJSON('{{.ToServerList}}');
+	console.log(ToServerList);
     for (var name in ToServerList){
-        $("#addToServerKey").append('<option value="'+name+'" toServerType="'+ToServerList[name].Type+'" datatype="'+ToServerList[name].TypeAndRule.DataTypeList+'">'+name+'</option>');
+        $("#addToServerKey").append('<option value="'+name+'" toServerType="'+ToServerList[name].Type+'">'+ToServerList[name].Type+' -- '+name+'</option>');
     }
 
     function showAddTable(obj){
@@ -311,16 +304,30 @@
 					if (v.FieldList != null) {
 						fields = v.FieldList.toString();
 					}
+					var PluginHtml = "";
+					for(var key in v.PluginParam){
+						PluginHtml += "<p>"+key+":"+v.PluginParam[key]+"</p>";
+					}
+					var ErrorHtml = "";
+					if (v.Error != "" && v.Error != null){
+						ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")=' type='button'>Miss</button></p>";
+					}
+					var op = "";
+					if(v.Status == "running" || v.Status == ""){
+						op = '<button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+					}else{
+						op = v.Status;
+					}
+				
 					e.push({
 							sliceid:index,
-							Type:v.Type,
-							DataType:v.DataType,
-							KeyConfig:v.KeyConfig,
-							ValueConfig:v.ValueConfig,
-							FieldList:fields,
+							PluginType:v.ToServerType,
 							ToServerKey:v.ToServerKey,
-                            Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>AddEventType: "+v.AddEventType+"</p><p>AddSchemaName: "+v.AddSchemaName+"</p><p>AddTableName: "+v.AddTableName+"</p><p>Expir: "+v.Expir+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
-							op:'<button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTableToServer(this)">DEL</button></div>',
+							FieldList:fields,
+                            Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
+							Plugin:PluginHtml,
+							Error:ErrorHtml,
+							op:op,
 							}
 					);
 				});
@@ -333,7 +340,7 @@
 		'json');
 	}
 	
-	function DelTableToServer(obj){
+	function DelTableToServer(obj,ToServerID){
 		var index = $(obj).parent().parent().children().eq(0).text();
 		if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
 			return false;
@@ -344,7 +351,7 @@
 
 		var url = "/table/deltoserver"
 		$.post(url,
-			{dbname:dbname,schema_name:schema_name,table_name:table_name,index:index},
+			{dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
 			function(data,status){
 				if( status != 'success' ){
 					alert("reqeust error, reqeust status : "+status);
@@ -391,6 +398,13 @@
 
     var DataBaseMap = new Map();
 	$(function(){
+		
+		$(":text").focus(
+			function(){
+				OnFoucsInputId = $(this).attr("id");
+			}
+		);
+		
 		$("#DatabaseListContair a").click(
 			function(){
 				$("#DatabaseListContair a").removeClass("active");
@@ -434,75 +448,17 @@
 			}
 		);
 
-        //init type select
-
-		$("#addToServerKey").change(function () {
-            doChangeTypeSelectHtml();
-        });
-
+		var doChangeToServer = function(){
+		    var toServerKey = $("#addToServerKey").val();
+			var toServerType = ToServerList[toServerKey].Type;
+            $("#plugin_param_div").load("/plugin/"+toServerType+"/"+toServerType+".html");
+            $.getScript("/plugin/"+toServerType+"/"+toServerType+".js",function(){});
+		}
 		//type change, rule change
-		var doChangeTypeRule = function(){
-            var toServerKey = $("#addToServerKey").val();
-            var dataType = $("#addToServerType").val();
-            var keyRule = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].Key;
-            var KeyExample = ToServerList[toServerKey].TypeAndRule.TypeList[dataType].KeyExample;
-            $("#KeyConfig").attr("placeholder",KeyExample);
-            $("#KeyConfig").attr("title",KeyExample);
-            $("#plugin_param_div").load("/plugin/"+ToServerList[toServerKey].Type+"/param.html");
-
-            $.getScript("/plugin/"+ToServerList[toServerKey].Type+"/"+ToServerList[toServerKey].Type+".js",function(){});
-        }
-
-		$("#addToServerType").change(
-		    function(){
-                doChangeTypeRule();
-            }
-        );
-
-		//dataType list
-		var doChangeDataTypeSelectHtml = function(){
-            var dataType = $("#addToServerDataType").val();
-            if (dataType == ""){
-                return
-            }
-            if (dataType == "string"){
-                $("#ValueConfigContair").show();
-                $("#AddEventTypeContair").hide();
-                $("#AddSchemaNameContair").hide();
-                $("#AddTableNameContair").hide();
-            }else{
-                $("#ValueConfigContair").hide();
-                $("#AddEventTypeContair").show();
-                $("#AddSchemaNameContair").show();
-                $("#AddTableNameContair").show();
-            }
-        };
-
-        $("#addToServerDataType").change(
-            function() {
-                doChangeDataTypeSelectHtml();
-            }
-        );
-
-        //Type list
-        var doChangeTypeSelectHtml = function(){
-            var toServerKey = $("#addToServerKey").val();
-            $("#addToServerType").html("");
-            //$("#addToServerDataType").html("");
-            for (var typeName in ToServerList[toServerKey].TypeAndRule.TypeList){
-                var html = '<option value="'+typeName+'" >'+typeName+'</option>';
-                $("#addToServerType").append(html);
-            }
-            $("#addToServerType").val(typeName);
-            $("#addToServerDataType").html("");
-            for (var i=0;i<ToServerList[toServerKey].TypeAndRule.DataTypeList.length;i++){
-                var dataTypeName = ToServerList[toServerKey].TypeAndRule.DataTypeList[i];
-                $("#addToServerDataType").append('<option value="'+dataTypeName+'" >'+dataTypeName+'</option>');
-            }
-            doChangeTypeRule();
-            doChangeDataTypeSelectHtml();
-        }
-        doChangeTypeSelectHtml();
+		$("#addToServerKey").change(function(){
+			doChangeToServer();
+        });
+		doChangeToServer();
 
         $("#TableFieldsContair").on("dblclick","p.fieldsname",function(){
             if (OnFoucsInputId == ""){
@@ -515,9 +471,10 @@
         $("#addToServerBtn").click(
             function(){
                 var p = doGetParam();
-                console.log(p);
-                //return;
-                var addToServerType = $("#addToServerType").val();
+				if (p.status == false){
+					alert(p.msg);
+					return false;
+				}
                 var dbname = $("#tableToServerListContair").attr("dbname");
                 var schema_name = $("#tableToServerListContair").attr("schema");
                 var table_name = $("#tableToServerListContair").attr("table_name");
@@ -529,34 +486,21 @@
                 var MustBeSuccess = $("input[name='MustBeSuccess']:checked").val();
 
                 var addToServerKey = $("#addToServerKey").val();
-
-                /**
-                 * check key and val rule
-                 * */
-                /*
-                if (ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Key != ""){
-                    var keyp=new RegExp(ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Key);
-                    if (keyp.test(KeyConfig) == false){
-                        alert("KeyConfig rule:"+ToServerList[addToServerKey].TypeAndRule.TypeList[addToServerType].Key);
-                        return false;
-                    }
-                }
-                */
-
                 var fieldlist = [];
                 $.each($("#TableFieldsContair input:checkbox:checked"),function(){
                     fieldlist.push($(this).val());
                 });
+				var toServerType = $("#addToServerKey").find("option:selected").attr("toServerType");
                 var url = '/table/addtoserver';
                 var data = {
                     dbname:dbname,
                     schema_name:schema_name,
                     table_name:table_name,
                     toserver_key:addToServerKey,
-                    type:addToServerType,
+					toserver_type:toServerType,
                     mustbe:MustBeSuccess,
                     fieldlist:fieldlist.toString(),
-                    param:JSON.stringify(p),
+                    param:JSON.stringify(p.data),
                 }
 
                 $.post(url,
@@ -576,16 +520,35 @@
 
             }
         );
-
-        $("#docBtn").click(
-            function(){
-                var toServerType = $("#addToServerKey").find("option:selected").attr("toServerType");
-                window.open("/docs#"+toServerType);
-            }
-        );
-
+		
 	});
+	
+	function DealWaitErr(obj,ToServerID){
+		var thisButton = $(obj);
+		var index = $(obj).parent().parent().parent("tr").children().eq(0).html();
+		var dbname = $("#tableToServerListContair").attr("dbname");
+		var schema_name = $("#tableToServerListContair").attr("schema");
+		var table_name = $("#tableToServerListContair").attr("table_name");
+		var url = "/table/toserver/deal";
 
+		$.post(
+				url,
+				{dbname: dbname,schema_name:schema_name,table_name:table_name,to_server_id:ToServerID,index:index,},
+				function(data,status){
+					if( status != 'success' ){
+						alert("reqeust error, reqeust status : "+status);
+						return false;
+					}
+					if(!data.status){
+						alert(data.msg);
+						return false;
+					}
+					thisButton.remove();
+				},
+				'json'
+		);
+     }
+	
     </script>
     
 {{template "footer" .}}

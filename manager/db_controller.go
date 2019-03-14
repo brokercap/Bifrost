@@ -28,13 +28,13 @@ import (
 )
 
 func init(){
-	AddRoute("/db/add",addDB_Action)
-	AddRoute("/db/stop",stopDB_Action)
-	AddRoute("/db/start",startDB_Action)
-	AddRoute("/db/close",closeDB_Action)
-	AddRoute("/db/del",delDB_Action)
-	AddRoute("/db/list",listDB_Action)
-	AddRoute("/db/check_uri",check_db_connect_Action)
+	addRoute("/db/add",addDB_Action)
+	addRoute("/db/stop",stopDB_Action)
+	addRoute("/db/start",startDB_Action)
+	addRoute("/db/close",closeDB_Action)
+	addRoute("/db/del",delDB_Action)
+	addRoute("/db/list",listDB_Action)
+	addRoute("/db/check_uri",check_db_connect_Action)
 }
 
 type dbListStruct struct{

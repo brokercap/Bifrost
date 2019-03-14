@@ -23,9 +23,9 @@ import (
 )
 
 func init()  {
-	AddRoute("/login",user_login)
-	AddRoute("/dologin",user_do_login)
-	AddRoute("/logout",user_logout)
+	addRoute("/login",user_login)
+	addRoute("/dologin",user_do_login)
+	addRoute("/logout",user_logout)
 }
 
 func user_login(w http.ResponseWriter,req *http.Request){

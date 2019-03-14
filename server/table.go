@@ -47,7 +47,7 @@ func AddTableToServer(db string,schemaName string,tableName string,ToServerInfo 
 	if _, ok := DbList[db].tableMap[key]; !ok {
 		return fmt.Errorf(key+" not exsit")
 	} else {
-		DbList[db].AddTableToServer(schemaName,tableName,ToServerInfo)
+		DbList[db].AddTableToServer(schemaName,tableName,&ToServerInfo)
 	}
 	return nil
 }

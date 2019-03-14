@@ -21,7 +21,7 @@ import (
 )
 
 func init()  {
-	AddRoute("/getversion",get_version_controller)
+	addRoute("/getversion",get_version_controller)
 }
 
 func get_version_controller(w http.ResponseWriter,req *http.Request){

@@ -18,18 +18,18 @@ import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
 	"github.com/jc3wish/Bifrost/plugin"
-	"fmt"
 	"strings"
 	"encoding/json"
 	"log"
 )
 
 func init(){
-	AddRoute("/table/del",table_del_controller)
-	AddRoute("/table/add",table_add_controller)
-	AddRoute("/table/toserverlist",table_toserverlist_controller)
-	AddRoute("/table/deltoserver",table_delToServer_controller)
-	AddRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/del",table_del_controller)
+	addRoute("/table/add",table_add_controller)
+	addRoute("/table/toserverlist",table_toserverlist_controller)
+	addRoute("/table/deltoserver",table_delToServer_controller)
+	addRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/toserver/deal",table_toserver_deal_controller)
 }
 
 func table_add_controller(w http.ResponseWriter,req *http.Request){
@@ -60,28 +60,24 @@ func table_del_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
 
 	toServerKey := req.Form.Get("toserver_key")
+	toserver_type := req.Form.Get("toserver_type")
 	FieldListString := req.Form.Get("fieldlist")
-	Type := req.Form.Get("type")
 	MustBeSuccess := req.Form.Get("mustbe")
 
 	p  := req.Form.Get("param")
+	var pluginParam map[string]interface{}
+	err := json.Unmarshal([]byte(p),&pluginParam)
 	log.Println("param",p)
-
-	w.Write(returnResult(true,"success"))
-	return
-
-	var toServer server.ToServer
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+		return
+	}
 
 	if plugin.GetToServerInfo(toServerKey) == nil{
 		w.Write(returnResult(false,toServerKey+"not exsit"))
@@ -96,24 +92,19 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		}
 	}
 
-	if Type != "set" && Type != "list"{
-		w.Write(returnResult(false,"type must be set or list"))
-		return
-	}
-
 	var MustBeSuccessBool bool = false
 	if MustBeSuccess == "1"{
 		MustBeSuccessBool = true
 	}
 
-	toServer = server.ToServer{
+	toServer := &server.ToServer{
 		MustBeSuccess: MustBeSuccessBool,
-		Type:          Type,
 		ToServerKey:   toServerKey,
+		ToServerType:  toserver_type,
 		FieldList:     fileList,
 		BinlogFileNum: 0,
 		BinlogPosition:0,
-		Param:			make(map[string]interface{}),
+		PluginParam:	pluginParam,
 	}
 	dbObj := server.GetDBObj(dbname)
 	r := dbObj.AddTableToServer(schema,tablename,toServer)
@@ -125,33 +116,39 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func table_delToServer_controller(w http.ResponseWriter,req *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
 	index :=  GetFormInt(req,"index")
-	server.GetDBObj(dbname).DelTableToServer(schema,tablename,index)
+	ToServerID := GetFormInt(req,"to_server_id")
+	server.GetDBObj(dbname).DelTableToServer(schema,tablename,index,ToServerID)
 	w.Write(returnResult(true,"success"))
 }
 
 func table_toserverlist_controller(w http.ResponseWriter,req *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
-	tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
-	toserverList := tableObj.ToServerList
-	b,_:=json.Marshal(toserverList)
+	t1:=server.GetDBObj(dbname)
+	tableObj:=t1.GetTable(schema,tablename)
+	//tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
+	b,_:=json.Marshal(tableObj.ToServerList)
 	w.Write(b)
+}
+
+func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+	ToServerID := GetFormInt(req,"to_server_id")
+	index :=  GetFormInt(req,"index")
+	ToServerInfo := server.GetDBObj(dbname).GetTable(schema,tablename).ToServerList[index]
+	if ToServerInfo.ToServerID == ToServerID{
+		ToServerInfo.DealWaitError()
+	}
+	w.Write(returnResult(true,"success"))
 }
 

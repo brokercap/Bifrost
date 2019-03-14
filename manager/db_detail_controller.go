@@ -17,7 +17,6 @@ package manager
 
 import (
 	"net/http"
-	"log"
 	"html/template"
 	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
@@ -25,17 +24,12 @@ import (
 )
 
 func init(){
-	AddRoute("/db/detail",db_detail_controller)
-	AddRoute("/db/tablelist",get_table_List_controller)
-	AddRoute("/db/tablefields",get_table_fields_controller)
+	addRoute("/db/detail",db_detail_controller)
+	addRoute("/db/tablelist",get_table_List_controller)
+	addRoute("/db/tablefields",get_table_fields_controller)
 }
 
 func db_detail_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	type dbDetail struct {
 		TemplateHeader
 		DbName string
@@ -61,11 +55,6 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func get_table_List_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
@@ -103,11 +92,6 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 
 
 func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")

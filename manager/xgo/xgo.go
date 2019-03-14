@@ -17,8 +17,8 @@ package xgo
 
 import (
 	"net/http"
-	"log"
 	"strings"
+	"runtime/debug"
 )
 
 type HandlerFun interface {
@@ -52,7 +52,7 @@ func AddRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request)
 func rounteFunc(w http.ResponseWriter,req *http.Request){
 	defer func() {
 		if err := recover();err!=nil{
-			log.Println(err)
+			debug.PrintStack()
 		}
 	}()
 	var route string

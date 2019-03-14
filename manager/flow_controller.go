@@ -24,8 +24,8 @@ import (
 )
 
 func init(){
-	AddRoute("/flow/get",get_flow_controller)
-	AddRoute("/flow/index",index_flow_controller)
+	addRoute("/flow/get",get_flow_controller)
+	addRoute("/flow/index",index_flow_controller)
 }
 
 func index_flow_controller(w http.ResponseWriter,req *http.Request){

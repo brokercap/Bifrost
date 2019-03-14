@@ -18,11 +18,10 @@ package manager
 import (
 	"net/http"
 	"text/template"
-	"github.com/jc3wish/Bifrost/plugin/driver"
 )
 
 func init(){
-	AddRoute("/docs",docs_controller)
+	addRoute("/docs",docs_controller)
 }
 
 func docs_controller(w http.ResponseWriter,req *http.Request){
@@ -30,7 +29,7 @@ func docs_controller(w http.ResponseWriter,req *http.Request){
 		TemplateHeader
 		ToServerDocs map[string]string
 	}
-	data := docs{ToServerDocs:driver.GetDocs()}
+	data := docs{}
 	data.Title =  "docs - Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/docs.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)

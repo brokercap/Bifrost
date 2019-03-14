@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"strconv"
 	"github.com/jc3wish/Bifrost/manager/xgo"
-	"log"
 	"os/exec"
 	"os"
 	"path/filepath"
 	"strings"
+	"fmt"
+	"runtime/debug"
 )
 
 var execDir string
@@ -57,7 +58,6 @@ type resultDataStruct struct {
 	Data interface{} `json:"data"`
 }
 
-
 var sessionMgr *xgo.SessionMgr = nil //session管理器
 
 func returnResult(r bool,msg string)[]byte{
@@ -80,7 +80,7 @@ func GetFormInt(req *http.Request,key string) int{
 	}
 }
 
-func AddRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request) ){
+func addRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request) ){
 	xgo.AddRoute(route,callbackFUns)
 }
 
@@ -88,7 +88,7 @@ func index_controller(w http.ResponseWriter,req *http.Request){
 	http.Redirect(w, req, "/db/list", http.StatusFound)
 }
 
-func Controller_FirstCallback(w http.ResponseWriter,req *http.Request) bool {
+func controller_FirstCallback(w http.ResponseWriter,req *http.Request) bool {
 	var sessionID= sessionMgr.CheckCookieValid(w, req)
 
 	if sessionID != "" {
@@ -112,7 +112,7 @@ func Controller_FirstCallback(w http.ResponseWriter,req *http.Request) bool {
 func Start(IpAndPort string){
 	defer func() {
 		if err:=recover(); err!= nil{
-			log.Println(err)
+			debug.PrintStack()
 		}
 	}()
 	sessionMgr = xgo.NewSessionMgr("xgo_cookie", 3600)
@@ -121,9 +121,16 @@ func Start(IpAndPort string){
 	xgo.AddStaticRoute("/fonts/",TemplatePath("manager/public/"))
 	xgo.AddStaticRoute("/img/",TemplatePath("manager/public/"))
 	xgo.AddStaticRoute("/plugin/",TemplatePath("manager/"))
-	xgo.SetFirstCallBack(Controller_FirstCallback)
+	xgo.SetFirstCallBack(controller_FirstCallback)
 	xgo.AddRoute("/",index_controller)
 	xgo.Start(IpAndPort)
 }
 
-
+func AddPluginController(route string, callbackFUns func(http.ResponseWriter,*http.Request) ) error{
+	if strings.Index(route,"/plugin") == 0{
+		xgo.AddRoute(route,callbackFUns)
+		return nil
+	}else{
+		return fmt.Errorf("must be /plugin start");
+	}
+}

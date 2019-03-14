@@ -90,32 +90,30 @@ func recoveryData(data map[string]dbSaveInfo){
 		}
 		var BinlogFileNum int = 0
 		var BinlogPosition uint32 = 0
-		for tKey,tInfo := range dbInfo.TableMap{
-			i := strings.IndexAny(tKey, "-")
-			schemaName := tKey[0:i]
-			tableName := tKey[i+1:]
-			db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey])
-			for _,toServer := range tInfo.ToServerList{
-				db.AddTableToServer(schemaName, tableName,
-					ToServer{
-						MustBeSuccess:toServer.MustBeSuccess,
-						Type:          toServer.Type,
-						DataType:	   toServer.DataType,
-						KeyConfig:     toServer.KeyConfig,
-						ValueConfig:   toServer.ValueConfig,
-						ToServerKey:   toServer.ToServerKey,
-						AddEventType:  toServer.AddEventType,
-						AddSchemaName: toServer.AddSchemaName,
-						AddTableName:  toServer.AddTableName,
-						Expir:		   toServer.Expir,
-						BinlogFileNum: toServer.BinlogFileNum,
-						BinlogPosition:toServer.BinlogPosition,
-					})
-				if BinlogFileNum == 0 || BinlogFileNum < toServer.BinlogFileNum{
-					BinlogFileNum = toServer.BinlogFileNum
-					BinlogPosition = toServer.BinlogPosition
-				}else if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition{
-					BinlogPosition = toServer.BinlogPosition
+		if len(dbInfo.TableMap) > 0 {
+			for tKey, tInfo := range dbInfo.TableMap {
+				i := strings.IndexAny(tKey, "-")
+				schemaName := tKey[0:i]
+				tableName := tKey[i+1:]
+				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey])
+				for _, toServer := range tInfo.ToServerList {
+					db.AddTableToServer(schemaName, tableName,
+						&ToServer{
+							ToServerID:		toServer.ToServerID,
+							MustBeSuccess:  toServer.MustBeSuccess,
+							ToServerKey:    toServer.ToServerKey,
+							ToServerType:   toServer.ToServerType,
+							FieldList:      toServer.FieldList,
+							BinlogFileNum:  toServer.BinlogFileNum,
+							BinlogPosition: toServer.BinlogPosition,
+							PluginParam:    toServer.PluginParam,
+						})
+					if BinlogFileNum == 0 || BinlogFileNum < toServer.BinlogFileNum {
+						BinlogFileNum = toServer.BinlogFileNum
+						BinlogPosition = toServer.BinlogPosition
+					} else if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition {
+						BinlogPosition = toServer.BinlogPosition
+					}
 				}
 			}
 		}

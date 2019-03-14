@@ -34,7 +34,6 @@
                                 <th>MaxThreadNum</th>
                                 <th>CurrentThreadNum</th>
                                 <th>Status</th>
-                                <th>WaitErr</th>
                                 <th>OP</th>
                             </tr>
                             </thead>
@@ -46,15 +45,6 @@
                                 <td>{{$v.MaxThreadNum}}</td>
                                 <td>{{$v.CurrentThreadNum}}</td>
                                 <td>{{$v.Status}}</td>
-                                <td>
-                                {{range $key,$val := $v.Errs}}
-                                    <div>
-                                    <p>Errs: {{$val.WaitErr}}</p>
-                                    <p>Data: {{$val.WaitData}} {{if eq $val.WaitDeal 0}}<button data-toggle="button" class="btn-sm btn-primary DealWaitErr" type="button" ErrorId="{{$key}}">Miss</button>{{end}}</p>
-                                    <p>&nbsp;</p>
-                                    </div>
-                                {{end}}
-                                </td>
                                 <td>
                             {{if eq $v.Status "running"}}
                                 <button data-toggle="button" class="btn-sm btn-warning stopChannelBtn" onclick="DoChangeDbStatus(this,'stop')" type="button" >Stop</button>
@@ -74,6 +64,10 @@
 
                                 <a href="/flow/index?channelid={{$v.Name}}&dbname={{$.DbName}}" target="_blank">
                                     <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                </a>
+
+                                <a href="/channel/tablelist?channelid={{$i}}&dbname={{$.DbName}}" target="_blank">
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button">TableList</button>
                                 </a>
 
                                 </td>
