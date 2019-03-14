@@ -2,17 +2,18 @@ package hprose
 
 import (
 	"fmt"
-	dataDriver "database/sql/driver"
 	"github.com/hprose/hprose-golang/rpc"
-	"log"
+	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	"encoding/json"
 )
 
 type Stub struct {
 	Check   func() error
-	Insert  func(key string,timeout int, data map[string]dataDriver.Value) (e error)
-	Update  func(key string,timeout int, data map[string]dataDriver.Value) (e error)
-	Delete  func(key string) (e error)
-	ToList  func(key string,timeout int, data map[string]dataDriver.Value) (e error)
+	ToList  func(SchemaName string,TableName string,EventType string, data interface{}) (e error)
+	Insert  func(SchemaName string,TableName string,data map[string]interface{}) (e error)
+	Update  func(SchemaName string,TableName string,data []map[string]interface{}) (e error)
+	Delete  func(SchemaName string,TableName string,data map[string]interface{}) (e error)
+	Query  func(SchemaName string,TableName string,sql string) (e error)
 }
 
 var stub *Stub
@@ -25,32 +26,38 @@ type Conn struct {
 	defaultClient rpc.Client
 	clientType string
 	err    error
-	expir  int
-	mustBeSuccess bool
-	p param
+	p PluginParam
 }
 
-type param struct {
-	Key string
+type PluginParam struct {
+	KeyConfig string
 	Expir int
 	DataType int
-	Content string
+	ValConfig string
 	Fields []string
 }
 
 func newConn(uri string) *Conn{
 	f := &Conn{
 		Uri:uri,
-		expir:0,
 		status:"close",
-		mustBeSuccess:false,
 	}
 	f.Connect()
 	return f
 }
 
-func (This *Conn) SetParam(p interface{}){
-	This.p = p.(param)
+func (This *Conn) SetParam(p interface{}) error{
+	s,err := json.Marshal(p)
+	if err != nil{
+		return err
+	}
+	var param PluginParam
+	err2 := json.Unmarshal(s,&param)
+	if err2 != nil{
+		return err2
+	}
+	This.p = param
+	return nil
 }
 
 func (This *Conn) GetConnStatus() string {
@@ -102,12 +109,21 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
+	This.clientType = checkUriType(This.Uri)
+	switch This.clientType {
+	case "tcp":
+		This.tcpClient.Close()
+		break
+	case "http":
+		This.httpClient.Close()
+		break
+	default:
+		This.defaultClient.Close()
+		break
+	}
 	return true
 }
 
-func (This *Conn) SetExpir(TimeOut int) {
-	This.expir = TimeOut
-}
 
 func (This *Conn) CheckUri() error {
 	if This.status != "running"{
@@ -128,8 +144,9 @@ func (This *Conn) CheckUri() error {
 	return err
 }
 
-func (This *Conn) Insert(key string, data interface{}) (bool,error) {
-	err := stub.Insert(key,This.expir,data.(map[string]dataDriver.Value))
+
+func (This *Conn) Insert(data *pluginDriver.PluginDataType) (bool,error) {
+	err := stub.Insert(data.SchemaName,data.TableName,data.Rows[0])
 	if err != nil{
 		This.err = err
 		return false,err
@@ -137,14 +154,8 @@ func (This *Conn) Insert(key string, data interface{}) (bool,error) {
 	return true,nil
 }
 
-func (This *Conn) Insert2(p interface{}) (bool,error) {
-	data := p.(map[string]dataDriver.Value)
-	log.Println(data)
-	return true,nil
-}
-
-func (This *Conn) Update(key string, data interface{}) (bool,error) {
-	err := stub.Update(key,This.expir,data.(map[string]dataDriver.Value))
+func (This *Conn) Update(data *pluginDriver.PluginDataType) (bool,error) {
+	err := stub.Update(data.SchemaName,data.TableName,data.Rows)
 	if err != nil{
 		This.err = err
 		return false,err
@@ -152,8 +163,9 @@ func (This *Conn) Update(key string, data interface{}) (bool,error) {
 	return true,nil
 }
 
-func (This *Conn) Del(key string) (bool,error) {
-	err := stub.Delete(key)
+
+func (This *Conn) Del(data *pluginDriver.PluginDataType) (bool,error) {
+	err := stub.Delete(data.SchemaName,data.TableName,data.Rows[0])
 	if err != nil{
 		This.err = err
 		return false,err
@@ -161,12 +173,23 @@ func (This *Conn) Del(key string) (bool,error) {
 	return true,nil
 }
 
-func (This *Conn) SetMustBeSuccess(b bool) {
-	return
+func (This *Conn) SendToList(data *pluginDriver.PluginDataType) (bool,error) {
+	queryType := data.EventType
+	var err error
+	if queryType == "sql"{
+		err = stub.ToList(data.SchemaName,data.TableName,queryType,data.Query)
+	}else{
+		err = stub.ToList(data.SchemaName,data.TableName,queryType,data.Rows)
+	}
+	if err != nil{
+		This.err = err
+		return false,err
+	}
+	return true,nil
 }
 
-func (This *Conn) SendToList(key string, data interface{}) (bool,error) {
-	err := stub.ToList(key,This.expir,data.(map[string]dataDriver.Value))
+func (This *Conn) Query(data *pluginDriver.PluginDataType) (bool,error) {
+	err := stub.Query(data.SchemaName,data.TableName,data.Query)
 	if err != nil{
 		This.err = err
 		return false,err
