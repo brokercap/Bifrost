@@ -5,20 +5,28 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
 )
 
 func init(){
 
 }
 
+
+type PluginDataType struct {
+	Timestamp 		uint32
+	EventType 		string
+	Rows            []map[string]interface{}
+	Query          	string
+	SchemaName     	string
+	TableName      	string
+	BinlogFileNum 	int
+	BinlogPosition 	uint32
+}
+
 type Driver interface {
 	Open(uri string) ConnFun
-	//GetTypeList() []string
 	GetUriExample() string
 	CheckUri(uri string) error
-	GetTypeAndRule() TypeAndRule
-	GetDoc() string
 }
 
 type ConnFun interface {
@@ -28,24 +36,16 @@ type ConnFun interface {
 	ReConnect() bool
 	HeartCheck()
 	Close() bool
-	Insert(key string, data interface{}) (bool,error)
-	Update(key string, data interface{}) (bool,error)
-	Del(key string) (bool,error)
-	SendToList(key string, data interface{}) (bool,error)
-	SetExpir(Expir int)
-	SetMustBeSuccess(b bool)
-	SetParam(p interface{})
+	Insert(data *PluginDataType) (bool,error)
+	Update(data *PluginDataType) (bool,error)
+	Del(data *PluginDataType) (bool,error)
+	Query(data *PluginDataType) (bool,error)
+	SetParam(p interface{}) error
 }
 
-type TypeRule struct {
-	Key string
-	KeyExample string
-	Val string
-}
-
-type TypeAndRule struct {
-	DataTypeList []string
-	TypeList map[string]TypeRule
+type PluginResult struct {
+	BinlogFileName string
+	BinlogPosition uint32
 }
 
 var (
@@ -87,14 +87,6 @@ func Open(name string,uri string) ConnFun{
 	return drivers[name].Open(uri)
 }
 
-func GetTypeAndRule(name string) TypeAndRule{
-	driversMu.RLock()
-	defer driversMu.RUnlock()
-	if _,ok := drivers[name];!ok{
-		return TypeAndRule{}
-	}
-	return drivers[name].GetTypeAndRule()
-}
 
 func CheckUri(name string,uri string) error{
 	driversMu.RLock()
@@ -105,32 +97,10 @@ func CheckUri(name string,uri string) error{
 	return drivers[name].CheckUri(uri)
 }
 
-func GetDocs() map[string]string{
-	driversMu.RLock()
-	defer driversMu.RUnlock()
-	docs := make(map[string]string,0)
-	for name,v := range drivers {
-		docs[name] = v.GetDoc()
-	}
-	return docs
-}
-
-
-func evenTypeName(e mysql.EventType) string {
-	switch e {
-	case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
-		return "insert"
-	case mysql.UPDATE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv2:
-		return "update"
-	case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
-		return "delete"
-	}
-	return fmt.Sprintf("%d", e)
-}
 
 const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 
-func transfeResult(val string, data *mysql.EventReslut,rowIndex int) string {
+func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 	r, _ := regexp.Compile(RegularxEpression)
 	p := r.FindAllStringSubmatch(val, -1)
 	for _, v := range p {
@@ -142,7 +112,7 @@ func transfeResult(val string, data *mysql.EventReslut,rowIndex int) string {
 			val = strings.Replace(val, "{$SchemaName}", data.SchemaName, -1)
 			break
 		case "EventType":
-			val = strings.Replace(val, "{$EventType}", evenTypeName(data.Header.EventType), -1)
+			val = strings.Replace(val, "{$EventType}", data.EventType, -1)
 			break
 		default:
 			val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)

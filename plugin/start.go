@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"github.com/jc3wish/Bifrost/plugin/driver"
+	"log"
+	"runtime/debug"
 )
 
 var l sync.Mutex
@@ -16,8 +18,6 @@ type ToServer struct {
 	Notes       string
 	LastID      int
 	CurrentConn int
-	DataTypeList []string
-	TypeAndRule driver.TypeAndRule
 }
 
 var ToServerMap map[string]*ToServer
@@ -30,9 +30,6 @@ func init() {
 }
 
 func GetToServerMap() map[string]*ToServer{
-	for _,v := range ToServerMap{
-		v.TypeAndRule = driver.GetTypeAndRule(v.Type)
-	}
 	return ToServerMap
 }
 
@@ -45,7 +42,6 @@ func SetToServerInfo(key string, Type string, ConnUri string, Notes string){
 			Notes: 			Notes,
 			LastID: 		0,
 			CurrentConn:	0,
-			TypeAndRule:	driver.GetTypeAndRule(Type),
 		}
 	}
 	l.Unlock()
@@ -71,7 +67,7 @@ func DelToServerInfo(key string) bool{
 	return true
 }
 
-func Start(key string) driver.ConnFun {
+func Start(key string) (driver.ConnFun,string) {
 	l.Lock()
 	if _, ok := ToServerConnList[key]; !ok {
 		ToServerConnList[key] = make(map[string]driver.ConnFun)
@@ -81,7 +77,7 @@ func Start(key string) driver.ConnFun {
 	var stringKey string
 	F = driver.Open(ToServerMap[key].Type,ToServerMap[key].ConnUri)
 	if F == nil{
-		return nil
+		return nil,""
 	}
 
 	ToServerMap[key].Lock()
@@ -91,10 +87,33 @@ func Start(key string) driver.ConnFun {
 	ToServerMap[key].Unlock()
 
 	if stringKey == "" {
-		return nil
+		return nil,""
 	}
 	l.Lock()
 	ToServerConnList[key][stringKey] = F
 	l.Unlock()
-	return F
+	return F,stringKey
+}
+
+func Close(key string,stringKey string) bool {
+	defer func() {
+		if err := recover();err !=nil{
+			log.Println(string(debug.Stack()))
+			return
+		}
+	}()
+	l.Lock()
+	defer l.Unlock()
+	if _, ok := ToServerConnList[key]; !ok {
+		return true
+	}
+	if _, ok := ToServerMap[key]; !ok {
+		return true
+	}
+	if _, ok := ToServerConnList[key][stringKey]; !ok {
+		return true
+	}
+	ToServerMap[key].CurrentConn--
+	ToServerConnList[key][stringKey].Close()
+	return true
 }
