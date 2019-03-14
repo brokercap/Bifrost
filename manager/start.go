@@ -120,7 +120,7 @@ func Start(IpAndPort string){
 	xgo.AddStaticRoute("/js/",TemplatePath("manager/public/"))
 	xgo.AddStaticRoute("/fonts/",TemplatePath("manager/public/"))
 	xgo.AddStaticRoute("/img/",TemplatePath("manager/public/"))
-	xgo.AddStaticRoute("/plugin/",TemplatePath("manager/"))
+	xgo.AddStaticRoute("/plugin/",TemplatePath("/"))
 	xgo.SetFirstCallBack(controller_FirstCallback)
 	xgo.AddRoute("/",index_controller)
 	xgo.Start(IpAndPort)

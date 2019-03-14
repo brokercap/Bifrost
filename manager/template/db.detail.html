@@ -451,8 +451,8 @@
 		var doChangeToServer = function(){
 		    var toServerKey = $("#addToServerKey").val();
 			var toServerType = ToServerList[toServerKey].Type;
-            $("#plugin_param_div").load("/plugin/"+toServerType+"/"+toServerType+".html");
-            $.getScript("/plugin/"+toServerType+"/"+toServerType+".js",function(){});
+            $("#plugin_param_div").load("/plugin/"+toServerType+"/www/"+toServerType+".html");
+            $.getScript("/plugin/"+toServerType+"/www/"+toServerType+".js",function(){});
 		}
 		//type change, rule change
 		$("#addToServerKey").change(function(){
