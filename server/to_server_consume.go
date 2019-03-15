@@ -9,12 +9,16 @@ import (
 	"fmt"
 )
 
+func (This *ToServer) pluginClose(){
+	if This.PluginConnKey != ""{
+		plugin.Close(This.ToServerKey,This.PluginConnKey)
+	}
+	This.PluginConn = nil
+}
 
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
 	defer func() {
-		if This.PluginConnKey != ""{
-			plugin.Close(This.ToServerKey,This.PluginConnKey)
-		}
+		This.pluginClose()
 		if err := recover();err !=nil{
 			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.ToServerType,This.ToServerKey,"ToServer consume_to_server over;err:",err)
 			return
