@@ -17,8 +17,6 @@ package main
 
 import (
 	"log"
-
-	"github.com/jc3wish/Bifrost/server"
 	"github.com/jc3wish/Bifrost/plugin"
 	"github.com/jc3wish/Bifrost/manager"
 	"github.com/jc3wish/Bifrost/config"
@@ -36,6 +34,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"github.com/jc3wish/Bifrost/server"
 )
 
 type recovery struct {
