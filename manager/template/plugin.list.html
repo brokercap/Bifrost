@@ -1,0 +1,65 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Plugin List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Version</th>
+                                <th>Dev For Bifrost</th>
+                                <th>Example ConnUri</th>
+                                <th>Erros</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .Drivers}}
+                            <tr>
+                                <td>{{$v.name}}</td>
+                                <td>{{$v.version}}</td>
+
+                                <td>
+                                {{$v.bifrost_version}}
+                                </td>
+                                <td>{{$v.uri}}</td>
+                                <td>{{$v.error}}</td>
+
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}
