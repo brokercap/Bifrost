@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"log"
 )
 
 func init(){
 
 }
-
 
 type PluginDataType struct {
 	Timestamp 		uint32
@@ -48,21 +48,38 @@ type PluginResult struct {
 	BinlogPosition uint32
 }
 
+type driverStructure struct{
+	Version string //插件版本
+	BifrostVersion string // 插件开发所使用的Bifrost的版本
+	Error   string
+	Driver  Driver
+}
+
 var (
 	driversMu sync.RWMutex
-	drivers   = make(map[string]Driver)
+	drivers   = make(map[string]driverStructure)
 )
 
-func Register(name string, driver Driver) {
+func Register(name string, driver Driver,version string,bifrost_version string) {
+	defer func() {
+		if err := recover();err!=nil{
+			log.Println(err)
+		}
+	}()
 	driversMu.Lock()
 	defer driversMu.Unlock()
 	if driver == nil {
-		panic("sql: Register driver is nil")
+		panic("Register driver is nil")
 	}
 	if _, ok := drivers[name]; ok {
-		panic("sql: Register called twice for driver " + name)
+		panic("Register called twice for driver " + name)
 	}
-	drivers[name] = driver
+	drivers[name] = driverStructure{
+		Version:version,
+		BifrostVersion:bifrost_version,
+		Error:"",
+		Driver:driver,
+	}
 }
 
 func Drivers() []map[string]string {
@@ -72,7 +89,10 @@ func Drivers() []map[string]string {
 	for name,v := range drivers {
 		m := make(map[string]string)
 		m["name"] = name
-		m["uri"] = v.GetUriExample()
+		m["version"] = v.Version
+		m["bifrost_version"] = v.BifrostVersion
+		m["error"] = v.Error
+		m["uri"] = v.Driver.GetUriExample()
 		list = append(list, m)
 	}
 	return list
@@ -84,7 +104,7 @@ func Open(name string,uri string) ConnFun{
 	if _,ok := drivers[name];!ok{
 		return nil
 	}
-	return drivers[name].Open(uri)
+	return drivers[name].Driver.Open(uri)
 }
 
 
@@ -94,7 +114,7 @@ func CheckUri(name string,uri string) error{
 	if _,ok := drivers[name];!ok{
 		return fmt.Errorf("no "+name)
 	}
-	return drivers[name].CheckUri(uri)
+	return drivers[name].Driver.CheckUri(uri)
 }
 
 
