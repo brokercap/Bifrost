@@ -47,18 +47,18 @@
                                 <td>{{$v.Status}}</td>
                                 <td>
                             {{if eq $v.Status "running"}}
-                                <button data-toggle="button" class="btn-sm btn-warning stopChannelBtn" onclick="DoChangeDbStatus(this,'stop')" type="button" >Stop</button>
+                                <button data-toggle="button" class="btn-sm btn-warning stopChannelBtn" onclick="DoChangeChannelStatus(this,'stop')" type="button" >Stop</button>
                             {{end}}
                             {{if eq $v.Status "close"}}
-                                <button data-toggle="button" class="btn-sm btn-danger delChannelBtn" onclick="DoChangeDbStatus(this,'del')" type="button" >Del</button>
-                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeDbStatus(this,'start')" type="button" >Start</button>
+                                <button data-toggle="button" class="btn-sm btn-danger delChannelBtn" onclick="DoChangeChannelStatus(this,'del')" type="button" >Del</button>
+                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeChannelStatus(this,'start')" type="button" >Start</button>
                             {{end}}
                             {{if eq $v.Status "stop"}}
-                                <button data-toggle="button" class="btn-sm btn-danger closeChannelBtn" onclick="DoChangeDbStatus(this,'close')" type="button" >Close</button>
-                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeDbStatus(this,'start')" type="button" >Start</button>
+                                <button data-toggle="button" class="btn-sm btn-danger closeChannelBtn" onclick="DoChangeChannelStatus(this,'close')" type="button" >Close</button>
+                                <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeChannelStatus(this,'start')" type="button" >Start</button>
                             {{end}}
                             {{if eq $v.Status "wait"}}
-                                <button data-toggle="button" class="btn-sm btn-warning dealChannelBtn" onclick="DoChangeDbStatus(this,'deal')" type="button" >Deal</button>
+                                <button data-toggle="button" class="btn-sm btn-warning dealChannelBtn" onclick="DoChangeChannelStatus(this,'deal')" type="button" >Deal</button>
                             {{end}}
 
 
@@ -173,32 +173,7 @@
             }
     );
 
-    $(".DealWaitErr").click(
-        function(){
-            var thisButton = $(this);
-            var ErrorId = $(this).attr("ErrorId");
-            var channelid = $(this).parent().parent().parent().parent("tr").children().eq(0).html();
-            var url = "/channel/deal"
-            $.post(
-                    url,
-                    {dbname: dbname,channelid:channelid,error_id:ErrorId},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                        if(!data.status){
-                            alert(data.msg);
-                            return false;
-                        }
-                        thisButton.remove();
-                    },
-                    'json'
-            );
-        }
-    );
-
-    function DoChangeDbStatus(obj,status){
+    function DoChangeChannelStatus(obj,status){
         if (status=="stop"){
             if (!confirm("确定暂停么？暂停连接不会断开，但是业务将受影响")){
                 return
