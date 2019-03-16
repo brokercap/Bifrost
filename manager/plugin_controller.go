@@ -30,14 +30,24 @@ func plugin_list_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	type PluginListInfo struct {
 		TemplateHeader
-		Drivers []map[string]string
+		PluginAPIVersion string
+		Drivers map[string]driver.DriverStructure
 	}
 	var data PluginListInfo
-	data = PluginListInfo{Drivers:driver.Drivers()}
+	data = PluginListInfo{
+		PluginAPIVersion:driver.GetApiVersion(),
+		Drivers:driver.Drivers(),
+	}
+
+	//因为plugin 加载so 插件，有可能会异常，所以这里需要你把异常的插件列表也加载进来并进行显示出来
+	errorPluginMap := plugin.GetErrorPluginList()
+	for name,v := range errorPluginMap{
+		data.Drivers[name] = v
+	}
+
 	data.Title = "Plugin List - Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/plugin.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)
-
 }
 
 func plugin_reload_controller(w http.ResponseWriter,req *http.Request){

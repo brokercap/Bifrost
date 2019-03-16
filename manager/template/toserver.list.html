@@ -93,11 +93,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-sm-3 control-label">Type：</label>
+                    <label class="col-sm-3 control-label">Plugin：</label>
                     <div class="col-sm-9">
                         <select class="form-control" name="type" id="conn_type">
                         {{range $k, $val := .Drivers}}
-                            <option value="{{$val.name}}" example='{{$val.uri}}' > {{$val.name}}</option>
+                            <option value="{{$k}}" example='{{$val.ExampleConnUri}}' > {{$k}} - {{$val.Version}}</option>
                         {{end}}
                         </select><span class="help-block m-b-none"></span>
                     </div>

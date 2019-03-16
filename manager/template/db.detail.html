@@ -4,7 +4,7 @@
 <div >
 	<input type="hidden" value="{{.DbName}}" id="dbname" />
     <div class="row">
-        <div class="col-sm-2">
+        <div class="col-sm-2" id="MyWebLeft_1">
 
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
@@ -23,10 +23,11 @@
             </div>
 
         </div>
-        <div class="col-sm-3" style=" padding-left: 0px;">
+        <div class="col-sm-3" style=" padding-left: 0px;" id="MyWebLeft_2">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Table List</h5>
+                    <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="float:right; font-size:14px; font-weight:600; color:#666; cursor:pointer">Hide</div>
                 </div>
                 <style type="text/css">
                     .tableDiv{display:block; width:100%; height: 25px;}
@@ -40,7 +41,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-7" style=" padding-left: 0px;">
+        <div class="col-sm-7" style=" padding-left: 0px;" id="MyWebLeft_3">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Table ToServer List
@@ -200,6 +201,21 @@
     for (var name in ToServerList){
         $("#addToServerKey").append('<option value="'+name+'" toServerType="'+ToServerList[name].Type+'">'+ToServerList[name].Type+' -- '+name+'</option>');
     }
+	
+	function showOrHideMyWeb(){
+		var status = $("#MyWebHideBtn").attr("status");
+		if (status == "hide"){
+			$("#MyWebLeft_2").removeClass("col-sm-1").addClass("col-sm-3");
+			$("#MyWebLeft_3").removeClass("col-sm-11").addClass("col-sm-7");
+			$("#MyWebLeft_1").show();
+			$("#MyWebHideBtn").attr("status","show");
+		}else{
+			$("#MyWebLeft_1").hide();
+			$("#MyWebLeft_2").removeClass("col-sm-3").addClass("col-sm-1");
+			$("#MyWebLeft_3").removeClass("col-sm-7").addClass("col-sm-11");
+			$("#MyWebHideBtn").attr("status","hide");
+		}
+	}
 
     function showAddTable(obj){
 		var addTableSchemaName = $("#DatabaseListContair a.active").find("h3").text();

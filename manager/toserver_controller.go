@@ -47,7 +47,7 @@ func toserver_list_controller(w http.ResponseWriter,req *http.Request){
 	type toServerInfo struct {
 		TemplateHeader
 		ToServerList map[string]*toserver.ToServer
-		Drivers []map[string]string
+		Drivers map[string]driver.DriverStructure
 	}
 	var data toServerInfo
 	data = toServerInfo{ToServerList: toserver.ToServerMap,Drivers:driver.Drivers()}

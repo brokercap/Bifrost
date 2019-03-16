@@ -17,7 +17,6 @@ type ToServer struct {
 	LastID      int
 	CurrentConn int
 	DataTypeList []string
-	TypeAndRule driver.TypeAndRule
 }
 
 var ToServerMap map[string]*ToServer
@@ -30,16 +29,13 @@ func init() {
 }
 
 func GetToServerMap() map[string]*ToServer{
-	for _,v := range ToServerMap{
-		v.TypeAndRule = driver.GetTypeAndRule(v.Type)
-	}
 	return ToServerMap
 }
 
 func SetToServerInfo(key string, Type string, ConnUri string, Notes string){
 	l.Lock()
 	if _, ok := ToServerMap[key]; !ok {
-		ToServerMap[key] = &ToServer{Type: Type, ConnUri: ConnUri, Notes: Notes, LastID: 0, CurrentConn: 0,TypeAndRule:driver.GetTypeAndRule(Type)}
+		ToServerMap[key] = &ToServer{Type: Type, ConnUri: ConnUri, Notes: Notes, LastID: 0, CurrentConn: 0}
 	}
 	l.Unlock()
 }
