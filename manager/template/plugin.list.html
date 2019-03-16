@@ -34,6 +34,7 @@
                                 <th>Dev For Bifrost</th>
                                 <th>Example ConnUri</th>
                                 <th>Erros</th>
+                                <th>Document</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -47,6 +48,11 @@
                                 </td>
                                 <td>{{$v.ExampleConnUri}}</td>
                                 <td>{{$v.Error}}</td>
+                                <td>
+                                    <a href="/docs?plugin={{$i}}" target="_blank">
+                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Document</button>
+                                    </a>
+                                </td>
 
                             </tr>
                             {{end}}
