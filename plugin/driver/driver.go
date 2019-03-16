@@ -6,11 +6,12 @@ import (
 	"regexp"
 	"strings"
 	"log"
+	"encoding/json"
 )
 
-func init(){
+const API_VERSION  = "v1.0"
 
-}
+func init(){}
 
 type PluginDataType struct {
 	Timestamp 		uint32
@@ -21,6 +22,10 @@ type PluginDataType struct {
 	TableName      	string
 	BinlogFileNum 	int
 	BinlogPosition 	uint32
+}
+
+func GetApiVersion() string{
+	return API_VERSION
 }
 
 type Driver interface {
@@ -48,16 +53,18 @@ type PluginResult struct {
 	BinlogPosition uint32
 }
 
-type driverStructure struct{
+type DriverStructure struct{
 	Version string //插件版本
 	BifrostVersion string // 插件开发所使用的Bifrost的版本
 	Error   string
-	Driver  Driver
+	ExampleConnUri string
+	driver  Driver
+
 }
 
 var (
 	driversMu sync.RWMutex
-	drivers   = make(map[string]driverStructure)
+	drivers   = make(map[string]DriverStructure)
 )
 
 func Register(name string, driver Driver,version string,bifrost_version string) {
@@ -74,28 +81,26 @@ func Register(name string, driver Driver,version string,bifrost_version string) 
 	if _, ok := drivers[name]; ok {
 		panic("Register called twice for driver " + name)
 	}
-	drivers[name] = driverStructure{
+	drivers[name] = DriverStructure{
 		Version:version,
 		BifrostVersion:bifrost_version,
 		Error:"",
-		Driver:driver,
+		ExampleConnUri:driver.GetUriExample(),
+		driver:driver,
 	}
 }
 
-func Drivers() []map[string]string {
+func Drivers() map[string]DriverStructure {
 	driversMu.RLock()
 	defer driversMu.RUnlock()
-	var list []map[string]string
-	for name,v := range drivers {
-		m := make(map[string]string)
-		m["name"] = name
-		m["version"] = v.Version
-		m["bifrost_version"] = v.BifrostVersion
-		m["error"] = v.Error
-		m["uri"] = v.Driver.GetUriExample()
-		list = append(list, m)
+	//json 一次是为了重新拷贝一个内存空间的map出来,防止外部新增修改
+	s,err :=json.Marshal(drivers)
+	if err != nil{
+		return make(map[string]DriverStructure,0)
 	}
-	return list
+	var data map[string]DriverStructure
+	json.Unmarshal(s,&data)
+	return data
 }
 
 func Open(name string,uri string) ConnFun{
@@ -104,7 +109,7 @@ func Open(name string,uri string) ConnFun{
 	if _,ok := drivers[name];!ok{
 		return nil
 	}
-	return drivers[name].Driver.Open(uri)
+	return drivers[name].driver.Open(uri)
 }
 
 
@@ -114,9 +119,8 @@ func CheckUri(name string,uri string) error{
 	if _,ok := drivers[name];!ok{
 		return fmt.Errorf("no "+name)
 	}
-	return drivers[name].Driver.CheckUri(uri)
+	return drivers[name].driver.CheckUri(uri)
 }
-
 
 const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 
