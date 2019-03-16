@@ -82,10 +82,11 @@
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">ToServerKey：</label>
                                 <div class="col-sm-9">
-                                    <select class="form-control" name="addToServerKey" id="addToServerKey">
-
-                                    </select>
-
+                                        <select class="form-control" name="addToServerKey" id="addToServerKey">
+                                        {{range $k,$v := .ToServerList}}
+                                            <option value="{{$k}}" toservertype="{{$v.Type}}">{{$v.Type}} -- {{$k}}</option>
+                                        {{end}}
+                                        </select>
                                     <span class="help-block m-b-none"></span>
 
                                 </div>
@@ -195,12 +196,14 @@
 	var dbname = "{{.DbName}}";
 	var OnFoucsInputId = "";
 	//var ToServer;
+    /*
     var ToServerList;
     ToServerList = $.parseJSON('{{.ToServerList}}');
 	console.log(ToServerList);
     for (var name in ToServerList){
         $("#addToServerKey").append('<option value="'+name+'" toServerType="'+ToServerList[name].Type+'">'+ToServerList[name].Type+' -- '+name+'</option>');
     }
+    */
 	
 	function showOrHideMyWeb(){
 		var status = $("#MyWebHideBtn").attr("status");
@@ -466,7 +469,7 @@
 
 		var doChangeToServer = function(){
 		    var toServerKey = $("#addToServerKey").val();
-			var toServerType = ToServerList[toServerKey].Type;
+            var toServerType = $("#addToServerKey").find("option:selected").attr("toServerType");
             $("#plugin_param_div").load("/plugin/"+toServerType+"/www/"+toServerType+".html");
             $.getScript("/plugin/"+toServerType+"/www/"+toServerType+".js",function(){});
 		}

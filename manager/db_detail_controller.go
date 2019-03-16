@@ -34,7 +34,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 		TemplateHeader
 		DbName string
 		DataBaseList []string
-		ToServerList string
+		ToServerList  map[string]*toserver.ToServer
 		ChannelList map[int]*server.Channel
 	}
 	req.ParseForm()
@@ -47,8 +47,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	defer dbConn.Close()
 	DataBaseList := GetSchemaList(dbConn)
 	var Result dbDetail
-	b,_:=json.Marshal(toserver.GetToServerMap())
-	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: string(b),ChannelList:server.GetDBObj(dbname).ListChannel()}
+	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
