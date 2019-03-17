@@ -151,7 +151,7 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 		binlogDump: &mysql.BinlogDump{
 			DataSource:    ConnectUri,
 			ReplicateDoDb: make(map[string]uint8, 0),
-			OnlyEvent:     []mysql.EventType{mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
+			OnlyEvent:     []mysql.EventType{mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,mysql.QUERY_EVENT},
 		},
 		replicateDoDb: make(map[string]uint8, 0),
 		serverId:      serverId,
