@@ -66,7 +66,7 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	schema := req.Form.Get("schema_name")
 
 	toServerKey := req.Form.Get("toserver_key")
-	toserver_type := req.Form.Get("toserver_type")
+	PluginName := req.Form.Get("plugin_name")
 	FieldListString := req.Form.Get("fieldlist")
 	MustBeSuccess := req.Form.Get("mustbe")
 
@@ -100,7 +100,7 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	toServer := &server.ToServer{
 		MustBeSuccess: MustBeSuccessBool,
 		ToServerKey:   toServerKey,
-		ToServerType:  toserver_type,
+		PluginName:  	PluginName,
 		FieldList:     fileList,
 		BinlogFileNum: 0,
 		BinlogPosition:0,

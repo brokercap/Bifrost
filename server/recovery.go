@@ -102,7 +102,7 @@ func recoveryData(data map[string]dbSaveInfo){
 							ToServerID:		toServer.ToServerID,
 							MustBeSuccess:  toServer.MustBeSuccess,
 							ToServerKey:    toServer.ToServerKey,
-							ToServerType:   toServer.ToServerType,
+							PluginName:   	toServer.PluginName,
 							FieldList:      toServer.FieldList,
 							BinlogFileNum:  toServer.BinlogFileNum,
 							BinlogPosition: toServer.BinlogPosition,

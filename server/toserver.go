@@ -13,7 +13,7 @@ import (
 type ToServer struct {
 	sync.RWMutex
 	ToServerID	  int
-	ToServerType  string
+	PluginName    string
 	MustBeSuccess bool
 	FieldList     []string
 	ToServerKey   string
@@ -36,10 +36,10 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 	} else {
 		db.Lock()
 		toserver.ToServerID = db.tableMap[key].LastToServerID + 1
-		if toserver.ToServerType == ""{
+		if toserver.PluginName == ""{
 			ToServerInfo := plugin.GetToServerInfo(toserver.ToServerKey)
 			if ToServerInfo != nil{
-				toserver.ToServerType = ToServerInfo.Type
+				toserver.PluginName = ToServerInfo.PluginName
 			}
 		}
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)

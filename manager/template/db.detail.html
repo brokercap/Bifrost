@@ -57,7 +57,7 @@
                                 <thead>
                                 <tr>
                                     <th data-field="sliceid">sliceId</th>
-                                    <th data-field="PluginType">PluginType</th>
+                                    <th data-field="PluginName">PluginType</th>
                                     <th data-field="ToServerKey">ToServerKey</th>
                                     <th data-field="FieldList">FieldList</th>
                                     <th data-field="Others">Others</th>
@@ -84,7 +84,7 @@
                                 <div class="col-sm-9">
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
                                     {{range $k,$v := .ToServerList}}
-                                        <option value="{{$k}}" toservertype="{{$v.Type}}">{{$v.Type}} -- {{$k}}</option>
+                                        <option value="{{$k}}" pluginName="{{$v.PluginName}}" pluginVersion="{{$v.PluginVersion}}">{{$v.PluginName}} -- {{$k}}</option>
                                     {{end}}
                                     </select>
                                     <span class="help-block m-b-none"></span>
@@ -328,7 +328,7 @@
 
                             e.push({
                                         sliceid:index,
-                                        PluginType:v.ToServerType,
+                                        PluginName:v.PluginName,
                                         ToServerKey:v.ToServerKey,
                                         FieldList:fields,
                                         Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
@@ -449,9 +449,10 @@
             );
             var doChangeToServer = function(){
                 var toServerKey = $("#addToServerKey").val();
-                var toServerType = $("#addToServerKey").find("option:selected").attr("toServerType");
-                $("#plugin_param_div").load("/plugin/"+toServerType+"/www/"+toServerType+".html");
-                $.getScript("/plugin/"+toServerType+"/www/"+toServerType+".js",function(){});
+                var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
+                $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
+                $.getScript("/plugin/"+pluginName+"/www/"+pluginName+".js?v="+pluginVersion,function(){});
             }
             //type change, rule change
             $("#addToServerKey").change(function(){
@@ -486,14 +487,14 @@
                         $.each($("#TableFieldsContair input:checkbox:checked"),function(){
                             fieldlist.push($(this).val());
                         });
-                        var toServerType = $("#addToServerKey").find("option:selected").attr("toServerType");
+                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                         var url = '/table/addtoserver';
                         var data = {
                             dbname:dbname,
                             schema_name:schema_name,
                             table_name:table_name,
                             toserver_key:addToServerKey,
-                            toserver_type:toServerType,
+                            plugin_name:pluginName,
                             mustbe:MustBeSuccess,
                             fieldlist:fieldlist.toString(),
                             param:JSON.stringify(p.data),

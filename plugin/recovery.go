@@ -13,7 +13,7 @@ func Recovery(data *json.RawMessage){
 		return
 	}
 	for name,v:=range toData{
-		SetToServerInfo(name,v.Type,v.ConnUri,v.Notes)
+		SetToServerInfo(name,v.PluginName,v.ConnUri,v.Notes)
 	}
 }
 

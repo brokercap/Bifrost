@@ -30,7 +30,8 @@
                             <thead>
                             <tr>
                                 <th>ToServerKey</th>
-                                <th>Type</th>
+                                <th>PluginName</th>
+                                <th>PluginVersion</th>
                                 <th>ConnUri</th>
                                 <th>LastID</th>
                                 <th>CurrentConn</th>
@@ -42,7 +43,8 @@
                             {{range $i, $v := .ToServerList}}
                             <tr>
                                 <td>{{$i}}</td>
-                                <td>{{$v.Type}}</td>
+                                <td>{{$v.PluginName}}</td>
+                                <td>{{$v.PluginVersion}}</td>
 
                                 <td>
                                 {{$v.ConnUri}}

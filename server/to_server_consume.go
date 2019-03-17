@@ -20,13 +20,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	defer func() {
 		This.pluginClose()
 		if err := recover();err !=nil{
-			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.ToServerType,This.ToServerKey,"ToServer consume_to_server over;err:",err)
+			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err)
 			return
 		}else{
-			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.ToServerType,This.ToServerKey,"ToServer consume_to_server over")
+			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
 	}()
-	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.ToServerType,This.ToServerKey,"ToServer consume_to_server  start")
+	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	var data pluginDriver.PluginDataType
 	CheckStatusFun := func(){

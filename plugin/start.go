@@ -13,11 +13,12 @@ var l sync.Mutex
 
 type ToServer struct {
 	sync.Mutex
-	Type        string
-	ConnUri     string
-	Notes       string
-	LastID      int
-	CurrentConn int
+	PluginName      string
+	PluginVersion 	string
+	ConnUri     	string
+	Notes       	string
+	LastID      	int
+	CurrentConn 	int
 }
 
 var ToServerMap map[string]*ToServer
@@ -33,11 +34,17 @@ func GetToServerMap() map[string]*ToServer{
 	return ToServerMap
 }
 
-func SetToServerInfo(key string, Type string, ConnUri string, Notes string){
+func SetToServerInfo(key string, PluginName string, ConnUri string, Notes string){
+	Drivers := driver.Drivers();
+	if _,ok:=Drivers[PluginName];!ok{
+		log.Println("SetToServerInfo err: plugin ",key," not exsit")
+		return
+	}
 	l.Lock()
 	if _, ok := ToServerMap[key]; !ok {
 		ToServerMap[key] = &ToServer{
-			Type: 			Type,
+			PluginName: 	PluginName,
+			PluginVersion:  Drivers[PluginName].Version,
 			ConnUri: 		ConnUri,
 			Notes: 			Notes,
 			LastID: 		0,
@@ -75,7 +82,7 @@ func Start(key string) (driver.ConnFun,string) {
 	l.Unlock()
 	var F driver.ConnFun
 	var stringKey string
-	F = driver.Open(ToServerMap[key].Type,ToServerMap[key].ConnUri)
+	F = driver.Open(ToServerMap[key].PluginName,ToServerMap[key].ConnUri)
 	if F == nil{
 		return nil,""
 	}
