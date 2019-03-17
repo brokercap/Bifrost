@@ -1,4 +1,4 @@
-package redis
+package src
 
 import (
 	"log"
@@ -24,7 +24,7 @@ func (MyConn *MyConn) Open(uri string) driver.ConnFun{
 }
 
 func (MyConn *MyConn) GetUriExample() string{
-	return "pwd@tcp(127.0.0.1:6379)/0"
+	return "pwd@tcp(127.0.0.1:6379)/0 or 127.0.0.1:6379"
 }
 
 func (MyConn *MyConn) CheckUri(uri string) error{
@@ -219,6 +219,8 @@ func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
 		break
 	case "list":
 		_, err = This.SendToList(Key,Val)
+	default:
+		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
 	}
 
 	if err != nil {
@@ -232,8 +234,37 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
-	Key := This.getKeyVal(data,0)
-	_, err := This.conn.Do("DEL", Key)
+	Key := This.getKeyVal(data, 0)
+	var err error
+	switch This.p.Type {
+	case "set":
+		_, err = This.conn.Do("DEL", Key)
+		break
+	case "list":
+		var Val string
+		if This.p.ValConfig != ""{
+			Val = This.getVal(data,0)
+		}else{
+			p := data.Rows[0]
+			if This.p.DataType == "json"{
+				if This.p.AddTableName {
+					p["TableName"] = data.TableName
+				}
+				if This.p.AddSchemaName {
+					p["SchemaName"] = data.SchemaName
+				}
+				if This.p.AddEventType {
+					p["EventType"] = data.EventType
+				}
+			}
+			vbyte, _ := json.Marshal(p)
+			Val = string(vbyte)
+		}
+		_, err = This.SendToList(Key,Val)
+		break
+	default:
+		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
+	}
 	if err != nil {
 		This.err = err
 		return false,err
@@ -242,12 +273,8 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 }
 
 func (This *Conn) SendToList(key string, Val string) (bool,error) {
-	if This.err != nil {
-		This.ReConnect()
-	}
 	_, err := This.conn.Do("LPUSH", key,Val)
 	if err != nil {
-		This.err = err
 		return false,err
 	}
 	return true,nil
