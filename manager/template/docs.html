@@ -77,7 +77,7 @@
                     <div style="float: right; margin-top: -10px">
                         <select class="form-control" name="type" id="PluginList">
                         {{range $k, $val := .Drivers}}
-                            <option value="{{$k}}" > {{$k}} - {{$val.Version}}</option>
+                            <option value="{{$k}}" version="{{$val.Version}}" > {{$k}} - {{$val.Version}}</option>
                         {{end}}
                         </select><span class="help-block m-b-none"></span>
                     </div>
@@ -105,7 +105,8 @@
 <script type="text/javascript">
     function GetPluginDoc(){
         var key = $("#PluginList").val();
-        $("#PluginDocDiv").load("/plugin/"+key+"/www/doc.html?v="+$("#version_contair").text(),function( response, status, xhr ){
+        var pluginVersion = $("#PluginList").find("option:selected").attr("version");
+        $("#PluginDocDiv").load("/plugin/"+key+"/www/doc.html?v="+pluginVersion,function( response, status, xhr ){
             if ( status == "error" ) {
                 $("#PluginDocDiv").html(key+ " no docs");
             }
