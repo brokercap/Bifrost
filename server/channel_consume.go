@@ -72,7 +72,6 @@ func (This *consume_channel_obj) checkChannleStatus() {
 }
 
 func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,pluginData pluginDriver.PluginDataType){
-	log.Println("sendToServerResult start")
 	ToServerInfo.Lock()
 	status := ToServerInfo.Status
 	if status == "deling" || status == "deled"{

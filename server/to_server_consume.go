@@ -7,6 +7,7 @@ import (
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
 	"runtime"
 	"fmt"
+	"runtime/debug"
 )
 
 func (This *ToServer) pluginClose(){
@@ -106,14 +107,14 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType){
 		return
 	}
 
-	if n == 0 {
+	if n == 1 {
 		m := make(map[string]interface{})
 		for _, key := range This.FieldList {
 			if _, ok := data.Rows[0][key]; ok {
 				m[key] = data.Rows[0][key]
 			}
-			data.Rows[0] = m
 		}
+		data.Rows[0] = m
 	}else{
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})
@@ -132,8 +133,8 @@ func (This *ToServer) sendToServer(data pluginDriver.PluginDataType) (result boo
 	defer func() {
 		if err2 := recover();err2!=nil{
 			result = false
-			err = fmt.Errorf(This.ToServerKey,fmt.Sprint(err2))
-			log.Println(This.ToServerKey,"sendToServer err:",err2)
+			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
+			log.Println(This.ToServerKey,"sendToServer err:",err)
 			func() {
 				defer func() {
 					if err2 := recover();err2!=nil{
