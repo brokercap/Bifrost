@@ -27,7 +27,10 @@
                     <p>当前只支持字段在表结构末尾追加新字段，如果配置的二进制位点是在DDL 之前的位点，会出现数据和字段对应不上</p>
                     <p>数据类型修改之后，如果配置的二进制位点是在DDL 之前的位点，可能会出现数据出错</p>
                     <p>&nbsp;</p>
-                    <h2><strong>支持存储类型</strong></h2>
+                    <h2><strong>存储类型数据转换</strong></h2>
+                    <p>从Binlog解析出来的数据,在转成 map[string]interface{} 的数据格式的时候</p>
+                    <p>MySQL里的存储类型对应Golang里的数据类型不一样</p>
+                    <p>括号里的代表是Golang里的数据类型</p>
                     <p>TINYINT ( int8 | unit8 ) , SMALLINT ( int16 | unit16 ) , MEDIUMINT ( int32 | uint32 ), INT ( int32 | uint32 ) , BIGINT ( int64 | uint64 )<p>
                     <p>FLOAT ( float32 ) , DOUBLE ( float64 ) ,REAL ( float64 )</p>
                     <p>DECIMAL , NUMERIC( 返回string类型 )</p>
@@ -42,7 +45,7 @@
                     <h2><strong>标签</strong></h2>
                     <p><strong>$SchemaName : </strong>  数据库名字</p>
                     <p><strong>$TableName : </strong>  表的名字</p>
-                    <p><strong>$EventType : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete)</p>
+                    <p><strong>$EventType : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete); SQL(sql)</p>
                     <p><strong>$字段名 : </strong>  表的字段数据</p>
                     <p>&nbsp;</p>
                     <h2><strong>其他配置</strong></h2>
@@ -102,7 +105,7 @@
 <script type="text/javascript">
     function GetPluginDoc(){
         var key = $("#PluginList").val();
-        $("#PluginDocDiv").load("/plugin/"+key+"/www/doc.html",function( response, status, xhr ){
+        $("#PluginDocDiv").load("/plugin/"+key+"/www/doc.html?v="+$("#version_contair").text(),function( response, status, xhr ){
             if ( status == "error" ) {
                 $("#PluginDocDiv").html(key+ " no docs");
             }
