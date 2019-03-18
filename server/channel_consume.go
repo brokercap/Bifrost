@@ -29,6 +29,8 @@ import (
 	"strconv"
 	"sync"
 	"log"
+	"bytes"
+	"encoding/gob"
 )
 
 func evenTypeName(e mysql.EventType) string {
@@ -46,7 +48,7 @@ func evenTypeName(e mysql.EventType) string {
 }
 
 type ToServerChan struct {
-	To chan pluginDriver.PluginDataType
+	To chan *pluginDriver.PluginDataType
 }
 
 type consume_channel_obj struct {
@@ -54,7 +56,6 @@ type consume_channel_obj struct {
 	db      *db
 	c       *Channel
 	connMap map[string]pluginDriver.ConnFun
-	ToserverKey *string
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
@@ -71,7 +72,7 @@ func (This *consume_channel_obj) checkChannleStatus() {
 	}
 }
 
-func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,pluginData pluginDriver.PluginDataType){
+func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,pluginData *pluginDriver.PluginDataType){
 	ToServerInfo.Lock()
 	status := ToServerInfo.Status
 	if status == "deling" || status == "deled"{
@@ -84,7 +85,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	ToServerInfo.Unlock()
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
-			To:     make(chan pluginDriver.PluginDataType, 10000),
+			To:     make(chan *pluginDriver.PluginDataType, 10000),
 		}
 		go ToServerInfo.consume_to_server(This.db,pluginData.SchemaName,pluginData.TableName)
 	}
@@ -106,6 +107,14 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 	}
 }
 
+func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
+		return err
+	}
+	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
+}
+
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
@@ -120,15 +129,34 @@ func (This *consume_channel_obj) consume_channel() {
 			This.checkChannleStatus()
 			toServerList := This.db.tableMap[key].ToServerList
 			pluginData := This.transferToPluginData(&data)
-			for _, toServerInfo := range toServerList {
+			n := len(toServerList)
+			if n == 1{
+				toServerInfo := toServerList[0]
 				if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
 					continue
 				}
 				if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
 					continue
 				}
-				This.sendToServerResult(toServerInfo,pluginData)
+				This.sendToServerResult(toServerInfo,&pluginData)
+			}else{
+				for _, toServerInfo := range toServerList {
+					if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
+						continue
+					}
+					if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
+						continue
+					}
+					//这里要将数据完全拷贝一份出来,因为pluginDriver rows []map[string]interface{} 里map这里在各个toserver 同步到plugin的时候会各自过滤数据。
+					var MyData pluginDriver.PluginDataType
+					err1 := This.deepCopy(&MyData,pluginData)
+					if err1 != nil{
+						log.Println("consume_to_server deepCopy data:",err1," src data:",data)
+					}
+					This.sendToServerResult(toServerInfo,&MyData)
+				}
 			}
+
 			//保存位点,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
 			This.db.Lock()
 			This.db.binlogDumpFileName = data.BinlogFileName

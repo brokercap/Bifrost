@@ -29,7 +29,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}()
 	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
-	var data pluginDriver.PluginDataType
+	var data *pluginDriver.PluginDataType
 	CheckStatusFun := func(){
 		if db.killStatus == 1{
 			runtime.Goexit()
@@ -129,7 +129,7 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType){
 	}
 }
 
-func (This *ToServer) sendToServer(data pluginDriver.PluginDataType) (result bool,err error){
+func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) (result bool,err error){
 	defer func() {
 		if err2 := recover();err2!=nil{
 			result = false
@@ -148,26 +148,30 @@ func (This *ToServer) sendToServer(data pluginDriver.PluginDataType) (result boo
 	}()
 	if This.PluginConn == nil{
 		This.PluginConn,This.PluginConnKey = plugin.Start(This.ToServerKey)
+		if This.PluginConn == nil{
+			err = fmt.Errorf("Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " start err,return nil")
+			return false,err
+		}
 		err := This.PluginConn.SetParam(This.PluginParam)
 		if err != nil{
 			return false,err
 		}
 	}
 
-	This.filterField(&data)
+	This.filterField(data)
 
 	switch data.EventType {
 	case "insert":
-		result, err = This.PluginConn.Insert(&data)
+		result, err = This.PluginConn.Insert(data)
 		break
 	case "update":
-		result, err = This.PluginConn.Update(&data)
+		result, err = This.PluginConn.Update(data)
 		break
 	case "delete":
-		result, err = This.PluginConn.Del(&data)
+		result, err = This.PluginConn.Del(data)
 		break
 	case "sql":
-		result, err = This.PluginConn.Query(&data)
+		result, err = This.PluginConn.Query(data)
 		break
 	default:
 		break
