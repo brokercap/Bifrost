@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 	"runtime/debug"
+	"fmt"
 )
 
 type HandlerFun interface {
@@ -41,12 +42,18 @@ func init()  {
 }
 
 func SetFirstCallBack(callbackFUns func(http.ResponseWriter,*http.Request) bool){
-	FirstCallBack = callbackFUns
+	if FirstCallBack == nil{
+		FirstCallBack = callbackFUns
+	}
 }
 
-func AddRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request) ){
+func AddRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request) ) error{
+	if _,ok:=routeMap[route];ok{
+		return fmt.Errorf(route+" is exsit")
+	}
 	routeMap[route]=HandlerFunc(callbackFUns)
 	http.HandleFunc(route,rounteFunc)
+	return nil
 }
 
 func rounteFunc(w http.ResponseWriter,req *http.Request){

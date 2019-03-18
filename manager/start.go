@@ -24,7 +24,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"fmt"
 	"runtime/debug"
 )
 
@@ -124,13 +123,4 @@ func Start(IpAndPort string){
 	xgo.SetFirstCallBack(controller_FirstCallback)
 	xgo.AddRoute("/",index_controller)
 	xgo.Start(IpAndPort)
-}
-
-func AddPluginController(route string, callbackFUns func(http.ResponseWriter,*http.Request) ) error{
-	if strings.Index(route,"/plugin") == 0{
-		xgo.AddRoute(route,callbackFUns)
-		return nil
-	}else{
-		return fmt.Errorf("must be /plugin start");
-	}
 }
