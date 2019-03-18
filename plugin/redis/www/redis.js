@@ -11,7 +11,7 @@ function doGetParam(){
 		AddSchemaName = true;
 	}
 	var AddTableName = false;
-    if ($("#Redis_Plugin_Contair input[name='AddTableName']:checked").val()){
+    if ($("#Redis_Plugin_Contair input[name='AddTableName']:checked").val() == "1"){
 		AddTableName = true;
 	}
 	
@@ -45,7 +45,6 @@ function doGetParam(){
 	result.data = data;
 	result.msg = "success";
 	result.status = true;
-	console.log(data);
     return result;
 }
 
