@@ -1,7 +1,7 @@
 function doGetParam(){
 	var result = {data:{},status:false,msg:"error"}
     var data = {};
-	var Type = $("#Redis_Plugin_Contair input[name='type']:checked").val();
+	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
     var AddEventType = false;
 	if ($("#Redis_Plugin_Contair input[name='AddEventType']:checked").val() == "1"){
 		AddEventType = true;
@@ -16,9 +16,8 @@ function doGetParam(){
 	}
 	
     var DataType = $("#Redis_Plugin_Contair #Redis_DataType").val();
-	var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();
     var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();
-	var ValueConfig = $("#Redis_Plugin_Contair input[name='ValueConfig']").val();
+	var ValueConfig = $("#Redis_Plugin_Contair #ValueConfig").val();
     if (KeyConfig==""){
 		result.msg = "Key must be not empty!"
 		return result
@@ -40,22 +39,21 @@ function doGetParam(){
     data["AddEventType"] = AddEventType;
     data["KeyConfig"] = KeyConfig;
     data["ValueConfig"] = ValueConfig;
-    data["Expir"] = Expir;
+    data["Expir"] = parseInt(Expir);
 	data["DataType"] = DataType;
 	data["Type"] = Type;
 	result.data = data;
 	result.msg = "success";
 	result.status = true;
-    return data;
+	console.log(data);
+    return result;
 }
 
 function Redis_DataType_Change(){
 	var dataType = $("#Redis_DataType").val();
 	if(dataType == "string"){
 		$("#Redis_ValueConfigContair").show();
-		$("#Redis_KeyConfigContair").hide();
 	}else{
 		$("#Redis_ValueConfigContair").hide();
-		$("#Redis_KeyConfigContair").show();	
 	}
 }
