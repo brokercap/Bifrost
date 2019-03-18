@@ -317,7 +317,7 @@
                             }
                             var ErrorHtml = "";
                             if (v.Error != "" && v.Error != null){
-                                ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")=' type='button'>Miss</button></p>";
+                                ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
                             }
                             var op = "";
                             if(v.Status == "running" || v.Status == ""){
@@ -511,6 +511,7 @@
                                         return false;
                                     }
                                     GetTableToServerList(schema_name,table_name);
+									doChangeToServer();
                                 },
                                 'json');
                     }
@@ -537,7 +538,7 @@
                             alert(data.msg);
                             return false;
                         }
-                        thisButton.remove();
+                        $(thisButton).parent().parent().html("");
                     },
                     'json'
             );
