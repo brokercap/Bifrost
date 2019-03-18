@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"github.com/hprose/hprose-golang/rpc"
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
-	"encoding/json"
 )
 
 type Stub struct {
 	Check   func() error
-	ToList  func(SchemaName string,TableName string,EventType string, data interface{}) (e error)
 	Insert  func(SchemaName string,TableName string,data map[string]interface{}) (e error)
 	Update  func(SchemaName string,TableName string,data []map[string]interface{}) (e error)
 	Delete  func(SchemaName string,TableName string,data map[string]interface{}) (e error)
@@ -26,15 +24,6 @@ type Conn struct {
 	defaultClient rpc.Client
 	clientType string
 	err    error
-	p PluginParam
-}
-
-type PluginParam struct {
-	KeyConfig string
-	Expir int
-	DataType int
-	ValConfig string
-	Fields []string
 }
 
 func newConn(uri string) *Conn{
@@ -47,16 +36,6 @@ func newConn(uri string) *Conn{
 }
 
 func (This *Conn) SetParam(p interface{}) error{
-	s,err := json.Marshal(p)
-	if err != nil{
-		return err
-	}
-	var param PluginParam
-	err2 := json.Unmarshal(s,&param)
-	if err2 != nil{
-		return err2
-	}
-	This.p = param
 	return nil
 }
 
@@ -166,21 +145,6 @@ func (This *Conn) Update(data *pluginDriver.PluginDataType) (bool,error) {
 
 func (This *Conn) Del(data *pluginDriver.PluginDataType) (bool,error) {
 	err := stub.Delete(data.SchemaName,data.TableName,data.Rows[0])
-	if err != nil{
-		This.err = err
-		return false,err
-	}
-	return true,nil
-}
-
-func (This *Conn) SendToList(data *pluginDriver.PluginDataType) (bool,error) {
-	queryType := data.EventType
-	var err error
-	if queryType == "sql"{
-		err = stub.ToList(data.SchemaName,data.TableName,queryType,data.Query)
-	}else{
-		err = stub.ToList(data.SchemaName,data.TableName,queryType,data.Rows)
-	}
 	if err != nil{
 		This.err = err
 		return false,err
