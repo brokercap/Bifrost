@@ -58,6 +58,7 @@ func GetToServerInfo(key string) *ToServer{
 	l.Lock()
 	defer  l.Unlock()
 	if _, ok := ToServerMap[key]; !ok {
+		log.Println("ToServer:",key," no exsit,GetToServerInfo nil")
 		return nil
 	}
 	return ToServerMap[key]
@@ -80,6 +81,10 @@ func Start(key string) (driver.ConnFun,string) {
 		ToServerConnList[key] = make(map[string]driver.ConnFun)
 	}
 	l.Unlock()
+	if _,ok := ToServerMap[key];!ok{
+		log.Println("ToServer:",key," no exsit,Start error")
+		return nil,""
+	}
 	var F driver.ConnFun
 	var stringKey string
 	F = driver.Open(ToServerMap[key].PluginName,ToServerMap[key].ConnUri)

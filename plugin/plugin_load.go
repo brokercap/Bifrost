@@ -26,7 +26,6 @@ func init()  {
 		pluginDir = filepath.Dir(execPath)+"/plugin/"
 		go func(){
 			for{
-				log.Println("ssssssssss")
 				LoadPlugin()
 				time.Sleep(60 * time.Second)
 			}
@@ -39,7 +38,6 @@ func GetErrorPluginList() map[string]driver.DriverStructure{
 }
 
 func cleanErrorPluginMap(){
-	log.Println("fffffffffff",errorPluginMap)
 	errorPluginMap = make(map[string]driver.DriverStructure,0)
 }
 
@@ -64,13 +62,13 @@ func LoadPlugin() error{
 		}
 		if dir.IsDir() {
 			files, _ := ioutil.ReadDir(pluginDir+dir.Name())
-			log.Println("dirs",pluginDir+dir.Name())
+			//log.Println("dirs",pluginDir+dir.Name())
 			for _,file := range files{
 				if file.IsDir(){
 					continue
 				}
 				fileSuffix := path.Ext(file.Name())
-				log.Println("file",pluginDir+dir.Name()+"/"+file.Name())
+				//log.Println("file",pluginDir+dir.Name()+"/"+file.Name())
 				if fileSuffix == ".so"{
 					if file.ModTime().Unix() < lastLoadPluginTime{
 						continue
@@ -100,7 +98,7 @@ func LoadPlugin() error{
 
 		log.Println("plugin load success so:",v)
 	}
-	log.Println(errorPluginMap)
+	//log.Println(errorPluginMap)
 
 	//这里要把有可能第一次so 加载失败了,然后删除了so文件，需要把错误信息给删除掉
 	for name,_ := range errorPluginMap{
