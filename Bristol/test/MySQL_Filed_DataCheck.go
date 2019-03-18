@@ -544,6 +544,7 @@ func callback2(d *mysql.EventReslut) {
 	if noError  == true{
 		log.Println(" type and value is all right ")
 	}
+	os.Exit(0)
 }
 
 func main() {
@@ -553,17 +554,20 @@ func main() {
 	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
 	port := flag.String("P", "3306", "-P 3306")
 	database := flag.String("database", "test", "-database test")
+	flag.Parse()
 
 	var filename,dataSource string
 	var position uint32 = 0
 	var MyServerID uint32 = 0
 
 	dataSource = *userName+":"+*password+"@tcp("+*host+":"+*port+")/"+*database
-
+	log.Println(dataSource," start connect")
 	db := DBConnect(dataSource)
 	if db == nil {
 		log.Println("dataSource:",dataSource," connect err")
+		return
 	}
+	log.Println(dataSource," start success")
 	masterInfo := GetBinLogInfo(db)
 	if masterInfo.File == ""{
 		log.Println(dataSource," binlog disabled")
