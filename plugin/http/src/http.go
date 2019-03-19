@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"log"
 	"time"
 )
 
@@ -33,7 +32,6 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 	client := &http.Client{Timeout:5 * time.Second}
 	req, err := http.NewRequest("GET", url,nil)
 	if user != ""{
-		log.Println(user,pwd)
 		req.SetBasicAuth(user,pwd)
 	}
 	if err != nil {

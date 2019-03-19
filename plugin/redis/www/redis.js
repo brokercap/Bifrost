@@ -1,4 +1,4 @@
-function doGetParam(){
+function doGetPluginParam(){
 	var result = {data:{},status:false,msg:"error"}
     var data = {};
 	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
