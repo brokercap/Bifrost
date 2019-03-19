@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"log"
+	"time"
 )
 
 
@@ -29,7 +30,7 @@ func (MyConn *MyConn) GetUriExample() string{
 
 func (MyConn *MyConn) CheckUri(uri string) error{
 	user,pwd,url := getUriParam(uri)
-	client := &http.Client{Timeout:5}
+	client := &http.Client{Timeout:5 * time.Second}
 	req, err := http.NewRequest("GET", url,nil)
 	if user != ""{
 		log.Println(user,pwd)
@@ -38,11 +39,8 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 	if err != nil {
 		return err
 	}
-	log.Println(url)
-	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	resp, err2 := client.Do(req)
 	if err2 != nil {
-		log.Println(err2)
 		return err2
 	}
 	if resp.StatusCode >= 200 || resp.StatusCode<300{
