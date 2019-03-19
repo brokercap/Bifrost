@@ -108,11 +108,22 @@ func recoveryData(data map[string]dbSaveInfo){
 							BinlogPosition: toServer.BinlogPosition,
 							PluginParam:    toServer.PluginParam,
 						})
-					if BinlogFileNum == 0 || BinlogFileNum < toServer.BinlogFileNum {
+					if BinlogFileNum == 0{
 						BinlogFileNum = toServer.BinlogFileNum
 						BinlogPosition = toServer.BinlogPosition
-					} else if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition {
-						BinlogPosition = toServer.BinlogPosition
+					}else{
+						if BinlogFileNum < toServer.BinlogFileNum{
+							continue
+						}
+						if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition{
+							BinlogPosition = toServer.BinlogPosition
+							continue
+						}
+						if toServer.BinlogFileNum > 0 && BinlogFileNum > toServer.BinlogFileNum{
+							BinlogFileNum = toServer.BinlogFileNum
+							BinlogPosition = toServer.BinlogPosition
+							continue
+						}
 					}
 				}
 			}
