@@ -46,8 +46,8 @@
                                 <td>{{$v.PluginName}}</td>
                                 <td>{{$v.PluginVersion}}</td>
 
-                                <td>
-                                {{$v.ConnUri}}
+                                <td title="{{$v.ConnUri}}">
+                                <script type="text/javascript">filterIpAndPort("{{$v.ConnUri}}")</script>
                                 </td>
                                 <td>{{$v.LastID}}</td>
                                 <td>{{$v.CurrentConn}}</td>

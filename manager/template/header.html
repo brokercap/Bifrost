@@ -58,4 +58,14 @@
     </div>
 </div>
 
+<script type="text/javascript">
+function filterIpAndPort(c){
+    if(c.indexOf("@") != -1){
+        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***")
+    }else{
+        document.write("***"+c.slice(5,c.length-5)+"***")
+    }
+    return;
+}
+</script>
 {{end}}
