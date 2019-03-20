@@ -40,7 +40,7 @@ func InitStorage(){
 		dataDir = execDir+"/data"
 	}
 	levelDbPath := dataDir+"/leveldb"
-	os.MkdirAll(levelDbPath, 0600)
+	os.MkdirAll(levelDbPath, 0700)
 	levelDB, err = leveldb.OpenFile(levelDbPath, nil)
 	if err != nil{
 		log.Println("init leveldb err:",err)

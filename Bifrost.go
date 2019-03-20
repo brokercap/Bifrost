@@ -141,7 +141,7 @@ func main() {
 		dataDir = execDir+"/data"
 	}
 
-	os.MkdirAll(dataDir, 0600)
+	os.MkdirAll(dataDir, 0700)
 
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
