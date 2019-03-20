@@ -35,6 +35,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"github.com/jc3wish/Bifrost/server"
+	_ "net/http/pprof"
 )
 
 type recovery struct {
@@ -132,9 +133,11 @@ func main() {
 		dataDir = *BifrostDataDir
 	}
 	if dataDir == ""{
+		//config.MyConf["Bifrostd"]["data_dir"] = execDir+"/data"
 		dataDir = execDir+"/data"
 	}
-	os.MkdirAll(dataDir, 0777)
+
+	os.MkdirAll(dataDir, 0600)
 
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
@@ -146,6 +149,8 @@ func main() {
 		}
 		WritePid()
 	}
+
+	plugin.DoDynamicPlugin()
 
 	log.Println("Server started, Bifrost version",config.VERSION)
 

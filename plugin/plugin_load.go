@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/jc3wish/Bifrost/config"
 )
 
 var lastLoadPluginTime int64 = 0
@@ -21,16 +22,27 @@ var errorPluginMap map[string]driver.DriverStructure
 
 func init()  {
 	errorPluginMap = make(map[string]driver.DriverStructure,0)
-	if runtime.GOOS == "linux"{
-		execPath, _ := exec.LookPath(os.Args[0])
-		pluginDir = filepath.Dir(execPath)+"/plugin/"
-		go func(){
-			for{
-				LoadPlugin()
-				time.Sleep(60 * time.Second)
-			}
-		}()
+}
+
+func DoDynamicPlugin(){
+	if runtime.GOOS != "linux"{
+		log.Println(runtime.GOOS,"don't support dynamic plugin")
+		return
 	}
+	if config.GetConfigVal("Bifrostd","dynamic_plugin") != "true"{
+		log.Println("don't support dynamic plugin")
+		return
+	}
+	log.Println("load dynamic plugin every 60s")
+
+	execPath, _ := exec.LookPath(os.Args[0])
+	pluginDir = filepath.Dir(execPath)+"/plugin/"
+	go func(){
+		for{
+			LoadPlugin()
+			time.Sleep(60 * time.Second)
+		}
+	}()
 }
 
 func GetErrorPluginList() map[string]driver.DriverStructure{
