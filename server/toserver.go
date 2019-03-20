@@ -12,21 +12,21 @@ import (
 
 type ToServer struct {
 	sync.RWMutex
-	ToServerID	  int
-	PluginName    string
-	MustBeSuccess bool
-	FieldList     []string
-	ToServerKey   string
-	BinlogFileNum int
-	BinlogPosition uint32
-	PluginParam   map[string]interface{}
-	Status        string
-	ToServerChan  *ToServerChan `json:"-"`
-	Error		  string
-	ErrorWaitDeal int
-	ErrorWaitData interface{}
-	PluginConn	  driver.ConnFun `json:"-"`
-	PluginConnKey string `json:"-"`
+	ToServerID	  		int
+	PluginName    		string
+	MustBeSuccess 		bool
+	FieldList     		[]string
+	ToServerKey   		string
+	BinlogFileNum 		int
+	BinlogPosition 		uint32
+	PluginParam   		map[string]interface{}
+	Status        		string
+	ToServerChan  		*ToServerChan `json:"-"`
+	Error		  		string
+	ErrorWaitDeal 		int
+	ErrorWaitData 		interface{}
+	PluginConn	  		driver.ConnFun `json:"-"`
+	PluginConnKey 		string `json:"-"`
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) bool {
@@ -64,6 +64,7 @@ func (db *db) DelTableToServer(schemaName string, tableName string, index int,To
 		if toServerInfo.ToServerID != ToServerID{
 			return false
 		}
+		toServerPositionBinlogKey := getToServerBinlogkey(db,toServerInfo)
 		toServerInfo.Lock()
 		if toServerInfo.Status == "running"{
 			del = true
@@ -75,6 +76,7 @@ func (db *db) DelTableToServer(schemaName string, tableName string, index int,To
 		db.Unlock()
 		if del == true {
 			go func() {
+				log.Println("DelTableToServer start",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 				for {
 					time.Sleep(2 * time.Second)
 					if toServerInfo.Status == "deled" {
@@ -88,12 +90,19 @@ func (db *db) DelTableToServer(schemaName string, tableName string, index int,To
 							db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
 						}
 						db.Unlock()
+						//删除binlog 信息
+						delBinlogPosition(toServerPositionBinlogKey)
 						return
 					}
 				}
+				log.Println("DelTableToServer over",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 			}()
+		}else{
+			//删除binlog 信息
+			delBinlogPosition(toServerPositionBinlogKey)
+			log.Println("DelTableToServer over",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 		}
-		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
+
 	}
 	return true
 }

@@ -39,6 +39,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			runtime.Goexit()
 		}
 	}
+	binlogKey := getToServerBinlogkey(db,This)
 	for {
 		CheckStatusFun()
 		select {
@@ -84,12 +85,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					}
 				}
 			}
-			//保存位点到toServer配置中，这个 len > toServerInfoKey+1 判断是为了防止在同步过程中 同步配置 被删除所引起的数据不对问题
+			//这里保存位点，为是了显示的时候，可以直接从内存中读取
 			db.Lock()
 			This.BinlogFileNum = data.BinlogFileNum
 			This.BinlogPosition = data.BinlogPosition
 			db.Unlock()
-			//保存位点,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
+			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
+			saveBinlogPosition(binlogKey,data.BinlogFileNum,data.BinlogPosition)
 			CheckStatusFun()
 		case <-time.After(5 * time.Second):
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))

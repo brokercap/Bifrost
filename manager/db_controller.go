@@ -25,6 +25,7 @@ import (
 	"log"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 func init(){
@@ -79,7 +80,8 @@ func addDB_Action(w http.ResponseWriter,req *http.Request){
 		data,_:=json.Marshal(result)
 		w.Write(data)
 	}else{
-		server.AddNewDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position)
+		defer server.SaveDBConfigInfo()
+		server.AddNewDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position,time.Now().Unix())
 		server.GetDBObj(dbname).AddChannel("default",1)
 		data,_:=json.Marshal(resultStruct{Status:true,Msg:"success"})
 		w.Write(data)
@@ -98,6 +100,7 @@ func delDB_Action(w http.ResponseWriter,req *http.Request){
 	}else{
 		result.Msg = "error"
 	}
+	defer server.SaveDBConfigInfo()
 	data,_:=json.Marshal(result)
 	w.Write(data)
 }
@@ -106,6 +109,7 @@ func stopDB_Action(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	server.DbList[dbname].Stop()
+	defer server.SaveDBConfigInfo()
 	data,_:=json.Marshal(resultStruct{Status:true,Msg:"success"})
 	w.Write(data)
 }
@@ -118,6 +122,7 @@ func startDB_Action(w http.ResponseWriter,req *http.Request){
 		data,_:=json.Marshal(resultStruct{Status:false,Msg:"failed"})
 		w.Write(data)
 	}else{
+		defer server.SaveDBConfigInfo()
 		data,_:=json.Marshal(resultStruct{Status:true,Msg:"success"})
 		w.Write(data)
 	}
@@ -127,6 +132,7 @@ func closeDB_Action(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	r := server.DbList[dbname].Close()
+	defer server.SaveDBConfigInfo()
 	data,_:=json.Marshal(resultStruct{Status:r,Msg:""})
 	w.Write(data)
 }

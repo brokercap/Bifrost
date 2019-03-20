@@ -50,6 +50,7 @@ func channle_add_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	db.AddChannel(chname,cosumercount)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 
@@ -79,6 +80,7 @@ func channle_stop_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	ch.Stop()
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 	return
 }
@@ -94,6 +96,7 @@ func channle_close_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	ch.Close()
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 	return
 }
@@ -109,6 +112,7 @@ func channle_start_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	ch.Start()
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 	return
 }
@@ -126,6 +130,7 @@ func channle_del_controller(w http.ResponseWriter,req *http.Request){
 	}
 	r := server.DelChannel(dbname,channelID)
 	if r == true{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}else{
 		w.Write(returnResult(false,"channel or db not exsit"))

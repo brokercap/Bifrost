@@ -42,6 +42,7 @@ func table_add_controller(w http.ResponseWriter,req *http.Request){
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}
 }
@@ -55,6 +56,7 @@ func table_del_controller(w http.ResponseWriter,req *http.Request){
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}
 }
@@ -109,6 +111,7 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	dbObj := server.GetDBObj(dbname)
 	r := dbObj.AddTableToServer(schema,tablename,toServer)
 	if r == true{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}else{
 		w.Write(returnResult(false,"unkown error"))
@@ -123,6 +126,7 @@ func table_delToServer_controller(w http.ResponseWriter,req *http.Request) {
 	index :=  GetFormInt(req,"index")
 	ToServerID := GetFormInt(req,"to_server_id")
 	server.GetDBObj(dbname).DelTableToServer(schema,tablename,index,ToServerID)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 

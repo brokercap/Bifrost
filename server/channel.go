@@ -32,17 +32,17 @@ type Channel struct {
 	CurrentThreadNum int
 	Status           string //stop ,starting,running,wait
 	db               *db
-	countChan		chan  *count.FlowCount
+	countChan		 chan  *count.FlowCount
 }
 
 func NewChannel(MaxThreadNum int,Name string, db *db) *Channel {
 	return &Channel{
-		Name:Name,
-		chanName:             make(chan mysql.EventReslut, MaxThreadNum*100),
-		MaxThreadNum:     MaxThreadNum,
-		CurrentThreadNum: 0,
-		Status:           "stop",
-		db:               db,
+		Name:					Name,
+		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*100),
+		MaxThreadNum:     		MaxThreadNum,
+		CurrentThreadNum: 		0,
+		Status:           		"stop",
+		db:               		db,
 	}
 }
 

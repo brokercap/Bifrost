@@ -119,6 +119,7 @@ func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
 	log.Println("consume_channel start")
+	DBBinlogKey := getDBBinlogkey(c.db)
 	for {
 		select {
 		case data = <-This.c.chanName:
@@ -157,11 +158,14 @@ func (This *consume_channel_obj) consume_channel() {
 				}
 			}
 
-			//保存位点,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
+			//保存位点 是为了显示的时候，直接从这里读取
 			This.db.Lock()
 			This.db.binlogDumpFileName = data.BinlogFileName
 			This.db.binlogDumpPosition = data.Header.LogPos
 			This.db.Unlock()
+			//保存位点,这个位点在重启 配置文件恢复的时候
+			//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
+			saveBinlogPosition(DBBinlogKey,pluginData.BinlogFileNum,data.Header.LogPos)
 			if This.db.killStatus == 1{
 				return
 			}

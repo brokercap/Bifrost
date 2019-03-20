@@ -18,6 +18,7 @@ import (
 	"net/http"
 	toserver "github.com/jc3wish/Bifrost/plugin"
 	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/jc3wish/Bifrost/server"
 	"html/template"
 )
 
@@ -39,6 +40,7 @@ func toserver_add_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	toserver.SetToServerInfo(toServerName, Type, ConnUri, Notes)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 
@@ -61,6 +63,7 @@ func toserver_del_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	toServerName := req.Form.Get("toserverkey")
 	toserver.DelToServerInfo(toServerName)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 

@@ -77,7 +77,11 @@ var BifrostDaemon *string
 var BifrostPid *string
 var BifrostDataDir *string
 
+//接收指令进行将配置信息刷盘到disk
+var doSaveInfoToDiskChan chan int8
+
 func main() {
+	doSaveInfoToDiskChan = make(chan int8,100)
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
@@ -151,6 +155,8 @@ func main() {
 	}
 
 	plugin.DoDynamicPlugin()
+	server.InitStrageChan(doSaveInfoToDiskChan)
+	server.InitStorage()
 
 	log.Println("Server started, Bifrost version",config.VERSION)
 
@@ -160,7 +166,7 @@ func main() {
 
 	doRecovery()
 
-	go TimeSleepDoSaveInfo()
+	go doSaveDBConfigToDisk()
 	go manager.Start(IpAndPort)
 	ListenSignal()
 }
@@ -200,11 +206,14 @@ func WritePid(){
 	io.WriteString(f, fmt.Sprint(os.Getpid()))
 }
 
-func TimeSleepDoSaveInfo(){
-	for {
-		time.Sleep(5 * time.Second)
-		doSaveDbInfo()
+func doSaveDBConfigToDisk(){
+	for{
+		i := <-doSaveInfoToDiskChan
+		if i == 0{
+			return
 		}
+		doSaveDbInfo()
+	}
 }
 
 func doSaveDbInfo(){
