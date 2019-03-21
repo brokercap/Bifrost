@@ -20,6 +20,7 @@ import (
 	"strings"
 	"runtime/debug"
 	"fmt"
+	"log"
 )
 
 type HandlerFun interface {
@@ -59,7 +60,7 @@ func AddRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request)
 func rounteFunc(w http.ResponseWriter,req *http.Request){
 	defer func() {
 		if err := recover();err!=nil{
-			debug.PrintStack()
+			log.Println("err:",err,string(debug.Stack()))
 		}
 	}()
 	var route string

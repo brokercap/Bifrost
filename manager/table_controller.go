@@ -20,7 +20,6 @@ import (
 	"github.com/jc3wish/Bifrost/plugin"
 	"strings"
 	"encoding/json"
-	"log"
 )
 
 func init(){
@@ -75,7 +74,6 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	p  := req.Form.Get("param")
 	var pluginParam map[string]interface{}
 	err := json.Unmarshal([]byte(p),&pluginParam)
-	log.Println("param",p)
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 		return

@@ -26,7 +26,7 @@ func Update(SchemaName string,TableName string, data []map[string]interface{}) (
 	return nil
 }
 
-func Delete(SchemaName string,TableName string,data map[string]map[string]interface{}) (e error) {
+func Delete(SchemaName string,TableName string,data map[string]interface{}) (e error) {
 	log.Println("Delete")
 	log.Println("SchemaName:",SchemaName)
 	log.Println("TableName:",TableName)

@@ -328,11 +328,11 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	} else {
 		db.Lock()
 		for _,toServerInfo := range db.tableMap[key].ToServerList{
-			toServerInfo.Lock()
+			//toServerInfo.Lock()
 			if toServerInfo.Status == "running"{
 				toServerInfo.Status = "deling"
 			}
-			toServerInfo.Unlock()
+			//toServerInfo.Unlock()
 		}
 		delete(db.tableMap,key)
 		db.Unlock()

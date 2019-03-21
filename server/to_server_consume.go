@@ -18,7 +18,9 @@ func (This *ToServer) pluginClose(){
 }
 
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
+	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
 	defer func() {
+		delBinlogPosition(toServerPositionBinlogKey)
 		This.pluginClose()
 		if err := recover();err !=nil{
 			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err)
