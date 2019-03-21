@@ -19,7 +19,20 @@ var schema_name string = "bifrost_test"
 var table_name string = "binlog_field_hprose_plugin_test"
 var fieldList []string = make([]string,0)
 
+type resultStruct struct {
+	insert bool
+	update bool
+	delete bool
+	query bool
+}
+
+var result *resultStruct
+
 func main(){
+	result = &resultStruct{
+		false,false,false,false,
+	}
+
 	bifrost_url := flag.String("bifrost_url", "http://127.0.0.1:21036", "-bifrost_url")
 	bifrost_user := flag.String("bifrost_user", "Bifrost", "-bifrost_user")
 	bifrost_pwd := flag.String("bifrost_pwd", "Bifrost123", "-bifrost_pwd")
@@ -28,13 +41,18 @@ func main(){
 	pluginServer := flag.String("pluginServer", "tcp4://127.0.0.1:4322/", "-pluginServer")
 	DDL := flag.String("ddl", "true", "-ddl")
 
-	mysqluri := flag.String("mysqluri", "root:root@tcp(127.0.0.1:3306)/test", "-mysqluri")
+	mysqluser := flag.String("mysqluser", "root", "-mysqluser")
+	mysqlpwd := flag.String("mysqlpwd", "", "-mysqlpwd")
+	mysqlhost := flag.String("mysqlhost", "127.0.0.1", "-mysqlhost")
+	mysqlport := flag.String("mysqlport", "3306", "-mysqlport")
+	mysqldb := flag.String("mysqldb", "test", "-mysqldb")
 	flag.Parse()
 
+	dbSourceString := *mysqluser+":"+*mysqlpwd+"@tcp("+*mysqlhost+":"+*mysqlport+")/"+*mysqldb
 	var dbName = "hposeTest_"+strconv.FormatInt(time.Now().Unix(),10)
 
 	var(
-		toServerKey string = "hproseToserverTest_111111"
+		toServerKey string = "httpToserverTest_111111"
 		pluginPamram map[string]interface{} = make(map[string]interface{},0)
 	)
 
@@ -92,7 +110,7 @@ func main(){
 		User: *bifrost_user,
 		Pwd:  *bifrost_pwd,
 		MysqlConn: &pluginTest.MySQLConn{
-			Uri: *mysqluri,
+			Uri: dbSourceString,
 		},
 	}
 
@@ -119,6 +137,9 @@ func main(){
 	deleteSQL := "delete from "+*schema_name+".`"+*table_name+"` where id = 1"
 	pluginObj.MysqlConn.ExecSQL(deleteSQL)
 
+	ddlSQL := "ALTER TABLE `"+*schema_name+"`.`"+*table_name+"` CHANGE COLUMN `testvarchar` `testvarchar` varchar(20) NOT NULL"
+	pluginObj.MysqlConn.ExecSQL(ddlSQL)
+
 	pluginObj.ChannelStart(dbName,"1")
 	pluginObj.DBStart(dbName)
 
@@ -142,6 +163,30 @@ func main(){
 		pluginObj.DBClose(dbName)
 		time.Sleep(1* time.Second)
 		pluginObj.DBDel(dbName)
+
+		if result.insert == true{
+			log.Println("insert test success")
+		}else{
+			log.Println("insert test failed")
+		}
+
+		if result.update == true{
+			log.Println("update test success")
+		}else{
+			log.Println("update test failed")
+		}
+
+		if result.delete == true{
+			log.Println("delete test success")
+		}else{
+			log.Println("delete test failed")
+		}
+
+		if result.query == true{
+			log.Println("query test success")
+		}else{
+			log.Println("query test failed")
+		}
 		os.Exit(0)
 	}
 }
@@ -153,10 +198,8 @@ func Check(context *rpc.HTTPContext) (e error) {
 }
 
 func Insert(SchemaName string,TableName string, data map[string]interface{}) (e error) {
-	log.Println("Insert")
-	log.Println("SchemaName:",SchemaName)
-	log.Println("TableName:",TableName)
-	log.Println("data:",data)
+	log.Println("Insert","SchemaName:",SchemaName,"TableName:",TableName,"data:",data)
+	result.insert = true
 	return nil
 }
 
@@ -165,24 +208,25 @@ func Update(SchemaName string,TableName string, data []map[string]interface{}) (
 	log.Println("SchemaName:",SchemaName)
 	log.Println("TableName:",TableName)
 	log.Println("data:",data)
-	log.Println("update key:testvarchar before：",data[0]["testvarchar"]," after:", data[1]["testvarchar"])
-	log.Println("update key:testbit before：",data[0]["testbit"]," after:", data[1]["testbit"])
+	log.Println("Update","SchemaName:",SchemaName,"TableName:",TableName)
+	for k,v := range data[0]{
+		log.Println(k,"before:",v, "after:",data[1][k])
+	}
+	if data[1]["testbit"].(float64) == 10 && data[1]["testvarchar"].(string) == "mytestVarc"{
+		result.update = true
+	}
 	return nil
 }
 
 func Delete(SchemaName string,TableName string,data map[string]interface{}) (e error) {
-	log.Println("Delete")
-	log.Println("SchemaName:",SchemaName)
-	log.Println("TableName:",TableName)
-	log.Println("data:",data)
+	log.Println("Delete","SchemaName:",SchemaName,"TableName:",TableName,"data:",data)
+	result.update = true
 	return nil
 }
 
 func Query(SchemaName string,TableName string,data interface{}) (e error) {
-	log.Println("Query")
-	log.Println("SchemaName:",SchemaName)
-	log.Println("TableName:",TableName)
-	log.Println("data:",data)
+	log.Println("Query","SchemaName:",SchemaName,"TableName:",TableName,"data:",data)
+	result.query = true
 	return nil
 }
 
