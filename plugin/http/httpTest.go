@@ -127,13 +127,13 @@ func main(){
 	go httpServer(*pluginServer)
 
 	pluginObj.AddDB(dbName,*bifrost_url)
-	pluginObj.AddTable(dbName,*schema_name,*table_name,"1")
-	pluginObj.AddTableToServer(dbName,*schema_name,*table_name,toServerKey,"http",fieldList,"1",pluginPamram)
+	pluginObj.AddTable(dbName,*schema_name,*table_name,1)
+	pluginObj.AddTableToServer(dbName,*schema_name,*table_name,toServerKey,"http",fieldList,1,pluginPamram)
 
 	insertSQL := "insert  into "+*schema_name+".`"+*table_name+"`(`id`,`testtinyint`,`testsmallint`,`testmediumint`,`testint`,`testbigint`,`testvarchar`,`testchar`,`testenum`,`testset`,`testtime`,`testdate`,`testyear`,`testtimestamp`,`testdatetime`,`testfloat`,`testdouble`,`testdecimal`,`testtext`,`testblob`,`testbit`,`testbool`,`testmediumblob`,`testlongblob`,`testtinyblob`,`test_unsinged_tinyint`,`test_unsinged_smallint`,`test_unsinged_mediumint`,`test_unsinged_int`,`test_unsinged_bigint`) values (1,-1,-2,-3,-4,-5,'testvarcha','te','en2','set1,set3','15:39:59','2018-05-08',2018,'2018-05-08 15:30:21','2018-05-08 15:30:21',9.39,9.39,9.39,'testtext','testblob','',1,'testmediumblob','testlongblob','testtinyblob',1,2,3,4,5)"
 	pluginObj.MysqlConn.ExecSQL(insertSQL)
 
-	updateSQL := "update "+*schema_name+".`"+*table_name+"` set testvarchar = 'mytestVarchar',testbit=10 where id = 1"
+	updateSQL := "update "+*schema_name+".`"+*table_name+"` set testvarchar = 'mytest',testbit=10 where id = 1"
 	pluginObj.MysqlConn.ExecSQL(updateSQL)
 
 	deleteSQL := "delete from "+*schema_name+".`"+*table_name+"` where id = 1"
@@ -143,7 +143,7 @@ func main(){
 	ddlSQL := "ALTER TABLE `"+*schema_name+"`.`"+*table_name+"` CHANGE COLUMN `testvarchar` `testvarchar` varchar(20) NOT NULL"
 	pluginObj.MysqlConn.ExecSQL(ddlSQL)
 
-	pluginObj.ChannelStart(dbName,"1")
+	pluginObj.ChannelStart(dbName,1)
 	pluginObj.DBStart(dbName)
 
 
@@ -153,18 +153,19 @@ func main(){
 		if sig == nil{
 			continue
 		}
-		pluginObj.DelTableToServer(dbName,*schema_name,*table_name,toServerKey,"1","0")
-		time.Sleep(2* time.Second)
+		pluginObj.DelTableToServer(dbName,*schema_name,*table_name,toServerKey,1)
 		pluginObj.DelTable(dbName,*schema_name,*table_name)
 
-		pluginObj.ChannelStop(dbName,"1")
-		pluginObj.ChannelClose(dbName,"1")
-		pluginObj.ChannelDel(dbName,"1")
+		pluginObj.ChannelStop(dbName,1)
+		pluginObj.ChannelClose(dbName,1)
+		pluginObj.ChannelDel(dbName,1)
 
 		pluginObj.DBStop(dbName)
 		pluginObj.DBClose(dbName)
 		time.Sleep(1* time.Second)
 		pluginObj.DBDel(dbName)
+
+		pluginObj.DelToServer(toServerKey)
 
 		if result.insert == true{
 			log.Println("insert test success")
@@ -264,7 +265,7 @@ func update(c string) error{
 	for k,v := range data[0]{
 		log.Println(k,"before:",v, "after:",data[1][k])
 	}
-	if data[1]["testbit"].(float64) == 10 && data[1]["testvarchar"].(string) == "mytestVarc"{
+	if data[1]["testbit"].(float64) == 10 && data[1]["testvarchar"].(string) == "mytest"{
 		result.update = true
 	}
 	return nil
@@ -291,5 +292,4 @@ func query(c string) error{
 func httpServer(ipAndPort string)  {
 	http.HandleFunc(http_api,handel_data)
 	http.ListenAndServe(ipAndPort, nil)
-
 }
