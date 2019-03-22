@@ -19,6 +19,7 @@ import (
 type resultStruct struct {
 	Status bool `json:"status"`
 	Msg string `json:"msg"`
+	Data interface{} `json:"data"`
 }
 
 type MySQLConn struct {
@@ -192,6 +193,22 @@ func(This *BifrostManager) getUrlRespHtml(API string, postDict map[string]string
 	return body
 }
 
+
+func(This *BifrostManager) JsonDecodeResult(body []byte) *resultStruct{
+	var data resultStruct
+	err2 := json.Unmarshal(body,&data)
+	if err2 != nil{
+		log.Println("login result err:",err2)
+		os.Exit(1)
+	}
+	if data.Status != true{
+		log.Println("login err:",data.Msg)
+		os.Exit(1)
+	}
+	return &data
+}
+
+
 func(This *BifrostManager) DoLogin() bool{
 	p := make(map[string]string,0)
 	p["user_name"] = This.User
@@ -211,17 +228,27 @@ func(This *BifrostManager) DoLogin() bool{
 	return true
 }
 
-func(This *BifrostManager) AddToServer(toServerKeyName string,pluginName string,uri string,notes string){
+func(This *BifrostManager) AddToServer(toServerKeyName string,pluginName string,uri string,notes string) bool{
 	postParam := make(map[string]string,0)
 	postParam["toserverkey"] = toServerKeyName
 	postParam["connuri"] = uri
 	postParam["type"] = pluginName
 	postParam["notes"] = notes
-	This.getUrlRespHtml("/toserver/add",postParam)
+	d := This.getUrlRespHtml("/toserver/add",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
+}
+
+func(This *BifrostManager) DelToServer(toServerKeyName string) bool{
+	postParam := make(map[string]string,0)
+	postParam["toserverkey"] = toServerKeyName
+	d:=This.getUrlRespHtml("/toserver/del",postParam)
+	data := This.JsonDecodeResult(d)
+	return  data.Status
 }
 
 
-func(This *BifrostManager) AddDB(dbname string,uri string){
+func(This *BifrostManager) AddDB(dbname string,uri string) bool{
 	masterInfo := This.MysqlConn.GetBinLogInfo()
 	if masterInfo.File == ""{
 		log.Println(This.MysqlConn.Uri," not supported binlog")
@@ -237,28 +264,34 @@ func(This *BifrostManager) AddDB(dbname string,uri string){
 	postParam["serverid"] = strconv.Itoa(serverId)
 	postParam["max_filename"] = ""
 	postParam["max_position"] = ""
-	This.getUrlRespHtml("/db/add",postParam)
+	d := This.getUrlRespHtml("/db/add",postParam)
+	data := This.JsonDecodeResult(d)
+	return  data.Status
 }
 
 
-func(This *BifrostManager)  AddTable(dbname string,schema string,table string,channelid string){
+func(This *BifrostManager)  AddTable(dbname string,schema string,table string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
 	postParam["schema_name"] = schema
 	postParam["table_name"] = table
-	postParam["channelid"] = channelid
-	This.getUrlRespHtml("/table/add",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/table/add",postParam)
+	data := This.JsonDecodeResult(d)
+	return  data.Status
 }
 
-func(This *BifrostManager)  DelTable(dbname string,schema string,table string){
+func(This *BifrostManager)  DelTable(dbname string,schema string,table string) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
 	postParam["schema_name"] = schema
 	postParam["table_name"] = table
-	This.getUrlRespHtml("/table/del",postParam)
+	d := This.getUrlRespHtml("/table/del",postParam)
+	data := This.JsonDecodeResult(d)
+	return  data.Status
 }
 
-func(This *BifrostManager)  AddTableToServer(dbname string,schema string,table string,toserver_key string,plugin_name string,fieldlist []string,mustbe string,param map[string]interface{}){
+func(This *BifrostManager)  AddTableToServer(dbname string,schema string,table string,toserver_key string,plugin_name string,fieldlist []string,mustbe int,param map[string]interface{}) (bool,int){
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
 	postParam["schema_name"] = schema
@@ -266,80 +299,122 @@ func(This *BifrostManager)  AddTableToServer(dbname string,schema string,table s
 	postParam["toserver_key"] = toserver_key
 	postParam["plugin_name"] = plugin_name
 	postParam["fieldlist"] = strings.Replace(strings.Trim(fmt.Sprint(fieldlist), "[]"), " ", ",", -1)
-	postParam["mustbe"] = mustbe
+	postParam["mustbe"] = strconv.Itoa(mustbe)
 	p,err := json.Marshal(param)
 	if err!=nil{
 		log.Println("addTableToServer err:",err)
 		os.Exit(1)
 	}
 	postParam["param"] = string(p)
-	This.getUrlRespHtml("/table/addtoserver",postParam)
+	d := This.getUrlRespHtml("/table/addtoserver",postParam)
+	data := This.JsonDecodeResult(d)
+	if data.Status == true{
+		i,_ := strconv.Atoi(fmt.Sprint(data.Data))
+		return data.Status,i
+	}
+	return  data.Status,0
 }
 
-func(This *BifrostManager)  DelTableToServer(dbname string,schema string,table string,toserver_key string,to_server_id string,index string){
+func(This *BifrostManager)  DelTableToServer(dbname string,schema string,table string,toserver_key string,to_server_id int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
 	postParam["schema_name"] = schema
 	postParam["table_name"] = table
 	postParam["toserver_key"] = toserver_key
-	postParam["to_server_id"] = to_server_id
-	postParam["index"] = index
-	This.getUrlRespHtml("/table/deltoserver",postParam)
+	postParam["to_server_id"] = strconv.Itoa(to_server_id)
+	d := This.getUrlRespHtml("/table/deltoserver",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-
-func(This *BifrostManager)  ChannelStart(dbname string,channelid string){
+func(This *BifrostManager)  AddChannel(dbname string,channel_name string,cosumercount int) (bool,int){
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	postParam["channelid"] = channelid
-	This.getUrlRespHtml("/channel/start",postParam)
+	postParam["channel_name"] = channel_name
+	postParam["cosumercount"] = strconv.Itoa(cosumercount)
+	d := This.getUrlRespHtml("/channel/start",postParam)
+	data := This.JsonDecodeResult(d)
+	i,_ := strconv.Atoi(fmt.Sprint(data.Data))
+	return data.Status,i
 }
 
-func(This *BifrostManager)  ChannelStop(dbname string,channelid string){
+func(This *BifrostManager)  DelChannel(dbname string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	postParam["channelid"] = channelid
-	This.getUrlRespHtml("/channel/stop",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/channel/del",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-
-func(This *BifrostManager)  ChannelClose(dbname string,channelid string){
+func(This *BifrostManager)  ChannelStart(dbname string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	postParam["channelid"] = channelid
-	This.getUrlRespHtml("/channel/close",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/channel/start",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-
-func(This *BifrostManager)  ChannelDel(dbname string,channelid string){
+func(This *BifrostManager)  ChannelStop(dbname string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	postParam["channelid"] = channelid
-	This.getUrlRespHtml("/channel/del",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/channel/stop",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
 
-func(This *BifrostManager)  DBStart(dbname string){
+func(This *BifrostManager)  ChannelClose(dbname string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	This.getUrlRespHtml("/db/start",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/channel/close",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-func(This *BifrostManager)  DBStop(dbname string){
+
+func(This *BifrostManager)  ChannelDel(dbname string,channelid int) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	This.getUrlRespHtml("/db/stop",postParam)
+	postParam["channelid"] = strconv.Itoa(channelid)
+	d := This.getUrlRespHtml("/channel/del",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-func(This *BifrostManager)  DBClose(dbname string){
+func(This *BifrostManager)  DBStart(dbname string) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	This.getUrlRespHtml("/db/close",postParam)
+	d := This.getUrlRespHtml("/db/start",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
 
-func(This *BifrostManager)  DBDel(dbname string){
+func(This *BifrostManager)  DBStop(dbname string) bool{
 	postParam := make(map[string]string,0)
 	postParam["dbname"] = dbname
-	This.getUrlRespHtml("/db/del",postParam)
+	d := This.getUrlRespHtml("/db/stop",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
 }
+
+func(This *BifrostManager)  DBClose(dbname string) bool{
+	postParam := make(map[string]string,0)
+	postParam["dbname"] = dbname
+	d := This.getUrlRespHtml("/db/close",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
+}
+
+func(This *BifrostManager)  DBDel(dbname string) bool{
+	postParam := make(map[string]string,0)
+	postParam["dbname"] = dbname
+	d := This.getUrlRespHtml("/db/del",postParam)
+	data := This.JsonDecodeResult(d)
+	return data.Status
+}
+
 
