@@ -103,7 +103,8 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 		TableName:data.TableName,
 		Rows:data.Rows,
 		BinlogFileNum:BinlogFileNum,
-		BinlogPosition:data.BinlogPosition,
+		BinlogPosition:data.Header.LogPos,
+		Query:data.Query,
 	}
 }
 
