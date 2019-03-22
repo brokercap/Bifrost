@@ -49,9 +49,9 @@ func channle_add_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false,dbname+" not exsit"))
 		return
 	}
-	db.AddChannel(chname,cosumercount)
+	_,ChannelID := db.AddChannel(chname,cosumercount)
 	defer server.SaveDBConfigInfo()
-	w.Write(returnResult(true,"success"))
+	w.Write(returnDataResult(true,"success",ChannelID))
 }
 
 func channle_list_controller(w http.ResponseWriter,req *http.Request){

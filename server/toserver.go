@@ -28,10 +28,10 @@ type ToServer struct {
 	PluginConnKey 		string `json:"-"`
 }
 
-func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) bool {
+func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
 	key := schemaName + "-" + tableName
 	if _, ok := db.tableMap[key]; !ok {
-		return false
+		return false,0
 	} else {
 		db.Lock()
 		toserver.ToServerID = db.tableMap[key].LastToServerID + 1
@@ -45,96 +45,39 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 		db.Unlock()
 		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
 	}
-	return true
+	return true,toserver.ToServerID
 }
 
-func (db *db) DelTableToServer(schemaName string, tableName string, index int,ToServerID int) bool {
+func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID int) bool {
 	key := schemaName + "-" + tableName
 	if _, ok := db.tableMap[key]; !ok {
 		return false
 	} else {
+		var index int = -1
 		db.Lock()
-		if len(db.tableMap[key].ToServerList) < index-1{
+		for index1,toServerInfo2 := range db.tableMap[key].ToServerList{
+			if toServerInfo2.ToServerID == ToServerID{
+				index = index1
+				break
+			}
+		}
+		if index == -1 {
 			db.Unlock()
 			return true
 		}
-		//var del bool = false
-		if len(db.tableMap[key].ToServerList) <= index{
-			db.Unlock()
-			return false
-		}
 		toServerInfo := db.tableMap[key].ToServerList[index]
-		if toServerInfo.ToServerID != ToServerID{
-			db.Unlock()
-			return false
-		}
 		toServerPositionBinlogKey := getToServerBinlogkey(db,toServerInfo)
 		//toServerInfo.Lock()
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
 		if toServerInfo.Status == "running"{
-			//del = true
 			toServerInfo.Status = "deling"
 		}else{
 			if toServerInfo.Status != "deling" {
-				//db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
 				delBinlogPosition(toServerPositionBinlogKey)
 			}
 		}
 		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-		//toServerInfo.Unlock()
 		db.Unlock()
-		/*
-		if del == true {
-			go func() {
-				dbHasLock := false
-				defer func() {
-					if err := recover();err != nil{
-						log.Println("DelTableToServer recovry:",err,db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-						log.Println(string(debug.Stack()))
-						func(){
-							defer func() {
-								if err := recover();err != nil{
-									return
-								}
-							}()
-							if dbHasLock == true{
-								db.Unlock()
-							}
-						}()
-						return
-					}
-				}()
-				log.Println("DelTableToServer start",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-				for {
-					time.Sleep(2 * time.Second)
-					if toServerInfo.Status == "deled" {
-						db.Lock()
-						dbHasLock = true
-						//这里要重新遍历一次 并且和 ToServerID 做对比, 是因为有可能在在这个是时候,index 已经变更过，但是ToServerID 又是唯一值
-						// ToServerList 不采用map 而采用 list 的原因 有一个重要原因,是因为 想实现每次在发送数据的时候，是按顺序的
-						for index,toServerInfo := range db.tableMap[key].ToServerList{
-							if toServerInfo.ToServerID != ToServerID{
-								toServerInfo.RUnlock()
-								continue
-							}
-							db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
-						}
-						db.Unlock()
-						dbHasLock = false
-						//删除binlog 信息
-						delBinlogPosition(toServerPositionBinlogKey)
-						return
-					}
-				}
-				log.Println("DelTableToServer over",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-			}()
-		}else{
-			//删除binlog 信息
-			delBinlogPosition(toServerPositionBinlogKey)
-			log.Println("DelTableToServer over",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-		}
-		*/
-
 	}
 	return true
 }

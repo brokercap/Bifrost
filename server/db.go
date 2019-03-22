@@ -342,13 +342,13 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	return true
 }
 
-func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
+func (db *db) AddChannel(Name string,MaxThreadNum int) (*Channel,int) {
 	db.Lock()
 	db.LastChannelID++
 	ChannelID := db.LastChannelID
 	if _, ok := db.channelMap[ChannelID]; ok {
 		db.Unlock()
-		return nil
+		return db.channelMap[ChannelID],ChannelID
 	}
 	c := NewChannel(MaxThreadNum,Name, db)
 	db.channelMap[ChannelID] = c
@@ -356,7 +356,7 @@ func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
 	db.channelMap[ChannelID].SetFlowCountChan(ch)
 	db.Unlock()
 	log.Println("AddChannel",db.Name,Name,"MaxThreadNum:",MaxThreadNum)
-	return db.channelMap[ChannelID]
+	return db.channelMap[ChannelID],ChannelID
 }
 
 func (db *db) ListChannel() map[int]*Channel {

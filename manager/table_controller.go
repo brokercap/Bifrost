@@ -107,10 +107,10 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		PluginParam:	pluginParam,
 	}
 	dbObj := server.GetDBObj(dbname)
-	r := dbObj.AddTableToServer(schema,tablename,toServer)
+	r,ToServerId := dbObj.AddTableToServer(schema,tablename,toServer)
 	if r == true{
 		defer server.SaveDBConfigInfo()
-		w.Write(returnResult(true,"success"))
+		w.Write(returnDataResult(true,"success",ToServerId))
 	}else{
 		w.Write(returnResult(false,"unkown error"))
 	}
@@ -121,9 +121,8 @@ func table_delToServer_controller(w http.ResponseWriter,req *http.Request) {
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
-	index :=  GetFormInt(req,"index")
 	ToServerID := GetFormInt(req,"to_server_id")
-	server.GetDBObj(dbname).DelTableToServer(schema,tablename,index,ToServerID)
+	server.GetDBObj(dbname).DelTableToServer(schema,tablename,ToServerID)
 	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
