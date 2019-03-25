@@ -190,27 +190,27 @@ func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
 	index := len(data.Rows)-1
 	Key := This.getKeyVal(data,index)
 	var Val string
-	if This.p.ValConfig != ""{
-		Val = This.getVal(data,index)
-	}else{
-		p := data.Rows[index]
-		if This.p.DataType == "json"{
-			if This.p.AddTableName {
-				p["TableName"] = data.TableName
-			}
-			if This.p.AddSchemaName {
-				p["SchemaName"] = data.SchemaName
-			}
-			if This.p.AddEventType {
-				p["EventType"] = data.EventType
-			}
-		}
-		vbyte, _ := json.Marshal(p)
-		Val = string(vbyte)
-	}
 	var err error
 	switch This.p.Type {
 	case "set":
+		if This.p.ValConfig != ""{
+			Val = This.getVal(data,index)
+		}else{
+			p := data.Rows[index]
+			if This.p.DataType == "json"{
+				if This.p.AddTableName {
+					p["TableName"] = data.TableName
+				}
+				if This.p.AddSchemaName {
+					p["SchemaName"] = data.SchemaName
+				}
+				if This.p.AddEventType {
+					p["EventType"] = data.EventType
+				}
+			}
+			vbyte, _ := json.Marshal(p)
+			Val = string(vbyte)
+		}
 		if This.p.Expir > 0{
 			_, err = This.conn.Do("SET", Key,Val,"ex",This.expir)
 		}else{
@@ -218,7 +218,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
 		}
 		break
 	case "list":
-		_, err = This.SendToList(Key,Val)
+		_,err = This.SendToList(Key,data)
 	default:
 		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
 	}
@@ -241,26 +241,7 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 		_, err = This.conn.Do("DEL", Key)
 		break
 	case "list":
-		var Val string
-		if This.p.ValConfig != ""{
-			Val = This.getVal(data,0)
-		}else{
-			p := data.Rows[0]
-			if This.p.DataType == "json"{
-				if This.p.AddTableName {
-					p["TableName"] = data.TableName
-				}
-				if This.p.AddSchemaName {
-					p["SchemaName"] = data.SchemaName
-				}
-				if This.p.AddEventType {
-					p["EventType"] = data.EventType
-				}
-			}
-			vbyte, _ := json.Marshal(p)
-			Val = string(vbyte)
-		}
-		_, err = This.SendToList(Key,Val)
+		_,err = This.SendToList(Key,data)
 		break
 	default:
 		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
@@ -272,8 +253,23 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 	return true,nil
 }
 
-func (This *Conn) SendToList(key string, Val string) (bool,error) {
-	_, err := This.conn.Do("LPUSH", key,Val)
+func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (bool,error) {
+	var Val string
+	var err error
+	if This.p.ValConfig != ""{
+		Val = This.getVal(data,0)
+	}else{
+		if This.p.ValConfig != ""{
+			Val = This.getVal(data,0)
+		}else{
+			c,err := json.Marshal(data)
+			if err != nil{
+				return false,err
+			}
+			Val = string(c)
+		}
+	}
+	_, err = This.conn.Do("LPUSH", Key,Val)
 	if err != nil {
 		return false,err
 	}
@@ -281,5 +277,9 @@ func (This *Conn) SendToList(key string, Val string) (bool,error) {
 }
 
 func (This *Conn) Query(data *driver.PluginDataType) (bool,error) {
+	if This.p.Type == "list"{
+		Key := This.getKeyVal(data, 0)
+		return This.SendToList(Key,data)
+	}
 	return true,nil
 }
