@@ -43,16 +43,26 @@
                     <p>BIT ( int64类型 )</p>
                     <p>&nbsp;</p>
                     <h2><strong>标签</strong></h2>
-                    <p><strong>$SchemaName : </strong>  数据库名字</p>
-                    <p><strong>$TableName : </strong>  表的名字</p>
-                    <p><strong>$EventType : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete); SQL(sql)</p>
-                    <p><strong>$字段名 : </strong>  表的字段数据</p>
+                    <p><strong>{$SchemaName} : </strong>  数据库名字</p>
+                    <p><strong>{$TableName} : </strong>  表的名字</p>
+                    <p><strong>{$EventType} : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete); SQL(sql)</p>
+                    <p><strong>{$字段名} : </strong>  表的字段数据</p>
                     <p>&nbsp;</p>
                     <h2><strong>其他配置</strong></h2>
                     <p>&nbsp;</p>
                     <h3><strong>MustBeSuccess</strong></h3>
-                    <p><strong>Yes : </strong> 当提交到 toServer 返回true 的时候,会进行重试操作,直到成功或者手工设置Miss 错过操作</p>
-                    <p><strong>No : </strong> 不管提交到 toServer 返回true 或者 false,都不进行重试提交</p>
+                    <p><strong>True : </strong> 当提交到 toServer 返回true 的时候,会进行重试操作,直到成功或者手工设置Miss 错过操作</p>
+                    <p><strong>False : </strong> 不管提交到 toServer 返回true 或者 false,都不进行重试提交</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>FilterQuery</strong></h3>
+                    <p><strong>True : </strong> 将过滤sql 事件，不提供给插件层处理</p>
+                    <p><strong>False : </strong> 由插件层自行决定怎么处理</p>
+
+                    <p>&nbsp;</p>
+                    <h3><strong>FilterUpdate</strong></h3>
+                    <p><strong>True : </strong> update事件，所选字段内容都没有变更情况下，不进行推送</p>
+                    <p><strong>False : </strong> 不管字段有没有更新，全部都会推送</p>
 
                     <p>&nbsp;</p>
 

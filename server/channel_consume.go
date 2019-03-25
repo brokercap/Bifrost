@@ -134,6 +134,9 @@ func (This *consume_channel_obj) consume_channel() {
 			n := len(toServerList)
 			if n == 1{
 				toServerInfo := toServerList[0]
+				if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
+					continue
+				}
 				if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
 					continue
 				}
@@ -143,6 +146,9 @@ func (This *consume_channel_obj) consume_channel() {
 				This.sendToServerResult(toServerInfo,&pluginData)
 			}else{
 				for _, toServerInfo := range toServerList {
+					if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
+						continue
+					}
 					if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
 						continue
 					}

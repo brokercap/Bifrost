@@ -102,13 +102,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 }
 
-func (This *ToServer) filterField(data *pluginDriver.PluginDataType){
+func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 	n := len(data.Rows)
 	if n == 0{
-		return
+		return true
 	}
 	if len(This.FieldList) == 0{
-		return
+		return true
 	}
 
 	if n == 1 {
@@ -122,15 +122,24 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType){
 	}else{
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})
+		var isNotUpdate bool = true
 		for _, key := range This.FieldList {
 			if _, ok := data.Rows[0][key]; ok {
 				m_before[key] = data.Rows[0][key]
 				m_after[key] = data.Rows[1][key]
+				if m_before[key] != m_after[key]{
+					isNotUpdate = false
+				}
 			}
+		}
+		//假如所有字段内容都未变更，并且过滤了这个功能，则直接返回false
+		if isNotUpdate && This.FilterUpdate{
+			return  false
 		}
 		data.Rows[0] = m_before
 		data.Rows[1] = m_after
 	}
+	return true
 }
 
 func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) (result bool,err error){
@@ -162,7 +171,10 @@ func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) (result bo
 		}
 	}
 
-	This.filterField(data)
+	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
+	if This.filterField(data) == false{
+		return true,nil
+	}
 
 	switch data.EventType {
 	case "insert":

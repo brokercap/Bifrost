@@ -100,6 +100,8 @@ func recoveryData(data map[string]dbSaveInfo){
 						&ToServer{
 							ToServerID:		toServer.ToServerID,
 							MustBeSuccess:  toServer.MustBeSuccess,
+							FilterQuery:  	toServer.FilterQuery,
+							FilterUpdate:  	toServer.FilterUpdate,
 							ToServerKey:    toServer.ToServerKey,
 							PluginName:   	toServer.PluginName,
 							FieldList:      toServer.FieldList,

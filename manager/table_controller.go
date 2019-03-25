@@ -70,6 +70,8 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	PluginName := req.Form.Get("plugin_name")
 	FieldListString := req.Form.Get("fieldlist")
 	MustBeSuccess := req.Form.Get("mustbe")
+	FilterQuery := req.Form.Get("FilterQuery")
+	FilterUpdate := req.Form.Get("FilterUpdate")
 
 	p  := req.Form.Get("param")
 	var pluginParam map[string]interface{}
@@ -93,17 +95,29 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	}
 
 	var MustBeSuccessBool bool = false
-	if MustBeSuccess == "1"{
+	if MustBeSuccess == "1" || MustBeSuccess == "true"{
 		MustBeSuccessBool = true
 	}
 
+	var FilterQueryBool bool = false
+	if FilterQuery == "1" || FilterQuery == "true"{
+		FilterQueryBool = true
+	}
+
+	var FilterUpdateBool bool = false
+	if FilterUpdate == "1" || FilterUpdate == "true"{
+		FilterUpdateBool = true
+	}
+
 	toServer := &server.ToServer{
-		MustBeSuccess: MustBeSuccessBool,
-		ToServerKey:   toServerKey,
+		MustBeSuccess: 	MustBeSuccessBool,
+		FilterQuery: 	FilterQueryBool,
+		FilterUpdate: 	FilterUpdateBool,
+		ToServerKey:   	toServerKey,
 		PluginName:  	PluginName,
-		FieldList:     fileList,
-		BinlogFileNum: 0,
-		BinlogPosition:0,
+		FieldList:     	fileList,
+		BinlogFileNum: 	0,
+		BinlogPosition:	0,
 		PluginParam:	pluginParam,
 	}
 	dbObj := server.GetDBObj(dbname)

@@ -61,7 +61,7 @@
                                     <th data-field="ToServerKey">ToServerKey</th>
                                     <th data-field="FieldList">FieldList</th>
                                     <th data-field="Others">Others</th>
-                                    <th data-field="Plugin">Plugin</th>
+                                    <th data-field="PluginParam">PluginParam</th>
                                     <th data-field="Error">Error</th>
                                     <th data-field="op">op</th>
                                 </tr>
@@ -99,13 +99,36 @@
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">MustBeSuccess：</label>
                                 <div class="col-sm-9">
-                                    <label class="radio-inline">
-                                        <input type="radio" checked="" value="1" id="MustBeSuccess1" name="MustBeSuccess">Yes</label>
-                                    <label class="radio-inline">
-                                        <input type="radio" value="0" id="MustBeSuccess2" name="MustBeSuccess">No</label>
-
+                                    <select class="form-control" name="MustBeSuccess" id="MustBeSuccess">
+                                        <option value="true" selected="selected">True</option>
+                                        <option value="false">False</option>
+                                    </select>
+                                    <p class="help-block m-b-none">True: 插件返回失败，自动重试，直到成功为止</p>
                                 </div>
-                                <p class="help-block m-b-none">Yes: 返回false,会自动重试，No: 不管提交是否成功</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">FilterQuery：</label>
+                                <div class="col-sm-9">
+                                    <select class="form-control" name="FilterQuery" id="FilterQuery">
+                                        <option value="true" selected="selected">True</option>
+                                        <option value="false">False</option>
+                                    </select>
+                                    <p class="help-block m-b-none">True: 将过滤sql 事件，不提供给插件层处理，False: 由插件层自行决定怎么处理</p>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">FilterUpdate：</label>
+                                <div class="col-sm-9">
+                                    <select class="form-control" name="FilterUpdate" id="FilterUpdate">
+                                        <option value="true" selected="selected">True</option>
+                                        <option value="false">False</option>
+                                    </select>
+                                    <p class="help-block m-b-none">True: update事件，所选字段内容都没有变更情况下，不进行推送，False: 不管字段有没有更新，全部都会推送</p>
+                                </div>
+                                
                             </div>
 
 
@@ -313,7 +336,11 @@
                             }
                             var PluginHtml = "";
                             for(var key in v.PluginParam){
-                                PluginHtml += "<p>"+key+":"+v.PluginParam[key]+"</p>";
+								if (typeof v.PluginParam[key] == "object"){
+									PluginHtml += "<p>"+key+":"+ JSON.stringify(v.PluginParam[key]) +"</p>";
+								}else{
+                                	PluginHtml += "<p>"+key+":"+v.PluginParam[key]+"</p>";
+								}
                             }
                             var ErrorHtml = "";
                             if (v.Error != "" && v.Error != null){
@@ -331,8 +358,8 @@
                                         PluginName:v.PluginName,
                                         ToServerKey:v.ToServerKey,
                                         FieldList:fields,
-                                        Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
-                                        Plugin:PluginHtml,
+                                        Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
+                                        PluginParam:PluginHtml,
                                         Error:ErrorHtml,
                                         op:op,
                                     }
@@ -481,12 +508,14 @@
                             alert("selected table please!");
                             return false;
                         }
-                        var MustBeSuccess = $("input[name='MustBeSuccess']:checked").val();
+                        var MustBeSuccess = $("#MustBeSuccess").val();
                         var addToServerKey = $("#addToServerKey").val();
                         var fieldlist = [];
                         $.each($("#TableFieldsContair input:checkbox:checked"),function(){
                             fieldlist.push($(this).val());
                         });
+						var FilterQuery = $("#FilterQuery").val();
+						var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                         var url = '/table/addtoserver';
                         var data = {
@@ -496,6 +525,8 @@
                             toserver_key:addToServerKey,
                             plugin_name:pluginName,
                             mustbe:MustBeSuccess,
+							FilterQuery:FilterQuery,
+							FilterUpdate:FilterUpdate,
                             fieldlist:fieldlist.toString(),
                             param:JSON.stringify(p.data),
                         }

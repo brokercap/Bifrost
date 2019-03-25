@@ -14,6 +14,8 @@ type ToServer struct {
 	ToServerID	  		int
 	PluginName    		string
 	MustBeSuccess 		bool
+	FilterQuery			bool
+	FilterUpdate		bool
 	FieldList     		[]string
 	ToServerKey   		string
 	BinlogFileNum 		int
