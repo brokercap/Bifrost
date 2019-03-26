@@ -41,25 +41,29 @@ type ConnFun interface {
 	ReConnect() bool
 	HeartCheck()
 	Close() bool
-	Insert(data *PluginDataType) (bool,error)
-	Update(data *PluginDataType) (bool,error)
-	Del(data *PluginDataType) (bool,error)
-	Query(data *PluginDataType) (bool,error)
+	Insert(data *PluginDataType) (*PluginBinlog,error) //状态,是否立马更新binlog,错误内容
+	Update(data *PluginDataType) (*PluginBinlog,error)
+	Del(data *PluginDataType) (*PluginBinlog,error)
+	Query(data *PluginDataType) (*PluginBinlog,error)
 	SetParam(p interface{}) error
+	Commit() (*PluginBinlog,error)
 }
 
-type PluginResult struct {
-	BinlogFileName string
+type PluginBinlog struct {
+	BinlogFileNum int
 	BinlogPosition uint32
 }
 
-type DriverStructure struct{
-	Version string //插件版本
-	BifrostVersion string // 插件开发所使用的Bifrost的版本
-	Error   string
-	ExampleConnUri string
-	driver  Driver
+type ToPluginParam struct {
+	FromPluginBinlogChan chan PluginBinlog
+}
 
+type DriverStructure struct{
+	Version 		string // 插件版本
+	BifrostVersion 	string // 插件开发所使用的Bifrost的版本
+	Error   		string
+	ExampleConnUri 	string
+	driver  		Driver
 }
 
 var (
@@ -127,6 +131,7 @@ const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 	r, _ := regexp.Compile(RegularxEpression)
 	p := r.FindAllStringSubmatch(val, -1)
+	n := len(data.Rows) - 1
 	for _, v := range p {
 		switch v[1] {
 		case "TableName":
@@ -139,7 +144,11 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 			val = strings.Replace(val, "{$EventType}", data.EventType, -1)
 			break
 		default:
-			val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)
+			if rowIndex <= n && rowIndex >= 0 {
+				val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)
+			}else{
+				val = strings.Replace(val, v[0], "nil", -1)
+			}
 			break
 		}
 	}

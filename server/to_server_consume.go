@@ -20,10 +20,9 @@ func (This *ToServer) pluginClose(){
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
 	defer func() {
-		delBinlogPosition(toServerPositionBinlogKey)
 		This.pluginClose()
 		if err := recover();err !=nil{
-			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err)
+			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
 		}else{
 			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
@@ -31,6 +30,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}()
 	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
+
 	var data *pluginDriver.PluginDataType
 	CheckStatusFun := func(){
 		if db.killStatus == 1{
@@ -38,25 +38,38 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		}
 		if This.Status == "deling"{
 			This.Status = "deled"
+			delBinlogPosition(toServerPositionBinlogKey)
 			runtime.Goexit()
 		}
 	}
+	var PluginBinlog *pluginDriver.PluginBinlog
+	var errs error
 	binlogKey := getToServerBinlogkey(db,This)
+
+	SaveBinlog := func(){
+		if PluginBinlog != nil {
+			db.Lock()
+			This.BinlogFileNum = PluginBinlog.BinlogFileNum
+			This.BinlogPosition = PluginBinlog.BinlogPosition
+			db.Unlock()
+			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
+			saveBinlogPosition(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
+		}
+	}
+	var fordo int = 0
+	var lastErrId int = 0
 	for {
 		CheckStatusFun()
 		select {
 		case data = <- c:
-			var result bool
-			var errs error
 			CheckStatusFun()
-			var fordo int = 0
-			var lastErrId int = 0
+			fordo = 0
+			lastErrId = 0
 			for {
-				result = false
 				errs = nil
-				result,errs = This.sendToServer(data)
+				PluginBinlog,errs = This.sendToServer(data)
 				if This.MustBeSuccess == true {
-					if result == true{
+					if errs == nil{
 						if lastErrId > 0 {
 							This.DelWaitError()
 							lastErrId = 0
@@ -85,19 +98,18 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						time.Sleep(2 * time.Second)
 						fordo = 0
 					}
+				}else{
+					PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}
+					break
 				}
 			}
 			//这里保存位点，为是了显示的时候，可以直接从内存中读取
-			db.Lock()
-			This.BinlogFileNum = data.BinlogFileNum
-			This.BinlogPosition = data.BinlogPosition
-			db.Unlock()
-			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
-			saveBinlogPosition(binlogKey,data.BinlogFileNum,data.BinlogPosition)
-			CheckStatusFun()
+			SaveBinlog()
+			break
 		case <-time.After(5 * time.Second):
-			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-			//log.Println("count:",count)
+			PluginBinlog,_ = This.PluginConn.Commit()
+			SaveBinlog()
+			break
 		}
 	}
 }
@@ -142,10 +154,9 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 	return true
 }
 
-func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) (result bool,err error){
+func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		if err2 := recover();err2!=nil{
-			result = false
 			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
 			func() {
@@ -163,31 +174,31 @@ func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) (result bo
 		This.PluginConn,This.PluginConnKey = plugin.Start(This.ToServerKey)
 		if This.PluginConn == nil{
 			err = fmt.Errorf("Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " start err,return nil")
-			return false,err
+			return Binlog,err
 		}
 		err := This.PluginConn.SetParam(This.PluginParam)
 		if err != nil{
-			return false,err
+			return Binlog,err
 		}
 	}
 
 	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
 	if This.filterField(data) == false{
-		return true,nil
+		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 	}
 
 	switch data.EventType {
 	case "insert":
-		result, err = This.PluginConn.Insert(data)
+		Binlog, err = This.PluginConn.Insert(data)
 		break
 	case "update":
-		result, err = This.PluginConn.Update(data)
+		Binlog, err = This.PluginConn.Update(data)
 		break
 	case "delete":
-		result, err = This.PluginConn.Del(data)
+		Binlog, err = This.PluginConn.Del(data)
 		break
 	case "sql":
-		result, err = This.PluginConn.Query(data)
+		Binlog, err = This.PluginConn.Query(data)
 		break
 	default:
 		break

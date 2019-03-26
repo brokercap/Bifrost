@@ -48,7 +48,7 @@ func evenTypeName(e mysql.EventType) string {
 }
 
 type ToServerChan struct {
-	To chan *pluginDriver.PluginDataType
+	To 		chan *pluginDriver.PluginDataType
 }
 
 type consume_channel_obj struct {

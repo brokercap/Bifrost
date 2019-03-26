@@ -119,11 +119,11 @@ func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
 	return driver.TransfeResult(This.p.ValConfig,data,index)
 }
 
-func (This *Conn) Insert(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	return This.Update(data)
 }
 
-func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -152,12 +152,12 @@ func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
 
 	if err != nil {
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -166,11 +166,15 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 	err = This.conn.Delete(Key)
 	if err != nil {
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Query(data *driver.PluginDataType) (bool,error) {
-	return true,nil
+func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+}
+
+func (This *Conn) Commit() (*driver.PluginBinlog,error){
+	return nil,nil
 }

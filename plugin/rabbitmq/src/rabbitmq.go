@@ -167,21 +167,20 @@ func (This *Conn) SetParam(p interface{}) error{
 	return nil
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	return This.sendToList(data)
-	return true,nil
 }
 
 func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (error){
@@ -215,17 +214,17 @@ func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (er
 	return nil
 }
 
-func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	if This.status != "running"{
 		This.ReConnect()
 		if This.status != "running"{
-			return false,This.err
+			return nil,This.err
 		}
 	}
 	c,err := json.Marshal(data)
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
 	var queuename string
 	var exchange string
@@ -236,14 +235,20 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (bool,error) {
 	if This.p.Declare == true {
 		queuename = pluginDriver.TransfeResult(This.p.Queue.Name, data, index)
 		if err := This.Declare(&queuename,&exchange,&routingkey); err != nil{
-			return false,err;
+			return nil,err;
 		}
 	}
-
 	if This.p.Confirm == true{
-		return This.SendAndWait(&exchange,&routingkey,&c,&This.deliveryMode)
+		_,err = This.SendAndWait(&exchange,&routingkey,&c,&This.deliveryMode)
 	}else{
-		return This.SendAndNoWait(&exchange,&routingkey,&c,&This.deliveryMode)
+		_,err = This.SendAndNoWait(&exchange,&routingkey,&c,&This.deliveryMode)
 	}
-	return true,nil
+	if err != nil{
+		return nil,err
+	}
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+}
+
+func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
+	return nil,nil
 }

@@ -179,11 +179,11 @@ func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
 	return driver.TransfeResult(This.p.ValConfig,data,index)
 }
 
-func (This *Conn) Insert(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	return This.Update(data)
 }
 
-func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -225,12 +225,12 @@ func (This *Conn) Update(data *driver.PluginDataType) (bool,error) {
 
 	if err != nil {
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -248,12 +248,12 @@ func (This *Conn) Del(data *driver.PluginDataType) (bool,error) {
 	}
 	if err != nil {
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (bool,error) {
+func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	var Val string
 	var err error
 	if This.p.ValConfig != ""{
@@ -264,22 +264,26 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (bool,erro
 		}else{
 			c,err := json.Marshal(data)
 			if err != nil{
-				return false,err
+				return nil,err
 			}
 			Val = string(c)
 		}
 	}
 	_, err = This.conn.Do("LPUSH", Key,Val)
 	if err != nil {
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Query(data *driver.PluginDataType) (bool,error) {
+func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
 	if This.p.Type == "list"{
 		Key := This.getKeyVal(data, 0)
 		return This.SendToList(Key,data)
 	}
-	return true,nil
+	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+}
+
+func (This *Conn) Commit() (*driver.PluginBinlog,error){
+	return nil,nil
 }

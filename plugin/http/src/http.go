@@ -141,38 +141,42 @@ func (This *Conn) Close() bool {
 	return true
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	b,_ := json.Marshal(data.Rows[0])
 	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
 	if err != nil{
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	b,_ := json.Marshal(data.Rows)
 	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
 	if err != nil{
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	b,_ := json.Marshal(data.Rows[0])
 	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
 	if err != nil{
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,data.Query)
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+}
+
+func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
+	return nil,nil
 }

@@ -124,39 +124,43 @@ func (This *Conn) CheckUri() error {
 }
 
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	err := stub.Insert(data.SchemaName,data.TableName,data.Rows[0])
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	err := stub.Update(data.SchemaName,data.TableName,data.Rows)
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	err := stub.Delete(data.SchemaName,data.TableName,data.Rows[0])
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (bool,error) {
+func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	err := stub.Query(data.SchemaName,data.TableName,data.Query)
 	if err != nil{
 		This.err = err
-		return false,err
+		return nil,err
 	}
-	return true,nil
+	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+}
+
+func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
+	return nil,nil
 }
