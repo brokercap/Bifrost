@@ -74,6 +74,9 @@ func (This *Conn) SetParam(p interface{}) error{
 	if err2 != nil{
 		return err2
 	}
+	if param.SchemaName == "" || param.TableName == "" || param.PrimaryKey == ""{
+		return fmt.Errorf("SchemaName,TableName,PrimaryKey can't be empty")
+	}
 	This.p = param
 	return nil
 }
@@ -118,16 +121,6 @@ func (This *Conn) HeartCheck() {
 func (This *Conn) Close() bool {
 	This.conn.Close()
 	return true
-}
-
-func (This *Conn) createExpirIndex(s []string) {
-	timeOutKey := s[0]+"-"+s[1]
-	if _,ok:=This.timeOutMap[timeOutKey];ok{
-		return
-	}else{
-		This.timeOutMap[timeOutKey] = This.expir
-		This.conn.DB(s[0]).C(s[1])
-	}
 }
 
 func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
