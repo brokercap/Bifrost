@@ -25,6 +25,7 @@ import (
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"github.com/jc3wish/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/config"
 	"unsafe"
 	"strconv"
 	"sync"
@@ -85,7 +86,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	ToServerInfo.Unlock()
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
-			To:     make(chan *pluginDriver.PluginDataType, 10000),
+			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
 		}
 		go ToServerInfo.consume_to_server(This.db,pluginData.SchemaName,pluginData.TableName)
 	}

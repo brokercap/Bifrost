@@ -21,6 +21,7 @@ import (
 
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"github.com/jc3wish/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/config"
 	"log"
 )
 
@@ -38,7 +39,7 @@ type Channel struct {
 func NewChannel(MaxThreadNum int,Name string, db *db) *Channel {
 	return &Channel{
 		Name:					Name,
-		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*100),
+		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*config.ChannelQueueSize),
 		MaxThreadNum:     		MaxThreadNum,
 		CurrentThreadNum: 		0,
 		Status:           		"stop",

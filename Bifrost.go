@@ -36,6 +36,7 @@ import (
 	"runtime/debug"
 	"github.com/jc3wish/Bifrost/server"
 	_ "net/http/pprof"
+	"strconv"
 )
 
 type recovery struct {
@@ -137,7 +138,6 @@ func main() {
 		dataDir = *BifrostDataDir
 	}
 	if dataDir == ""{
-		//config.MyConf["Bifrostd"]["data_dir"] = execDir+"/data"
 		dataDir = execDir+"/data"
 	}
 
@@ -154,6 +154,9 @@ func main() {
 		WritePid()
 	}
 
+	//初始化其他配置
+	initParam()
+
 	plugin.DoDynamicPlugin()
 	server.InitStrageChan(doSaveInfoToDiskChan)
 	server.InitStorage()
@@ -169,6 +172,25 @@ func main() {
 	go doSaveDBConfigToDisk()
 	go manager.Start(IpAndPort)
 	ListenSignal()
+}
+
+func initParam(){
+	var tmp string
+	tmp = config.GetConfigVal("Bifrostd","toserver_queue_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.ToServerQueueSize = intA
+		}
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","channel_queue_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.ChannelQueueSize = intA
+		}
+	}
 }
 
 func initLog(){
