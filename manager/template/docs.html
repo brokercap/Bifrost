@@ -78,12 +78,11 @@
 
     <a name="pluginDocName">&nbsp;</a>
     <div class="row">
-
         <div class="col-sm-12">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Plugin 配置</h5>
-
+                   
                     <div style="float: right; margin-top: -10px">
                         <select class="form-control" name="type" id="PluginList">
                         {{range $k, $val := .Drivers}}
@@ -100,11 +99,22 @@
                         </a>
                     </div>
                 </div>
-                <div class="ibox-content" id="PluginDocDiv">
-
+                
+                <div class="ibox-content col-sm-12" >
+                	
+                     <div class="col-sm-7">
+                     	<div class="col-sm-12 ibox-content" id="PluginDocDiv" style="border:0px"></div>
+                     </div>
+                     
+                     
+                     <div class="col-sm-5" >
+                     	<div class="col-sm-12 ibox-content" id="PluginWebDiv" style="border-top:0px;"></div>
+                     </div>
                 </div>
             </div>
         </div>
+
+	
 
     </div>
 
@@ -121,6 +131,8 @@
                 $("#PluginDocDiv").html(key+ " no docs");
             }
         });
+		$("#PluginWebDiv").load("/plugin/"+key+"/www/"+key+".html?v="+pluginVersion);
+		$.getScript("/plugin/"+key+"/www/"+key+".js?v="+pluginVersion,function(){});
     }
     $("#PluginList").change(
         function(){
