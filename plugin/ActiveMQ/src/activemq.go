@@ -9,6 +9,7 @@ import (
 	"github.com/gmallard/stompngo"
 	"net"
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	"fmt"
 )
 
 type Conn struct {
@@ -16,7 +17,6 @@ type Conn struct {
 	status string
 	conn   *stompngo.Connection
 	err    error
-	expir  string
 	header stompngo.Headers
 	p	   PluginParam
 }
@@ -31,7 +31,6 @@ type PluginParam struct {
 func newConn(uri string) *Conn{
 	f := &Conn{
 		Uri:uri,
-		expir:"",
 		status:"close",
 	}
 	f.Connect()
@@ -48,10 +47,10 @@ func (This *Conn) SetParam(p interface{}) error{
 	if err2 != nil{
 		return err2
 	}
-	This.p = param
-	if This.p.Expir > 0{
-		This.expir = strconv.FormatInt((time.Now().Unix()+int64(This.p.Expir)),10)
+	if param.QueueName == ""{
+		return fmt.Errorf("QueueName is empty")
 	}
+	This.p = param
 	return nil
 }
 
@@ -169,8 +168,8 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 	if This.p.Persistent == true{
 		h = h.Add("persistent","true")
 	}
-	if This.expir != ""{
-		h = h.Add("expires",This.expir)
+	if This.p.Expir > 0{
+		h = h.Add("expires",strconv.FormatInt((time.Now().Unix()*1000+int64(This.p.Expir)),10))
 	}
 	err2 := This.conn.SendBytes(h,c)
 	if err2 !=nil{
