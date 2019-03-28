@@ -1,6 +1,6 @@
 # Bifrost ---- MySQL到其他服务的高性能异构中间件
 
-[![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=v1.1.0)](https://travis-ci.org/jc3wish/Bifrost)
+[![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/jc3wish/Bifrost)
 [![Join the chat at https://gitter.im/jc3wish-Bifrost/Lobby](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/jc3wish-Bifrost/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
@@ -18,8 +18,8 @@
 * ActiveMQ
 * Kafka
 * Mongodb
-* Http 自定义服务
-* [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/master/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
 ![image](https://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
 
@@ -38,7 +38,7 @@
 
 * kill,服务宕机等重启自动恢复配置
 
-* 每条数据同步完保存位点,数据位点安全,确保不会出现数据重复同步
+* 支持自定义插件开发，动态加载
 
 
 ### MySQL 版本（经过测试）
@@ -80,7 +80,7 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.4-release/linux.zip
+wget https://github.com/jc3wish/Bifrost/releases/download/v1.1.x-release/linux.zip
 
 unzip linux.zip
 
@@ -107,6 +107,16 @@ listen=0.0.0.0:21036
 #通过界面配置的信息保存文件夹,默认为启动文件所在文件夹下的data目录
 data_dir=./
 
+#设置同步给第三方服务的队列大小，默认10000
+toserver_queue_size=10000
+
+#通道队列的大小，默认1000
+channel_queue_size=1000
+
+#是否支持动态加plugin so 插件，默认为false
+#这个参数只在 linux 下有效，其他平台全部为false
+dynamic_plugin=false
+
 `````
 
 ##### 启动
@@ -128,7 +138,7 @@ data_dir=./
  FROM centos:centos6.8
  MAINTAINER jc3wish "jc3wish@126.com"
  RUN yum install -y wget unzip
- RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.0.4-release/linux.zip
+ RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.1.x-release/linux.zip
  RUN unzip linux && cd linux && chmod a+x ./Bifrost-server
  ENTRYPOINT ["linux/Bifrost-server","start"]
  EXPOSE 21036
@@ -136,14 +146,14 @@ data_dir=./
 `````
 
 `````shell
- docker build -t bifrost:1.0.4 .
+ docker build -t bifrost:1.1.x .
 `````
 
 ##### Docker启动
 `````shell
-docker pull jc3wish/bifrost:1.0.4
+docker pull jc3wish/bifrost:1.1.x
 
-docker run -d -p21036:21036 jc3wish/bifrost:1.0.4
+docker run -d -p21036:21036 jc3wish/bifrost:1.1.x
 `````
 
 ##### 管理
@@ -153,6 +163,16 @@ http://127.0.0.1:21036
 ### 界面操作文档
 [Bifrost官网](http://www.xbifrost.com/)
 
-### QQ群号： 70331601
-![image](https://github.com/jc3wish/Bifrost/blob/master/qq.jpg)
+### 感谢相关依懒包提供者
 
+- github.com/gmallard/stompngo
+- github.com/hprose/hprose-golang
+- github.com/Shopify/sarama
+- github.com/bradfitz/gomemcache/memcache
+- gopkg.in/mgo.v2
+- github.com/streadway/amqp
+- github.com/garyburd/redigo/redis
+- github.com/syndtr/goleveldb/leveldb
+
+### QQ群号： 70331601
+<img src="https://github.com/jc3wish/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>
