@@ -21,12 +21,12 @@
 * [Http 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
-![image](https://github.com/jc3wish/Bifrost/blob/master/bifrost1.jpg)
+![image](https://github.com/jc3wish/Bifrost/blob/v1.1.x/bifrost1.jpg)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/jc3wish/Bifrost/blob/master/diagram.png)
+![image](https://github.com/jc3wish/Bifrost/blob/v1.1.x/diagram.png)
 
 
 ### Bifrost 特点
@@ -64,16 +64,16 @@
 go get github.com/jc3wish/Bifrost
 
 # windows
-./build.sh windows
+./build.sh windows v1.1.x
 
 # linux
-./build.sh linux
+./build.sh linux v1.1.x
 
 #mac
-./build.sh darwin
+./build.sh darwin v1.1.x
 
 #freebsd
-./build.sh freebsd
+./build.sh freebsd v1.1.x
 
 ```
 
