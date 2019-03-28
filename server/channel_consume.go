@@ -120,7 +120,10 @@ func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
-	log.Println("consume_channel start")
+	log.Println("channel",c.Name," consume_channel start")
+	defer func() {
+		log.Println("channel",c.Name," consume_channel over; CurrentThreadNum:",c.CurrentThreadNum)
+	}()
 	DBBinlogKey := getDBBinlogkey(c.db)
 	for {
 		select {
