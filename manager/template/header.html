@@ -26,7 +26,7 @@
                     <a href="http://www.xbifrost.com" target="_blank" class="navbar-brand">Bifrost</a>
                 </div>
                 <div class="navbar-collapse collapse" id="navbar" style="float: right; width: auto; margin-right: 0px">
-                    <ul class="nav navbar-nav">
+                    <ul class="nav navbar-nav" id="header_nav">
                         <li class="active">
                             <a aria-expanded="false" role="button" href="/"> 返回首页</a>
                         </li>
@@ -38,6 +38,9 @@
                         </li>
                         <li class="dropdown">
                             <a href="/toserver/list" class="dropdown-toggle"> ToServer </a>
+                        </li>
+                        <li class="dropdown">
+                            <a  href="/flow/index" class="dropdown-toggle"> Flow </a>
                         </li>
                         <li class="dropdown">
                             <a href="/docs" target="_blank" class="dropdown-toggle"> Docs </a>
@@ -67,5 +70,13 @@ function filterIpAndPort(c){
     }
     return;
 }
+$(function(){
+	$("#header_nav li a").each(function(){
+		if(document.URL.indexOf($(this).attr("href")) != -1){
+			$("#header_nav li").removeClass("active");
+			$(this).parent().addClass("active");
+		}
+	 });
+})
 </script>
 {{end}}

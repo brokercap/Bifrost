@@ -28,6 +28,8 @@
                          
                          {{if ne .DbName "" }}
                          - DB: {{.DbName}}
+                         {{else}}
+                         - ALL
                          {{end}}
                         </h5>
                         <div class="ibox-tools">
@@ -47,7 +49,14 @@
                                 <option value="eighthour">8 小时</option>
                                 <option value="day">24 小时</option>
                             </select>
-                        </div>                                      
+                        </div>       
+                        
+                        <div class="ibox-tools" style="width: auto; padding-right:8px;">
+							<select class="form-control" style=" margin-top:-8px;" id="data_display_format">
+                            	<option value="increment" selected="selected">增量</option>
+                            	<option value="full">全量</option>
+                            </select>
+                        </div>                                 
                 </div>
                     
                     <div class="ibox-content">
@@ -78,10 +87,27 @@
 	var key_arr = key = ["Count","ByteSize"];
 	var monitor_color_arr = monitor_color= ["#1ab394","#60C"];
 	var monitor_color_html = "";
+	var CountType = "条";
+	var ByteSizeType = "b";
+	var data = [];
 	for(i in monitor_color_arr){
 		monitor_color_html +='<div i="'+i+'" status="y" class="colorDiv" id="'+key[i]+'" color="'+monitor_color[i]+'" onclick="doSelectMonitorDisplay(this);" style=" cursor:pointer; float:left; display:block; padding:6px 12px; border-bottom:2px '+monitor_color[i]+' solid; margin-right:15px">'+key[i]+'</div>';
 	}
 	$("#monitor_color").html(monitor_color_html);
+
+	function add0(m){return m<10?'0'+m:m }
+	function TimeFormat(timeUnix)
+	{
+		//timeUnix是整数，否则要parseInt转换
+		var time = new Date(parseInt(timeUnix)*1000);
+		var y = time.getFullYear();
+		var m = time.getMonth();
+		var d = time.getDate();
+		var h = time.getHours();
+		var mm = time.getMinutes();
+		var s = time.getSeconds();
+		return y+'-'+add0(m)+'-'+add0(d)+' '+add0(h)+':'+add0(mm)+':'+add0(s);
+	}
 
 	function rewrite_data(data){
 	    if (data.length == 0){
@@ -101,9 +127,11 @@
         pointSize: 2
 	    }
 		);
+		$("#Count").text('Count( '+CountType+' )');
+		$("#ByteSize").text('ByteSize( '+ByteSizeType+' )');
 	}
 	
-	var data = [];	
+	
 	function doSelectMonitorDisplay(obj){
 		var status = $(obj).attr('status');
 		if(status == 'y'){
@@ -126,6 +154,90 @@
 		rewrite_data(data);
 	}
 	
+	function incrementData(d){
+		CountType = "条";
+		ByteSizeType = "b";
+		var Count = -1;
+		var ByteSize = -1;
+		for (s in d) {
+			if (d[s].Time > 0){
+				if (Count == -1){
+					Count = d[s].Count;
+					ByteSize = d[s].ByteSize;
+					continue;
+				}
+				var tSize = d[s].ByteSize-ByteSize;
+				if( tSize < 0){
+					tSize = 0;
+				}
+				var tCount = d[s].Count-Count;
+				if (tCount < 0){
+					tCount = 0;
+				}
+				data.push({
+					time: TimeFormat(d[s].Time),
+					Count: tCount,
+					ByteSize: tSize,
+				});
+				Count = d[s].Count;
+				ByteSize = d[s].ByteSize;
+			}
+		}
+		return data;
+	}
+	
+	function fullData(d){
+		CountType = "条"
+		ByteSizeType = "b"
+		if (d[0].Count > 100000){
+			CountType = "k"
+		}
+		if (d[0].ByteSize >= 1024000 ){
+			ByteSizeType = "kb"
+		}
+
+		if (d[0].ByteSize >= 1024000000 ){
+			ByteSizeType = "MB"
+		}
+
+		if (d[0].ByteSize >= 1024000000000 ){
+			ByteSizeType = "GB"
+		}
+
+		for (s in d) {
+			if (d[s].Time != ""){
+				var Count = 0
+				if (CountType == "k"){
+					Count =(d[s].Count/1000).toFixed(2)
+				}else{
+					Count = d[s].Count
+				}
+				var ByteSize = 0
+				switch (ByteSizeType){
+					case "b":
+						ByteSize = d[s].ByteSize;
+						break
+					case "kb":
+						ByteSize =(d[s].ByteSize/1024).toFixed(2)
+						break
+					case "MB":
+						ByteSize =(d[s].ByteSize/1024000).toFixed(2)
+						break
+					case "GB":
+						ByteSize =(d[s].ByteSize/1024000000).toFixed(2)
+						break
+				}
+
+				data.push({
+					time: TimeFormat(d[s].Time),
+					Count: Count,
+					ByteSize: ByteSize,
+				});
+			}
+		}
+		return data;
+	}
+	
 	function getFlowData() {
         data = [];
 
@@ -142,69 +254,25 @@
                     if (status != "success") {
                         return false;
                     }
-                    var CountType = "条"
-                    if (d[0].Count > 100000){
-                        CountType = "k"
-                    }
-                    $("#Count").text('Count( '+CountType+' )')
-
-                    var ByteSizeType = "b"
-
-                    if (d[0].ByteSize >= 1024000 ){
-                        ByteSizeType = "kb"
-                    }
-
-                    if (d[0].ByteSize >= 1024000000 ){
-                        ByteSizeType = "MB"
-                    }
-
-                    if (d[0].ByteSize >= 1024000000000 ){
-                        ByteSizeType = "GB"
-                    }
-
-                    $("#ByteSize").text('ByteSize( '+ByteSizeType+' )')
-
-                    for (s in d) {
-                        if (d[s].Time != ""){
-                            var Count = 0
-                            if (CountType == "k"){
-                                Count =(d[s].Count/1000).toFixed(2)
-                            }else{
-                                Count = d[s].Count
-                            }
-                            var ByteSize = 0
-                            switch (ByteSizeType){
-                                case "b":
-                                    ByteSize = d[s].ByteSize;
-                                    break
-                                case "kb":
-                                    ByteSize =(d[s].ByteSize/1024).toFixed(2)
-                                    break
-                                case "MB":
-                                    ByteSize =(d[s].ByteSize/1024000).toFixed(2)
-                                    break
-                                case "GB":
-                                    ByteSize =(d[s].ByteSize/1024000000).toFixed(2)
-                                    break
-                            }
-
-                            data.push({
-                                time: d[s].Time,
-                                Count: Count,
-                                ByteSize: ByteSize,
-                            });
-						}
-                    }
-                    //console.log(d);
-                    //console.log(data);
+				//	console.log(d);
                     //写入到曲线
-                    rewrite_data(data);
+					if ($("#data_display_format").val() == "full"){
+						rewrite_data(fullData(d));
+					}else{
+						rewrite_data(incrementData(d));
+					}
+                    
                 }, 'json');
     }
 	getFlowData();
 
 	$(function(){
 		$("#selectLengthsAge").change(
+			function(){
+                getFlowData();
+			}
+		);
+		$("#data_display_format").change(
 			function(){
                 getFlowData();
 			}

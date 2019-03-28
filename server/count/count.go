@@ -8,14 +8,14 @@ import (
 )
 
 type FlowCount struct {
-	Time string
+	Time int64
 	TableId *string
 	Count int64
 	ByteSize int64
 }
 
 type CountContent struct {
-	Time string
+	Time int64
 	Count int64
 	ByteSize int64
 }
@@ -35,7 +35,7 @@ type dbCountChild struct {
 	ChannelMap map[string]*CountFlow
 	Flow *CountFlow
 	Content *CountContent
-	doSliceTime string
+	doSliceTime int64
 }
 
 var l sync.RWMutex
@@ -55,9 +55,10 @@ func DoInit(){
 		for{
 			time.Sleep(5 * time.Second)
 			l.Lock()
+			NowTime := time.Now().Unix()
 			for _,c := range dbChannelChanMap{
 				c <- &FlowCount{
-					Time:time.Now().Format("2006-01-02 15:04:05"),
+					Time:NowTime,
 					Count:-3,
 				}
 			}
@@ -83,7 +84,7 @@ func SetDB(db string){
 				Count:0,
 				ByteSize:0,
 			},
-			doSliceTime:"",
+			doSliceTime:0,
 		}
 	}
 	l.Unlock()
@@ -106,7 +107,7 @@ func DelDB(db string){
 
 func setChannelChan(key string) chan *FlowCount{
 	if _,ok := dbChannelChanMap[key];!ok{
-		flowChan := make(chan *FlowCount,1000)
+		flowChan := make(chan *FlowCount,10000)
 		dbChannelChanMap[key] = flowChan
 	}
 	return dbChannelChanMap[key]
@@ -146,7 +147,7 @@ func SetChannel(db string,channelId string) chan *FlowCount{
 func flowContentInit(n int) []CountContent{
 	data := make([]CountContent,0)
 	for i:=0;i<n;i++ {
-		data = append(data,CountContent{Time:"", Count:0, ByteSize:0})
+		data = append(data,CountContent{Time:0, Count:0, ByteSize:0})
 	}
 	return data
 }
@@ -283,4 +284,62 @@ func GetFlowByDb(db string,flowType string) []CountContent{
 		break
 	}
 	return nil
+}
+
+func GetFlowAll(flowType string) []CountContent{
+
+	var tmp []CountContent
+	var result []CountContent
+
+	switch flowType {
+	case "Minute":
+		result = flowContentInit(12)
+		break
+	case "TenMinute":
+		result = flowContentInit(120)
+		break
+	case "Hour":
+		result = flowContentInit(120)
+		break
+	case "EightHour":
+		result = flowContentInit(96)
+		break
+	case "Day":
+		result = flowContentInit(144)
+		break
+	default:
+		tmp = make([]CountContent,0)
+		return tmp
+	}
+	for _,FlowInfo := range dbCountChanMap{
+		switch flowType {
+		case "Minute":
+			tmp = FlowInfo.Flow.Minute[0:]
+			break
+		case "TenMinute":
+			tmp = FlowInfo.Flow.TenMinute[0:]
+
+			break
+		case "Hour":
+			tmp = FlowInfo.Flow.Hour[0:]
+			break
+		case "EightHour":
+			tmp = FlowInfo.Flow.EightHour[0:]
+			break
+		case "Day":
+			tmp = FlowInfo.Flow.Day[0:]
+			break
+		default:
+			tmp = make([]CountContent,0)
+			break
+		}
+		for index,Flow := range tmp{
+			result[index].Count += Flow.Count
+			result[index].ByteSize += Flow.ByteSize
+			if Flow.Time > 0{
+				result[index].Time = Flow.Time
+			}
+		}
+	}
+	return result
 }

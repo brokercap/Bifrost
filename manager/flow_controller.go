@@ -91,6 +91,9 @@ func get_flow_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func getFlowCount(dbname *string,dbANdTableName *string,channelId *string,FlowType string) ([]count.CountContent,error){
+	if *dbname == ""{
+		return count.GetFlowAll(FlowType),nil
+	}
 	if *dbANdTableName != "-"{
 		if *dbname == ""{
 			return make([]count.CountContent,0),fmt.Errorf("param error")
