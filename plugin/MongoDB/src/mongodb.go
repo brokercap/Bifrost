@@ -6,6 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"encoding/json"
+	"strings"
 )
 
 const VERSION  = "v1.1.0"
@@ -39,13 +40,14 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 }
 
 type Conn struct {
-	Uri    string
-	status string
-	conn   *mgo.Session
-	err    error
-	expir  int
-	timeOutMap map[string]int
-	p		PluginParam
+	Uri    			string
+	status 			string
+	conn   			*mgo.Session
+	err    			error
+	p	   			PluginParam
+	primaryKeys 	[]string
+	hadIndexMap 	map[string]bool
+	indexName		string
 }
 
 
@@ -58,7 +60,7 @@ type PluginParam struct {
 func newConn(uri string) *Conn{
 	f := &Conn{
 		Uri:uri,
-		timeOutMap:make(map[string]int,0),
+		indexName:"bifrost_unique_index",
 	}
 	f.Connect()
 	return f
@@ -77,7 +79,9 @@ func (This *Conn) SetParam(p interface{}) error{
 	if param.SchemaName == "" || param.TableName == "" || param.PrimaryKey == ""{
 		return fmt.Errorf("SchemaName,TableName,PrimaryKey can't be empty")
 	}
+	This.primaryKeys = strings.Split(param.PrimaryKey, ",")
 	This.p = param
+	This.hadIndexMap = make(map[string]bool,0)
 	return nil
 }
 
@@ -123,6 +127,26 @@ func (This *Conn) Close() bool {
 	return true
 }
 
+func (This *Conn) createIndex(c *mgo.Collection) {
+	indexTableKey := c.Database.Name+"#"+c.Name
+	if _,ok := This.hadIndexMap[indexTableKey];!ok{
+		indexs,err := c.Indexes()
+		if err == nil{
+			//假如表里已经拥有了指定索引名称的索引，而不再创建索引
+			//假如这里创建了2个字段的索引，用户又在mongodb server修改了这个索引，是很有可能会出问题的，使用的时候，需要注意
+			for _,indexInfo := range indexs{
+				if indexInfo.Name == This.indexName{
+					This.hadIndexMap[indexTableKey] = true
+					return
+				}
+			}
+		}
+		index := mgo.Index{Key:This.primaryKeys,Unique:true,Name:This.indexName}
+		This.hadIndexMap[indexTableKey] = true
+		c.EnsureIndex(index)
+	}
+}
+
 func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
 	n := len(data.Rows)-1
 	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, n)
@@ -134,8 +158,15 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 		return nil,fmt.Errorf("PrimaryKey "+ This.p.PrimaryKey +" is not exsit")
 	}
 	c := This.conn.DB(SchemaName).C(TableName)
+	This.createIndex(c)
 	k := make(bson.M,1)
-	k[This.p.PrimaryKey] = data.Rows[n][This.p.PrimaryKey]
+	for _,key := range This.primaryKeys{
+		if _,ok := data.Rows[n][key];ok{
+			k[key] = data.Rows[n][key]
+		}else{
+			return nil,fmt.Errorf("key:"+key+ " no exsit")
+		}
+	}
 	_,err:=c.Upsert(k,data.Rows[n])
 	if err !=nil{
 		return nil,err
@@ -151,14 +182,18 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBi
 	if This.p.PrimaryKey == ""{
 		return nil,fmt.Errorf("PrimaryKey is empty")
 	}
-	if _,ok := data.Rows[0][This.p.PrimaryKey];!ok{
-		return nil,fmt.Errorf("PrimaryKey "+ This.p.PrimaryKey +" is not exsit")
-	}
 	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, 0)
 	TableName := pluginDriver.TransfeResult(This.p.TableName, data, 0)
 	c := This.conn.DB(SchemaName).C(TableName)
+	This.createIndex(c)
 	k := make(bson.M,1)
-	k[This.p.PrimaryKey] = data.Rows[0][This.p.PrimaryKey]
+	for _,key := range This.primaryKeys{
+		if _,ok := data.Rows[0][key];ok{
+			k[key] = data.Rows[0][key]
+		}else{
+			return nil,fmt.Errorf("key:"+key+ " no exsit")
+		}
+	}
 	err := c.Remove(k)
 	if err !=nil{
 		return nil,err
