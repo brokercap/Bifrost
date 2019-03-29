@@ -77,11 +77,10 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 			}
 			if DoMinuteSlice == true {
 				DoMinuteSlice = false
-				dbCountChanMap[db].TableMap[*data.TableId].Minute = dbCountChanMap[db].TableMap[*data.TableId].Minute[1:]
-				dbCountChanMap[db].ChannelMap[channelId].Minute = dbCountChanMap[db].ChannelMap[channelId].Minute[1:]
+
 
 				if doDbSlice == true {
-					dbCountChanMap[db].Flow.Minute = dbCountChanMap[db].Flow.Minute[1:]
+
 					//db总计
 					dbCountChanMap[db].Flow.Minute = append(
 						dbCountChanMap[db].Flow.Minute,
@@ -90,6 +89,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 							Count:    dbCountChanMap[db].Content.Count,
 							ByteSize: dbCountChanMap[db].Content.ByteSize,
 						})
+					dbCountChanMap[db].Flow.Minute = dbCountChanMap[db].Flow.Minute[1:]
 				}
 
 				//表的统计信息
@@ -109,13 +109,13 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 						Count:    dbCountChanMap[db].ChannelMap[channelId].Content.Count,
 						ByteSize: dbCountChanMap[db].ChannelMap[channelId].Content.ByteSize,
 					})
-
+				dbCountChanMap[db].TableMap[*data.TableId].Minute = dbCountChanMap[db].TableMap[*data.TableId].Minute[1:]
+				dbCountChanMap[db].ChannelMap[channelId].Minute = dbCountChanMap[db].ChannelMap[channelId].Minute[1:]
 			}
 
 			if DoTenMinuteSlice == true {
 				DoTenMinuteSlice = false
-				dbCountChanMap[db].TableMap[*data.TableId].TenMinute = dbCountChanMap[db].TableMap[*data.TableId].TenMinute[1:]
-				dbCountChanMap[db].ChannelMap[channelId].TenMinute = dbCountChanMap[db].ChannelMap[channelId].TenMinute[1:]
+
 
 				dbCountChanMap[db].TableMap[*data.TableId].TenMinute = append(
 					dbCountChanMap[db].TableMap[*data.TableId].TenMinute,
@@ -134,8 +134,11 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 						ByteSize: dbCountChanMap[db].ChannelMap[channelId].Content.ByteSize,
 					})
 
+				dbCountChanMap[db].TableMap[*data.TableId].TenMinute = dbCountChanMap[db].TableMap[*data.TableId].TenMinute[1:]
+				dbCountChanMap[db].ChannelMap[channelId].TenMinute = dbCountChanMap[db].ChannelMap[channelId].TenMinute[1:]
+
 				if doDbSlice == true {
-					dbCountChanMap[db].Flow.TenMinute = dbCountChanMap[db].Flow.TenMinute[1:]
+
 					//db总计
 					dbCountChanMap[db].Flow.TenMinute = append(
 						dbCountChanMap[db].Flow.TenMinute,
@@ -144,6 +147,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 							Count:    dbCountChanMap[db].Content.Count,
 							ByteSize: dbCountChanMap[db].Content.ByteSize,
 						})
+					dbCountChanMap[db].Flow.TenMinute = dbCountChanMap[db].Flow.TenMinute[1:]
 				}
 
 			}
@@ -151,8 +155,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 			//每30秒一条数据
 			if DoHourSlice == true {
 				DoHourSlice = false
-				dbCountChanMap[db].TableMap[*data.TableId].Hour = dbCountChanMap[db].TableMap[*data.TableId].Hour[1:]
-				dbCountChanMap[db].ChannelMap[channelId].Hour = dbCountChanMap[db].ChannelMap[channelId].Hour[1:]
+
 
 				dbCountChanMap[db].TableMap[*data.TableId].Hour = append(
 					dbCountChanMap[db].TableMap[*data.TableId].Hour,
@@ -171,9 +174,10 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 						ByteSize: dbCountChanMap[db].ChannelMap[channelId].Content.ByteSize,
 					})
 
-				if doDbSlice == true {
-					dbCountChanMap[db].Flow.Hour = dbCountChanMap[db].Flow.Hour[1:]
+				dbCountChanMap[db].TableMap[*data.TableId].Hour = dbCountChanMap[db].TableMap[*data.TableId].Hour[1:]
+				dbCountChanMap[db].ChannelMap[channelId].Hour = dbCountChanMap[db].ChannelMap[channelId].Hour[1:]
 
+				if doDbSlice == true {
 					//db总计
 					dbCountChanMap[db].Flow.Hour = append(
 						dbCountChanMap[db].Flow.Hour,
@@ -182,14 +186,13 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 							Count:    dbCountChanMap[db].Content.Count,
 							ByteSize: dbCountChanMap[db].Content.ByteSize,
 						})
+					dbCountChanMap[db].Flow.Hour = dbCountChanMap[db].Flow.Hour[1:]
+
 				}
 			}
 			if DoEightHourSlice == true {
 				DoEightHourSlice = false
 				//每5分钟一条数据
-
-				dbCountChanMap[db].TableMap[*data.TableId].EightHour = dbCountChanMap[db].TableMap[*data.TableId].EightHour[1:]
-				dbCountChanMap[db].ChannelMap[channelId].EightHour = dbCountChanMap[db].ChannelMap[channelId].EightHour[1:]
 
 				dbCountChanMap[db].TableMap[*data.TableId].EightHour = append(
 					dbCountChanMap[db].TableMap[*data.TableId].EightHour,
@@ -207,25 +210,24 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 						Count:    dbCountChanMap[db].ChannelMap[channelId].Content.Count,
 						ByteSize: dbCountChanMap[db].ChannelMap[channelId].Content.ByteSize,
 					})
+				dbCountChanMap[db].TableMap[*data.TableId].EightHour = dbCountChanMap[db].TableMap[*data.TableId].EightHour[1:]
+				dbCountChanMap[db].ChannelMap[channelId].EightHour = dbCountChanMap[db].ChannelMap[channelId].EightHour[1:]
 
 				if doDbSlice == true {
-					dbCountChanMap[db].Flow.EightHour = dbCountChanMap[db].Flow.EightHour[1:]
 					//db总计
-					dbCountChanMap[db].Flow.Hour = append(
-						dbCountChanMap[db].Flow.Hour,
+					dbCountChanMap[db].Flow.EightHour = append(
+						dbCountChanMap[db].Flow.EightHour,
 						CountContent{
 							Time:     seliceTime,
 							Count:    dbCountChanMap[db].Content.Count,
 							ByteSize: dbCountChanMap[db].Content.ByteSize,
 						})
+					dbCountChanMap[db].Flow.EightHour = dbCountChanMap[db].Flow.EightHour[1:]
 				}
 			}
 
 			if DoDaySlice == true {
 				DoDaySlice = false
-
-				dbCountChanMap[db].TableMap[*data.TableId].Day = dbCountChanMap[db].TableMap[*data.TableId].Day[1:]
-				dbCountChanMap[db].ChannelMap[channelId].Day = dbCountChanMap[db].ChannelMap[channelId].Day[1:]
 
 				dbCountChanMap[db].TableMap[*data.TableId].Day = append(
 					dbCountChanMap[db].TableMap[*data.TableId].Day,
@@ -244,8 +246,11 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 						ByteSize: dbCountChanMap[db].ChannelMap[channelId].Content.ByteSize,
 					})
 
+				dbCountChanMap[db].TableMap[*data.TableId].Day = dbCountChanMap[db].TableMap[*data.TableId].Day[1:]
+				dbCountChanMap[db].ChannelMap[channelId].Day = dbCountChanMap[db].ChannelMap[channelId].Day[1:]
+
 				if doDbSlice == true {
-					dbCountChanMap[db].Flow.Day = dbCountChanMap[db].Flow.Day[1:]
+
 					//db总计
 					dbCountChanMap[db].Flow.Day = append(
 						dbCountChanMap[db].Flow.Day,
@@ -254,6 +259,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 							Count:    dbCountChanMap[db].Content.Count,
 							ByteSize: dbCountChanMap[db].Content.ByteSize,
 						})
+					dbCountChanMap[db].Flow.Day = dbCountChanMap[db].Flow.Day[1:]
 				}
 			}
 			dbCountChanMap[db].TableMap[*data.TableId].Content.Count += data.Count
