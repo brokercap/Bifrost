@@ -46,7 +46,7 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 		return nil
 	}
 	resp.Body.Close()
-	return fmt.Errorf("http code:%s",resp.StatusCode)
+	return fmt.Errorf("http code:%d",resp.StatusCode)
 }
 
 type Conn struct {
@@ -121,7 +121,7 @@ func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,d
 		resp.Body.Close()
 		return nil
 	}
-	return fmt.Errorf("http code:%s",resp.StatusCode)
+	return fmt.Errorf("http code:%d",resp.StatusCode)
 }
 
 
