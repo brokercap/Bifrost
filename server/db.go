@@ -31,11 +31,11 @@ func init() {
 	DbList = make(map[string]*db, 0)
 }
 
-func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32) *db {
+func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
 	var r bool = false
 	DbLock.Lock()
 	if _, ok := DbList[Name]; !ok {
-		DbList[Name] = NewDb(Name, ConnectUri, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition)
+		DbList[Name] = NewDb(Name, ConnectUri, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition,AddTime)
 		r = true
 	}
 	count.SetDB(Name)
@@ -59,6 +59,7 @@ func GetDBObj(Name string) *db{
 func DelDB(Name string) bool {
 	DbLock.Lock()
 	defer DbLock.Unlock()
+	DBPositionBinlogKey := getDBBinlogkey(DbList[Name])
 	if _, ok := DbList[Name]; ok {
 		if DbList[Name].ConnStatus == "close" {
 			for _,c := range  DbList[Name].channelMap{
@@ -71,42 +72,46 @@ func DelDB(Name string) bool {
 			return false
 		}
 	}
+	// 删除binlog 信息
+	delBinlogPosition(DBPositionBinlogKey)
 	return true
 }
 
 type db struct {
-	sync.Mutex
-	Name               string `json:"Name"`
-	ConnectUri         string `json:"ConnectUri"`
-	ConnStatus         string `json:"ConnStatus"` //close,stop,starting,running
-	ConnErr            string `json:"ConnErr"`
-	channelMap         map[int]*Channel `json:"ChannelMap"`
-	LastChannelID      int	`json:"LastChannelID"`
-	tableMap           map[string]*Table `json:"TableMap"`
-	binlogDump         *mysql.BinlogDump
-	binlogDumpFileName string `json:"BinlogDumpFileName"`
-	binlogDumpPosition uint32 `json:"BinlogDumpPosition"`
-	replicateDoDb      map[string]uint8 `json:"ReplicateDoDb"`
-	serverId           uint32 `json:"ServerId"`
-	killStatus 			int
-	maxBinlogDumpFileName string `json:"MaxBinlogDumpFileName"`
-	maxBinlogDumpPosition uint32 `json:"MaxBinlogDumpPosition"`
+	sync.RWMutex
+	Name               		string `json:"Name"`
+	ConnectUri         		string `json:"ConnectUri"`
+	ConnStatus         		string `json:"ConnStatus"` //close,stop,starting,running
+	ConnErr            		string `json:"ConnErr"`
+	channelMap         		map[int]*Channel `json:"ChannelMap"`
+	LastChannelID      		int	`json:"LastChannelID"`
+	tableMap           		map[string]*Table `json:"TableMap"`
+	binlogDump         		*mysql.BinlogDump
+	binlogDumpFileName 		string `json:"BinlogDumpFileName"`
+	binlogDumpPosition 		uint32 `json:"BinlogDumpPosition"`
+	replicateDoDb      		map[string]uint8 `json:"ReplicateDoDb"`
+	serverId           		uint32 `json:"ServerId"`
+	killStatus 				int
+	maxBinlogDumpFileName 	string `json:"MaxBinlogDumpFileName"`
+	maxBinlogDumpPosition 	uint32 `json:"MaxBinlogDumpPosition"`
+	AddTime					int64
 }
 
 type DbListStruct struct {
-	Name               string
-	ConnectUri         string
-	ConnStatus         string //close,stop,starting,running
-	ConnErr            string
-	ChannelCount       int
-	LastChannelID      int
-	TableCount         int
-	BinlogDumpFileName string
-	BinlogDumpPosition uint32
-	MaxBinlogDumpFileName string
-	MaxBinlogDumpPosition uint32
-	ReplicateDoDb      map[string]uint8
-	ServerId           uint32
+	Name               		string
+	ConnectUri         		string
+	ConnStatus         		string //close,stop,starting,running
+	ConnErr            		string
+	ChannelCount       		int
+	LastChannelID      		int
+	TableCount         		int
+	BinlogDumpFileName 		string
+	BinlogDumpPosition 		uint32
+	MaxBinlogDumpFileName 	string
+	MaxBinlogDumpPosition 	uint32
+	ReplicateDoDb      		map[string]uint8
+	ServerId           		uint32
+	AddTime					int64
 }
 
 func GetListDb() map[string]DbListStruct {
@@ -116,46 +121,53 @@ func GetListDb() map[string]DbListStruct {
 	defer DbLock.Unlock()
 	for k,v := range DbList{
 		dbListMap[k] = DbListStruct{
-			Name:v.Name,
-			ConnectUri:v.ConnectUri,
-			ConnStatus:v.ConnStatus,
-			ConnErr:v.ConnErr,
-			ChannelCount:len(v.channelMap),
-			LastChannelID:v.LastChannelID,
-			TableCount:len(v.tableMap),
-			BinlogDumpFileName:v.binlogDumpFileName,
-			BinlogDumpPosition:v.binlogDumpPosition,
-			MaxBinlogDumpFileName:v.maxBinlogDumpFileName,
-			MaxBinlogDumpPosition:v.maxBinlogDumpPosition,
-			ReplicateDoDb:v.replicateDoDb,
-			ServerId:v.serverId,
+			Name:					v.Name,
+			ConnectUri:				v.ConnectUri,
+			ConnStatus:				v.ConnStatus,
+			ConnErr:				v.ConnErr,
+			ChannelCount:			len(v.channelMap),
+			LastChannelID:			v.LastChannelID,
+			TableCount:				len(v.tableMap),
+			BinlogDumpFileName:		v.binlogDumpFileName,
+			BinlogDumpPosition:		v.binlogDumpPosition,
+			MaxBinlogDumpFileName:	v.maxBinlogDumpFileName,
+			MaxBinlogDumpPosition:	v.maxBinlogDumpPosition,
+			ReplicateDoDb:			v.replicateDoDb,
+			ServerId:				v.serverId,
+			AddTime:				v.AddTime,
 		}
 	}
 	return dbListMap
 }
 
 
-func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32) *db {
+func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
 	return &db{
-		Name:               Name,
-		ConnectUri:         ConnectUri,
-		ConnStatus:         "close",
-		ConnErr:            "",
-		LastChannelID:		0,
-		channelMap:         make(map[int]*Channel, 0),
-		tableMap:           make(map[string]*Table, 0),
-		binlogDumpFileName: binlogFileName,
-		binlogDumpPosition: binlogPostion,
-		maxBinlogDumpFileName:maxFileName,
-		maxBinlogDumpPosition:maxPosition,
-		binlogDump: &mysql.BinlogDump{
-			DataSource:    ConnectUri,
-			ReplicateDoDb: make(map[string]uint8, 0),
-			OnlyEvent:     []mysql.EventType{mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
-		},
-		replicateDoDb: make(map[string]uint8, 0),
-		serverId:      serverId,
-		killStatus:			0,
+		Name:               	Name,
+		ConnectUri:         	ConnectUri,
+		ConnStatus:         	"close",
+		ConnErr:            	"",
+		LastChannelID:			0,
+		channelMap:         	make(map[int]*Channel, 0),
+		tableMap:           	make(map[string]*Table, 0),
+		binlogDumpFileName: 	binlogFileName,
+		binlogDumpPosition: 	binlogPostion,
+		maxBinlogDumpFileName:	maxFileName,
+		maxBinlogDumpPosition:	maxPosition,
+		binlogDump: 			&mysql.BinlogDump{
+					DataSource:    	ConnectUri,
+					ReplicateDoDb: 	make(map[string]uint8, 0),
+					OnlyEvent:     	[]mysql.EventType{
+										mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
+										mysql.QUERY_EVENT,
+										mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
+										mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
+									},
+				},
+		replicateDoDb: 			make(map[string]uint8, 0),
+		serverId:      			serverId,
+		killStatus:				0,
+		AddTime:				AddTime,
 	}
 }
 /*
@@ -270,17 +282,19 @@ func (db *db) monitorDump(reslut chan error) bool {
 	return true
 }
 
-func (db *db) AddTable(schemaName string, tableName string, ChannelKey int) bool {
+func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastToServerID int) bool {
 	key := schemaName + "-" + tableName
 	if _, ok := db.tableMap[key]; !ok {
 		db.tableMap[key] = &Table{
-			Name:         tableName,
-			ChannelKey:   ChannelKey,
-			ToServerList: make([]ToServer, 0),
+			Name:         	tableName,
+			ChannelKey:   	ChannelKey,
+			ToServerList: 	make([]*ToServer, 0),
+			LastToServerID: LastToServerID,
 		}
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
+		log.Println("key:",key,"db.tableMap[key]：",db.tableMap[key])
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
 		db.Unlock()
@@ -297,12 +311,29 @@ func (db *db) GetTable(schemaName string, tableName string) *Table {
 	}
 }
 
+func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap map[string]*Table) {
+	TableMap = make(map[string]*Table,0)
+	for k,v := range db.tableMap{
+		if v.ChannelKey == ChanneKey && len(v.ToServerList) > 0 {
+			TableMap[k] = v
+		}
+	}
+	return
+}
+
 func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := schemaName + "-" + tableName
 	if _, ok := db.tableMap[key]; !ok {
 		return true
 	} else {
 		db.Lock()
+		for _,toServerInfo := range db.tableMap[key].ToServerList{
+			//toServerInfo.Lock()
+			if toServerInfo.Status == "running"{
+				toServerInfo.Status = "deling"
+			}
+			//toServerInfo.Unlock()
+		}
 		delete(db.tableMap,key)
 		db.Unlock()
 		count.DelTable(db.Name,key)
@@ -311,44 +342,13 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	return true
 }
 
-func (db *db) AddTableToServer(schemaName string, tableName string, toserver ToServer) bool {
-	key := schemaName + "-" + tableName
-	if _, ok := db.tableMap[key]; !ok {
-		return false
-	} else {
-		db.Lock()
-		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
-		db.Unlock()
-		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
-	}
-	return true
-}
-
-func (db *db) DelTableToServer(schemaName string, tableName string, index int) bool {
-	key := schemaName + "-" + tableName
-	if _, ok := db.tableMap[key]; !ok {
-		return false
-	} else {
-		db.Lock()
-		if len(db.tableMap[key].ToServerList) < index-1{
-			db.Unlock()
-			return true
-		}
-		toServerInfo := db.tableMap[key].ToServerList[index]
-		db.tableMap[key].ToServerList=append(db.tableMap[key].ToServerList[:index],db.tableMap[key].ToServerList[index+1:]...)
-		db.Unlock()
-		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-	}
-	return true
-}
-
-func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
+func (db *db) AddChannel(Name string,MaxThreadNum int) (*Channel,int) {
 	db.Lock()
 	db.LastChannelID++
 	ChannelID := db.LastChannelID
 	if _, ok := db.channelMap[ChannelID]; ok {
 		db.Unlock()
-		return nil
+		return db.channelMap[ChannelID],ChannelID
 	}
 	c := NewChannel(MaxThreadNum,Name, db)
 	db.channelMap[ChannelID] = c
@@ -356,7 +356,7 @@ func (db *db) AddChannel(Name string,MaxThreadNum int) *Channel {
 	db.channelMap[ChannelID].SetFlowCountChan(ch)
 	db.Unlock()
 	log.Println("AddChannel",db.Name,Name,"MaxThreadNum:",MaxThreadNum)
-	return db.channelMap[ChannelID]
+	return db.channelMap[ChannelID],ChannelID
 }
 
 func (db *db) ListChannel() map[int]*Channel {
@@ -372,28 +372,11 @@ func (db *db) GetChannel(channelID int) *Channel {
 	return db.channelMap[channelID]
 }
 
-type ToServer struct {
-	sync.RWMutex
-	MustBeSuccess bool
-	Type          string
-	DataType      string //string , json
-	AddEventType  bool
-	AddSchemaName bool
-	AddTableName  bool
-	KeyConfig     string
-	ValueConfig   string
-	FieldList     []string
-	ToServerKey   string
-	Expir 		  int
-	BinlogFileNum int
-	BinlogPosition uint32
-}
-
 type Table struct {
 	sync.Mutex
-	Name         string
-	ChannelKey   int
-	ToServerList []ToServer
-	//Plugin      string //*.so ,default:default.so
+	Name         	string
+	ChannelKey   	int
+	LastToServerID  int
+	ToServerList 	[]*ToServer
 }
 

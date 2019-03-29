@@ -1,0 +1,53 @@
+<p><strong>实现以下几个方法</strong></p>
+
+<h4>检测是否可以连接到当前服务</h4>
+<pre>
+func Check(context *rpc.HTTPContext) (e error) {
+log.Println("Check success")
+return nil
+}
+</pre>
+
+<h4>新增数据</h4>
+<pre>
+func Insert(SchemaName string,TableName string, data map[string]interface{}) (e error) {
+return nil
+}
+</pre>
+
+<h4>更新数据</h4>
+<pre>
+
+func Update(SchemaName string,TableName string, data []map[string]interface{}) (e error){
+log.Println("data:",data)
+return nil
+}
+</pre>
+
+<h4>删除数据</h4>
+
+<pre>
+func Delete(SchemaName string,TableName string,data map[string]map[string]interface{}) (e error) {
+log.Println("Delete")
+log.Println("SchemaName:",SchemaName)
+log.Println("TableName:",TableName)
+log.Println("data:",data)
+return nil
+}
+</pre>
+
+<h4>sql</h4>
+
+<pre>
+func Query(SchemaName string,TableName string,sql string) (e error) {
+log.Println("sql")
+log.Println("SchemaName:",SchemaName)
+log.Println("TableName:",TableName)
+log.Println("sql:",sql)
+return nil
+}
+</pre>
+
+<h4>map[string]interface{} 格式</h4>
+<p> </p>
+<p>map[字段名][字段的值]</p>

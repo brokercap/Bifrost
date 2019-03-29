@@ -46,7 +46,7 @@
                                             	{{range $i, $v := .DBList}}
                                                 <tr>
                                                     <td>{{$v.Name}}</td>
-                                                    <td>{{$v.ConnectUri}}</td>
+                                                    <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
                                                     	{{if eq $v.ConnStatus "close"}}
@@ -337,5 +337,6 @@ function DoChangeDbStatus(obj,status){
 		'json'
 	);
 }
+
 
 </script>

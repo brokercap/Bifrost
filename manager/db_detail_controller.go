@@ -17,30 +17,24 @@ package manager
 
 import (
 	"net/http"
-	"log"
 	"html/template"
 	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
-	"github.com/jc3wish/Bifrost/toserver"
+	toserver "github.com/jc3wish/Bifrost/plugin"
 )
 
 func init(){
-	AddRoute("/db/detail",db_detail_controller)
-	AddRoute("/db/tablelist",get_table_List_controller)
-	AddRoute("/db/tablefields",get_table_fields_controller)
+	addRoute("/db/detail",db_detail_controller)
+	addRoute("/db/tablelist",get_table_List_controller)
+	addRoute("/db/tablefields",get_table_fields_controller)
 }
 
 func db_detail_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	type dbDetail struct {
 		TemplateHeader
 		DbName string
 		DataBaseList []string
-		ToServerList string
+		ToServerList  map[string]*toserver.ToServer
 		ChannelList map[int]*server.Channel
 	}
 	req.ParseForm()
@@ -53,19 +47,13 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	defer dbConn.Close()
 	DataBaseList := GetSchemaList(dbConn)
 	var Result dbDetail
-	b,_:=json.Marshal(toserver.GetToServerMap())
-	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: string(b),ChannelList:server.GetDBObj(dbname).ListChannel()}
+	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
 }
 
 func get_table_List_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
@@ -103,11 +91,6 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 
 
 func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")

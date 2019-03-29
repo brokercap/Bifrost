@@ -24,8 +24,8 @@ import (
 )
 
 func init(){
-	AddRoute("/flow/get",get_flow_controller)
-	AddRoute("/flow/index",index_flow_controller)
+	addRoute("/flow/get",get_flow_controller)
+	addRoute("/flow/index",index_flow_controller)
 }
 
 func index_flow_controller(w http.ResponseWriter,req *http.Request){
@@ -91,6 +91,9 @@ func get_flow_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func getFlowCount(dbname *string,dbANdTableName *string,channelId *string,FlowType string) ([]count.CountContent,error){
+	if *dbname == ""{
+		return count.GetFlowAll(FlowType),nil
+	}
 	if *dbANdTableName != "-"{
 		if *dbname == ""{
 			return make([]count.CountContent,0),fmt.Errorf("param error")

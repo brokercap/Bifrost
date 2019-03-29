@@ -31,7 +31,7 @@ type MysqlConnection interface {
 
 type EventReslut struct {
 	Header         EventHeader
-	Rows           []map[string]driver.Value
+	Rows           []map[string]interface{}
 	Query          string
 	SchemaName     string
 	TableName      string
@@ -40,7 +40,6 @@ type EventReslut struct {
 }
 
 type callback func(data *EventReslut)
-
 
 func fieldTypeName(t FieldType) string {
 	switch t {

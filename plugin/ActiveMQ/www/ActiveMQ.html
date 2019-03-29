@@ -1,0 +1,34 @@
+<div id="ActiveMQ_Plugin_Contair">
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">QueueName：</label>
+    <div class="col-sm-9">
+        <input type="text"  name="Kafka_Topic" id="ActiveMQ_Queue" class="form-control" placeholder="/queue/name">
+        <span class="help-block m-b-none">* 队列名,支持标签 {$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Expir：</label>
+    <div class="col-sm-9">
+        <input type="text" name="Expir" id="ActiveMQ_Expir"  class="form-control" value="0" placeholder="Expir time (ms)">
+        <span class="help-block m-b-none">消息过期时间,单位毫秒(ms)</span>
+        <p>&nbsp;</p>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">消息持久化：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="ActiveMQ_Persistent" id="ActiveMQ_Persistent">
+            <option value="true" selected="selected">Yes</option>
+            <option value="false">No</option>
+        </select>
+        <span class="help-block m-b-none" id="declare_help">
+            Yes: 消息将以持久化方式写入 </br>
+            No : 消息不持久化
+    </span>
+    </div>
+</div>
+
+</div>

@@ -1,0 +1,71 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Plugin List &nbsp;&nbsp;&nbsp;&nbsp;  Plugin API Version: {{.PluginAPIVersion}}</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Version</th>
+                                <th>Dev For Bifrost</th>
+                                <th>Example ConnUri</th>
+                                <th>Erros</th>
+                                <th>Document</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .Drivers}}
+                            <tr>
+                                <td>{{$i}}</td>
+                                <td>{{$v.Version}}</td>
+
+                                <td>
+                                {{$v.BifrostVersion}}
+                                </td>
+                                <td>{{$v.ExampleConnUri}}</td>
+                                <td>{{$v.Error}}</td>
+                                <td>
+                                    <a href="/docs?plugin={{$i}}" target="_blank">
+                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Document</button>
+                                    </a>
+                                </td>
+
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}

@@ -17,23 +17,22 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"time"
 	"strings"
 )
 
 import (
-	"github.com/jc3wish/Bifrost/toserver/driver"
+	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
-	"github.com/jc3wish/Bifrost/toserver"
-	dataDriver "database/sql/driver"
-	"regexp"
 	"github.com/jc3wish/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/config"
 	"unsafe"
 	"strconv"
+	"sync"
+	"log"
+	"bytes"
+	"encoding/gob"
 )
-
-const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
 
 func evenTypeName(e mysql.EventType) string {
 	switch e {
@@ -43,24 +42,28 @@ func evenTypeName(e mysql.EventType) string {
 		return "update"
 	case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
 		return "delete"
+	case mysql.QUERY_EVENT:
+		return "sql"
 	}
 	return fmt.Sprintf("%d", e)
 }
 
+type ToServerChan struct {
+	To 		chan *pluginDriver.PluginDataType
+}
+
 type consume_channel_obj struct {
+	sync.RWMutex
 	db      *db
 	c       *Channel
-	connMap map[string]driver.ConnFun
-	ToserverKey *string
-	rowIndex  int
+	connMap map[string]pluginDriver.ConnFun
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
 	return &consume_channel_obj{
 		db:      c.db,
 		c:       c,
-		connMap: make(map[string]driver.ConnFun, 0),
-		rowIndex:0,
+		connMap: make(map[string]pluginDriver.ConnFun, 0),
 	}
 }
 
@@ -70,173 +73,113 @@ func (This *consume_channel_obj) checkChannleStatus() {
 	}
 }
 
-func (This *consume_channel_obj) sendToServer(Type string,KeyConfig *string, ValConfig *interface{}) (result bool,err error){
-	defer func() {
-		if err2 := recover();err2!=nil{
-			result = false
-			err = fmt.Errorf(*This.ToserverKey,fmt.Sprint(err2))
-			log.Println(*This.ToserverKey,"sendToServer err:",err2)
-			func() {
-				defer func() {
-					if err2 := recover();err2!=nil{
-						return
-					}
-				}()
-				This.connMap[*This.ToserverKey].Close()
-			}()
-			This.connMap[*This.ToserverKey].Connect()
-		}
-	}()
-	switch Type {
-	case "insert":
-		result,err = This.connMap[*This.ToserverKey].Insert(*KeyConfig, *ValConfig)
-			break
-	case "update":
-		result,err = This.connMap[*This.ToserverKey].Update(*KeyConfig, *ValConfig)
-		break
-	case "del":
-		result,err = This.connMap[*This.ToserverKey].Del(*KeyConfig)
-		break
-	case "list":
-		result,err = This.connMap[*This.ToserverKey].SendToList(*KeyConfig, *ValConfig)
-		break
+func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,pluginData *pluginDriver.PluginDataType){
+	ToServerInfo.Lock()
+	status := ToServerInfo.Status
+	if status == "deling" || status == "deled"{
+		ToServerInfo.Unlock()
+		return
 	}
-	return
+	if status == ""{
+		ToServerInfo.Status = "running"
+	}
+	ToServerInfo.Unlock()
+	if ToServerInfo.ToServerChan == nil{
+		ToServerInfo.ToServerChan = &ToServerChan{
+			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
+		}
+		go ToServerInfo.consume_to_server(This.db,pluginData.SchemaName,pluginData.TableName)
+	}
+	ToServerInfo.ToServerChan.To <- pluginData
 }
 
+func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) pluginDriver.PluginDataType{
+	i := strings.IndexAny(data.BinlogFileName, ".")
+	intString := data.BinlogFileName[i+1:]
+	BinlogFileNum,_:=strconv.Atoi(intString)
+	return pluginDriver.PluginDataType{
+		Timestamp:data.Header.Timestamp,
+		EventType:evenTypeName(data.Header.EventType),
+		SchemaName:data.SchemaName,
+		TableName:data.TableName,
+		Rows:data.Rows,
+		BinlogFileNum:BinlogFileNum,
+		BinlogPosition:data.Header.LogPos,
+		Query:data.Query,
+	}
+}
+
+func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
+		return err
+	}
+	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
+}
 
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
-	//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-	var BinlogFileNum int
-	var intString string
+	log.Println("channel",c.Name," consume_channel start")
+	defer func() {
+		log.Println("channel",c.Name," consume_channel over; CurrentThreadNum:",c.CurrentThreadNum)
+	}()
+	DBBinlogKey := getDBBinlogkey(c.db)
 	for {
 		select {
 		case data = <-This.c.chanName:
-			i := strings.IndexAny(data.BinlogFileName, ".")
-			intString = data.BinlogFileName[i+1:]
-			BinlogFileNum,_=strconv.Atoi(intString)
-
 			key := data.SchemaName + "-" + data.TableName
-			This.db.Lock()
 			if This.db.killStatus == 1{
-				This.db.Unlock()
-				break
+				return
 			}
-			toServerList := This.db.tableMap[key].ToServerList[0:]
-			This.db.Unlock()
-			var result bool
-			var errs error
-			//var KeyConfig1, ValConfig1 string = ""
 			This.checkChannleStatus()
-			This.rowIndex = len(data.Rows) - 1
-			for toServerInfoKey, toServerInfo := range toServerList {
-				if BinlogFileNum < toServerInfo.BinlogFileNum{
+			toServerList := This.db.tableMap[key].ToServerList
+			pluginData := This.transferToPluginData(&data)
+			n := len(toServerList)
+			if n == 1{
+				toServerInfo := toServerList[0]
+				if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
 					continue
 				}
-				if BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= data.Header.LogPos{
+				if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
 					continue
 				}
-
-				ToServerKey := toServerInfo.ToServerKey
-				if _, ok := This.connMap[ToServerKey]; !ok {
-					This.connMap[ToServerKey] = toserver.Start(ToServerKey)
+				if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
+					continue
 				}
-				var KeyConfig string
-				var ValConfig interface{}
-
-				//Header
-				switch data.Header.EventType {
-				case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
-					if toServerInfo.Type == "list" {
-						//设置ToServerKey msg 过期信息，至于是否数据是否会过期处理，具体由toServer决定
-						This.connMap[ToServerKey].SetExpir(toServerInfo.Expir)
-						KeyConfig, ValConfig = This.transferData(&data, &key, &toServerInfo)
-					} else {
-						KeyConfig = This.transfeResult(toServerInfo.KeyConfig, &data)
+				This.sendToServerResult(toServerInfo,&pluginData)
+			}else{
+				for _, toServerInfo := range toServerList {
+					if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
+						continue
 					}
-					break
-				default:
-					//设置ToServerKey msg 过期信息，至于是否数据是否会过期处理，具体由toServer决定
-					This.connMap[ToServerKey].SetExpir(toServerInfo.Expir)
-					KeyConfig, ValConfig = This.transferData(&data, &key, &toServerInfo)
-					break
-				}
-
-				var fordo int = 0
-				var lastErrId int = 0
-				This.connMap[ToServerKey].SetMustBeSuccess(toServerInfo.MustBeSuccess)
-				This.ToserverKey = &ToServerKey
-				for {
-					result = false
-					errs = nil
-					if toServerInfo.Type == "set" {
-						switch data.Header.EventType {
-						case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
-							result,errs = This.sendToServer("insert",&KeyConfig,&ValConfig)
-							break
-						case mysql.UPDATE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv2:
-							result,errs = This.sendToServer("update",&KeyConfig,&ValConfig)
-							break
-						case mysql.DELETE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv2:
-							result,errs = This.sendToServer("del",&KeyConfig,nil)
-							break
-						default:
-							break
-						}
-					} else {
-						result,errs = This.sendToServer("list",&KeyConfig,&ValConfig)
+					if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
+						continue
 					}
-					if toServerInfo.MustBeSuccess == true {
-						if result == true{
-							if lastErrId > 0 {
-								c.DelWaitError(lastErrId)
-								lastErrId = 0
-							}
-							break
-						} else {
-							if lastErrId > 0{
-								dealStatus := c.GetWaitErrorDeal(lastErrId)
-								if dealStatus == -1{
-									lastErrId = 0
-									break
-								}
-								if dealStatus == 1{
-									c.DelWaitError(lastErrId)
-									lastErrId = 0
-									break
-								}
-							}else{
-								lastErrId = c.AddWaitError(errs,data)
-							}
-						}
-						fordo++
-						if fordo==3{
-							This.checkChannleStatus()
-							time.Sleep(2 * time.Second)
-							fordo = 0
-						}
+					if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
+						continue
 					}
+					//这里要将数据完全拷贝一份出来,因为pluginDriver rows []map[string]interface{} 里map这里在各个toserver 同步到plugin的时候会各自过滤数据。
+					var MyData pluginDriver.PluginDataType
+					err1 := This.deepCopy(&MyData,pluginData)
+					if err1 != nil{
+						log.Println("consume_to_server deepCopy data:",err1," src data:",data)
+					}
+					This.sendToServerResult(toServerInfo,&MyData)
 				}
-				//保存位点到toServer配置中，这个 len > toServerInfoKey+1 判断是为了防止在同步过程中 同步配置 被删除所引起的数据不对问题
-				This.db.Lock()
-				if len(This.db.tableMap[key].ToServerList) >= toServerInfoKey+1 && This.db.tableMap[key].ToServerList[toServerInfoKey].ToServerKey == toServerInfo.ToServerKey {
-					This.db.tableMap[key].ToServerList[toServerInfoKey].BinlogFileNum = BinlogFileNum
-					This.db.tableMap[key].ToServerList[toServerInfoKey].BinlogPosition = data.Header.LogPos
-				}
-				This.db.Unlock()
 			}
-			//保存位点,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
+
+			//保存位点 是为了显示的时候，直接从这里读取
 			This.db.Lock()
 			This.db.binlogDumpFileName = data.BinlogFileName
 			This.db.binlogDumpPosition = data.Header.LogPos
-			if This.db.killStatus == 1{
-				This.db.Unlock()
-				break
-			}
 			This.db.Unlock()
-
+			//保存位点,这个位点在重启 配置文件恢复的时候
+			//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
+			saveBinlogPosition(DBBinlogKey,pluginData.BinlogFileNum,data.Header.LogPos)
+			if This.db.killStatus == 1{
+				return
+			}
 			c.countChan <- &count.FlowCount{
 				//Time:"",
 				Count:1,
@@ -254,90 +197,9 @@ func (This *consume_channel_obj) consume_channel() {
 				break
 			}
 		}
-		c.Lock()
 		if c.CurrentThreadNum > c.MaxThreadNum || c.Status == "close" {
 			c.CurrentThreadNum--
-			c.Unlock()
-			break
-		} else {
-			c.Unlock()
-		}
-	}
-}
-
-
-func (This *consume_channel_obj) transfeResult(val string, data *mysql.EventReslut) string {
-	r, _ := regexp.Compile(RegularxEpression)
-	p := r.FindAllStringSubmatch(val, -1)
-	for _, v := range p {
-		switch v[1] {
-		case "TableName":
-			val = strings.Replace(val, "{$TableName}", data.TableName, -1)
-			break
-		case "SchemaName":
-			val = strings.Replace(val, "{$SchemaName}", data.SchemaName, -1)
-			break
-		case "EventType":
-			val = strings.Replace(val, "{EventType}", evenTypeName(data.Header.EventType), -1)
-			break
-		default:
-			val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[This.rowIndex][v[1]]), -1)
 			break
 		}
 	}
-	return val
-}
-
-func (This *consume_channel_obj) transferData(data *mysql.EventReslut, key *string, toServer *ToServer) (string, interface{}) {
-	Row := data.Rows[This.rowIndex]
-	var keyResult string
-	var valResult interface{}
-	if toServer.DataType == "string" {
-		keyResult = This.transfeResult(toServer.KeyConfig, data)
-		if toServer.ValueConfig == "" {
-			valResult = ""
-		} else {
-			valResult = This.transfeResult(toServer.ValueConfig, data)
-		}
-		return keyResult, valResult
-	}
-
-	if toServer.DataType == "json" {
-		keyResult = This.transfeResult(toServer.KeyConfig, data)
-		if len(toServer.FieldList) == 0 {
-			if toServer.AddEventType == true {
-				Row["EventType"] = evenTypeName(data.Header.EventType)
-			}
-			if toServer.AddSchemaName == true {
-				Row["SchemaName"] = data.SchemaName
-			}
-			if toServer.AddTableName == true {
-				Row["TableName"] = data.TableName
-			}
-			valResult = Row
-		} else {
-			m := make(map[string]dataDriver.Value, 0)
-			for _, name := range toServer.FieldList {
-				if _, ok := Row[name]; !ok {
-					m[name] = ""
-				} else {
-					m[name] = Row[name]
-				}
-			}
-			if toServer.AddEventType == true {
-				m["EventType"] = evenTypeName(data.Header.EventType)
-			}
-			if toServer.AddSchemaName == true {
-				m["SchemaName"] = data.SchemaName
-			}
-			if toServer.AddTableName == true {
-				m["TableName"] = data.TableName
-			}
-			valResult = m
-		}
-		return keyResult, valResult
-	}
-
-	return "", nil
-
 }

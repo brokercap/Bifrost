@@ -1,0 +1,19 @@
+
+<p>RabbitMQ 队列及交换机Durable 及 AutoDelete 都是对应 RabbitMQ 参数中的durable,及auto_delete</p>
+<p>Queue,Exchange,RoutingKey 都可以 采用 {$SchemaName},{$TableName},{$EventType},{$"+filedName+"} 标签</p>
+
+<h4>Declare</h4>
+<p>Declare 选择为 True 的时候 , Queue,Exchange,RoutingKey 信息必须填写. </p>
+<p>在写入数据的时候,会进行判断当前连接是否初始化了 Queue,Exchange,及和RoutingKey 进行绑这操作</p>
+<p>Declare 为 False 的时候 Queue 等信息可以不填写,并且也不会进行任何declare及和RoutingKey绑定操作,这些队列创建及绑定操作需要事先在RabbitMQ中操作完成</p>
+
+<h4>Expir </h4>
+<p>消息过期时间,单位为毫秒,默认为0 ,不过期</p>
+
+<h4>Confirm </h4>
+<p>True : 假如declare == False 的时候,并且在RabbitMQ中也没有做队列创建及和RoutingKey绑定,数据将会丢失</p>
+<p>False : 不采用Confirm机制</p>
+
+<h4>消息持久化 </h4>
+<p>True : 消息将进行持久化操作</p>
+<p>False : 不进行持久化操作</p>

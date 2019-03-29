@@ -16,17 +16,17 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/jc3wish/Bifrost/toserver"
-	"github.com/jc3wish/Bifrost/toserver/driver"
-	"fmt"
+	toserver "github.com/jc3wish/Bifrost/plugin"
+	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/jc3wish/Bifrost/server"
 	"html/template"
 )
 
 func init()  {
-	AddRoute("/toserver/add",toserver_add_controller)
-	AddRoute("/toserver/del",toserver_del_controller)
-	AddRoute("/toserver/list",toserver_list_controller)
-	AddRoute("/toserver/check_uri",toserver_checkuri_controller)
+	addRoute("/toserver/add",toserver_add_controller)
+	addRoute("/toserver/del",toserver_del_controller)
+	addRoute("/toserver/list",toserver_list_controller)
+	addRoute("/toserver/check_uri",toserver_checkuri_controller)
 }
 
 func toserver_add_controller(w http.ResponseWriter,req *http.Request){
@@ -40,20 +40,16 @@ func toserver_add_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 	toserver.SetToServerInfo(toServerName, Type, ConnUri, Notes)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 
 func toserver_list_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	type toServerInfo struct {
 		TemplateHeader
 		ToServerList map[string]*toserver.ToServer
-		Drivers []map[string]string
+		Drivers map[string]driver.DriverStructure
 	}
 	var data toServerInfo
 	data = toServerInfo{ToServerList: toserver.ToServerMap,Drivers:driver.Drivers()}
@@ -64,14 +60,10 @@ func toserver_list_controller(w http.ResponseWriter,req *http.Request){
 }
 
 func toserver_del_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	toServerName := req.Form.Get("toserverkey")
 	toserver.DelToServerInfo(toServerName)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 

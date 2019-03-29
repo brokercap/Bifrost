@@ -1,0 +1,68 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>{{.DbName}} - Channel:{{.ChannelName}} - Table List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>SchemaName - TableName</th>
+                                <th>ToServerList</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .TableList}}
+                            <tr>
+                                <td>{{$i}}</td>
+                                <td>
+                                  {{range $key,$val := $v.ToServerList}}
+                                    <p>
+                                    <strong>ToServerType : {{$val.ToServerType}}</strong> 
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    <strong>ToServerKey : {{$val.ToServerKey}}</strong>
+                                    </p>
+                                    <p>
+                                    BinlogFileNum : {{$val.BinlogFileNum}}
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    BinlogPos : {{$val.BinlogPosition}}
+                                    </p>
+                                	{{end}}
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}

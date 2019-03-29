@@ -30,10 +30,9 @@
                             <thead>
                             <tr>
                                 <th>ToServerKey</th>
-                                <th>Type</th>
+                                <th>PluginName</th>
+                                <th>PluginVersion</th>
                                 <th>ConnUri</th>
-                                <th>DataTypeList</th>
-                                <th>Key Example</th>
                                 <th>LastID</th>
                                 <th>CurrentConn</th>
                                 <th>Notes</th>
@@ -44,20 +43,11 @@
                             {{range $i, $v := .ToServerList}}
                             <tr>
                                 <td>{{$i}}</td>
-                                <td>{{$v.Type}}</td>
-                                <td>
-                                {{$v.ConnUri}}
-                                </td>
-                                <td>{{$v.TypeAndRule.DataTypeList}}</td>
-                                <td>
-                                {{range $key,$val := $v.TypeAndRule.TypeList}}
-                                    {{if ne $val.Key "" }}
-                                        <p>{{$key}} pattern: {{$val.Key}}</p>
-                                    {{end}}
-                                    {{if ne $val.KeyExample ""}}
-                                        <p>{{$key}} example: {{$val.KeyExample}}</p>
-                                    {{end}}
-                                {{end}}
+                                <td>{{$v.PluginName}}</td>
+                                <td>{{$v.PluginVersion}}</td>
+
+                                <td title="{{$v.ConnUri}}">
+                                <script type="text/javascript">filterIpAndPort("{{$v.ConnUri}}")</script>
                                 </td>
                                 <td>{{$v.LastID}}</td>
                                 <td>{{$v.CurrentConn}}</td>
@@ -105,11 +95,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="col-sm-3 control-label">Type：</label>
+                    <label class="col-sm-3 control-label">Plugin：</label>
                     <div class="col-sm-9">
                         <select class="form-control" name="type" id="conn_type">
                         {{range $k, $val := .Drivers}}
-                            <option value="{{$val.name}}" example='{{$val.uri}}' > {{$val.name}}</option>
+                            <option value="{{$k}}" example='{{$val.ExampleConnUri}}' > {{$k}} - {{$val.Version}}</option>
                         {{end}}
                         </select><span class="help-block m-b-none"></span>
                     </div>
@@ -129,7 +119,7 @@
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Notes：</label>
                     <div class="col-sm-9">
-                        <textarea type="text" name="notes" id="notes" class="form-control" placeholder="Notes"></textarea> <span class="help-block m-b-none"></span>
+                        <textarea type="text" name="notes" id="notes" class="form-control" placeholder="Notes"></textarea> <span class="help-block m-b-none">*</span>
 
                     </div>
                 </div>

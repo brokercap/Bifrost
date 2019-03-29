@@ -5,7 +5,6 @@ package mysql
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -21,7 +20,7 @@ type RowsEvent struct {
 	flags                 uint16
 	columnsPresentBitmap1 Bitfield
 	columnsPresentBitmap2 Bitfield
-	rows                  []map[string]driver.Value
+	rows                  []map[string]interface{}
 }
 
 func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, err error) {
@@ -57,7 +56,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	}
 	event.tableMap = parser.tableMap[event.tableId]
 	for buf.Len() > 0 {
-		var row map[string]driver.Value
+		var row map[string]interface{}
 		row, err = parser.parseEventRow(buf, event.tableMap, parser.tableSchemaMap[event.tableId])
 		if err != nil {
 			log.Println("event row parser err:",err)
@@ -69,9 +68,9 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	return
 }
 
-func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEvent, tableSchemaMap []*column_schema_type) (row map[string]driver.Value, e error) {
+func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEvent, tableSchemaMap []*column_schema_type) (row map[string]interface{}, e error) {
 	columnsCount := len(tableMap.columnTypes)
-	row = make(map[string]driver.Value)
+	row = make(map[string]interface{})
 	bitfieldSize := (columnsCount + 7) / 8
 	nullBitMap := Bitfield(buf.Next(bitfieldSize))
 	for i := 0; i < columnsCount; i++ {

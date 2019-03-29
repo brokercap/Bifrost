@@ -18,19 +18,25 @@ package manager
 import (
 	"net/http"
 	"text/template"
-	"github.com/jc3wish/Bifrost/toserver/driver"
+	"github.com/jc3wish/Bifrost/plugin/driver"
 )
 
 func init(){
-	AddRoute("/docs",docs_controller)
+	addRoute("/docs",docs_controller)
 }
 
 func docs_controller(w http.ResponseWriter,req *http.Request){
 	type docs struct {
 		TemplateHeader
-		ToServerDocs map[string]string
+		PluginKey string
+		Drivers map[string]driver.DriverStructure
 	}
-	data := docs{ToServerDocs:driver.GetDocs()}
+	req.ParseForm()
+	PluginKey := req.Form.Get("plugin")
+	data := docs{
+		PluginKey:PluginKey,
+		Drivers:driver.Drivers(),
+	}
 	data.Title =  "docs - Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/docs.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, data)

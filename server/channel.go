@@ -1,3 +1,4 @@
+
 /*
 Copyright [2018] [jc3wish]
 
@@ -20,6 +21,7 @@ import (
 
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"github.com/jc3wish/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/config"
 	"log"
 )
 
@@ -31,27 +33,17 @@ type Channel struct {
 	CurrentThreadNum int
 	Status           string //stop ,starting,running,wait
 	db               *db
-	Errs 			map[int]*ChannelErr
-	lastErrId 		int
-	countChan		chan  *count.FlowCount
-}
-
-type ChannelErr struct {
-	WaitErr error
-	WaitData interface{}
-	WaitDeal int // 0不处理,1错过
+	countChan		 chan  *count.FlowCount
 }
 
 func NewChannel(MaxThreadNum int,Name string, db *db) *Channel {
 	return &Channel{
-		Name:Name,
-		chanName:             make(chan mysql.EventReslut, MaxThreadNum*100),
-		MaxThreadNum:     MaxThreadNum,
-		CurrentThreadNum: 0,
-		Status:           "stop",
-		db:               db,
-		Errs: 			  make(map[int]*ChannelErr),
-		lastErrId:		  	0,
+		Name:					Name,
+		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*config.ChannelQueueSize),
+		MaxThreadNum:     		MaxThreadNum,
+		CurrentThreadNum: 		0,
+		Status:           		"stop",
+		db:               		db,
 	}
 }
 
@@ -90,48 +82,6 @@ func (Channel *Channel) Start() chan mysql.EventReslut {
 		go Channel.channelConsume()
 	}
 	return Channel.chanName
-}
-
-func (Channel *Channel) AddWaitError(WaitErr error,WaitData interface{}) int {
-	Channel.Lock()
-	Channel.lastErrId++
-	id := Channel.lastErrId
-	Channel.Errs[id] = &ChannelErr{
-		WaitErr:WaitErr,
-		WaitData:WaitData,
-		WaitDeal:0,
-	}
-	Channel.Unlock()
-	return id
-}
-
-func (Channel *Channel) DealWaitError(id int) bool {
-	Channel.Lock()
-	if _,ok:=Channel.Errs[id];!ok{
-		Channel.Unlock()
-		return false
-	}
-	Channel.Errs[id].WaitDeal = 1
-	Channel.Unlock()
-	return true
-}
-
-func (Channel *Channel) GetWaitErrorDeal(id int) int {
-	Channel.Lock()
-	if _,ok:=Channel.Errs[id];!ok{
-		Channel.Unlock()
-		return -1
-	}
-	deal := Channel.Errs[id].WaitDeal
-	Channel.Unlock()
-	return deal
-}
-
-func (Channel *Channel) DelWaitError(id int) bool {
-	Channel.Lock()
-	delete(Channel.Errs,id)
-	Channel.Unlock()
-	return true
 }
 
 

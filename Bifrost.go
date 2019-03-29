@@ -17,9 +17,7 @@ package main
 
 import (
 	"log"
-
-	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/toserver"
+	"github.com/jc3wish/Bifrost/plugin"
 	"github.com/jc3wish/Bifrost/manager"
 	"github.com/jc3wish/Bifrost/config"
 	"flag"
@@ -36,6 +34,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"github.com/jc3wish/Bifrost/server"
+	_ "net/http/pprof"
+	"strconv"
 )
 
 type recovery struct {
@@ -77,7 +78,11 @@ var BifrostDaemon *string
 var BifrostPid *string
 var BifrostDataDir *string
 
+//接收指令进行将配置信息刷盘到disk
+var doSaveInfoToDiskChan chan int8
+
 func main() {
+	doSaveInfoToDiskChan = make(chan int8,100)
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
@@ -135,7 +140,8 @@ func main() {
 	if dataDir == ""{
 		dataDir = execDir+"/data"
 	}
-	os.MkdirAll(dataDir, 0777)
+
+	os.MkdirAll(dataDir, 0700)
 
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
@@ -148,6 +154,13 @@ func main() {
 		WritePid()
 	}
 
+	//初始化其他配置
+	initParam()
+
+	plugin.DoDynamicPlugin()
+	server.InitStrageChan(doSaveInfoToDiskChan)
+	server.InitStorage()
+
 	log.Println("Server started, Bifrost version",config.VERSION)
 
 
@@ -156,9 +169,28 @@ func main() {
 
 	doRecovery()
 
-	go TimeSleepDoSaveInfo()
+	go doSaveDBConfigToDisk()
 	go manager.Start(IpAndPort)
 	ListenSignal()
+}
+
+func initParam(){
+	var tmp string
+	tmp = config.GetConfigVal("Bifrostd","toserver_queue_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.ToServerQueueSize = intA
+		}
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","channel_queue_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.ChannelQueueSize = intA
+		}
+	}
 }
 
 func initLog(){
@@ -196,11 +228,14 @@ func WritePid(){
 	io.WriteString(f, fmt.Sprint(os.Getpid()))
 }
 
-func TimeSleepDoSaveInfo(){
-	for {
-		time.Sleep(5 * time.Second)
-		doSaveDbInfo()
+func doSaveDBConfigToDisk(){
+	for{
+		i := <-doSaveInfoToDiskChan
+		if i == 0{
+			return
 		}
+		doSaveDbInfo()
+	}
 }
 
 func doSaveDbInfo(){
@@ -216,7 +251,7 @@ func doSaveDbInfo(){
 	}()
 	data := recoveryData{
 		Version:config.VERSION,
-		ToServer:toserver.SaveToServerData(),
+		ToServer:plugin.SaveToServerData(),
 		DbInfo:server.SaveDBInfoToFileData(),
 	}
 	b,_:= json.Marshal(data)
@@ -254,7 +289,7 @@ func doRecovery(){
 		log.Printf("recovery error:%s, data:%s \r\n",errors,string(fd))
 	}
 	if string(*data.ToServer) != "{}"{
-		toserver.Recovery(data.ToServer)
+		plugin.Recovery(data.ToServer)
 	}
 	if string(*data.DbInfo) != "{}"{
 		server.Recovery(data.DbInfo)

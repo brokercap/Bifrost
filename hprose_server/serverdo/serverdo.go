@@ -2,41 +2,49 @@ package serverdo
 
 import (
 	"github.com/hprose/hprose-golang/rpc"
-	dataDriver "database/sql/driver"
 	"log"
 )
+
+var i int
+
+func init()  {
+	i = 1
+}
 
 func Check(context *rpc.HTTPContext) (e error) {
 	log.Println("Check success")
 	return nil
 }
 
-func Insert(key string,timeout int, data map[string]dataDriver.Value) (e error) {
+func Insert(SchemaName string,TableName string, data map[string]interface{}) (e error) {
 	log.Println("Insert")
-	log.Println("key:",key)
-	log.Println("timeout:",timeout)
-	log.Println("data:",data)
+	log.Println("SchemaName:",SchemaName)
+	log.Println("TableName:",TableName)
+	log.Println(i,"data:",data)
+	i++
 	return nil
 }
 
-func Update(key string,timeout int, data map[string]dataDriver.Value) (e error){
+func Update(SchemaName string,TableName string, data []map[string]interface{}) (e error){
 	log.Println("Update")
-	log.Println("key:",key)
-	log.Println("timeout:",timeout)
-	log.Println("data:",data)
+	log.Println("SchemaName:",SchemaName)
+	log.Println("TableName:",TableName)
+	log.Println(i,"data:",data)
+	i++
 	return nil
 }
 
-func Delete(key string) (e error) {
+func Delete(SchemaName string,TableName string,data map[string]interface{}) (e error) {
 	log.Println("Delete")
-	log.Println("key:",key)
+	log.Println("SchemaName:",SchemaName)
+	log.Println("TableName:",TableName)
+	log.Println(i,"data:",data)
+	i++
 	return nil
 }
 
-func ToList(key string,timeout int, data map[string]dataDriver.Value) (e error) {
-	log.Println("ToList")
-	log.Println("key:",key)
-	log.Println("timeout:",timeout)
-	log.Println("data:",data)
+func Query(SchemaName string,TableName string,data interface{}) (e error) {
+	log.Println(i,"Query","SchemaName:",SchemaName,"TableName:",TableName,"data:",data)
+	i++
 	return nil
 }

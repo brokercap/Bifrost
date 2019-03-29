@@ -17,18 +17,18 @@ package manager
 import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/toserver"
-	"fmt"
+	"github.com/jc3wish/Bifrost/plugin"
 	"strings"
 	"encoding/json"
 )
 
 func init(){
-	AddRoute("/table/del",table_del_controller)
-	AddRoute("/table/add",table_add_controller)
-	AddRoute("/table/toserverlist",table_toserverlist_controller)
-	AddRoute("/table/deltoserver",table_delToServer_controller)
-	AddRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/del",table_del_controller)
+	addRoute("/table/add",table_add_controller)
+	addRoute("/table/toserverlist",table_toserverlist_controller)
+	addRoute("/table/deltoserver",table_delToServer_controller)
+	addRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/toserver/deal",table_toserver_deal_controller)
 }
 
 func table_add_controller(w http.ResponseWriter,req *http.Request){
@@ -41,6 +41,7 @@ func table_add_controller(w http.ResponseWriter,req *http.Request){
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}
 }
@@ -54,36 +55,33 @@ func table_del_controller(w http.ResponseWriter,req *http.Request){
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{
+		defer server.SaveDBConfigInfo()
 		w.Write(returnResult(true,"success"))
 	}
 }
 
 func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
-	defer func() {
-		if err := recover();err!=nil{
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
 
 	toServerKey := req.Form.Get("toserver_key")
+	PluginName := req.Form.Get("plugin_name")
 	FieldListString := req.Form.Get("fieldlist")
-	DataType := req.Form.Get("datatype")
-	Type := req.Form.Get("type")
 	MustBeSuccess := req.Form.Get("mustbe")
-	AddEventType := req.Form.Get("add_eventtype")
-	KeyConfig := req.Form.Get("key_config")
-	ValConfig := req.Form.Get("val_config")
-	AddSchemaName := req.Form.Get("add_schemaname")
-	AddTableName := req.Form.Get("add_tablename")
-	Expir := GetFormInt(req,"expir")
+	FilterQuery := req.Form.Get("FilterQuery")
+	FilterUpdate := req.Form.Get("FilterUpdate")
 
-	var toServer server.ToServer
+	p  := req.Form.Get("param")
+	var pluginParam map[string]interface{}
+	err := json.Unmarshal([]byte(p),&pluginParam)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+		return
+	}
 
-	if toserver.GetToServerInfo(toServerKey) == nil{
+	if plugin.GetToServerInfo(toServerKey) == nil{
 		w.Write(returnResult(false,toServerKey+"not exsit"))
 		return
 	}
@@ -96,93 +94,76 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		}
 	}
 
-	if KeyConfig == ""{
-		w.Write(returnResult(false,"key_config must be"))
-		return
-	}
-
-	if DataType == "string"{
-		if ValConfig == ""{
-			w.Write(returnResult(false,"DataType==stirng,"+ValConfig+" must be"))
-			return
-		}
-	}else{
-		if DataType != "json"{
-			w.Write(returnResult(false,"DataType must be json or string"))
-			return
-		}
-	}
-
-	if Type != "set" && Type != "list"{
-		w.Write(returnResult(false,"type must be set or list"))
-		return
-	}
-
-	var MustBeSuccessBool , AddEventTypeBool,AddSchemaNameBool,AddTableNameBool bool = false,false,false,false
-	if MustBeSuccess == "1"{
+	var MustBeSuccessBool bool = false
+	if MustBeSuccess == "1" || MustBeSuccess == "true"{
 		MustBeSuccessBool = true
 	}
-	if AddEventType == "1"{
-		AddEventTypeBool = true
+
+	var FilterQueryBool bool = false
+	if FilterQuery == "1" || FilterQuery == "true"{
+		FilterQueryBool = true
 	}
-	if AddSchemaName == "1"{
-		AddSchemaNameBool = true
+
+	var FilterUpdateBool bool = false
+	if FilterUpdate == "1" || FilterUpdate == "true"{
+		FilterUpdateBool = true
 	}
-	if AddTableName == "1"{
-		AddTableNameBool = true
-	}
-	toServer = server.ToServer{
-		MustBeSuccess: MustBeSuccessBool,
-		Type:          Type,
-		DataType:	   DataType,
-		KeyConfig:     KeyConfig,
-		ValueConfig:   ValConfig,
-		ToServerKey:   toServerKey,
-		FieldList:     fileList,
-		AddEventType:  AddEventTypeBool,
-		AddSchemaName: AddSchemaNameBool,
-		AddTableName:  AddTableNameBool,
-		Expir:		   Expir,
-		BinlogFileNum: 0,
-		BinlogPosition:0,
+
+	toServer := &server.ToServer{
+		MustBeSuccess: 	MustBeSuccessBool,
+		FilterQuery: 	FilterQueryBool,
+		FilterUpdate: 	FilterUpdateBool,
+		ToServerKey:   	toServerKey,
+		PluginName:  	PluginName,
+		FieldList:     	fileList,
+		BinlogFileNum: 	0,
+		BinlogPosition:	0,
+		PluginParam:	pluginParam,
 	}
 	dbObj := server.GetDBObj(dbname)
-	r := dbObj.AddTableToServer(schema,tablename,toServer)
+	r,ToServerId := dbObj.AddTableToServer(schema,tablename,toServer)
 	if r == true{
-		w.Write(returnResult(true,"success"))
+		defer server.SaveDBConfigInfo()
+		w.Write(returnDataResult(true,"success",ToServerId))
 	}else{
 		w.Write(returnResult(false,"unkown error"))
 	}
 }
 
 func table_delToServer_controller(w http.ResponseWriter,req *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
-	index :=  GetFormInt(req,"index")
-	server.GetDBObj(dbname).DelTableToServer(schema,tablename,index)
+	ToServerID := GetFormInt(req,"to_server_id")
+	server.GetDBObj(dbname).DelTableToServer(schema,tablename,ToServerID)
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
 
 func table_toserverlist_controller(w http.ResponseWriter,req *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			w.Write([]byte(fmt.Sprint(err)))
-		}
-	}()
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
-	tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
-	toserverList := tableObj.ToServerList
-	b,_:=json.Marshal(toserverList)
+	t1:=server.GetDBObj(dbname)
+	tableObj:=t1.GetTable(schema,tablename)
+	//tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
+	b,_:=json.Marshal(tableObj.ToServerList)
 	w.Write(b)
+}
+
+func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+	ToServerID := GetFormInt(req,"to_server_id")
+	index :=  GetFormInt(req,"index")
+	ToServerInfo := server.GetDBObj(dbname).GetTable(schema,tablename).ToServerList[index]
+	if ToServerInfo.ToServerID == ToServerID{
+		ToServerInfo.DealWaitError()
+	}
+	w.Write(returnResult(true,"success"))
 }
 

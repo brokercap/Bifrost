@@ -19,14 +19,14 @@
     <div id="page-wrapper" class="gray-bg">
         <div class="row border-bottom white-bg">
             <nav class="navbar navbar-static-top" role="navigation">
-                <div class="navbar-header">
+                <div class="navbar-header" style="float: left; width: auto">
                     <button aria-controls="navbar" aria-expanded="false" data-target="#navbar" data-toggle="collapse" class="navbar-toggle collapsed" type="button">
                         <i class="fa fa-reorder"></i>
                     </button>
-                    <a href="#" class="navbar-brand">Bifrost</a>
+                    <a href="http://www.xbifrost.com" target="_blank" class="navbar-brand">Bifrost</a>
                 </div>
-                <div class="navbar-collapse collapse" id="navbar">
-                    <ul class="nav navbar-nav">
+                <div class="navbar-collapse collapse" id="navbar" style="float: right; width: auto; margin-right: 0px">
+                    <ul class="nav navbar-nav" id="header_nav">
                         <li class="active">
                             <a aria-expanded="false" role="button" href="/"> 返回首页</a>
                         </li>
@@ -34,7 +34,13 @@
                             <a  href="/db/list" class="dropdown-toggle" > DBList </a>
                         </li>
                         <li class="dropdown">
+                            <a href="/plugin/list" class="dropdown-toggle"> Plugin </a>
+                        </li>
+                        <li class="dropdown">
                             <a href="/toserver/list" class="dropdown-toggle"> ToServer </a>
+                        </li>
+                        <li class="dropdown">
+                            <a  href="/flow/index" class="dropdown-toggle"> Flow </a>
                         </li>
                         <li class="dropdown">
                             <a href="/docs" target="_blank" class="dropdown-toggle"> Docs </a>
@@ -55,4 +61,22 @@
     </div>
 </div>
 
+<script type="text/javascript">
+function filterIpAndPort(c){
+    if(c.indexOf("@") != -1){
+        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***")
+    }else{
+        document.write("***"+c.slice(5,c.length-5)+"***")
+    }
+    return;
+}
+$(function(){
+	$("#header_nav li a").each(function(){
+		if(document.URL.indexOf($(this).attr("href")) != -1){
+			$("#header_nav li").removeClass("active");
+			$(this).parent().addClass("active");
+		}
+	 });
+})
+</script>
 {{end}}

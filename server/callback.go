@@ -24,7 +24,7 @@ import (
 )
 
 func (db *db) Callback(data *mysql.EventReslut) {
-	if len(data.Rows) == 0 {
+	if len(data.Rows) == 0 && data.Query == ""{
 		return
 	}
 	key := data.SchemaName + "-" + data.TableName
