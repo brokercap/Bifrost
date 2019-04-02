@@ -139,8 +139,30 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 			if _, ok := data.Rows[0][key]; ok {
 				m_before[key] = data.Rows[0][key]
 				m_after[key] = data.Rows[1][key]
-				if m_before[key] != m_after[key]{
-					isNotUpdate = false
+				if This.FilterUpdate {
+					switch m_after[key].(type) {
+					case []string:
+						m1 := m_before[key].([]string)
+						m2 := m_after[key].([]string)
+						n1 := len(m1)
+						n2 := len(m2)
+						if n1 != n2 {
+							isNotUpdate = false
+							break
+						}
+						for k,v := range m1{
+							if m2[k] != v{
+								isNotUpdate = false
+								break
+							}
+						}
+						break
+					default:
+						if m_before[key] != m_after[key] {
+							isNotUpdate = false
+						}
+						break
+					}
 				}
 			}
 		}
