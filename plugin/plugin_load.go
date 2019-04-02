@@ -90,6 +90,7 @@ func LoadPlugin() error{
  			}
 		}
 	}
+	lastLoadPluginTime = time.Now().Unix()
 	if len(pluginSoMap) == 0{
 		cleanErrorPluginMap()
 		return nil
