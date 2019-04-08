@@ -191,7 +191,26 @@ func initParam(){
 			config.ChannelQueueSize = intA
 		}
 	}
+
+	initTLSParam()
 }
+
+func initTLSParam(){
+	if config.GetConfigVal("Bifrostd","tls") == "true"{
+		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
+			log.Println("tls_server_key:",config.GetConfigVal("Bifrostd","tls_key_file"),err)
+			return
+		}
+		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
+			log.Println("tls_server_crt:",config.GetConfigVal("Bifrostd","tls_crt_file"),err)
+			return
+		}
+		config.TLS = true
+		config.TLSServerKeyFile = config.GetConfigVal("Bifrostd","tls_key_file")
+		config.TLSServerCrtFile = config.GetConfigVal("Bifrostd","tls_crt_file")
+	}
+}
+
 
 func initLog(){
 	log_dir := config.GetConfigVal("Bifrostd","log_dir")

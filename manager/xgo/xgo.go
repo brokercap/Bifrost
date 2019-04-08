@@ -81,6 +81,10 @@ func AddStaticRoute(route string, dir string ){
 	http.Handle(route, http.FileServer(http.Dir(dir)))
 }
 
-func Start(IpAndPort string){
-	http.ListenAndServe(IpAndPort, nil)
+func Start(IpAndPort string) error{
+	return http.ListenAndServe(IpAndPort, nil)
+}
+
+func StartTLS(IpAndPort string,serverKey string,serverCrt string) error{
+	return http.ListenAndServeTLS(IpAndPort, serverCrt,serverKey,nil)
 }
