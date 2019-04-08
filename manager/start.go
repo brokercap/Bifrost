@@ -20,11 +20,13 @@ import (
 	"encoding/json"
 	"strconv"
 	"github.com/jc3wish/Bifrost/manager/xgo"
+	"github.com/jc3wish/Bifrost/config"
 	"os/exec"
 	"os"
 	"path/filepath"
 	"strings"
 	"runtime/debug"
+	"log"
 )
 
 var execDir string
@@ -122,5 +124,13 @@ func Start(IpAndPort string){
 	xgo.AddStaticRoute("/plugin/",TemplatePath("/"))
 	xgo.SetFirstCallBack(controller_FirstCallback)
 	xgo.AddRoute("/",index_controller)
-	xgo.Start(IpAndPort)
+	var err error
+	if config.TLS{
+		err = xgo.StartTLS(IpAndPort,config.TLSServerKeyFile,config.TLSServerCrtFile)
+	}else{
+		err = xgo.Start(IpAndPort)
+	}
+	if err != nil{
+		log.Println("Manager Start Err:",err)
+	}
 }
