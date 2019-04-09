@@ -220,10 +220,10 @@ func initLog(){
 		log_dir += "/logs"
 		log.Println("log_dir default:",log_dir)
 	}
-	os.MkdirAll(log_dir,0777)
+	os.MkdirAll(log_dir,0700)
 	t := time.Now().Format("2006-01-02")
 	LogFileName := log_dir+"/Bifrost_"+t+".log"
-	f, err := os.OpenFile(LogFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777) //打开文件
+	f, err := os.OpenFile(LogFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0700) //打开文件
 	if err != nil{
 		log.Println("log init error:",err)
 	}
@@ -232,7 +232,7 @@ func initLog(){
 }
 
 func WritePid(){
-	f, err2 := os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0777) //打开文件
+	f, err2 := os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0700) //打开文件
 	if err2 !=nil{
 		log.Println("Open BifrostPid Error; File:",*BifrostPid,"; Error:",err2)
 		os.Exit(1)
@@ -274,7 +274,7 @@ func doSaveDbInfo(){
 		DbInfo:server.SaveDBInfoToFileData(),
 	}
 	b,_:= json.Marshal(data)
-	f, err2 := os.OpenFile(DataTmpFile, os.O_CREATE|os.O_RDWR, 0777) //打开文件
+	f, err2 := os.OpenFile(DataTmpFile, os.O_CREATE|os.O_RDWR, 0700) //打开文件
 	if err2 !=nil{
 		log.Println("open file error:",err2)
 		return
