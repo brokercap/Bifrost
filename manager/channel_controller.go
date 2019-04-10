@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"html/template"
 	"fmt"
+	"encoding/json"
 )
 
 func init(){
@@ -62,6 +63,11 @@ func channle_list_controller(w http.ResponseWriter,req *http.Request){
 	}
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
+	if req.Form.Get("format") == "json"{
+		data,_:=json.Marshal(server.GetDBObj(dbname).ListChannel())
+		w.Write(data)
+		return
+	}
 	var data channelResult
 	data = channelResult{ChannelList:server.GetDBObj(dbname).ListChannel(),DbName:dbname}
 	data.Title = dbname +" - Channel List - Bifrost"

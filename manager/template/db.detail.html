@@ -135,7 +135,7 @@
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">&nbsp;</label>
                                 <div class="col-sm-9">
-                                    <button data-toggle="button" class="btn btn-primary" id="addToServerBtn" type="button">提交</button>
+                                    <button data-toggle="button" class="btn-sm btn-primary" id="addToServerBtn" type="button">提交</button>
                                 </div>
                             </div>
                         </div>
@@ -204,8 +204,8 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn btn-primary" onclick="AddTable()">保存</button>
+                    <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn-sm btn-primary" onclick="AddTable()">保存</button>
                 </div>
             </div>
         </div>
@@ -348,7 +348,7 @@
                             }
                             var op = "";
                             if(v.Status == "running" || v.Status == ""){
-                                op = '<button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                                op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
                             }else{
                                 op = v.Status;
                             }
@@ -445,9 +445,9 @@
                     html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
                     html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
                     if (v.AddStatus == false){
-                        html+= '<div class="right"><button data-toggle="button" class="btn btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
+                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
                     }else{
-                        html+= '<div class="right"><button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button></div>';
+                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button></div>';
                     }
                     html +=	'</div></a>';
                     $("#TableListContair").append(html);

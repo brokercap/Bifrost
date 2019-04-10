@@ -48,7 +48,12 @@ func listDB_Action(w http.ResponseWriter,req *http.Request){
 		http.Redirect(w, req, "/toserver/list", http.StatusFound)
 		return
 	}
-
+	req.ParseForm()
+	if req.Form.Get("format") == "json"{
+		data,_:=json.Marshal(server.GetListDb())
+		w.Write(data)
+		return
+	}
 	DbList := dbListStruct{DBList:server.GetListDb()}
 	DbList.Title = "Bifrost"
 	t, _ := template.ParseFiles(TemplatePath("manager/template/db.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))

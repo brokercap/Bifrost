@@ -7,6 +7,7 @@ import (
 	"strings"
 	"html/template"
 	"log"
+	"github.com/jc3wish/Bifrost/plugin"
 )
 
 func init(){
@@ -25,15 +26,16 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+	ChannelID := GetFormInt(req,"channelid")
 	var syncList []syncListStruct
 	if tablename != "" {
 		syncList = get_syncList_by_table_name(dbname,schema,tablename)
 	}else if schema != ""{
-		syncList = get_syncList_by_schema_name(dbname,schema)
+		syncList = get_syncList_by_schema_name(dbname,schema,ChannelID)
 	}else if dbname != ""{
-		syncList = get_syncList_by_dbname(dbname)
+		syncList = get_syncList_by_dbname(dbname,ChannelID)
 	}else{
-		syncList = get_syncList_all()
+		syncList = get_syncList_all(ChannelID)
 	}
 
 	//假如传了 toserverkey 参数，则将 非 toserverkey 的列表给过滤掉
@@ -73,11 +75,19 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 	default:
 		type syncListResult struct {
 			TemplateHeader
-			DbName string
-			SchemaName string
-			TableName string
-			ToServerKey string
-			SyncList []syncListStruct
+			DbName 			string
+			SchemaName 		string
+			TableName 		string
+			ToServerKey 	string
+			SyncList 		[]syncListStruct
+			ToServerKeyList map[string]*plugin.ToServer
+			DbList 			map[string]server.DbListStruct
+			ChannelID		int
+			ChannelList		map[int]*server.Channel
+		}
+		var ChannelList map[int]*server.Channel
+		if dbname != ""{
+			ChannelList = server.GetDBObj(dbname).ListChannel()
 		}
 		data := syncListResult{
 			DbName:dbname,
@@ -85,6 +95,10 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 			TableName:tablename,
 			ToServerKey:toserverkey,
 			SyncList:syncList,
+			ChannelID:ChannelID,
+			DbList:server.GetListDb(),
+			ToServerKeyList:plugin.ToServerMap,
+			ChannelList:ChannelList,
 		}
 		data.Title = "SyncList - Bifrost"
 		t, err := template.ParseFiles(TemplatePath("manager/template/sync.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
@@ -96,12 +110,15 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 	return
 }
 
-func get_syncList_all() []syncListStruct{
+func get_syncList_all(ChannelID int) []syncListStruct{
 	syncList := make([]syncListStruct,0)
 	DBList := server.GetListDb()
 	for _,db := range DBList{
 		t1:=server.GetDBObj(db.Name)
 		for key,table := range t1.GetTables(){
+			if ChannelID > 0 && ChannelID != table.ChannelKey{
+				continue
+			}
 			tmpArr := strings.Split(key,"-")
 			syncList = append(syncList,syncListStruct{db.Name,tmpArr[0],tmpArr[1],table.ToServerList})
 		}
@@ -110,11 +127,14 @@ func get_syncList_all() []syncListStruct{
 }
 
 
-func get_syncList_by_dbname(dbname string) []syncListStruct{
+func get_syncList_by_dbname(dbname string,ChannelID int) []syncListStruct{
 	syncList := make([]syncListStruct,0)
 	t1 := server.GetDBObj(dbname)
 	if t1 != nil{
 		for key,table := range t1.GetTables(){
+			if ChannelID > 0 && ChannelID != table.ChannelKey{
+				continue
+			}
 			tmpArr := strings.Split(key,"-")
 			syncList = append(syncList,syncListStruct{dbname,tmpArr[0],tmpArr[1],table.ToServerList})
 		}
@@ -123,11 +143,14 @@ func get_syncList_by_dbname(dbname string) []syncListStruct{
 }
 
 
-func get_syncList_by_schema_name(dbname,schema_name string) []syncListStruct{
+func get_syncList_by_schema_name(dbname,schema_name string,ChannelID int) []syncListStruct{
 	syncList := make([]syncListStruct,0)
 	t1 := server.GetDBObj(dbname)
 	if t1 != nil{
 		for key,table := range t1.GetTables(){
+			if ChannelID > 0 && ChannelID != table.ChannelKey{
+				continue
+			}
 			tmpArr := strings.Split(key,"-")
 			if tmpArr[0] == schema_name {
 				syncList = append(syncList, syncListStruct{dbname, tmpArr[0], tmpArr[1], table.ToServerList})

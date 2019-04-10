@@ -66,10 +66,9 @@
                                     <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
                                 </a>
 
-                                <a href="/channel/tablelist?channelid={{$i}}&dbname={{$.DbName}}" target="_blank">
-                                    <button data-toggle="button" class="btn-sm btn-primary" type="button">TableList</button>
+                                <a href="/synclist?dbname={{$.DbName}}&channelid={{$i}}">
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" >TableList</button>
                                 </a>
-
                                 </td>
                             </tr>
                             {{end}}
@@ -132,7 +131,7 @@
                     <label class="col-sm-3 control-label">&nbsp;</label>
                     <div class="col-sm-9">
 
-                        <button data-toggle="button" class="btn btn-primary" id="addNewChannelBtn" type="button">提交</button>
+                        <button data-toggle="button" class="btn-sm btn-primary" id="addNewChannelBtn" type="button">提交</button>
                     </div>
                 </div>
 

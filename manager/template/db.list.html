@@ -101,7 +101,7 @@
                                                     </td>
                                                     <td>{{$v.TableCount}} &nbsp;
                                                         <a href="/synclist?dbname={{$v.Name}}">
-                                                            <button data-toggle="button" class="btn btn-primary" type="button" >同步列表</button>
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button" >同步列表</button>
                                                         </a>
                                                     </td>
                                                     <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
@@ -159,7 +159,7 @@
                             <label class="col-sm-3 control-label">ConnUri：</label>
                             <div class="col-sm-9" style=" position: relative">
                                 <div style="position: absolute; right: -65px; top: 0px;">
-                                    <button data-toggle="button" class="btn btn-warning " id="checkUriBtn" type="button">Check</button>
+                                    <button data-toggle="button" class="btn-sm btn-warning " id="checkUriBtn" type="button">Check</button>
                                 </div>
                                 <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri"> <span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span>
                             </div>
@@ -208,7 +208,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">&nbsp;</label>
                             <div class="col-sm-9">
-                                <button data-toggle="button" class="btn btn-primary" id="addNewDBBtn" type="button">提交</button>
+                                <button data-toggle="button" class="btn-sm btn-primary" id="addNewDBBtn" type="button">提交</button>
                     
                             </div>
                         </div>                        
