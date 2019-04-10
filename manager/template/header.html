@@ -67,11 +67,15 @@
 </div>
 
 <script type="text/javascript">
+function showOriginalData(obj,c){
+    $(obj).parent().text(c);
+}
 function filterIpAndPort(c){
+    var html = " <button data-toggle=\"button\" class=\"btn-sm btn-primary\" onclick='showOriginalData(this,\""+c+"\")' type=\"button\">show</button>\n"
     if(c.indexOf("@") != -1){
-        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***")
+        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***"+html)
     }else{
-        document.write("***"+c.slice(5,c.length-5)+"***")
+        document.write("***"+c.slice(5,c.length-5)+"***"+html)
     }
     return;
 }
