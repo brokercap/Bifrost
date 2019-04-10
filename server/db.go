@@ -311,6 +311,10 @@ func (db *db) GetTable(schemaName string, tableName string) *Table {
 	}
 }
 
+func (db *db) GetTables() map[string]*Table {
+	return db.tableMap
+}
+
 func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap map[string]*Table) {
 	TableMap = make(map[string]*Table,0)
 	for k,v := range db.tableMap{

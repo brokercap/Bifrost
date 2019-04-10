@@ -52,7 +52,11 @@
                                 <td>{{$v.LastID}}</td>
                                 <td>{{$v.CurrentConn}}</td>
                                 <td>{{$v.Notes}}</td>
-                                <td><button data-toggle="button" class="btn btn-danger delToServerBtn" type="button" >Del</button>
+                                <td>
+                                    <button data-toggle="button" class="btn btn-danger delToServerBtn" type="button" >Del</button>
+                                    <a href="/synclist?toserverkey={{$i}}">
+                                    <button data-toggle="button" class="btn btn-primary" type="button" >查看绑定表</button>
+                                    </a>
                                 </td>
                             </tr>
                             {{end}}

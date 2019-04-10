@@ -1,0 +1,98 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>同步列表
+                    {{if ne .ToServerKey "" }}
+                        - ToServerKey: {{.ToServerKey}}
+                    {{end}}
+                    {{if ne .TableName "" }}
+                        - TableName: {{.TableName}}
+                    {{end}}
+                    {{if ne .SchemaName "" }}
+                        - SchemaName: {{.SchemaName}}
+                    {{end}}
+
+                    {{if ne .DbName "" }}
+                        - DbName: {{.DbName}}
+                    {{end}}
+                    </h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>DbName</th>
+                                <th>SchemaName</th>
+                                <th>TableName</th>
+                                <th>PluginName</th>
+                                <th>ToServerKey</th>
+                                <th>Position</th>
+                                <th>Status</th>
+                                <th>Error</th>
+                                <th>ErrorWaitData</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $toServer := .SyncList}}
+                            {{range $k, $v := $toServer.ToServerList}}
+                            <tr>
+                                <td>{{$i}}-{{$k}}</td>
+                                <td>{{$toServer.DbName}}</td>
+                                <td>{{$toServer.SchemaName}}</td>
+                                <td>{{$toServer.TableName}}</td>
+                                <td>{{$v.PluginName}}</td>
+                                <td>{{$v.ToServerKey}}</td>
+                                <td>
+                                    <p>BinlogNum: {{$v.BinlogFileNum}}</p>
+                                    <p>Pisition : {{$v.BinlogPosition}}</p>
+                                </td>
+                                <td>
+                                    {{$v.Status}}
+                                </td>
+                                <td>{{$v.Error}}</td>
+                                <td>{{$v.ErrorWaitData}}</td>
+                                <td>
+                                    <a href="/db/detail?dbname={{$toServer.DbName}}&schema={{$toServer.SchemaName}}&table_name={{$toServer.TableName}}" target="_blank">
+                                    <button data-toggle="button" class="btn btn-primary" type="button" >Detail</button>
+                                    </a>
+                                </td>
+                            </tr>
+                            {{end}}
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}

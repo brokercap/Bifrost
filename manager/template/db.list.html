@@ -99,7 +99,11 @@
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
                                                         </a>
                                                     </td>
-                                                    <td>{{$v.TableCount}}</td>
+                                                    <td>{{$v.TableCount}} &nbsp;
+                                                        <a href="/synclist?dbname={{$v.Name}}">
+                                                            <button data-toggle="button" class="btn btn-primary" type="button" >同步列表</button>
+                                                        </a>
+                                                    </td>
                                                     <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
                                                     <td>
 
@@ -283,7 +287,7 @@
                 return false;
             }
             $(this).parent().parent().find(".db_current_binlog").text(data.data.BinlogFile);
-            $(this).parent().parent().find(".db_current_postion").text(data.data.BinlogPosition);
+            $(this).parent().parent().find(".db_current_").text(data.data.BinlogPosition);
         }
 
     );
