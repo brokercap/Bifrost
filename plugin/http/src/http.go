@@ -103,7 +103,7 @@ func (This *Conn) SetParam(p interface{}) error{
 
 func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,data string) error {
 	pstring := "EventType="+EventType+"&SchemaName="+SchemaName+"&TableName="+TableName+"&data="+data
-	client := &http.Client{}
+	client := &http.Client{Timeout:10 * time.Second}
 	req, err := http.NewRequest("POST", This.uri, strings.NewReader(pstring))
 	if err != nil {
 		return err
