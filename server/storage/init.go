@@ -47,7 +47,6 @@ func DelKeyVal(key []byte) error{
 
 func GetListByPrefix(key []byte) [][][]byte{
 	data := make([][][]byte,0)
-	log.Println("GetListByPrefix start")
 	iter := levelDB.NewIterator(util.BytesPrefix(key), nil)
 	for iter.Next() {
 		tmp := make([][]byte,2)
@@ -55,7 +54,6 @@ func GetListByPrefix(key []byte) [][][]byte{
 		tmp[1] = iter.Value()
 		data = append(data,tmp)
 	}
-	log.Println("GetListByPrefix over")
 	iter.Release()
 	return data
 }
