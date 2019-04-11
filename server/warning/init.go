@@ -83,9 +83,21 @@ func consumeWarning(){
 		select {
 		case data := <- WarningChan:
 			body := getWarningBody(data)
+			var title string
+			switch data.Type {
+			case WARNINGERROR:
+				title = "Bifrost Warning"
+				break
+			case WARNINGNORMAL:
+				title = "Bifrost Return Normal"
+				break
+			default:
+				title = "Bifrost Other Warning"
+				break
+			}
 			l.RLock()
 			for _,config := range allWaringConfigCacheMap{
-				sendToWaring(config,body,5)
+				sendToWaring(config,title,body,5)
 			}
 			l.RUnlock()
 			break
@@ -96,7 +108,7 @@ func consumeWarning(){
 }
 
 
-func sendToWaring(config WaringConfig,c string,n int){
+func sendToWaring(config WaringConfig,title,c string,n int){
 	defer func() {
 		if err:=recover();err!=nil{
 			log.Println(string(debug.Stack()))
@@ -107,7 +119,7 @@ func sendToWaring(config WaringConfig,c string,n int){
 	}
 
 	for i:=0; i< n; i++{
-		err := dirverMap[config.Type].SendWarning(config.Param,c)
+		err := dirverMap[config.Type].SendWarning(config.Param,title,c)
 		if err == nil{
 			return
 		}
@@ -125,7 +137,7 @@ func CheckWarngConfigBySendTest(config WaringConfig,c string) error{
 	if _,ok := dirverMap[config.Type];!ok{
 		return fmt.Errorf("Type:"+config.Type + "not exsit")
 	}
-
-	err := dirverMap[config.Type].SendWarning(config.Param,c)
+	title := "Bifrost warning test"
+	err := dirverMap[config.Type].SendWarning(config.Param,title,c)
 	return err
 }

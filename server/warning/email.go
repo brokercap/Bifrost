@@ -36,7 +36,7 @@ func (This *Email) paramTansfer(p map[string]interface{}) error{
 	return nil
 }
 
-func (This *Email) SendWarning(p map[string]interface{},Body string) error {
+func (This *Email) SendWarning(p map[string]interface{},title,Body string) error {
 	err1 := This.paramTansfer(p)
 	if err1 != nil{
 		return err1

@@ -11,5 +11,5 @@ func Register(name string,f WarningFunInterface) {
 }
 
 type WarningFunInterface interface {
-	SendWarning(p map[string]interface{},data string) error
+	SendWarning(p map[string]interface{},title string,body string) error
 }
