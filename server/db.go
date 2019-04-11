@@ -21,6 +21,7 @@ import (
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"log"
 	"github.com/jc3wish/Bifrost/server/count"
+	"github.com/jc3wish/Bifrost/server/warning"
 )
 
 var DbLock sync.Mutex
@@ -255,12 +256,6 @@ func (db *db) monitorDump(reslut chan error) bool {
 	var lastStatus string = ""
 	for {
 		v := <-reslut
-		if v.Error() != lastStatus{
-			log.Println(db.Name+" monitor:",v.Error())
-		}else{
-			lastStatus = v.Error()
-		}
-
 		switch v.Error() {
 		case "stop":
 			db.ConnStatus = "stop"
@@ -268,10 +263,26 @@ func (db *db) monitorDump(reslut chan error) bool {
 		case "running":
 			db.ConnStatus = "running"
 			db.ConnErr = "running"
+			warning.AppendWarning(warning.WarningContent{
+				Type:warning.WARNINGNORMAL,
+				DbName:db.Name,
+				Body:" connect status:running; last status:"+lastStatus,
+			})
 			break
 		default:
+			warning.AppendWarning(warning.WarningContent{
+				Type:warning.WARNINGERROR,
+				DbName:db.Name,
+				Body:" connect status:"+v.Error()+"; last status:"+lastStatus,
+			})
 			db.ConnErr = v.Error()
 			break
+		}
+
+		if v.Error() != lastStatus{
+			log.Println(db.Name+" monitor:",v.Error())
+		}else{
+			lastStatus = v.Error()
 		}
 
 		if v.Error() == "close" {
