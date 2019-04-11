@@ -42,10 +42,9 @@ func (This *Email) SendWarning(p map[string]interface{},title,Body string) error
 		return err1
 	}
 	auth := smtp.PlainAuth("", This.p.From, This.p.Password, This.p.SmtpHost)
-	subject := "Bifrost warning mail"
 	content_type := "Content-Type: text/plain; charset=UTF-8"
 	msg := []byte("To: " + strings.Join(This.p.To, ",") + "\r\nFrom: " + This.p.NickName +
-		"<" + This.p.From + ">\r\nSubject: " + subject + "\r\n" + content_type + "\r\n\r\n" + Body)
+		"<" + This.p.From + ">\r\nSubject: " + title + "\r\n" + content_type + "\r\n\r\n" + Body)
 	err := smtp.SendMail(This.p.SmtpHost+":"+strconv.Itoa(This.p.SmtpPort), auth, This.p.From, This.p.To, msg)
 	if err != nil {
 		return err

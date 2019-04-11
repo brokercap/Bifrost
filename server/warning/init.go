@@ -117,13 +117,16 @@ func sendToWaring(config WaringConfig,title,c string,n int){
 	if _,ok := dirverMap[config.Type];!ok{
 		return
 	}
-
+	var err error
 	for i:=0; i< n; i++{
-		err := dirverMap[config.Type].SendWarning(config.Param,title,c)
+		err = dirverMap[config.Type].SendWarning(config.Param,title,c)
 		if err == nil{
 			return
 		}
 		time.Sleep(5 * time.Second)
+	}
+	if err != nil{
+		log.Println("sendToWaring err:",err,"title:",title,"body:",c)
 	}
 }
 
