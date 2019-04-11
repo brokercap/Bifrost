@@ -1,0 +1,343 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>报警配置</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Config</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $id, $config := .WaringConfigList}}
+                            <tr>
+                                <td>{{$config.Type}}</td>
+                                <td>
+                            {{range $k, $v := $config.Param}}
+                                <p>{{$k}} : {{$v}}</p>
+                            {{end}}
+                                </td>
+                                <td>
+                                    <button data-toggle="button" class="btn-sm btn-danger WarningConfigDelBtn" id="{{$id}}" type="button" >Del</button>
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<div class="ibox float-e-margins" id="addWarningConfigContair">
+    <div class="ibox-title">
+        <h5>Add new Warning Config</h5>
+        <div class="ibox-tools">
+
+            <a class="collapse-link">
+                <i class="fa fa-chevron-up"></i>
+            </a>
+            <a class="close-link">
+                <i class="fa fa-times"></i>
+            </a>
+        </div>
+    </div>
+    <div class="ibox-content">
+        <div class="row row-lg">
+
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Type：</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" name="warning_type" id="warning_type">
+                            <option value="Email" >Email</option>
+                        </select><span class="help-block m-b-none"></span>
+                    </div>
+                </div>
+
+                <div id="Email_contair" class="warning_param_contair">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">FROM：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_FROM" id="Email_FROM" class="form-control" placeholder="jc3wish@126.com">
+                            <span class="help-block m-b-none">*用哪个邮件发送邮件</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">NickName：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_NickName" id="Email_NickName" class="form-control" placeholder="邮箱别名">
+                            <span class="help-block m-b-none"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Password：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_Password" id="Email_Password" class="form-control" placeholder="邮箱密码">
+                            <span class="help-block m-b-none">*邮箱密码</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">SMTP HOST：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_SMTP_HOST" id="Email_SMTP_HOST" class="form-control" placeholder="smtp.126.com">
+                            <span class="help-block m-b-none">*smtp服务器地址</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">SMTP PORT：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_SMTP_PORT" id="Email_SMTP_PORT" value="25" class="form-control" placeholder="25">
+                            <span class="help-block m-b-none">*smtp 端口</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">TO：</label>
+                        <div class="col-sm-9">
+                            <textarea type="text" name="Email_TO" id="Email_TO" value="25" class="form-control" placeholder="1@126.com;2@126.com"></textarea>
+                            <span class="help-block m-b-none">*发给哪些邮箱,多个用 ; 隔开</span>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">&nbsp;</label>
+                    <div class="col-sm-9">
+                        <button data-toggle="button" class="btn-sm btn-warning " id="checkParamBtn" type="button">测试</button>
+                        &nbsp;
+                        <button data-toggle="button" class="btn-sm btn-primary" id="addNewWarningBtn" type="button">提交</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+
+var hadCheckParam = false;
+
+$(":text,textarea").change(
+        function() {
+            hadCheckParam = false;
+        }
+);
+
+$(".WarningConfigDelBtn").click(
+    function(){
+        var trObj = $(this).parent().parent();
+        if (!confirm("确定删除?删除后不能恢复!!!!")){
+            return false;
+        }
+        var url = "/warning/config/del";
+        $.post(
+            url,
+            { id: $(this).attr("id")},
+            function(data,status){
+                if( status != 'success' ){
+                    alert("reqeust error, reqeust status : "+status);
+                    return false;
+                }
+                if(!data.status){
+                    alert(data.msg);
+                    return false;
+                }
+                trObj.remove();
+            },
+            'json'
+        );
+    }
+);
+
+function GetWarningParamEmail(){
+    var result = {data:{},status:false,msg:"error"}
+    var data = {};
+    var From        = $("#Email_FROM").val();
+    var NickName    = $("#Email_NickName").val();
+    var Host        = $("#Email_SMTP_HOST").val();
+    var Port        = $("#Email_SMTP_PORT").val();
+    var To          = $("#Email_TO").val();
+    var Password    = $("#Email_Password").val();
+
+    var emreg=/^\w{3,}(\.\w+)*@[A-z0-9]+(\.[A-z]{2,5}){1,2}$/;
+    if(emreg.test(From)==false) {
+        result.msg = "FROM:" + From + " 邮箱不合法";
+        return result;
+    }
+
+    if(Password == ""){
+        result.msg = "Password 不能为空";
+        return result;
+    }
+
+    if(To == ""){
+        result.msg = "To 发送目标邮箱，不能为空";
+        return result;
+    }
+    var ToList = To.split(";")
+    for (var index in ToList){
+        if(emreg.test(ToList[index])==false){
+            result.msg = ToList[index]+" 邮箱不合法";
+            return result;
+        }
+    }
+
+    if (Host == ""){
+        result.msg = "SMTP HOST 不能为空";
+        return result;
+    }
+
+    if (Port == "" || isNaN(Port)){
+        result.msg = "SMTP PORT 不能为空 并且未须为 数字";
+        return result;
+    }
+
+    data["From"] = From;
+    data["NickName"] = NickName;
+    data["Password"] = Password;
+    data["SmtpHost"] = Host;
+    data["SmtpPort"] = parseInt(Port);
+
+    data["To"] = ToList;
+
+    result.data = data;
+    result.msg = "success";
+    result.status = true;
+    return result;
+}
+
+function CheckParam(Type,data) {
+    var url = "/warning/config/check";
+    var result = {status:false,msg:""};
+    $.ajax({
+        type : "post",
+        url : url,
+        data:{param:data,type:Type},
+        async : false,
+        dataType:"json",
+        success : function(data,status){
+            if( status != 'success' ){
+                result.msg = "reqeust error, reqeust status : "+status;
+                return result;
+            }
+            if(data.status){
+                hadCheckParam = true;
+            }
+            result = data;
+        }
+    });
+    return result;
+}
+
+function GetParam(Type) {
+    var data = {}
+    switch (Type) {
+        case "Email":
+            data = GetWarningParamEmail();
+            break;
+        default:
+            break;
+    }
+    return data;
+}
+
+$("#checkParamBtn").click(
+    function () {
+        var Type = $("#warning_type").val();
+        var data = GetParam(Type);
+        if(data.length == 0){
+            return false;
+        }
+        if(data.status != true){
+            alert(data.msg);
+            return false
+        }
+        var checkResult = CheckParam(Type,JSON.stringify(data.data));
+        alert(checkResult.msg);
+        return;
+    }
+);
+
+$("#addNewWarningBtn").click(
+    function(){
+        var Type = $("#warning_type").val();
+        var data = GetParam(Type);
+        if(data.length == 0){
+            return false;
+        }
+        if(data.status != true){
+            alert(data.msg);
+            return false
+        }
+        var dataString = JSON.stringify(data.data);
+        if(hadCheckParam == false){
+            var checkResult = CheckParam(Type,dataString);
+            if (checkResult.status == false){
+                alert(checkResult.msg);
+                return;
+            }
+        }
+        var url = "/warning/config/add";
+        $.ajax({
+            type : "post",
+            url : url,
+            data: {param:dataString,type:Type},
+            async : true,
+            dataType:"json",
+            success : function(data,status){
+                if( status != 'success' ){
+                    alert("reqeust error, reqeust status : "+status);
+                    return result;
+                }
+                if(data.status){
+                    alert(data.msg);
+                    location.reload();
+                    return;
+                }
+                alert(data.msg);
+                return;
+            }
+        });
+
+    }
+);
+
+</script>
+
+{{template "footer" .}}
