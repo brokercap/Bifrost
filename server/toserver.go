@@ -36,7 +36,10 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 		return false,0
 	} else {
 		db.Lock()
-		toserver.ToServerID = db.tableMap[key].LastToServerID + 1
+		if toserver.ToServerID <= 0{
+			db.tableMap[key].LastToServerID += 1
+			toserver.ToServerID = db.tableMap[key].LastToServerID
+		}
 		if toserver.PluginName == ""{
 			ToServerInfo := plugin.GetToServerInfo(toserver.ToServerKey)
 			if ToServerInfo != nil{
