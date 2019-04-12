@@ -23,8 +23,6 @@ esac
 
 mkdir -p $tagDir/manager
 mkdir -p $tagDir/plugin
-mkdir -p $tagDir/etc
-
 
 CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
 
@@ -37,7 +35,7 @@ fi
 
 cp -rf ./manager/template ./$tagDir/manager/template
 cp -rf ./manager/public ./$tagDir/manager/public
-cp -f ./etc/Bifrost.ini ./$tagDir/etc
+cp -r ./etc ./$tagDir/
 for element in `ls ./plugin`
 do
     dir_or_file="./plugin/"$element
