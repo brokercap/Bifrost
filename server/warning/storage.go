@@ -44,7 +44,7 @@ func InitWarningConfigCache(){
 	if firstStartUp == false{
 		return
 	}
-	firstStartUp = true
+	firstStartUp = false
 	data := storage.GetListByPrefix([]byte(WARNING_KEY_PREFIX))
 	for _,v := range data{
 		key := string(v[0])

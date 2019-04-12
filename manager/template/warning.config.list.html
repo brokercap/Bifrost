@@ -37,7 +37,7 @@
                             <tbody>
                             {{range $id, $config := .WaringConfigList}}
                             <tr>
-                                <td>{{$config.Type}}</td>
+                                <td>{{if eq $config.Type "WechatWork"}}微信企业号{{else}}{{$config.Type}}{{end}}</td>
                                 <td>
                             {{range $k, $v := $config.Param}}
                                 <p>{{$k}} : {{$v}}</p>
@@ -82,11 +82,12 @@
                     <div class="col-sm-9">
                         <select class="form-control" name="warning_type" id="warning_type">
                             <option value="Email" >Email</option>
+                            <option value="WechatWork" >微信企业号</option>
                         </select><span class="help-block m-b-none"></span>
                     </div>
                 </div>
 
-                <div id="Email_contair" class="warning_param_contair">
+                <div id="Email_contair" class="warning_param_contair" style="display: none">
                     <div class="form-group">
                         <label class="col-sm-3 control-label">FROM：</label>
                         <div class="col-sm-9">
@@ -136,6 +137,51 @@
                 </div>
 
 
+                <div id="WechatWork_contair" class="warning_param_contair" style="display: none">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">CorpID：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_corpid" id="WechatWork_corpid" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号CorpID参数</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Secret：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_corpsecret" id="WechatWork_corpsecret" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号Secret参数</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">agentid：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_agentid" id="WechatWork_agentid" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号 应用ID,数字类型</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">touser：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_touser" id="WechatWork_touser" class="form-control" placeholder="UserID1|UserID2|UserID3">
+                            <span class="help-block m-b-none">消息接收者，多个接收者用‘|’分隔，最多支持1000个，默认为 all</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">toparty：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_toparty" id="WechatWork_toparty" class="form-control" placeholder="PartyID1 | PartyID2">
+                            <span class="help-block m-b-none">部门ID列表，多个接收者用‘|’分隔，最多支持100个</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">totag：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_totag" id="WechatWork_totag" class="form-control" placeholder="TagID1 | TagID2">
+                            <span class="help-block m-b-none">标签ID列表，多个接收者用‘|’分隔，最多支持100个</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="col-sm-3 control-label">&nbsp;</label>
                     <div class="col-sm-9">
@@ -153,11 +199,26 @@
 
 var hadCheckParam = false;
 
-$(":text,textarea").change(
-        function() {
-            hadCheckParam = false;
-        }
+$(":text,textarea,select").change(
+    function() {
+        hadCheckParam = false;
+    }
 );
+
+function showWarningConfig() {
+    $(".warning_param_contair").hide();
+    var warning_type = $("#warning_type").val();
+    $("#"+warning_type+"_contair").show();
+}
+
+showWarningConfig();
+
+$("#warning_type").change(
+  function(){
+      showWarningConfig();
+  }
+);
+
 
 $(".WarningConfigDelBtn").click(
     function(){
@@ -242,6 +303,44 @@ function GetWarningParamEmail(){
     return result;
 }
 
+
+function GetWarningParamWechatWork(){
+    var result = {data:{},status:false,msg:"error"}
+    var data = {};
+    var corpid        = $("#WechatWork_corpid").val();
+    var corpsecret    = $("#WechatWork_corpsecret").val();
+    var touser        = $("#WechatWork_touser").val();
+    var toparty       = $("#WechatWork_toparty").val();
+    var totag         = $("#WechatWork_totag").val();
+    var agentid       = $("#WechatWork_agentid").val();
+
+    if(corpid == "" || corpsecret == ""){
+        result.msg = "CorpID , Secret 不能为空";
+        return result;
+    }
+
+    if (agentid == "" || isNaN(agentid)){
+        result.msg = "agentid 不能为空 并且未须为 数字";
+        return result;
+    }
+
+    if(touser == "" && toparty=="" && totag == ""){
+        touser = "@all";
+    }
+
+    data["corpid"] = corpid;
+    data["corpsecret"] = corpsecret;
+    data["touser"] = touser;
+    data["toparty"] = toparty;
+    data["totag"] = totag;
+    data["agentid"] = parseInt(agentid);
+
+    result.data = data;
+    result.msg = "success";
+    result.status = true;
+    return result;
+}
+
 function CheckParam(Type,data) {
     var url = "/warning/config/check";
     var result = {status:false,msg:""};
@@ -270,6 +369,9 @@ function GetParam(Type) {
     switch (Type) {
         case "Email":
             data = GetWarningParamEmail();
+            break;
+        case "WechatWork":
+            data = GetWarningParamWechatWork();
             break;
         default:
             break;
