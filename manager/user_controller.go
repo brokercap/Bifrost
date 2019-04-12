@@ -46,7 +46,12 @@ func user_do_login(w http.ResponseWriter,req *http.Request){
 	}
 	pwd := config.GetConfigVal("user",UserName)
 	if pwd == UserPwd{
+		GroupName := config.GetConfigVal("groups",UserName)
+		if GroupName == ""{
+			GroupName = "monitor"
+		}
 		sessionMgr.SetSessionVal(sessionID, "UserName", UserName)
+		sessionMgr.SetSessionVal(sessionID, "Group", GroupName)
 		w.Write(returnResult(true," success"))
 		return
 	}

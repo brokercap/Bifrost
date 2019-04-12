@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"fmt"
 	"runtime/debug"
+	"github.com/jc3wish/Bifrost/server/warning"
 )
 
 func (This *ToServer) pluginClose(){
@@ -58,6 +59,22 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 	var fordo int = 0
 	var lastErrId int = 0
+	var warningStatus bool = false
+
+	//告警方法
+	doWarningFun := func(warningType warning.WarningType,body string) {
+		if warningType == warning.WARNINGNORMAL && warningStatus != true {
+			return
+		}
+		warningStatus = true
+		warning.AppendWarning(warning.WarningContent{
+			Type:       warningType,
+			DbName:     db.Name,
+			SchemaName: SchemaName,
+			TableName:  TableName,
+			Body:       body,
+		})
+	}
 	for {
 		CheckStatusFun()
 		select {
@@ -65,6 +82,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			CheckStatusFun()
 			fordo = 0
 			lastErrId = 0
+			warningStatus = false
 			for {
 				errs = nil
 				PluginBinlog,errs = This.sendToServer(data)
@@ -73,6 +91,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						if lastErrId > 0 {
 							This.DelWaitError()
 							lastErrId = 0
+							//自动恢复
+							doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
 						}
 						break
 					} else {
@@ -85,6 +105,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							if dealStatus == 1{
 								This.DelWaitError()
 								lastErrId = 0
+								//人工处理恢复
+								doWarningFun(warning.WARNINGNORMAL,"Return to normal by user")
 								break
 							}
 						}else{
@@ -93,10 +115,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						}
 					}
 					fordo++
-					if fordo==3{
+					if fordo % 3 == 0{
 						CheckStatusFun()
+						//连续15次发送都是失败的,则报警
+						if fordo == 15 {
+							doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
+						}
 						time.Sleep(2 * time.Second)
-						fordo = 0
 					}
 				}else{
 					PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}

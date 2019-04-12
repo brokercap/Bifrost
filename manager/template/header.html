@@ -31,20 +31,28 @@
                             <a aria-expanded="false" role="button" href="/"> 返回首页</a>
                         </li>
                         <li class="dropdown">
-                            <a  href="/db/list" class="dropdown-toggle" > DBList </a>
+                            <a  href="/db/list" class="dropdown-toggle" > 数据源 </a>
                         </li>
                         <li class="dropdown">
-                            <a href="/plugin/list" class="dropdown-toggle"> Plugin </a>
+                            <a href="/toserver/list" class="dropdown-toggle"> 目标库列表 </a>
                         </li>
                         <li class="dropdown">
-                            <a href="/toserver/list" class="dropdown-toggle"> ToServer </a>
+                            <a  href="/flow/index" class="dropdown-toggle"> 流量 </a>
+                        </li>
+
+                        <li class="dropdown">
+                            <a  href="/synclist" class="dropdown-toggle"> 表同步列表 </a>
                         </li>
                         <li class="dropdown">
-                            <a  href="/flow/index" class="dropdown-toggle"> Flow </a>
+                            <a href="/plugin/list" class="dropdown-toggle"> 插件 </a>
                         </li>
                         <li class="dropdown">
-                            <a href="/docs" target="_blank" class="dropdown-toggle"> Docs </a>
+                            <a href="/warning/config/list" class="dropdown-toggle"> 报警 </a>
                         </li>
+                        <li class="dropdown">
+                            <a href="/docs" target="_blank" class="dropdown-toggle"> 文档 </a>
+                        </li>
+
 
                     </ul>
                     <ul class="nav navbar-top-links navbar-right">
@@ -62,11 +70,15 @@
 </div>
 
 <script type="text/javascript">
+function showOriginalData(obj,c){
+    $(obj).parent().text(c);
+}
 function filterIpAndPort(c){
+    var html = " <button data-toggle=\"button\" class=\"btn-sm btn-primary\" onclick='showOriginalData(this,\""+c+"\")' type=\"button\">show</button>\n"
     if(c.indexOf("@") != -1){
-        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***")
+        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***"+html)
     }else{
-        document.write("***"+c.slice(5,c.length-5)+"***")
+        document.write("***"+c.slice(5,c.length-5)+"***"+html)
     }
     return;
 }

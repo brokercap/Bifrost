@@ -33,6 +33,7 @@
                                                     <th>ConnectUri</th>
                                                     <th>ConnStatus</th>
                                                     <th>Position</th>
+                                                    <th>DB Postion</th>
                                                     <th>MaxPosition</th>
                                                     <th>ServerId</th>
                                                     <th>ConnErr</th>
@@ -78,6 +79,12 @@
                                                         <p>{{$v.BinlogDumpFileName}}</p>
                                                         <p>{{$v.BinlogDumpPosition}}</p>
                                                     </td>
+
+                                                    <td>
+                                                        <p class="db_current_binlog"></p>
+                                                        <p class="db_current_postion"></p>
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary NewestPostionBtn" type="button">最新位点</button></p>
+                                                    </td>
                                                     <td>
                                                     {{if ne $v.MaxBinlogDumpFileName ""}}
                                                         <p>{{$v.MaxBinlogDumpFileName}}</p>
@@ -92,7 +99,11 @@
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
                                                         </a>
                                                     </td>
-                                                    <td>{{$v.TableCount}}</td>
+                                                    <td>{{$v.TableCount}} &nbsp;
+                                                        <a href="/synclist?dbname={{$v.Name}}">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button" >同步列表</button>
+                                                        </a>
+                                                    </td>
                                                     <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
                                                     <td>
 
@@ -148,7 +159,7 @@
                             <label class="col-sm-3 control-label">ConnUri：</label>
                             <div class="col-sm-9" style=" position: relative">
                                 <div style="position: absolute; right: -65px; top: 0px;">
-                                    <button data-toggle="button" class="btn btn-warning " id="checkUriBtn" type="button">Check</button>
+                                    <button data-toggle="button" class="btn-sm btn-warning " id="checkUriBtn" type="button">Check</button>
                                 </div>
                                 <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri"> <span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span>
                             </div>
@@ -197,7 +208,7 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">&nbsp;</label>
                             <div class="col-sm-9">
-                                <button data-toggle="button" class="btn btn-primary" id="addNewDBBtn" type="button">提交</button>
+                                <button data-toggle="button" class="btn-sm btn-primary" id="addNewDBBtn" type="button">提交</button>
                     
                             </div>
                         </div>                        
@@ -217,41 +228,68 @@
             $("#checkUriBtn").show();
         }
     );
+
+    function getDBPostion(uri) {
+        var url = "/db/check_uri";
+        var MyData;
+        $.ajax({
+            type : "post",
+            url : url,
+            data:{uri:uri},
+            async : false,
+            dataType:"json",
+            success : function(data,status){
+                if( status != 'success' ){
+                    alert("reqeust error, reqeust status : "+status);
+                    return false;
+                }
+                MyData = data;
+                return
+            }
+        });
+        return MyData;
+    }
+
     $("#checkUriBtn").click(
         function(){
             var uri = $("#uri").val();
             if (uri == ""){
                 return false;
             }
-            var url = "/db/check_uri";
-            $.post(
-                url,
-                {uri:uri},
-                function(data,status){
-                    if( status != 'success' ){
-                        alert("reqeust error, reqeust status : "+status);
-                        return false;
-                    }
-                    if(!data.status){
-                        alert(data.msg);
-                        return false;
-                    }
-                    if($("#filename").val() == ""){
-                        $("#filename").val(data.data.BinlogFile);
-                    }
-                    if($("#position").val() == ""){
-                        $("#position").val(data.data.BinlogPosition);
-                    }
-                    if($("#serverid").val() == ""){
-                        $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
-                    }
-                    alert(data.msg);
-                    dbUriChecked = true;
-                    $("#checkUriBtn").hide();
-                },
-                'json'
-        );
+            var data = getDBPostion(uri);
+
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            if($("#filename").val() == ""){
+                $("#filename").val(data.data.BinlogFile);
+            }
+            if($("#position").val() == ""){
+                $("#position").val(data.data.BinlogPosition);
+            }
+            if($("#serverid").val() == ""){
+                $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
+            }
+            alert(data.msg);
+            dbUriChecked = true;
+            $("#checkUriBtn").hide();
         }
+    );
+
+    $(".NewestPostionBtn").click(
+        function(){
+            var uri = $(this).parent().parent().parent().children().eq(1).attr("title");
+
+            var data = getDBPostion(uri);
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            $(this).parent().parent().find(".db_current_binlog").text(data.data.BinlogFile);
+            $(this).parent().parent().find(".db_current_postion").text(data.data.BinlogPosition);
+        }
+
     );
 $("#addNewDBBtn").click(
 	function(){

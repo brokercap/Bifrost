@@ -20,6 +20,7 @@ import (
 	"github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/server"
 	"html/template"
+	"encoding/json"
 )
 
 func init()  {
@@ -46,6 +47,11 @@ func toserver_add_controller(w http.ResponseWriter,req *http.Request){
 
 func toserver_list_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
+	if req.Form.Get("format") == "json"{
+		data,_:=json.Marshal(toserver.ToServerMap)
+		w.Write(data)
+		return
+	}
 	type toServerInfo struct {
 		TemplateHeader
 		ToServerList map[string]*toserver.ToServer

@@ -13,7 +13,7 @@
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
                     {{range $i, $v := .DataBaseList}}
-                        <a class="list-group-item">
+                        <a class="list-group-item" id="Schema-{{$v}}">
                             <h3 class="list-group-item-heading">{{$v}}</h3>
                         </a>
                     {{end}}
@@ -135,7 +135,7 @@
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">&nbsp;</label>
                                 <div class="col-sm-9">
-                                    <button data-toggle="button" class="btn btn-primary" id="addToServerBtn" type="button">提交</button>
+                                    <button data-toggle="button" class="btn-sm btn-primary" id="addToServerBtn" type="button">提交</button>
                                 </div>
                             </div>
                         </div>
@@ -204,8 +204,8 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn btn-primary" onclick="AddTable()">保存</button>
+                    <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn-sm btn-primary" onclick="AddTable()">保存</button>
                 </div>
             </div>
         </div>
@@ -348,7 +348,7 @@
                             }
                             var op = "";
                             if(v.Status == "running" || v.Status == ""){
-                                op = '<button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                                op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
                             }else{
                                 op = v.Status;
                             }
@@ -357,7 +357,7 @@
                                         sliceid:index,
                                         PluginName:v.PluginName,
                                         ToServerKey:v.ToServerKey,
-                                        FieldList:fields,
+                                        FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",
                                         Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
                                         PluginParam:PluginHtml,
                                         Error:ErrorHtml,
@@ -427,6 +427,52 @@
             $("#TableFieldsContair").html(html);
         }
         var DataBaseMap = new Map();
+
+        function showSchemaTableList(id){
+            $("#DatabaseListContair a").removeClass("active");
+            $("#"+id).addClass("active");
+            var schema_name = $("#"+id).find("h3").text();
+            var dbname = $("#dbname").val();
+            var url = "/db/tablelist";
+            var showTableList = function(data){
+                $("#TableListContair").html("");
+                $.each(data,function(index,v){
+                    var html = "";
+                    var title = "";
+                    if (v.ChannelName != ""){
+                        title = " title='Bind Channel : "+v.ChannelName+"' ";
+                    }
+                    html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
+                    html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
+                    if (v.AddStatus == false){
+                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
+                    }else{
+                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button></div>';
+                    }
+                    html +=	'</div></a>';
+                    $("#TableListContair").append(html);
+                });
+            }
+            if (!DataBaseMap.has(schema_name) || DataBaseMap.get(schema_name) == undefined){
+                $.ajax({
+                    type : "get",
+                    url : url,
+                    data:{dbname:dbname,schema_name:schema_name},
+                    async : false,  //这里用同步 ,是为了当前界第一次请求进来执行init的时候,确保执行完了这个方法,再自动执行查询toserverList
+                    dataType:"json",
+                    success : function(data,status){
+                        if( status != 'success' ){
+                            alert("reqeust error, reqeust status : "+status);
+                            return false;
+                        }
+                        DataBaseMap.set(schema_name,data);
+                        showTableList(data);
+                    }
+                });
+            }else{
+                showTableList(DataBaseMap.get(schema_name));
+            }
+        }
         $(function(){
             $("#plugin_param_div").on("click",":text,textarea",function(){
                 OnFoucsInputId = $(this).attr("id");
@@ -434,44 +480,7 @@
 
             $("#DatabaseListContair a").click(
                     function(){
-                        $("#DatabaseListContair a").removeClass("active");
-                        $(this).addClass("active");
-                        var schema_name = $(this).find("h3").text();
-                        var dbname = $("#dbname").val();
-                        var url = "/db/tablelist";
-                        var showTableList = function(data){
-                            $("#TableListContair").html("");
-                            $.each(data,function(index,v){
-                                var html = "";
-                                var title = "";
-                                if (v.ChannelName != ""){
-                                    title = " title='Bind Channel : "+v.ChannelName+"' ";
-                                }
-                                html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
-                                html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
-                                if (v.AddStatus == false){
-                                    html+= '<div class="right"><button data-toggle="button" class="btn btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
-                                }else{
-                                    html+= '<div class="right"><button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button></div>';
-                                }
-                                html +=	'</div></a>';
-                                $("#TableListContair").append(html);
-                            });
-                        }
-                        if (!DataBaseMap.has(schema_name) || DataBaseMap.get(schema_name) == undefined){
-                            $.get(url,
-                                    {dbname:dbname,schema_name:schema_name},
-                                    function(data,status){
-                                        if( status != 'success' ){
-                                            alert("reqeust error, reqeust status : "+status);
-                                            return false;
-                                        }
-                                        DataBaseMap.set(schema_name,data);
-                                        showTableList(data);
-                                    }, 'json');
-                        }else{
-                            showTableList(DataBaseMap.get(schema_name));
-                        }
+                        showSchemaTableList($(this).attr("id"));
                     }
             );
             var doChangeToServer = function(){
@@ -574,6 +583,30 @@
                     'json'
             );
         }
+
+
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]);
+            return null;
+        }
+
+        function init(){
+            var querySchemaName = getQueryString("schema");
+            var queryTableName = getQueryString("table_name");
+            if(querySchemaName == null || queryTableName == null) {
+                return false;
+            }
+            if( $("#Schema-"+querySchemaName).length <= 0){
+                return false;
+            }
+            showSchemaTableList("Schema-"+querySchemaName)
+            //$("#Schema-"+querySchemaName).onclick();
+            GetTableToServerList(querySchemaName,queryTableName);
+        }
+
+        init();
 
     </script>
 

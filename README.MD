@@ -1,4 +1,5 @@
-# Bifrost ---- MySQL到其他服务的高性能异构中间件
+## Bifrost ---- 将MySQL数据实时同步 到 Redis , MongoDB等的高性能异构中间件
+
 
 [![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/jc3wish/Bifrost)
 [![Join the chat at https://gitter.im/jc3wish-Bifrost/Lobby](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/jc3wish-Bifrost/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
@@ -10,7 +11,7 @@
 提供 [Linux](https://github.com/jc3wish/Bifrost/releases) , [mac](https://github.com/jc3wish/Bifrost/releases) , [windows](https://github.com/jc3wish/Bifrost/releases) , [freebsd](https://github.com/jc3wish/Bifrost/releases)  平台二进制可执行文件下载.
 
 
-*Bifrsot* 支持同步到多种第三方服务, for example:
+*Bifrsot* 支持同步到多种目标库, for example:
 
 * Redis
 * Memcache
@@ -34,12 +35,20 @@
 
 * 界面化灵活配置不同的数据表
 
-* 一个数据表可以不同的格式同步到多个第三方服务
+* 多数据源,多种目标库支持
 
-* kill,服务宕机等重启自动恢复配置
+* 宕机后重启自动恢复配置
 
-* 支持自定义插件开发，动态加载. [插件开发教程](https://github.com/jc3wish/Bifrost/wiki/%E6%8F%92%E4%BB%B6%E5%BC%80%E5%8F%91%E6%95%99%E7%A8%8B)
+* 支持自定义插件开发，动态加载
 
+* 支持 Email 及 微信企业号等报警功能
+
+* 提供第三方监控平台访问接口(Http Basic验证)
+
+
+### WIKI
+
+[Bifrost WIKI](https://github.com/jc3wish/Bifrost/wiki)
 
 ### MySQL 版本（经过测试）
 
@@ -96,6 +105,13 @@ vim Bifrost.ini
 [user]
 #登入用户名和密码
 Bifrost=Bifrost123
+BifrostMonitor=Bifrost123
+
+[groups]
+#administrator 管理人员可以添加删除等操作
+#monitor 只能查看数据
+Bifrost=administrator
+BifrostMonitor=monitor
 
 [Bifrostd]
 #log写到入的文件夹，默认为启动文件所在文件夹下的logs目录
@@ -117,7 +133,18 @@ channel_queue_size=1000
 #这个参数只在 linux 下有效，其他平台全部为false
 dynamic_plugin=false
 
+#是否支持https
+tls=true
+
+#server.key 及 server.crt 相对于 Bifrost 的路径，也可以填绝对路径
+tls_key_file=./etc/server.key
+tls_crt_file=./etc/server.crt
+
 `````
+
+##### 生成https证书
+
+[参数证书生成](https://github.com/jc3wish/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
 
 ##### 启动
 `````shell
@@ -157,7 +184,7 @@ docker run -d -p21036:21036 jc3wish/bifrost:1.1.x
 `````
 
 ##### 管理
-http://127.0.0.1:21036
+https://127.0.0.1:21036
 
 
 ### 界面操作文档
