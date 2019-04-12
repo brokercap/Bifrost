@@ -35,12 +35,20 @@
 
 * 界面化灵活配置不同的数据表
 
-* 一个数据表可以不同的格式同步到多个第三方服务
+* 多数据源,多种目标库支持
 
-* kill,服务宕机等重启自动恢复配置
+* 宕机后重启自动恢复配置
 
 * 支持自定义插件开发，动态加载
 
+* 支持 Email 及 微信企业号等报警功能
+
+* 提供第三方监控平台访问接口(Http Basic验证)
+
+
+### WIKI
+
+[Bifrost WIKI](https://github.com/jc3wish/Bifrost/wiki)
 
 ### MySQL 版本（经过测试）
 
@@ -97,6 +105,13 @@ vim Bifrost.ini
 [user]
 #登入用户名和密码
 Bifrost=Bifrost123
+BifrostMonitor=Bifrost123
+
+[groups]
+#administrator 管理人员可以添加删除等操作
+#monitor 只能查看数据
+Bifrost=administrator
+BifrostMonitor=monitor
 
 [Bifrostd]
 #log写到入的文件夹，默认为启动文件所在文件夹下的logs目录
