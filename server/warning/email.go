@@ -17,7 +17,7 @@ type Email struct {
 
 type EmailParam struct {
 	From string
-	To []string
+	To string
 	Password string
 	SmtpHost string
 	SmtpPort int
@@ -41,11 +41,15 @@ func (This *Email) SendWarning(p map[string]interface{},title,Body string) error
 	if err1 != nil{
 		return err1
 	}
+	toUser := strings.Split(This.p.To,";")
+	if toUser[len(toUser)-1]==""{
+		toUser = toUser[:len(toUser)-1]
+	}
 	auth := smtp.PlainAuth("", This.p.From, This.p.Password, This.p.SmtpHost)
 	content_type := "Content-Type: text/plain; charset=UTF-8"
-	msg := []byte("To: " + strings.Join(This.p.To, ",") + "\r\nFrom: " + This.p.NickName +
+	msg := []byte("To: " + strings.Join(toUser, ",") + "\r\nFrom: " + This.p.NickName +
 		"<" + This.p.From + ">\r\nSubject: " + title + "\r\n" + content_type + "\r\n\r\n" + Body)
-	err := smtp.SendMail(This.p.SmtpHost+":"+strconv.Itoa(This.p.SmtpPort), auth, This.p.From, This.p.To, msg)
+	err := smtp.SendMail(This.p.SmtpHost+":"+strconv.Itoa(This.p.SmtpPort), auth, This.p.From, toUser, msg)
 	if err != nil {
 		return err
 	}
