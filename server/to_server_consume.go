@@ -82,6 +82,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			CheckStatusFun()
 			fordo = 0
 			lastErrId = 0
+			warningStatus = false
 			for {
 				errs = nil
 				PluginBinlog,errs = This.sendToServer(data)
@@ -105,7 +106,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 								This.DelWaitError()
 								lastErrId = 0
 								//人工处理恢复
-								doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal by user")
+								doWarningFun(warning.WARNINGNORMAL,"Return to normal by user")
 								break
 							}
 						}else{
@@ -116,8 +117,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					fordo++
 					if fordo % 3 == 0{
 						CheckStatusFun()
-						//连续30次发送都是失败的,则报警
-						if fordo == 30 {
+						//连续15次发送都是失败的,则报警
+						if fordo == 15 {
 							doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
 						}
 						time.Sleep(2 * time.Second)
