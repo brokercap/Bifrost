@@ -89,7 +89,7 @@ func index_controller(w http.ResponseWriter,req *http.Request){
 	http.Redirect(w, req, "/db/list", http.StatusFound)
 }
 
-var writeRequestOp = []string{"/add","/del","/deal"}
+var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal"}
 //判断是否为写操作
 func checkWriteRequest(uri string) bool {
 	for _,v := range writeRequestOp{
