@@ -61,8 +61,8 @@
                                 <td>
                                     <button data-toggle="button" class="btn-sm btn-danger delToServerBtn" type="button" >Del</button>
                                     <button data-toggle="button" class="btn-sm btn-primary updateMaxConnBtn" type="button" >修改</button>
-                                    <a href="/synclist?toserverkey={{$i}}">
-                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" >查看绑定表</button>
+                                    <a href="/synclist?toserverkey={{$i}}" target="_self">
+                                    <button class="btn-sm btn-primary" type="button" >查看绑定表</button>
                                     </a>
                                 </td>
                             </tr>
@@ -196,7 +196,7 @@
                     <label class="col-sm-3 control-label">MaxConn：</label>
                     <div class="col-sm-9" >
                         <input type="text" name="maxconn" id="maxconn" class="form-control" value="20" placeholder="ConnUri">
-                        <span class="help-block m-b-none" id="connuri_example">*最大连接数</span>
+                        <span class="help-block m-b-none">*最大连接数</span>
                     </div>
                 </div>
 
@@ -249,6 +249,7 @@
     );
 
     function checkUri(plugin,uri) {
+        var url = "/toserver/check_uri";
         var result = {status:false,msg:"unknow error"};
         $.ajax({
             type : "post",
@@ -273,7 +274,6 @@
                     return false;
                 }
                 var conn_type = $("#conn_type").val();
-                var url = "/toserver/check_uri";
                 var data = checkUri(conn_type,connuri);
                 if(!data.status){
                     alert(data.msg);
@@ -407,7 +407,10 @@
                                 return false;
                             }
                             alert(data.msg);
-                            //location.reload();
+                            $("#ToServer_"+ToServerKey).children().eq(3).attr("title",Uri);
+                            $("#ToServer_"+ToServerKey).children().eq(3).text(Uri);
+                            $("#ToServer_"+ToServerKey).children().eq(5).text(MaxConn);
+                            $("#ToServer_"+ToServerKey).children().eq(8).text(Notes);
                         },
                         'json'
                 );
