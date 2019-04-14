@@ -45,7 +45,7 @@ type ConnFun interface {
 	Update(data *PluginDataType) (*PluginBinlog,error)
 	Del(data *PluginDataType) (*PluginBinlog,error)
 	Query(data *PluginDataType) (*PluginBinlog,error)
-	SetParam(p interface{}) error
+	SetParam(p interface{})(interface{},error)
 	Commit() (*PluginBinlog,error)
 }
 

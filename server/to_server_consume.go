@@ -203,14 +203,17 @@ func (This *ToServer) pluginReBack(){
 }
 
 //从插件实例池中获取一个插件实例
-func (This *ToServer) getPluginAndSetParam() error{
+func (This *ToServer) getPluginAndSetParam() (err error){
 	This.PluginConn,This.PluginConnKey = plugin.GetPlugin(This.ToServerKey)
-	log.Println("aaaaaaa11111")
 	if This.PluginConn == nil{
 		return fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
-	log.Println("aaaaaaa1222221")
-	err := This.PluginConn.SetParam(This.PluginParam)
+	if This.PluginParamObj == nil{
+		This.PluginParamObj,err = This.PluginConn.SetParam(This.PluginParam)
+	}else{
+		_, err = This.PluginConn.SetParam(This.PluginParamObj)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -219,7 +222,6 @@ func (This *ToServer) getPluginAndSetParam() error{
 
 func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
-		log.Println("sssssss0000")
 		This.pluginReBack()
 		if err2 := recover();err2!=nil{
 			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
@@ -245,12 +247,10 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 
 
 func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
-	log.Println("sendToServer data:",data.SchemaName,data.TableName,data.Rows)
 	defer func() {
-		log.Println("sssssss0000")
 		This.pluginReBack()
 		if err2 := recover();err2!=nil{
-			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
+			err = fmt.Errorf(This.ToServerKey,err2,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
 			func() {
 				defer func() {

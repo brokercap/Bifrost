@@ -6,6 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 	"time"
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	"fmt"
 )
 
 type Conn struct {
@@ -13,16 +14,16 @@ type Conn struct {
 	status 			string
 	conn   			sarama.SyncProducer
 	err    			error
-	p      			PluginParam
-	dataList 		[]*sarama.ProducerMessage
-	binlogList 		[]pluginDriver.PluginBinlog
-	dataCurrentCount int
+	p      			*PluginParam
 }
 
 type PluginParam struct {
 	Topic 			string
 	Key   			string
 	BatchSize 		int
+	dataList		[]*sarama.ProducerMessage
+	binlogList 		[]pluginDriver.PluginBinlog
+	dataCurrentCount int
 }
 
 func newConn(uri string) *Conn{
@@ -59,26 +60,40 @@ func (This *Conn) Connect() bool {
 	return true
 }
 
-func (This *Conn) SetParam(p interface{}) error{
+
+func (This *Conn) GetParam(p interface{}) (interface{},error){
 	s,err := json.Marshal(p)
 	if err != nil{
-		return err
+		return nil,err
 	}
 	var param PluginParam
 	err2 := json.Unmarshal(s,&param)
 	if err2 != nil{
-		return err2
+		return nil,err2
 	}
-	This.p = param
-	if This.p.BatchSize <=0 {
-		This.p.BatchSize = 1
+	if param.BatchSize <= 0{
+		param.BatchSize = 1
 	}
-	if len(This.dataList) == 0{
-		This.dataList = make([]*sarama.ProducerMessage,0)
-		This.binlogList = make([]pluginDriver.PluginBinlog,0)
-		This.dataCurrentCount = 0
+	if len(param.dataList) == 0{
+		param.dataList = make([]*sarama.ProducerMessage,0)
+		param.binlogList = make([]pluginDriver.PluginBinlog,0)
+		param.dataCurrentCount = 0
 	}
-	return nil
+	This.p = &param
+	return &param,nil
+}
+
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	if p == nil{
+		return nil,fmt.Errorf("param is nil")
+	}
+	switch p.(type) {
+	case *PluginParam:
+		This.p = p.(*PluginParam)
+		return p,nil
+	default:
+		return This.GetParam(p)
+	}
 }
 
 func (This *Conn) ReConnect() bool {
@@ -145,10 +160,10 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 	}
 	msg.Value =  sarama.StringEncoder(c)
 	if This.p.BatchSize > 1{
-		This.dataList = append(This.dataList,msg)
-		This.binlogList = append(This.binlogList,pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition})
-		This.dataCurrentCount++
-		if This.dataCurrentCount >= This.p.BatchSize{
+		This.p.dataList = append(This.p.dataList,msg)
+		This.p.binlogList = append(This.p.binlogList,pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition})
+		This.p.dataCurrentCount++
+		if This.p.dataCurrentCount >= This.p.BatchSize{
 			return This.sendToKafka()
 		}
 		return nil,nil
@@ -165,26 +180,26 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 }
 
 func (This *Conn) sendToKafka() (binlog *pluginDriver.PluginBinlog, err error) {
-	if This.dataCurrentCount == 0{
+	if This.p.dataCurrentCount == 0{
 		return nil,nil
 	}
-	if This.dataCurrentCount > This.p.BatchSize{
-		list := This.dataList[:This.p.BatchSize]
+	if This.p.dataCurrentCount > This.p.BatchSize{
+		list := This.p.dataList[:This.p.BatchSize]
 		err = This.conn.SendMessages(list)
 		if err == nil{
-			This.dataList = This.dataList[This.p.BatchSize:]
-			binlogInfo := This.binlogList[This.p.BatchSize]
-			This.binlogList = This.binlogList[This.p.BatchSize:]
-			This.dataCurrentCount -= This.p.BatchSize
+			This.p.dataList = This.p.dataList[This.p.BatchSize:]
+			binlogInfo := This.p.binlogList[This.p.BatchSize]
+			This.p.binlogList = This.p.binlogList[This.p.BatchSize:]
+			This.p.dataCurrentCount -= This.p.BatchSize
 			binlog = &binlogInfo
 		}
 	}else{
-		err = This.conn.SendMessages(This.dataList)
+		err = This.conn.SendMessages(This.p.dataList)
 		if err == nil{
-			This.dataList = make([]*sarama.ProducerMessage,0)
-			This.dataCurrentCount = 0
-			binlogInfo := This.binlogList[len(This.binlogList)-1]
-			This.binlogList = make([]pluginDriver.PluginBinlog,0)
+			This.p.dataList = make([]*sarama.ProducerMessage,0)
+			This.p.dataCurrentCount = 0
+			binlogInfo := This.p.binlogList[len(This.p.binlogList)-1]
+			This.p.binlogList = make([]pluginDriver.PluginBinlog,0)
 			binlog = &binlogInfo
 		}
 	}

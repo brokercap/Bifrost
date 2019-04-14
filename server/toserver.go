@@ -28,6 +28,7 @@ type ToServer struct {
 	ErrorWaitData 		interface{}
 	PluginConn	  		driver.ConnFun `json:"-"`
 	PluginConnKey 		string `json:"-"`
+	PluginParamObj 		interface{} `json:"-"`
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {

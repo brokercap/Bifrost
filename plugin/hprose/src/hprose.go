@@ -35,8 +35,8 @@ func newConn(uri string) *Conn{
 	return f
 }
 
-func (This *Conn) SetParam(p interface{}) error{
-	return nil
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	return nil,nil
 }
 
 func (This *Conn) GetConnStatus() string {

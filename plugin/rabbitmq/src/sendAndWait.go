@@ -6,8 +6,13 @@ import (
 	"fmt"
 )
 
-func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode *uint8) (bool,error) {
-	err := This.ch.Publish(
+func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode uint8) (bool,error) {
+	ch := This.getChannel(true)
+	if ch == nil{
+		This.status = "close"
+		return false,This.err
+	}
+	err := ch.Publish(
 		*exchange,     // exchange
 		*routingkey, // routing key
 		true,  // mandatory
@@ -15,8 +20,8 @@ func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,Del
 		amqp.Publishing{
 			ContentType: 	"text/plain",
 			Body:   *c,
-			DeliveryMode:	*DeliveryMode,
-			Expiration:	This.expir,
+			DeliveryMode:	DeliveryMode,
+			Expiration:	This.p.expir,
 		})
 	if err != nil{
 		This.err = err
@@ -38,8 +43,13 @@ func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,Del
 	return false,This.err
 }
 
-func (This *Conn) SendAndNoWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode *uint8) (bool,error) {
-	err := This.ch.Publish(
+func (This *Conn) SendAndNoWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode uint8) (bool,error) {
+	ch := This.getChannel(false)
+	if ch == nil{
+		This.status = "close"
+		return false,This.err
+	}
+	err := ch.Publish(
 		*exchange,     // exchange
 		*routingkey, // routing key
 		false,  // mandatory
@@ -47,8 +57,8 @@ func (This *Conn) SendAndNoWait(exchange *string,routingkey *string, c *[]byte,D
 		amqp.Publishing{
 			ContentType: 	"text/plain",
 			Body:   *c,
-			DeliveryMode:	*DeliveryMode,
-			Expiration:	This.expir,
+			DeliveryMode:	DeliveryMode,
+			Expiration:	This.p.expir,
 		})
 	if err != nil{
 		This.err = err
