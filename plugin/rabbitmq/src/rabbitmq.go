@@ -123,7 +123,6 @@ func (This *Conn) ReConnect() bool {
 				return
 			}
 		}()
-		This.conn.Close()
 		if This.ch != nil{
 			This.ch.Close()
 			This.ch = nil
@@ -132,6 +131,7 @@ func (This *Conn) ReConnect() bool {
 			This.ch_nowait.Close()
 			This.ch_nowait = nil
 		}
+		This.conn.Close()
 	}()
 	r := This.Connect()
 	if r == true{
