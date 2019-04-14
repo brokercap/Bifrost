@@ -36,8 +36,11 @@ func SetToServerInfo(ToServerKey string,server ToServer){
 		log.Println("SetToServerInfo err: plugin ",ToServerKey," not exsit")
 		return
 	}
-	if server.MaxConn == 0{
+	if server.MaxConn <= 0{
 		server.MaxConn = 10
+	}
+	if server.MaxConn > 500{
+		server.MaxConn = 500
 	}
 	l.Lock()
 	if _, ok := ToServerMap[ToServerKey]; !ok {
@@ -60,6 +63,12 @@ func UpdateToServerInfo(ToServerKey string,server ToServer) error{
 	if _,ok:=Drivers[server.PluginName];!ok{
 		log.Println("SetToServerInfo err: plugin ",ToServerKey," not exsit")
 		return nil
+	}
+	if server.MaxConn <= 0{
+		server.MaxConn = 10
+	}
+	if server.MaxConn > 500{
+		server.MaxConn = 500
 	}
 	l.Lock()
 	if _, ok := ToServerMap[ToServerKey]; ok {

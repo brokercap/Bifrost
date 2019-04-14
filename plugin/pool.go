@@ -22,29 +22,30 @@ func init()  {
 }
 
 func GetPlugin(ToServerKey string)  (driver.ConnFun, string){
-	log.Println("GetPlugin start")
-	defer func() {
-		log.Println("GetPlugin over")
-	}()
+
 	if _,ok := ToServerMap[ToServerKey];!ok{
-		log.Println("ToServer:",ToServerKey," no exsit,Start error")
+		log.Println("ToServer:",ToServerKey," no exsit,start error")
 		return nil,""
 	}
 	t := ToServerMap[ToServerKey]
 	var toServerChanContentData *toServerChanContent
 	t.Lock()
 	if t.AvailableConn > 0 {
+		t.AvailableConn--
 		t.Unlock()
 		//这里为什么不需要timeout,是因为前面加了lock 判断空闲连接数
 		toServerChanContentData = <-toServerChanMap[ToServerKey]
-		t.Lock()
-		t.AvailableConn--
-		t.Unlock()
 		return toServerChanContentData.conn,toServerChanContentData.key
 	}
 	if t.MaxConn > t.CurrentConn{
+		t.CurrentConn++
 		t.Unlock()
 		f,stringKey := startPlugin(ToServerKey)
+		if f == nil{
+			t.Lock()
+			t.CurrentConn--
+			t.Unlock()
+		}
 		return f,stringKey
 	}
 	t.Unlock()
@@ -65,10 +66,6 @@ func GetPlugin(ToServerKey string)  (driver.ConnFun, string){
 }
 
 func startPlugin(key string) (driver.ConnFun,string) {
-	log.Println("startPlugin start")
-	defer func() {
-		log.Println("startPlugin over")
-	}()
 	l.Lock()
 	if _, ok := ToServerConnList[key]; !ok {
 		ToServerConnList[key] = make(map[string]driver.ConnFun)
@@ -84,14 +81,12 @@ func startPlugin(key string) (driver.ConnFun,string) {
 	t := ToServerMap[key]
 	t.Lock()
 	t.LastID++
-	t.CurrentConn++
 	stringKey = strconv.Itoa(t.LastID)
 	t.Unlock()
 
 	l.Lock()
 	ToServerConnList[key][stringKey] = F
 	l.Unlock()
-	F.Connect()
 	return F,stringKey
 }
 
@@ -111,7 +106,7 @@ func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
 	t:=ToServerMap[ToServerKey]
 	t.Lock()
 	if t.CurrentConn > t.MaxConn{
-		l.Lock()
+		t.CurrentConn--
 		func(){
 			defer func() {
 				if err := recover();err != nil{
@@ -124,10 +119,9 @@ func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
 		}()
 		delete(ToServerConnList[ToServerKey],key)
 		l.Unlock()
-
 	}else{
-		toServerChanMap[ToServerKey] <- &toServerChanContent{key:key,conn:toServer}
 		t.AvailableConn++
+		toServerChanMap[ToServerKey] <- &toServerChanContent{key:key,conn:toServer}
 	}
 	t.Unlock()
 	return true

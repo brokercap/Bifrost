@@ -196,7 +196,6 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 
 func (This *ToServer) pluginReBack(){
 	if This.PluginConn != nil{
-		log.Println("sssssss")
 		plugin.BackPlugin(This.ToServerKey,This.PluginConnKey,This.PluginConn)
 		This.PluginConn = nil
 	}
