@@ -352,17 +352,22 @@
                             }else{
                                 op = v.Status;
                             }
+                            var others = "";
 
+                            others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
+                            others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
+                            others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
+                            others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
                             e.push({
-                                        sliceid:index,
-                                        PluginName:v.PluginName,
-                                        ToServerKey:v.ToServerKey,
-                                        FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",
-                                        Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
-                                        PluginParam:PluginHtml,
-                                        Error:ErrorHtml,
-                                        op:op,
-                                    }
+                                sliceid:index,
+                                PluginName:v.PluginName,
+                                ToServerKey:v.ToServerKey,
+                                FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",
+                                Others:others,
+                                PluginParam:PluginHtml,
+                                Error:ErrorHtml,
+                                op:op,
+                            }
                             );
                         });
                         $("#tableToServerListContair").attr("dbname",dbname);
