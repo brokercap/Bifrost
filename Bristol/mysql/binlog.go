@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
+	"runtime/debug"
 )
 
 type eventParser struct {
@@ -365,15 +366,16 @@ func (parser *eventParser) GetQueryTableName(sql string) (string, string) {
 }
 
 func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error) {
-	/*
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("DumpBinlog err:",err,313)
 			result <- fmt.Errorf(fmt.Sprint(err))
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
-	*/
+	parser.binlogFileName = filename
+	parser.binlogPosition = position
 	ServerId := uint32(parser.ServerId) // Must be non-zero to avoid getting EOF packet
 	flags := uint16(0)
 	e := mc.writeCommandPacket(COM_BINLOG_DUMP, position, flags, ServerId, filename)
@@ -428,23 +430,43 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			//only return replicateDoDb, any sql may be use db.table query
 			if len(parser.replicateDoDb) > 0 {
 				if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
+					if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0 {
+						parser.binlogFileName = event.BinlogFileName
+						parser.binlogPosition = event.Header.LogPos
+					}
 					continue
 				}
 			}
 
 			//only return EventType by set
 			if parser.eventDo[int(event.Header.EventType)] == false {
+				if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0{
+					parser.binlogFileName = event.BinlogFileName
+					parser.binlogPosition = event.Header.LogPos
+				}
 				continue
 			}
 
+			/*
+			log.Println("event:",event)
+			log.Println("event BinlogFileName:",event.BinlogFileName)
+			log.Println("event BinlogPosition:",event.BinlogPosition)
+			log.Println("event Query:",event.Query)
+			log.Println("event Rows:",event.Rows)
+			log.Println("event SchemaName:",event.SchemaName)
+			log.Println("event TableName:",event.TableName)
+			log.Println("event EventType:",event.Header.EventType)
+			*/
 			if event.BinlogFileName == parser.maxBinlogFileName && event.Header.LogPos >= parser.maxBinlogPosition{
 				parser.dumpBinLogStatus = 2
 				break
 			}
 			//set binlog info
 			callbackFun(event)
-			parser.binlogFileName = event.BinlogFileName
-			parser.binlogPosition = event.Header.LogPos
+			if event.BinlogFileName != "" && event.Header.LogPos > 0{
+				parser.binlogFileName = event.BinlogFileName
+				parser.binlogPosition = event.Header.LogPos
+			}
 
 		} else {
 			result <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
@@ -459,16 +481,19 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 }
 
 type BinlogDump struct {
-	DataSource string
-	Status     string //stop,running,close,error,starting
-	parser     *eventParser
-	//BinlogIgnoreDb string
-	ReplicateDoDb map[string]uint8
-	OnlyEvent     []EventType
-	CallbackFun   callback
-	mysqlConn  MysqlConnection
-	mysqlConnStatus int
-	connLock sync.Mutex
+	connLock 			sync.Mutex
+	DataSource 			string
+	Status     			string //stop,running,close,error,starting
+	parser     			*eventParser
+	ReplicateDoDb 		map[string]uint8
+	OnlyEvent     		[]EventType
+	CallbackFun   		callback
+	mysqlConn  			MysqlConnection
+	mysqlConnStatus 	int
+}
+
+func (This *BinlogDump) GetBinlog()(string,uint32){
+	return This.parser.binlogFileName,This.parser.binlogPosition
 }
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error,maxFileName string,maxPosition uint32) {
