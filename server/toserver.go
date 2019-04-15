@@ -29,6 +29,9 @@ type ToServer struct {
 	PluginConn	  		driver.ConnFun `json:"-"`
 	PluginConnKey 		string `json:"-"`
 	PluginParamObj 		interface{} `json:"-"`
+	LastBinlogFileNum   int                       // 由 channel 提交到 ToServerChan 的最后一个位点
+	LastBinlogPosition  uint32                    // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
+	LastBinlogKey 		[]byte `json:"-"`         // 将数据保存到 level 的key
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
@@ -45,6 +48,17 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 			ToServerInfo := plugin.GetToServerInfo(toserver.ToServerKey)
 			if ToServerInfo != nil{
 				toserver.PluginName = ToServerInfo.PluginName
+			}
+		}
+		if toserver.BinlogFileNum == 0{
+			BinlogPostion,err := getBinlogPosition(getDBBinlogkey(db))
+			if err == nil {
+				toserver.BinlogFileNum = BinlogPostion.BinlogFileNum
+				toserver.LastBinlogFileNum = BinlogPostion.BinlogFileNum
+				toserver.BinlogPosition = BinlogPostion.BinlogPosition
+				toserver.LastBinlogPosition = BinlogPostion.BinlogPosition
+			}else{
+				log.Println("AddTableToServer GetDBBinlogPostion:",err)
 			}
 		}
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
