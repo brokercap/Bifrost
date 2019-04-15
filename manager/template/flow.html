@@ -60,11 +60,7 @@
                 </div>
                     
                     <div class="ibox-content">
-                        <div id="morris-line-chart" style="height:450px;"></div>
-                    </div>
-                    
-                    <div id="monitor_color">
-
+                        <canvas id="morris-line-chart" ></canvas>
                     </div>
                 </div>
             </div>
@@ -77,23 +73,16 @@
 
 {{template "footer" .}}
 
-<script src="/js/plugins/morris/raphael-2.1.0.min.js"></script>
-<script src="/js/plugins/morris/morris.js"></script>
+<script src="/js/chart.js"></script>
 <script type="text/javascript">
 	var dbName = "{{.DbName}}";
 	var ChanneId = "{{.ChannelId}}";
 	var schema = "{{.Schema}}";
 	var tableName = "{{.TableName}}";
-	var key_arr = key = ["Count","ByteSize"];
-	var monitor_color_arr = monitor_color= ["#1ab394","#60C"];
-	var monitor_color_html = "";
+
 	var CountType = "条";
 	var ByteSizeType = "b";
 	var data = [];
-	for(i in monitor_color_arr){
-		monitor_color_html +='<div i="'+i+'" status="y" class="colorDiv" id="'+key[i]+'" color="'+monitor_color[i]+'" onclick="doSelectMonitorDisplay(this);" style=" cursor:pointer; float:left; display:block; padding:6px 12px; border-bottom:2px '+monitor_color[i]+' solid; margin-right:15px">'+key[i]+'</div>';
-	}
-	$("#monitor_color").html(monitor_color_html);
 
 	function add0(m){return m<10?'0'+m:m }
 	function TimeFormat(timeUnix)
@@ -109,49 +98,44 @@
 		return y+'-'+add0(m)+'-'+add0(d)+' '+add0(h)+':'+add0(mm)+':'+add0(s);
 	}
 
-	function rewrite_data(data){
-	    if (data.length == 0){
-	        return false
+	function rewrite_data(d){
+        if (d.length == 0){
+            return false
+        }
+		var ChartData = {};
+        ChartData.options = {};
+        ChartData.labels=[];
+        ChartData.datasets=[];
+
+        var ByteSizeData={};
+        ByteSizeData.data=[];
+        ByteSizeData.fillColor= "#1ab394";
+        ByteSizeData.strokeColor = "#1ab394";
+        ByteSizeData.highlightFill="#1ab394";
+        ByteSizeData.highlightStroke= "#1ab394";
+        //ByteSizeData.backgroundColor =  '#1ab394';
+		ByteSizeData.borderColor ="#1ab394";
+        ByteSizeData.label = "ByteSize("+ByteSizeType+")";
+
+        var CountData = {};
+        CountData.data=[];
+        CountData.fillColor= "#5CACEE";
+        CountData.strokeColor = "#5CACEE";
+        CountData.highlightFill="#5CACEE";
+		CountData.highlightStroke= "#5CACEE";
+        //CountData.backgroundColor =  "#5CACEE";
+        CountData.borderColor ="#5CACEE";
+        CountData.label = "Count("+CountType+")";
+        for (i in d) {
+            ChartData.labels.push(d[i].time);
+            ByteSizeData.data.push(d[i].ByteSize);
+            CountData.data.push(d[i].Count);
 		}
-		$("#morris-line-chart").html('');
-	    Morris.Line({
-        element: "morris-line-chart",
-        data: data,
-		xkey: "time",
-        ykeys: key,
-        resize: !0,
-        lineWidth:2,
-		hideHover: "auto",
-        labels: key,
-        lineColors: monitor_color,
-        pointSize: 2
-	    }
-		);
-		$("#Count").text('Count( '+CountType+' )');
-		$("#ByteSize").text('ByteSize( '+ByteSizeType+' )');
-	}
-	
-	
-	function doSelectMonitorDisplay(obj){
-		var status = $(obj).attr('status');
-		if(status == 'y'){
-			$(obj).attr('status','n');
-			$(obj).css("text-decoration","line-through");
-		}else{
-			$(obj).attr('status','y');
-			$(obj).css("text-decoration","");
-		}
-		key = [];
-		monitor_color = [];
-		$("#monitor_color .colorDiv").each(
-			function(){
-				if($(this).attr("status") == "y"){
-					key.push($(this).attr("id"));
-					monitor_color.push($(this).attr("color"));
-				}	
-			}
-		);
-		rewrite_data(data);
+        ChartData.datasets.push(ByteSizeData);
+        ChartData.datasets.push(CountData);
+
+        var ctx = document.getElementById("morris-line-chart").getContext("2d");
+        var chart = new Chart(ctx, {type:"line",data:ChartData});
 	}
 	
 	function incrementData(d){
