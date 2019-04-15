@@ -5,6 +5,7 @@ go:
     - "1.9"
     - "1.10"
     - "1.11"
+    - "1.12"
 
 before_install:
     - go get github.com/gmallard/stompngo
