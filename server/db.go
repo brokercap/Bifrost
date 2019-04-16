@@ -334,7 +334,7 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
-		log.Println("key:",key,"db.tableMap[key]：",db.tableMap[key])
+		log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
 		db.Unlock()
