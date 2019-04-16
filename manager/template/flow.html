@@ -74,195 +74,39 @@
 {{template "footer" .}}
 
 <script src="/js/chart.js"></script>
+<script src="/js/flow.js"></script>
 <script type="text/javascript">
 	var dbName = "{{.DbName}}";
 	var ChanneId = "{{.ChannelId}}";
 	var schema = "{{.Schema}}";
 	var tableName = "{{.TableName}}";
 
-	var CountType = "条";
-	var ByteSizeType = "b";
-	var data = [];
-
-	function add0(m){return m<10?'0'+m:m }
-	function TimeFormat(timeUnix)
-	{
-		//timeUnix是整数，否则要parseInt转换
-		var time = new Date(parseInt(timeUnix)*1000);
-		var y = time.getFullYear();
-		var m = time.getMonth();
-		var d = time.getDate();
-		var h = time.getHours();
-		var mm = time.getMinutes();
-		var s = time.getSeconds();
-		return y+'-'+add0(m)+'-'+add0(d)+' '+add0(h)+':'+add0(mm)+':'+add0(s);
-	}
-
-	function rewrite_data(d){
-        if (d.length == 0){
-            return false
-        }
-		var ChartData = {};
-        ChartData.options = {};
-        ChartData.labels=[];
-        ChartData.datasets=[];
-
-        var ByteSizeData={};
-        ByteSizeData.data=[];
-        ByteSizeData.fillColor= "#1ab394";
-        ByteSizeData.strokeColor = "#1ab394";
-        ByteSizeData.highlightFill="#1ab394";
-        ByteSizeData.highlightStroke= "#1ab394";
-        //ByteSizeData.backgroundColor =  '#1ab394';
-		ByteSizeData.borderColor ="#1ab394";
-        ByteSizeData.label = "ByteSize("+ByteSizeType+")";
-
-        var CountData = {};
-        CountData.data=[];
-        CountData.fillColor= "#5CACEE";
-        CountData.strokeColor = "#5CACEE";
-        CountData.highlightFill="#5CACEE";
-		CountData.highlightStroke= "#5CACEE";
-        //CountData.backgroundColor =  "#5CACEE";
-        CountData.borderColor ="#5CACEE";
-        CountData.label = "Count("+CountType+")";
-        for (i in d) {
-            ChartData.labels.push(d[i].time);
-            ByteSizeData.data.push(d[i].ByteSize);
-            CountData.data.push(d[i].Count);
-		}
-        ChartData.datasets.push(ByteSizeData);
-        ChartData.datasets.push(CountData);
-
-        var ctx = document.getElementById("morris-line-chart").getContext("2d");
-        var chart = new Chart(ctx, {type:"line",data:ChartData});
-	}
-	
-	function incrementData(d){
-		CountType = "条";
-		ByteSizeType = "b";
-		var Count = -1;
-		var ByteSize = -1;
-		for (s in d) {
-			if (d[s].Time > 0){
-				if (Count == -1){
-					Count = d[s].Count;
-					ByteSize = d[s].ByteSize;
-					continue;
-				}
-				var tSize = d[s].ByteSize-ByteSize;
-				if( tSize < 0){
-					tSize = 0;
-				}
-				var tCount = d[s].Count-Count;
-				if (tCount < 0){
-					tCount = 0;
-				}
-				data.push({
-					time: TimeFormat(d[s].Time),
-					Count: tCount,
-					ByteSize: tSize,
-				});
-				Count = d[s].Count;
-				ByteSize = d[s].ByteSize;
-			}
-		}
-		return data;
-	}
-	
-	function fullData(d){
-		CountType = "条"
-		ByteSizeType = "b"
-		if (d[0].Count > 100000){
-			CountType = "k"
-		}
-		if (d[0].ByteSize >= 1024000 ){
-			ByteSizeType = "kb"
-		}
-
-		if (d[0].ByteSize >= 1024000000 ){
-			ByteSizeType = "MB"
-		}
-
-		if (d[0].ByteSize >= 1024000000000 ){
-			ByteSizeType = "GB"
-		}
-
-		for (s in d) {
-			if (d[s].Time != ""){
-				var Count = 0
-				if (CountType == "k"){
-					Count =(d[s].Count/1000).toFixed(2)
-				}else{
-					Count = d[s].Count
-				}
-				var ByteSize = 0
-				switch (ByteSizeType){
-					case "b":
-						ByteSize = d[s].ByteSize;
-						break
-					case "kb":
-						ByteSize =(d[s].ByteSize/1024).toFixed(2)
-						break
-					case "MB":
-						ByteSize =(d[s].ByteSize/1024000).toFixed(2)
-						break
-					case "GB":
-						ByteSize =(d[s].ByteSize/1024000000).toFixed(2)
-						break
-				}
-
-				data.push({
-					time: TimeFormat(d[s].Time),
-					Count: Count,
-					ByteSize: ByteSize,
-				});
-			}
-		}
-		return data;
-	}
-	
-	function getFlowData() {
-        data = [];
-
-        $.post(
-                "/flow/get",
-                {
-                    dbname: dbName,
-                    schema: schema,
-                    table_name: tableName,
-                    channelid: ChanneId,
-                    type: $("#selectLengthsAge").val()
-                },
-                function (d, status) {
-                    if (status != "success") {
-                        return false;
-                    }
-				//	console.log(d);
-                    //写入到曲线
-					if ($("#data_display_format").val() == "full"){
-						rewrite_data(fullData(d));
-					}else{
-						rewrite_data(incrementData(d));
-					}
-                    
-                }, 'json');
-    }
-	getFlowData();
+    var flowObj = Object.create(FlowClass)
+    flowObj.setCanvasId("morris-line-chart");
+    $("#selectLengthsAge").val("minute");
+	flowObj.setAgetLength("minute");
+    flowObj.setDbName(dbName);
+    flowObj.setTableName(tableName);
+    flowObj.setSchema(schema);
+    flowObj.setChanneId(ChanneId);
 
 	$(function(){
-		$("#selectLengthsAge").change(
-			function(){
-                getFlowData();
-			}
-		);
+        $("#selectLengthsAge").change(
+                function(){
+                    flowObj.setAgetLength($(this).val());
+                    flowObj.getFlowData();
+                }
+        );
 		$("#data_display_format").change(
 			function(){
-                getFlowData();
+                flowObj.setDisplayFormat($(this).val());
+                flowObj.getFlowData();
 			}
 		);
 	});
-	var IntervalFun = getFlowData;
+	var IntervalFun = function () {
+        flowObj.getFlowData();
+    }
 
 </script>
 
