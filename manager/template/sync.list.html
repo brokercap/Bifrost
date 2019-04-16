@@ -96,8 +96,10 @@
                                 <td>{{$v.PluginName}}</td>
                                 <td>{{$v.ToServerKey}}</td>
                                 <td>
-                                    <p>BinlogNum: {{$v.BinlogFileNum}}</p>
+                                    <p title="最后一个成功处理的位点">BinlogNum: {{$v.BinlogFileNum}}</p>
                                     <p>Pisition : {{$v.BinlogPosition}}</p>
+                                    <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
+                                    <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
                                 </td>
                                 <td>
                                     {{$v.Status}}

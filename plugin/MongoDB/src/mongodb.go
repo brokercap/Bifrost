@@ -44,10 +44,7 @@ type Conn struct {
 	status 			string
 	conn   			*mgo.Session
 	err    			error
-	p	   			PluginParam
-	primaryKeys 	[]string
-	hadIndexMap 	map[string]bool
-	indexName		string
+	p	   			*PluginParam
 }
 
 
@@ -55,34 +52,51 @@ type PluginParam struct {
 	SchemaName 			string
 	TableName 			string
 	PrimaryKey			string
+	primaryKeys 		[]string
+	hadIndexMap 		map[string]bool
+	indexName			string
 }
 
 func newConn(uri string) *Conn{
 	f := &Conn{
 		Uri:uri,
-		indexName:"bifrost_unique_index",
 	}
 	f.Connect()
 	return f
 }
 
-func (This *Conn) SetParam(p interface{}) error{
+
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
 	if err != nil{
-		return err
+		return nil,err
 	}
 	var param PluginParam
 	err2 := json.Unmarshal(s,&param)
 	if err2 != nil{
-		return err2
+		return nil,err2
 	}
 	if param.SchemaName == "" || param.TableName == "" || param.PrimaryKey == ""{
-		return fmt.Errorf("SchemaName,TableName,PrimaryKey can't be empty")
+		return nil,fmt.Errorf("SchemaName,TableName,PrimaryKey can't be empty")
 	}
-	This.primaryKeys = strings.Split(param.PrimaryKey, ",")
-	This.p = param
-	This.hadIndexMap = make(map[string]bool,0)
-	return nil
+	param.indexName = "bifrost_unique_index"
+	param.primaryKeys = strings.Split(param.PrimaryKey, ",")
+	param.hadIndexMap = make(map[string]bool,0)
+	This.p = &param
+	return &param,nil
+}
+
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	if p == nil{
+		return nil,fmt.Errorf("param is nil")
+	}
+	switch p.(type) {
+	case *PluginParam:
+		This.p = p.(*PluginParam)
+		return p,nil
+	default:
+		return This.GetParam(p)
+	}
 }
 
 func (This *Conn) GetConnStatus() string {
@@ -129,20 +143,20 @@ func (This *Conn) Close() bool {
 
 func (This *Conn) createIndex(c *mgo.Collection) {
 	indexTableKey := c.Database.Name+"#"+c.Name
-	if _,ok := This.hadIndexMap[indexTableKey];!ok{
+	if _,ok := This.p.hadIndexMap[indexTableKey];!ok{
 		indexs,err := c.Indexes()
 		if err == nil{
 			//假如表里已经拥有了指定索引名称的索引，而不再创建索引
 			//假如这里创建了2个字段的索引，用户又在mongodb server修改了这个索引，是很有可能会出问题的，使用的时候，需要注意
 			for _,indexInfo := range indexs{
-				if indexInfo.Name == This.indexName{
-					This.hadIndexMap[indexTableKey] = true
+				if indexInfo.Name == This.p.indexName{
+					This.p.hadIndexMap[indexTableKey] = true
 					return
 				}
 			}
 		}
-		index := mgo.Index{Key:This.primaryKeys,Unique:true,Name:This.indexName}
-		This.hadIndexMap[indexTableKey] = true
+		index := mgo.Index{Key:This.p.primaryKeys,Unique:true,Name:This.p.indexName}
+		This.p.hadIndexMap[indexTableKey] = true
 		c.EnsureIndex(index)
 	}
 }
@@ -160,7 +174,7 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 	c := This.conn.DB(SchemaName).C(TableName)
 	This.createIndex(c)
 	k := make(bson.M,1)
-	for _,key := range This.primaryKeys{
+	for _,key := range This.p.primaryKeys{
 		if _,ok := data.Rows[n][key];ok{
 			k[key] = data.Rows[n][key]
 		}else{
@@ -187,7 +201,7 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBi
 	c := This.conn.DB(SchemaName).C(TableName)
 	This.createIndex(c)
 	k := make(bson.M,1)
-	for _,key := range This.primaryKeys{
+	for _,key := range This.p.primaryKeys{
 		if _,ok := data.Rows[0][key];ok{
 			k[key] = data.Rows[0][key]
 		}else{

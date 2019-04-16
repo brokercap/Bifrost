@@ -83,7 +83,14 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	if status == ""{
 		ToServerInfo.Status = "running"
 	}
+	//修改toserver 对应最后接收的 位点信息
+	ToServerInfo.LastBinlogFileNum = pluginData.BinlogFileNum
+	ToServerInfo.LastBinlogPosition = pluginData.BinlogPosition
 	ToServerInfo.Unlock()
+	if ToServerInfo.LastBinlogKey == nil{
+		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
+	}
+	saveBinlogPosition(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
@@ -124,7 +131,6 @@ func (This *consume_channel_obj) consume_channel() {
 	defer func() {
 		log.Println("channel",c.Name," consume_channel over; CurrentThreadNum:",c.CurrentThreadNum)
 	}()
-	DBBinlogKey := getDBBinlogkey(c.db)
 	for {
 		select {
 		case data = <-This.c.chanName:
@@ -169,14 +175,6 @@ func (This *consume_channel_obj) consume_channel() {
 				}
 			}
 
-			//保存位点 是为了显示的时候，直接从这里读取
-			This.db.Lock()
-			This.db.binlogDumpFileName = data.BinlogFileName
-			This.db.binlogDumpPosition = data.Header.LogPos
-			This.db.Unlock()
-			//保存位点,这个位点在重启 配置文件恢复的时候
-			//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
-			saveBinlogPosition(DBBinlogKey,pluginData.BinlogFileNum,data.Header.LogPos)
 			if This.db.killStatus == 1{
 				return
 			}

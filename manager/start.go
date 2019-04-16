@@ -85,11 +85,7 @@ func addRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request)
 	xgo.AddRoute(route,callbackFUns)
 }
 
-func index_controller(w http.ResponseWriter,req *http.Request){
-	http.Redirect(w, req, "/db/list", http.StatusFound)
-}
-
-var writeRequestOp = []string{"/add","/del","/deal"}
+var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update"}
 //判断是否为写操作
 func checkWriteRequest(uri string) bool {
 	for _,v := range writeRequestOp{
@@ -168,7 +164,6 @@ func Start(IpAndPort string){
 	xgo.AddStaticRoute("/img/",TemplatePath("manager/public/"))
 	xgo.AddStaticRoute("/plugin/",TemplatePath("/"))
 	xgo.SetFirstCallBack(controller_FirstCallback)
-	xgo.AddRoute("/",index_controller)
 	var err error
 	if config.TLS{
 		err = xgo.StartTLS(IpAndPort,config.TLSServerKeyFile,config.TLSServerCrtFile)

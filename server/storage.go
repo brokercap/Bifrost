@@ -31,6 +31,10 @@ func InitStorage(){
 	storage.InitStorage()
 }
 
+func getToServerLastBinlogkey(db *db ,toserver *ToServer) []byte{
+	return []byte("last-binlog-toserver-"+db.Name+"-"+strconv.FormatInt(db.AddTime, 10)+"-"+toserver.ToServerKey+"-"+strconv.Itoa(toserver.ToServerID))
+}
+
 func getToServerBinlogkey(db *db ,toserver *ToServer) []byte{
 	return []byte("binlog-toserver-"+db.Name+"-"+strconv.FormatInt(db.AddTime, 10)+"-"+toserver.ToServerKey+"-"+strconv.Itoa(toserver.ToServerID))
 }

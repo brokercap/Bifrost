@@ -11,17 +11,10 @@ import (
 	"github.com/jc3wish/Bifrost/server/warning"
 )
 
-func (This *ToServer) pluginClose(){
-	if This.PluginConnKey != ""{
-		plugin.Close(This.ToServerKey,This.PluginConnKey)
-	}
-	This.PluginConn = nil
-}
-
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
 	defer func() {
-		This.pluginClose()
+		//This.pluginClose()
 		if err := recover();err !=nil{
 			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
@@ -132,7 +125,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			SaveBinlog()
 			break
 		case <-time.After(5 * time.Second):
-			PluginBinlog,_ = This.PluginConn.Commit()
+			PluginBinlog,_ = This.commit()
 			SaveBinlog()
 			break
 		}
@@ -201,8 +194,34 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 	return true
 }
 
-func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
+func (This *ToServer) pluginReBack(){
+	if This.PluginConn != nil{
+		plugin.BackPlugin(This.ToServerKey,This.PluginConnKey,This.PluginConn)
+		This.PluginConn = nil
+	}
+}
+
+//从插件实例池中获取一个插件实例
+func (This *ToServer) getPluginAndSetParam() (err error){
+	This.PluginConn,This.PluginConnKey = plugin.GetPlugin(This.ToServerKey)
+	if This.PluginConn == nil{
+		return fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
+	}
+	if This.PluginParamObj == nil{
+		This.PluginParamObj,err = This.PluginConn.SetParam(This.PluginParam)
+	}else{
+		_, err = This.PluginConn.SetParam(This.PluginParamObj)
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
+		This.pluginReBack()
 		if err2 := recover();err2!=nil{
 			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
@@ -212,26 +231,43 @@ func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *
 						return
 					}
 				}()
-				This.PluginConn.Close()
 			}()
-			This.PluginConn.Connect()
 		}
 	}()
-	if This.PluginConn == nil{
-		This.PluginConn,This.PluginConnKey = plugin.Start(This.ToServerKey)
-		if This.PluginConn == nil{
-			err = fmt.Errorf("Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " start err,return nil")
-			return Binlog,err
-		}
-		err := This.PluginConn.SetParam(This.PluginParam)
-		if err != nil{
-			return Binlog,err
-		}
+
+	err = This.getPluginAndSetParam()
+	if err != nil{
+		return Binlog,err
 	}
+
+	Binlog, err = This.PluginConn.Commit()
+	return
+}
+
+
+func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
+	defer func() {
+		This.pluginReBack()
+		if err2 := recover();err2!=nil{
+			err = fmt.Errorf(This.ToServerKey,err2,string(debug.Stack()))
+			log.Println(This.ToServerKey,"sendToServer err:",err)
+			func() {
+				defer func() {
+					if err2 := recover();err2!=nil{
+						return
+					}
+				}()
+			}()
+		}
+	}()
 
 	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
 	if This.filterField(data) == false{
 		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	}
+	err = This.getPluginAndSetParam()
+	if err != nil{
+		return Binlog,err
 	}
 
 	switch data.EventType {

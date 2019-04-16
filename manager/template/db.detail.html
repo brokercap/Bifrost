@@ -31,13 +31,21 @@
                 </div>
                 <style type="text/css">
                     .tableDiv{display:block; width:100%; height: 25px;}
-                    .tableDiv .left{ display:block; float:left; width:80%; line-height:100%;word-wrap: break-word;  }
-                    .tableDiv .right{ display:block; float:right; width:20%;}
+                    .tableDiv .left{ display:block; float:left; width:79%; line-height:100%;word-wrap: break-word;  }
+                    .tableDiv .right{ display:block; float:right; width:21%; line-height: 25px;}
+                    .tableDiv .right .button{ float: left;}
+                    .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
                 </style>
                 <div class="ibox-content">
                     <div class="list-group" id="TableListContair">
 
                     </div>
+                    <div id="bachTableDelOrAddBtnDiv">
+                        <button data-toggle="button" class="btn-sm btn-danger" type="button" id="batchTableDeleteBtn">批量删除</button>
+                        <button data-toggle="button" class="btn-sm btn-warning" id="batchTableChanneBindBtn" type="button">批量绑定通道</button>
+                    </div>
+
+                    <div id="batchDelOrAddTableResultDiv" style="padding-top: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -131,11 +139,20 @@
                                 
                             </div>
 
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">&nbsp;</label>
+                                <div class="col-sm-9" style="padding-top: 15px;">
+                                    <button data-toggle="button" class="btn-sm btn-primary" id="addToServerBtn" type="button">提交</button>
+                                    <button data-toggle="button" class="btn-sm btn-success" id="batchAddToServerBtn" type="button">批量提交</button>
+                                    <p>&nbsp;</p>
+                                    <p style="color:#F00">批量提交，将会提交到选中的表里,批量提交,字段不能选,默认全选</p>
+                                </div>
+                            </div>
 
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">&nbsp;</label>
-                                <div class="col-sm-9">
-                                    <button data-toggle="button" class="btn-sm btn-primary" id="addToServerBtn" type="button">提交</button>
+                                <div class="col-sm-9" style="padding-top: 15px;" id="batchAddToServerResultDiv">
+
                                 </div>
                             </div>
                         </div>
@@ -144,8 +161,8 @@
                         <!-- right start-->
 
                         <div class="col-md-5">
-                            <label class="col-sm-3 control-label">Fields：</label>
-                            <div class="col-sm-9" id="TableFieldsContair">
+                            <label class="col-sm-2 control-label">Fields：</label>
+                            <div class="col-sm-10" id="TableFieldsContair">
 
                             </div>
                         </div>
@@ -205,7 +222,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn-sm btn-primary" onclick="AddTable()">保存</button>
+                    <button type="button" class="btn-sm btn-primary" onclick="AddTable(this)">保存</button>
                 </div>
             </div>
         </div>
@@ -233,13 +250,18 @@
                 $("#MyWebHideBtn").attr("status","hide");
             }
         }
-        function showAddTable(obj){
+
+        function showBatchDelOrAddBtn() {
+            $("#bachTableDelOrAddBtnDiv").show();
+        }
+        $("#bachTableDelOrAddBtnDiv").hide();
+
+        function showAddTable(table_names){
             var addTableSchemaName = $("#DatabaseListContair a.active").find("h3").text();
             $("#addTableSchema").val(addTableSchemaName);
             var dbname = $("#dbname").val();
-            var table_name = $(obj).parent().parent().find("h5").text();
             var url = "/channel/list";
-            $("#addTableName").val(table_name);
+            $("#addTableName").val(table_names);
             $.get(url,
                     {dbname:dbname},
                     function(data,status){
@@ -257,64 +279,138 @@
             $("#addTableDiv").modal('show');
         }
 
-        function AddTable(){
+        function batchDelOrAddTableResultFun(content,type) {
+            if (type == 0){
+                $("#batchDelOrAddTableResultDiv").html("<p>"+content+"</p>");
+            }else{
+                $("#batchDelOrAddTableResultDiv").append("<p>"+content+"</p>");
+            }
+
+        }
+
+        $("#batchTableChanneBindBtn").click(
+            function () {
+                var table_names = "";
+                $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                    if($(this).parent().parent().find(".button button").text()=="ADD"){
+                        table_names += $(this).val()+";"
+                    }
+                });
+                showAddTable(table_names);
+            }
+        );
+
+        $("#batchTableDeleteBtn").click(
+                function () {
+                    var table_names = "";
+                    $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                        if($(this).parent().parent().find(".button button").text()=="DEL"){
+                            table_names += $(this).val()+";"
+                        }
+                    });
+                    DelTable(table_names);
+                }
+        );
+
+        function AddTable(obj){
+            if($(obj).text()=="正在执行"){
+                return false;
+            }
             var dbname = $("#dbname").val();
-            var table_name = $("#addTableName").val();
+            var table_names = $("#addTableName").val();
             var schema_name = $("#addTableSchema").val();
             var channelid = $("#AddTableChannel").val();
-            var url = "/table/add"
-            $.post(url,
-                    {dbname:dbname,schema_name:schema_name,table_name:table_name,channelid:channelid},
-                    function(data,status){
+            if ( table_names == "" ){
+                return false;
+            }
+            $(obj).text("正在执行");
+            var url = "/table/add";
+            var arr = table_names.split(";");
+            $("#addTableDiv").modal('hide');
+            batchDelOrAddTableResultFun("开始添加",0);
+            for( var i in arr) {
+                var table_name = arr[i];
+                if ( table_name == "" ){
+                    continue;
+                }
+                $.ajax({
+                    type : "post",
+                    url : url,
+                    data:{dbname: dbname, schema_name: schema_name, table_name: table_name, channelid: channelid},
+                    async : false,  //同步
+                    dataType:"json",
+                    success : function(data,status){
                         if( status != 'success' ){
                             alert("reqeust error, reqeust status : "+status);
                             return false;
                         }
-                        if (!data.status){
-                            alert(data.msg);
-                            return false;
+                        if(data.status){
+                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button>';
+                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
+                            $("#" + schema_name + "-" + table_name + " .right .input input").prop("checked",false);
                         }
-                        html = '<button data-toggle="button" class="btn btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button>';
-                        $("#"+schema_name+"-"+table_name+" .right").html(html);
-                        $("#addTableDiv").modal('hide');
-                    },
-                    'json');
-
+                        batchDelOrAddTableResultFun(table_name +" ADD Result:"+data.msg,1);
+                    }
+                });
+            }
+            batchDelOrAddTableResultFun("添加完成",1);
+            $(obj).text("提交");
         }
 
-        function DelTable(obj){
-            var p = $(obj).parent().parent();
-            var table_name = $(p).find("h5").text();
-            if (!confirm("确定删除 [ "+table_name+" ] ?删除后不能恢复!!!")){
+        function DelTable(table_names){
+            if (!confirm("确定删除 [ "+table_names+" ] ?删除后不能恢复!!!")){
                 return false;
             }
             var dbname = $("#dbname").val();
             var schema_name = $("#DatabaseListContair a.active").find("h3").text();
-            var url = "/table/del"
-            $.post(url,
-                    {dbname:dbname,schema_name:schema_name,table_name:table_name},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
+            var url = "/table/del";
+            var arr = table_names.split(";");
+            batchDelOrAddTableResultFun("开始删除",0);
+            for( var i in arr) {
+                var table_name = arr[i];
+                if ( table_name == "" ){
+                    continue;
+                }
+                $.ajax({
+                    type: "post",
+                    url: url,
+                    data: {dbname: dbname, schema_name: schema_name, table_name: table_name},
+                    async: false,  //同步
+                    dataType: "json",
+                    success: function (data, status) {
+                        if (status != 'success') {
+                            alert("reqeust error, reqeust status : " + status);
                             return false;
                         }
-                        if (!data.status){
-                            alert(data.msg);
-                            return false;
+                        if (data.status) {
+                            html = '<button data-toggle="button" class="btn-warning btn-sm" type="button" onClick="showAddTable(\'' + table_name + '\')">ADD</button>';
+                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
                         }
-                        html = '<button data-toggle="button" class="btn btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button>';
-                        $(obj).parent().html(html);
-                    },
-                    'json');
+                        batchDelOrAddTableResultFun(table_name +" DEL Result:"+data.msg,1);
+                    }
+                });
+            }
+            batchDelOrAddTableResultFun("删除完成",1);
         }
         function ChangeTableFlowBtnHref(schema_name,table_name){
             $("#tableFlowBtn").attr("href","/flow/index?dbname="+dbname+"&schema="+schema_name+"&table_name="+table_name);
             $("#tableFlowBtn").show();
         }
 
+        //将表设置为 选中 或 非选中 状态
+        function table_check_input(id) {
+            var idNew = "#"+id+" .check_input input[name=table_check_name]";
+            if($(idNew).is(':checked')){
+                $(idNew).prop("checked", false);
+            }else{
+                $(idNew).prop("checked", true);
+            }
+        }
+
         function GetTableToServerList(schema_name,table_name){
             var key = schema_name+"-"+table_name;
             if ($("#"+key+" .right button").text() == "ADD"){
+                table_check_input(key);
                 return  false;
             }
             $("#TableListContair a").removeClass("active");
@@ -352,17 +448,22 @@
                             }else{
                                 op = v.Status;
                             }
+                            var others = "";
 
+                            others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
+                            others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
+                            others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
+                            others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
                             e.push({
-                                        sliceid:index,
-                                        PluginName:v.PluginName,
-                                        ToServerKey:v.ToServerKey,
-                                        FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",
-                                        Others:"<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p><p>BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>",
-                                        PluginParam:PluginHtml,
-                                        Error:ErrorHtml,
-                                        op:op,
-                                    }
+                                sliceid:index,
+                                PluginName:v.PluginName,
+                                ToServerKey:v.ToServerKey,
+                                FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",
+                                Others:others,
+                                PluginParam:PluginHtml,
+                                Error:ErrorHtml,
+                                op:op,
+                            }
                             );
                         });
                         $("#tableToServerListContair").attr("dbname",dbname);
@@ -403,7 +504,7 @@
         function GetTableFields(schema_name,table_name){
             var key = schema_name+"-"+table_name;
             if (!TableMap.has(key) || TableMap.get(key) == undefined){
-                var url = '/db/tablefields'
+                var url = '/db/tablefields';
                 $.post(url,
                         {dbname:dbname,schema_name:schema_name,table_name:table_name},
                         function(data,status){
@@ -422,7 +523,7 @@
         function showFieldsList(key) {
             var html = "";
             TableMap.get(key).forEach(function (value, k, map) {
-                html += '<p class="fieldsname" style="font-size: 16px; cursor: pointer">&nbsp;<input type="checkbox" value="'+value+'">&nbsp;&nbsp;'+value+' </p>'
+                html += '<p class="fieldsname" style="font-size: 16px; cursor: pointer">&nbsp;<input type="checkbox" style="width: 20px; height: 20px;" value="'+value+'">&nbsp;&nbsp;'+value+' </p>'
             });
             $("#TableFieldsContair").html(html);
         }
@@ -444,11 +545,14 @@
                     }
                     html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
                     html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
+                    html += '<div class="right">';
                     if (v.AddStatus == false){
-                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-warning btn-sm" type="button" onClick="showAddTable(this)">ADD</button></div>';
+                        html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onClick="showAddTable(\''+v.TableName+'\')">ADD</button></div>';
                     }else{
-                        html+= '<div class="right"><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button></div>';
+                        html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+v.TableName+'\')">DEL</button></div>';
                     }
+                    html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+v.TableName+"' style='width: 20px; height: 20px;' /></div>";
+                    html += '</div>';
                     html +=	'</div></a>';
                     $("#TableListContair").append(html);
                 });
@@ -472,6 +576,7 @@
             }else{
                 showTableList(DataBaseMap.get(schema_name));
             }
+            showBatchDelOrAddBtn();
         }
         $(function(){
             $("#plugin_param_div").on("click",":text,textarea",function(){
@@ -484,7 +589,6 @@
                     }
             );
             var doChangeToServer = function(){
-                var toServerKey = $("#addToServerKey").val();
                 var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
@@ -503,6 +607,7 @@
                 var fieldName = $(this).text();
                 $("#"+OnFoucsInputId).val($("#"+OnFoucsInputId).val()+"{$"+($.trim(fieldName))+"}");
             });
+
             $("#addToServerBtn").click(
                     function(){
                         var p = doGetPluginParam();
@@ -557,6 +662,91 @@
                     }
             );
 
+
+            $("#batchAddToServerBtn").click(
+                    function(){
+                        var obj = $(this);
+                        if ($(obj).text() == "正在提交"){
+                            return false;
+                        }
+                        var p = doGetPluginParam();
+                        if (p.status == false){
+                            alert(p.msg);
+                            return false;
+                        }
+                        var dbname = $("#tableToServerListContair").attr("dbname");
+                        var schema_name = $("#tableToServerListContair").attr("schema");
+                        var tableArr = [];
+
+                        $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                            if($(this).parent().parent().find(".button button").text()=="DEL"){
+                                tableArr.push($(this).val());
+                            }
+                        });
+
+                        if (tableArr.length == 0){
+                            alert("请先选择 需要同步的 表");
+                            return false;
+                        }
+                        var fieldlist = [];
+                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                            fieldlist.push($(this).val());
+                        });
+                        if (fieldlist.length > 0){
+                            alert("批量提交不能选择字段");
+                            return false;
+                        }
+                        var MustBeSuccess = $("#MustBeSuccess").val();
+                        var addToServerKey = $("#addToServerKey").val();
+
+                        var FilterQuery = $("#FilterQuery").val();
+                        var FilterUpdate = $("#FilterUpdate").val();
+                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                        var url = '/table/addtoserver';
+                        var data = {
+                            dbname: dbname,
+                            schema_name: schema_name,
+                            table_name: "",
+                            toserver_key: addToServerKey,
+                            plugin_name: pluginName,
+                            mustbe: MustBeSuccess,
+                            FilterQuery: FilterQuery,
+                            FilterUpdate: FilterUpdate,
+                            fieldlist: fieldlist.toString(),
+                            param: JSON.stringify(p.data),
+                        }
+                        $(obj).text("正在提交");
+                        $("#batchAddToServerResultDiv").html("");
+                        var resultFun = function (content) {
+                            $("#batchAddToServerResultDiv").append("<p>"+content+"</p>");
+                        }
+                        resultFun("开始提交");
+                        for(var i in tableArr) {
+                            data.table_name = tableArr[i];
+                            $.ajax({
+                                type : "post",
+                                url : url,
+                                data:data,
+                                async : false,  //同步
+                                dataType:"json",
+                                success : function(r,status){
+                                    if( status != 'success' ){
+                                        resultFun(tableArr[i]+ " reqeust error, reqeust status : "+status);
+                                        return false;
+                                    }
+                                    if(r.status){
+                                        resultFun(tableArr[i]+" success");
+                                    }else{
+                                        resultFun(tableArr[i]+ " "+ r.msg);
+                                    }
+                                }
+                            });
+                        }
+                        resultFun("执行完成");
+                        $(obj).text("批量提交");
+                    }
+            );
+
         });
 
         function DealWaitErr(obj,ToServerID){
@@ -568,7 +758,7 @@
             var url = "/table/toserver/deal";
             $.post(
                     url,
-                    {dbname: dbname,schema_name:schema_name,table_name:table_name,to_server_id:ToServerID,index:index,},
+                    {dbname: dbname,schema_name:schema_name,table_name:table_name,to_server_id:ToServerID,index:index},
                     function(data,status){
                         if( status != 'success' ){
                             alert("reqeust error, reqeust status : "+status);
@@ -601,7 +791,7 @@
             if( $("#Schema-"+querySchemaName).length <= 0){
                 return false;
             }
-            showSchemaTableList("Schema-"+querySchemaName)
+            showSchemaTableList("Schema-"+querySchemaName);
             //$("#Schema-"+querySchemaName).onclick();
             GetTableToServerList(querySchemaName,queryTableName);
         }

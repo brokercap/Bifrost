@@ -34,14 +34,16 @@
                                 <th>PluginVersion</th>
                                 <th>ConnUri</th>
                                 <th>LastID</th>
+                                <th>MaxConn</th>
                                 <th>CurrentConn</th>
+                                <th title="空闲连接数">AvailableConn</th>
                                 <th>Notes</th>
                                 <th>OP</th>
                             </tr>
                             </thead>
                             <tbody>
                             {{range $i, $v := .ToServerList}}
-                            <tr>
+                            <tr id="ToServer_{{$i}}">
                                 <td>{{$i}}</td>
                                 <td>{{$v.PluginName}}</td>
                                 <td>{{$v.PluginVersion}}</td>
@@ -50,12 +52,17 @@
                                 <script type="text/javascript">filterIpAndPort("{{$v.ConnUri}}")</script>
                                 </td>
                                 <td>{{$v.LastID}}</td>
+                                <td>
+                                {{$v.MaxConn}}
+                                </td>
                                 <td>{{$v.CurrentConn}}</td>
+                                <td>{{$v.AvailableConn}}</td>
                                 <td>{{$v.Notes}}</td>
                                 <td>
                                     <button data-toggle="button" class="btn-sm btn-danger delToServerBtn" type="button" >Del</button>
-                                    <a href="/synclist?toserverkey={{$i}}">
-                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" >查看绑定表</button>
+                                    <button data-toggle="button" class="btn-sm btn-primary updateMaxConnBtn" type="button" >修改</button>
+                                    <a href="/synclist?toserverkey={{$i}}" target="_self">
+                                    <button class="btn-sm btn-primary" type="button" >查看绑定表</button>
                                     </a>
                                 </td>
                             </tr>
@@ -72,6 +79,70 @@
 
 </div>
 
+<!--update MaxConn start-->
+<div class="modal inmodal fade" id="updateToServerInfoDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Update MaxConn</h3>
+            </div>
+            <div class="modal-body">
+
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">PluginName：</label>
+                        <div class="col-sm-9"  style=" position: relative">
+                            <input type="text" name="PluginName"  class="form-control" placeholder="PluginName" disabled>
+                            <span class="help-block m-b-none">*</span>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">ToServerKey：</label>
+                        <div class="col-sm-9"  style=" position: relative">
+                            <input type="text" name="ToServerKey"  class="form-control" placeholder="ToServerKey" disabled>
+                            <span class="help-block m-b-none">*</span>
+
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">ConnUri：</label>
+                        <div class="col-sm-9"  style=" position: relative">
+                            <input type="text" name="Uri"  class="form-control" placeholder="ConnUri">
+                            <span class="help-block m-b-none">*</span>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">MaxConn：</label>
+                        <div class="col-sm-9"  style=" position: relative">
+                            <input type="text" name="MaxConn"  class="form-control" placeholder="MaxConn">
+                            <span class="help-block m-b-none">*最大连接数</span>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Notes：</label>
+                        <div class="col-sm-9">
+                            <textarea type="text" name="Notes" class="form-control" placeholder="Notes"></textarea> <span class="help-block m-b-none">*</span>
+
+                        </div>
+                    </div>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn-sm btn-primary updateMaxConnCommitBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--update MaxConn over-->
 
 
 <div class="ibox float-e-margins" id="addToServerContair">
@@ -108,6 +179,7 @@
                         </select><span class="help-block m-b-none"></span>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label class="col-sm-3 control-label">ConnUri：</label>
                     <div class="col-sm-9"  style=" position: relative">
@@ -119,6 +191,15 @@
 
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">MaxConn：</label>
+                    <div class="col-sm-9" >
+                        <input type="text" name="maxconn" id="maxconn" class="form-control" value="20" placeholder="ConnUri">
+                        <span class="help-block m-b-none">*最大连接数</span>
+                    </div>
+                </div>
+
 
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Notes：</label>
@@ -143,6 +224,8 @@
 </div>
 
 {{template "footer" .}}
+<script src="/js/bootstrap.min.js?v=3.3.6"></script>
+<script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
 
 <script type="text/javascript">
     var uriChecked = false;
@@ -164,6 +247,26 @@
             $("#checkUriBtn").show();
         }
     );
+
+    function checkUri(plugin,uri) {
+        var url = "/toserver/check_uri";
+        var result = {status:false,msg:"unknow error"};
+        $.ajax({
+            type : "post",
+            url : url,
+            data:{connuri:uri,type:plugin},
+            async : false,  //这里用同步 ,是为了当前界第一次请求进来执行init的时候,确保执行完了这个方法,再自动执行查询toserverList
+            dataType:"json",
+            success : function(data,status){
+                if( status != 'success' ){
+                    result.msg =  "reqeust error, reqeust status : "+statuss;
+                    return false;
+                }
+                result = data;
+            }
+        });
+        return result;
+    }
     $("#checkUriBtn").click(
             function(){
                 var connuri = $.trim($("#connuri").val());
@@ -171,25 +274,14 @@
                     return false;
                 }
                 var conn_type = $("#conn_type").val();
-                var url = "/toserver/check_uri";
-                $.post(
-                        url,
-                        {connuri:connuri,type:conn_type},
-                        function(data,status){
-                            if( status != 'success' ){
-                                alert("reqeust error, reqeust status : "+status);
-                                return false;
-                            }
-                            if(!data.status){
-                                alert(data.msg);
-                                return false;
-                            }
-                            alert(data.msg);
-                            uriChecked = true;
-                            $("#checkUriBtn").hide();
-                        },
-                        'json'
-                );
+                var data = checkUri(conn_type,connuri);
+                if(!data.status){
+                    alert(data.msg);
+                    return false;
+                }
+                alert(data.msg);
+                uriChecked = true;
+                $("#checkUriBtn").hide();
             }
     );
 
@@ -203,14 +295,20 @@
                 var connuri = $.trim($("#connuri").val());
                 var type = $("#conn_type").val();
                 var notes = $("#notes").val();
+                var maxconn = $("#maxconn").val();
                 if( connuri == "" || type=="" || notes==""){
+                    alert("connuri,notes 不能为空")
+                    return
+                }
+                if(maxconn == "" || isNaN(maxconn)){
+                    alert("MaxConn 不能为空且必须为数字");
                     return
                 }
 
                 var url = "/toserver/add";
                 $.post(
                         url,
-                        { toserverkey: toserverkey,connuri:connuri,type:type,notes:notes},
+                        { toserverkey: toserverkey,connuri:connuri,type:type,notes:notes,maxconn:maxconn},
                         function(data,status){
                             if( status != 'success' ){
                                 alert("reqeust error, reqeust status : "+status);
@@ -251,6 +349,72 @@
                         },
                         'json'
                 );
+            }
+    );
+
+    $(".updateMaxConnBtn").click(
+        function () {
+            var MaxConn = $.trim($(this).parent().parent().children().eq(5).text());
+            var Uri = $(this).parent().parent().children().eq(3).attr("title");
+            var ToServerKey = $(this).parent().parent().children().eq(0).text();
+            var PluginName = $(this).parent().parent().children().eq(1).text();
+            var Notes = $(this).parent().parent().children().eq(8).text();
+
+            $("#updateToServerInfoDiv input[name=ToServerKey]").val(ToServerKey);
+            $("#updateToServerInfoDiv input[name=PluginName]").val(PluginName);
+            $("#updateToServerInfoDiv input[name=MaxConn]").val(MaxConn);
+            $("#updateToServerInfoDiv textarea[name=Notes]").val(Notes);
+            $("#updateToServerInfoDiv input[name=Uri]").val(Uri);
+            $("#updateToServerInfoDiv").modal('show');
+        }
+    );
+
+    $(".updateMaxConnCommitBtn").click(
+            function () {
+                var MaxConn = $("#updateToServerInfoDiv input[name=MaxConn]").val();
+                var ToServerKey = $("#updateToServerInfoDiv input[name=ToServerKey]").val();
+                var PluginName = $("#updateToServerInfoDiv input[name=PluginName]").val();
+                var Uri = $("#updateToServerInfoDiv input[name=Uri]").val();
+                var Notes = $("#updateToServerInfoDiv textarea[name=Notes]").val();
+
+                var url = "/toserver/update";
+                if(MaxConn == "" || isNaN(MaxConn)){
+                    alert("MaxConn 不能为空且必须为数字");
+                    return
+                }
+                if( Uri == "" || notes==""){
+                    alert("Uri,Notes 不能为空")
+                    return
+                }
+
+                if(Uri != $("#ToServer_"+ToServerKey).children().eq(3).attr("title") ){
+                    var data = checkUri(PluginName,Uri)
+                    if(data.status == false){
+                        alert(data.msg);
+                        return;
+                    }
+                }
+                $.post(
+                        url,
+                        { toserverkey: ToServerKey,maxconn:MaxConn,plugin:PluginName,notes:Notes,connuri:Uri},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            alert(data.msg);
+                            $("#ToServer_"+ToServerKey).children().eq(3).attr("title",Uri);
+                            $("#ToServer_"+ToServerKey).children().eq(3).text(Uri);
+                            $("#ToServer_"+ToServerKey).children().eq(5).text(MaxConn);
+                            $("#ToServer_"+ToServerKey).children().eq(8).text(Notes);
+                        },
+                        'json'
+                );
+                $("#updateToServerInfoDiv").modal('hide');
             }
     );
 

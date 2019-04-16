@@ -21,10 +21,12 @@ import (
 	"github.com/jc3wish/Bifrost/server"
 	"html/template"
 	"encoding/json"
+	"strings"
 )
 
 func init()  {
 	addRoute("/toserver/add",toserver_add_controller)
+	addRoute("/toserver/update",toserver_update_controller)
 	addRoute("/toserver/del",toserver_del_controller)
 	addRoute("/toserver/list",toserver_list_controller)
 	addRoute("/toserver/check_uri",toserver_checkuri_controller)
@@ -36,11 +38,19 @@ func toserver_add_controller(w http.ResponseWriter,req *http.Request){
 	Type := req.Form.Get("type")
 	Notes := req.Form.Get("notes")
 	ConnUri := req.Form.Get("connuri")
+	MaxConn := GetFormInt(req,"maxconn")
 	if toServerName == "" || Type == "" || ConnUri==""{
 		w.Write(returnResult(false,"toserverkey,type,connuri muest be not empty"))
 		return
 	}
-	toserver.SetToServerInfo(toServerName, Type, ConnUri, Notes)
+	toserver.SetToServerInfo(
+		toServerName,
+		toserver.ToServer{
+			PluginName:Type,
+			ConnUri:ConnUri,
+			Notes:Notes,
+			MaxConn:MaxConn,
+			})
 	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }
@@ -86,5 +96,28 @@ func toserver_checkuri_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false,err.Error()))
 		return
 	}
+	w.Write(returnResult(true,"success"))
+}
+
+func toserver_update_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	toServerName := strings.Trim(req.Form.Get("toserverkey"),"")
+	plugin := req.Form.Get("plugin")
+	Notes := req.Form.Get("notes")
+	ConnUri := req.Form.Get("connuri")
+	MaxConn := GetFormInt(req,"maxconn")
+	if toServerName == "" || plugin == "" || ConnUri==""{
+		w.Write(returnResult(false,"toserverkey,plugin,connuri muest be not empty"))
+		return
+	}
+	toserver.UpdateToServerInfo(
+		toServerName,
+		toserver.ToServer{
+			PluginName:plugin,
+			ConnUri:ConnUri,
+			Notes:Notes,
+			MaxConn:MaxConn,
+		})
+	defer server.SaveDBConfigInfo()
 	w.Write(returnResult(true,"success"))
 }

@@ -38,7 +38,7 @@ type Conn struct {
 	status 		string
 	conn   		*memcache.Client
 	err    		error
-	p 			PluginParam
+	p 			*PluginParam
 }
 
 type PluginParam struct {
@@ -60,18 +60,31 @@ func newConn(uri string) *Conn{
 	return f
 }
 
-func (This *Conn) SetParam(p interface{}) error{
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
 	if err != nil{
-		return err
+		return nil,err
 	}
 	var param PluginParam
 	err2 := json.Unmarshal(s,&param)
 	if err2 != nil{
-		return err2
+		return nil,err2
 	}
-	This.p = param
-	return nil
+	This.p = &param
+	return &param,nil
+}
+
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	if p == nil{
+		return nil,fmt.Errorf("param is nil")
+	}
+	switch p.(type) {
+	case *PluginParam:
+		This.p = p.(*PluginParam)
+		return p,nil
+	default:
+		return This.GetParam(p)
+	}
 }
 
 func (This *Conn) GetConnStatus() string {

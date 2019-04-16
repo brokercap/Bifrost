@@ -5,6 +5,8 @@ import (
 	"github.com/streadway/amqp"
 	"strconv"
 	"encoding/json"
+	"fmt"
+	"log"
 )
 
 const VERSION  = "v1.1.0"
@@ -39,11 +41,10 @@ type Conn struct {
 	status 			string
 	conn   			*amqp.Connection
 	ch 				*amqp.Channel
+	ch_nowait       *amqp.Channel
 	confirmWait 	chan amqp.Confirmation
-	p				PluginParam
+	p				*PluginParam
 	err				error
-	expir			string
-	deliveryMode	uint8
 	queueMap		map[string]bool
 	exchangeMap		map[string]bool
 	bindMap			map[string]bool
@@ -52,7 +53,6 @@ type Conn struct {
 func newConn(uri string) *Conn{
 	f := &Conn{
 		uri:uri,
-		expir:"",
 	}
 	f.Connect()
 	return f
@@ -74,6 +74,7 @@ func (This *Conn) Connect() bool {
 		This.status = "close"
 		return false
 	}
+	/*
 	This.ch,err = This.conn.Channel()
 	if err != nil{
 		This.err = err
@@ -81,6 +82,7 @@ func (This *Conn) Connect() bool {
 		This.conn.Close()
 		return false
 	}
+	*/
 	This.queueMap = make(map[string]bool,0)
 	This.exchangeMap = make(map[string]bool,0)
 	This.bindMap = make(map[string]bool,0)
@@ -89,15 +91,47 @@ func (This *Conn) Connect() bool {
 	return true
 }
 
+func (This *Conn) getChannel(confirm bool) *amqp.Channel {
+	if confirm == true{
+		if This.ch == nil {
+			This.ch, This.err = This.conn.Channel()
+			if This.err != nil{
+				This.ch = nil
+				return nil
+			}
+			This.ch.Confirm(false)
+			This.confirmWait = make(chan amqp.Confirmation,1)
+			This.ch.NotifyPublish(This.confirmWait)
+		}
+		return This.ch
+	}else{
+		if This.ch_nowait == nil {
+			This.ch_nowait, This.err = This.conn.Channel()
+			if This.err != nil{
+				This.ch_nowait = nil
+				return nil
+			}
+		}
+		return This.ch_nowait
+	}
+}
 func (This *Conn) ReConnect() bool {
 	func(){
 		defer func(){
 			if err := recover();err != nil{
+				log.Println("ReConnect recory:",err)
 				return
 			}
 		}()
+		if This.ch != nil{
+			This.ch.Close()
+			This.ch = nil
+		}
+		if This.ch_nowait != nil{
+			This.ch_nowait.Close()
+			This.ch_nowait = nil
+		}
 		This.conn.Close()
-		This.ch.Close()
 	}()
 	r := This.Connect()
 	if r == true{
@@ -137,34 +171,44 @@ type PluginParam struct {
 	RoutingKey 			string
 	Expir 				int
 	Declare 			bool
+	expir               string
+	deliveryMode		uint8
 }
 
-
-func (This *Conn) SetParam(p interface{}) error{
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
 	if err != nil{
-		return err
+		return nil,err
 	}
 	var param PluginParam
 	err2 := json.Unmarshal(s,&param)
 	if err2 != nil{
-		return err2
+		return nil,err2
 	}
-	This.p = param
-	if This.p.Confirm == true{
-		This.ch.Confirm(false)
-		This.confirmWait = make(chan amqp.Confirmation,1)
-		This.ch.NotifyPublish(This.confirmWait)
+	if param.Expir > 0{
+		param.expir = strconv.Itoa(This.p.Expir)
 	}
-	if This.p.Expir > 0{
-		This.expir = strconv.Itoa(This.p.Expir)
-	}
-	if This.p.Persistent ==  true{
-		This.deliveryMode = 2
+	if param.Persistent ==  true{
+		param.deliveryMode = 2
 	}else{
-		This.deliveryMode = 1
+		param.deliveryMode = 1
 	}
-	return nil
+	This.p = &param
+	return &param,nil
+}
+
+
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	if p == nil{
+		return nil,fmt.Errorf("param is nil")
+	}
+	switch p.(type) {
+	case *PluginParam:
+		This.p = p.(*PluginParam)
+		return p,nil
+	default:
+		return This.GetParam(p)
+	}
 }
 
 func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
@@ -184,9 +228,14 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 }
 
 func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (error){
+	ch := This.getChannel(This.p.Confirm)
+	if ch == nil{
+		This.status = "close"
+		return This.err
+	}
 	if _,ok := This.queueMap[*Queue]; !ok{
 		p := make(amqp.Table,0)
-		_,err := This.ch.QueueDeclare(*Queue,This.p.Queue.Durable,This.p.Queue.AutoDelete,false,false,p)
+		_,err := ch.QueueDeclare(*Queue,This.p.Queue.Durable,This.p.Queue.AutoDelete,false,false,p)
 		if err != nil{
 			return err
 		}
@@ -195,7 +244,7 @@ func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (er
 
 	if _,ok := This.exchangeMap[*Exchange]; !ok{
 		p := make(amqp.Table,0)
-		err := This.ch.ExchangeDeclare(*Exchange,This.p.Exchange.Type,This.p.Exchange.Durable,false,false,false,p)
+		err := ch.ExchangeDeclare(*Exchange,This.p.Exchange.Type,This.p.Exchange.Durable,false,false,false,p)
 		if err != nil{
 			return err
 		}
@@ -205,7 +254,7 @@ func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (er
 	key := *Queue+"-"+*Exchange+"-"+*RoutingKey
 	if _,ok := This.bindMap[key]; !ok{
 		p := make(amqp.Table,0)
-		err := This.ch.QueueBind(*Queue,*RoutingKey,*Exchange,false,p)
+		err := ch.QueueBind(*Queue,*RoutingKey,*Exchange,false,p)
 		if err != nil{
 			return err
 		}
@@ -239,9 +288,9 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 		}
 	}
 	if This.p.Confirm == true{
-		_,err = This.SendAndWait(&exchange,&routingkey,&c,&This.deliveryMode)
+		_,err = This.SendAndWait(&exchange,&routingkey,&c,This.p.deliveryMode)
 	}else{
-		_,err = This.SendAndNoWait(&exchange,&routingkey,&c,&This.deliveryMode)
+		_,err = This.SendAndNoWait(&exchange,&routingkey,&c,This.p.deliveryMode)
 	}
 	if err != nil{
 		return nil,err

@@ -97,8 +97,8 @@ func (This *Conn) SetConnStatus(status string) {
 }
 
 
-func (This *Conn) SetParam(p interface{}) error{
-	return nil
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	return nil,nil
 }
 
 func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,data string) error {

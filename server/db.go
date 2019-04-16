@@ -22,6 +22,9 @@ import (
 	"log"
 	"github.com/jc3wish/Bifrost/server/count"
 	"github.com/jc3wish/Bifrost/server/warning"
+	"time"
+	"strings"
+	"strconv"
 )
 
 var DbLock sync.Mutex
@@ -96,6 +99,7 @@ type db struct {
 	maxBinlogDumpFileName 	string `json:"MaxBinlogDumpFileName"`
 	maxBinlogDumpPosition 	uint32 `json:"MaxBinlogDumpPosition"`
 	AddTime					int64
+	DBBinlogKey				[]byte `json:"-"`  // 保存 binlog到levelDB 的key
 }
 
 type DbListStruct struct {
@@ -252,45 +256,70 @@ func (db *db) Close() bool {
 	return true
 }
 
-func (db *db) monitorDump(reslut chan error) bool {
+func (db *db) monitorDump(reslut chan error) (r bool) {
 	var lastStatus string = ""
 	for {
-		v := <-reslut
-		switch v.Error() {
-		case "stop":
-			db.ConnStatus = "stop"
-			break
-		case "running":
-			db.ConnStatus = "running"
-			db.ConnErr = "running"
-			warning.AppendWarning(warning.WarningContent{
-				Type:warning.WARNINGNORMAL,
-				DbName:db.Name,
-				Body:" connect status:running; last status:"+lastStatus,
-			})
-			break
-		default:
-			warning.AppendWarning(warning.WarningContent{
-				Type:warning.WARNINGERROR,
-				DbName:db.Name,
-				Body:" connect status:"+v.Error()+"; last status:"+lastStatus,
-			})
-			db.ConnErr = v.Error()
-			break
-		}
+		select {
+			case v := <-reslut:
+			switch v.Error() {
+			case "stop":
+				db.ConnStatus = "stop"
+				break
+			case "running":
+				db.ConnStatus = "running"
+				db.ConnErr = "running"
+				warning.AppendWarning(warning.WarningContent{
+					Type:   warning.WARNINGNORMAL,
+					DbName: db.Name,
+					Body:   " connect status:running; last status:" + lastStatus,
+				})
+				break
+			default:
+				warning.AppendWarning(warning.WarningContent{
+					Type:   warning.WARNINGERROR,
+					DbName: db.Name,
+					Body:   " connect status:" + v.Error() + "; last status:" + lastStatus,
+				})
+				db.ConnErr = v.Error()
+				break
+			}
 
-		if v.Error() != lastStatus{
-			log.Println(db.Name+" monitor:",v.Error())
-		}else{
-			lastStatus = v.Error()
-		}
+			if v.Error() != lastStatus {
+				log.Println(db.Name+" monitor:", v.Error())
+			} else {
+				lastStatus = v.Error()
+			}
 
-		if v.Error() == "close" {
-			db.ConnStatus = "close"
+			if v.Error() == "close" {
+				db.ConnStatus = "close"
+				return
+			}
+			break
+		case <- time.After(3 * time.Second):
+			db.saveBinlog()
 			break
 		}
 	}
 	return true
+}
+
+func (db *db) saveBinlog(){
+	FileName,Position := db.binlogDump.GetBinlog()
+	if FileName == ""{
+		return
+	}
+	db.Lock()
+	//保存位点,这个位点在重启 配置文件恢复的时候
+	//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
+	db.binlogDumpFileName,db.binlogDumpPosition = FileName,Position
+	if db.DBBinlogKey == nil{
+		db.DBBinlogKey = getDBBinlogkey(db)
+	}
+	db.Unlock()
+	index := strings.IndexAny(FileName, ".")
+
+	BinlogFileNum,_ := strconv.Atoi(FileName[index+1:])
+	saveBinlogPosition(db.DBBinlogKey,BinlogFileNum,db.binlogDumpPosition)
 }
 
 func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastToServerID int) bool {
@@ -305,7 +334,7 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
-		log.Println("key:",key,"db.tableMap[key]：",db.tableMap[key])
+		log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
 		db.Lock()
 		db.tableMap[key].ChannelKey = ChannelKey
 		db.Unlock()

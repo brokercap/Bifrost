@@ -56,4 +56,5 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	} else {
 		log.Printf("key:%s , ChannelKey:%s chan is nil , data:%s \r\n , ", key, ChannelKey, data)
 	}
+	db.saveBinlog()
 }
