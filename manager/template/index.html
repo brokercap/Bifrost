@@ -7,10 +7,8 @@
         <div class="col-lg-4"></div>
 
     </div>
-
-
     <div class="row">
-        <div class="col-sm-12">
+        <div class="col-sm-6">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>流量</h5>
@@ -33,24 +31,103 @@
                         </select>
                     </div>
 
-                    <div class="ibox-tools" style="width: auto; padding-right:8px;">
-                        <select class="form-control" style=" margin-top:-8px;" id="data_display_format">
-                            <option value="increment" selected="selected">增量</option>
-                            <option value="full">全量</option>
-                        </select>
-                    </div>
                 </div>
 
-                <div class="ibox-content">
-                    <canvas id="morris-line-chart" ></canvas>
+                <div class="ibox-content" >
+                    <canvas id="morris-line-chart" style="height: 200px"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-2">
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="ibox float-e-margins" id="flow_count">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">条</span>
+                            <h5>条数</h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="ibox float-e-margins" id="flow_bytesize">
+                        <div class="ibox-title">
+                            <span class="label label-info pull-right unit">Byte</span>
+                            <h5>数据大小</h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="row">
+        <div class="col-sm-12">
 
+                    <div class="col-md-2">
+                        <div class="ibox float-e-margins" id="db_count">
+                            <div class="ibox-title">
+                                <span class="label label-success pull-right unit">个</span>
+                                <h5><a href="/db/list">数据源</a></h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins number">0</h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="ibox float-e-margins" id="plugin_count">
+                            <div class="ibox-title">
+                                <span class="label label-success pull-right unit">个</span>
+                                <h5><a href="/plugin/list">插件</a></h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins number">0</h1>
+                            </div>
+                        </div>
+                    </div>
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins" id="toserver_count">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit">个</span>
+                        <h5><a href="/toserver/list">目标库</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                        <h1 class="no-margins number">0</h1>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins" id="table_count">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit">个</span>
+                        <h5>数据表</h5>
+                    </div>
+                    <div class="ibox-content">
+                        <h1 class="no-margins number">0</h1>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
 
 </div>
+
+
+
 
 
 {{template "footer" .}}
@@ -58,25 +135,63 @@
 <script src="/js/chart.js"></script>
 <script src="/js/flow.js"></script>
 <script type="text/javascript">
-    var flowObj = new FlowClass("tenminute","morris-line-chart","increment");
-    flowObj.getFlowData();
+    var flowObj = Object.create(FlowClass)
+    flowObj.setCanvasId("morris-line-chart");
+    $("#selectLengthsAge").val("tenminute");
+    flowObj.setAgetLength("tenminute");
 
+    function getFlowData() {
+        flowObj.getFlowData();
+        var count = flowObj.getCountSum();
+        var CountUint = flowObj.CountType;
+        var ByteSize = flowObj.getByteSizeSum();
+        var ByteSizeType = "Byte";
+        if (ByteSize >= 1024000) {
+            ByteSize = (ByteSize / 1024).toFixed(2)
+            ByteSizeType = "kb"
+        }
+
+        if (ByteSize >= 1024000000) {
+            ByteSize = (ByteSize / 1024000).toFixed(2)
+            ByteSizeType = "MB"
+        }
+
+        if (ByteSize >= 1024000000000) {
+            ByteSize = (ByteSize / 1024000000).toFixed(2)
+            ByteSizeType = "GB"
+        }
+        $("#flow_count .number").text(count);
+        $("#flow_count .unit").text(CountUint);
+        $("#flow_bytesize .number").text(ByteSize);
+        $("#flow_bytesize .unit").text(ByteSizeType);
+    }
+    getFlowData();
     $(function(){
         $("#selectLengthsAge").change(
                 function(){
-                    flowObj.setType($(this).val());
-                    flowObj.getFlowData();
-                }
-        );
-        $("#data_display_format").change(
-                function(){
-                    flowObj.setDisplayFormat($(this).val());
-                    flowObj.getFlowData();
+                    flowObj.setAgetLength($(this).val());
+                    getFlowData();
                 }
         );
     });
+
+    function getOverView() {
+        $.get(
+                "/overview",
+                function (d, status) {
+                    if (status != "success") {
+                        return false;
+                    }
+                    $("#db_count .number").text(d.DbCount);
+                    $("#plugin_count .number").text(d.PluginCount);
+                    $("#toserver_count .number").text(d.ToServerCount);
+                    $("#table_count .number").text(d.TableCount);
+                }, 'json');
+    }
+    getOverView();
+
     var IntervalFun = function () {
-        flowObj.getFlowData();
+        getFlowData();
     }
 
 </script>

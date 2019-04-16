@@ -85,7 +85,7 @@ func addRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request)
 	xgo.AddRoute(route,callbackFUns)
 }
 
-var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal"}
+var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update"}
 //判断是否为写操作
 func checkWriteRequest(uri string) bool {
 	for _,v := range writeRequestOp{
