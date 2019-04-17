@@ -12,6 +12,8 @@ var FlowClass  = {
 
     CountSum:0,
     ByteSizeSum:0,
+    CallBack:null,
+    Data:[],
 
     getCountSum:function () {
         return this.CountSum;
@@ -46,6 +48,16 @@ var FlowClass  = {
         this.DisplayFormat = DisplayFormat;
     },
 
+    setCallBackFun: function (f) {
+        if (typeof(f) == "function"){
+            this.CallBack = f;
+        }
+    },
+
+    getData:function () {
+        return this.Data;
+    },
+
     add0: function (m) {
         return m < 10 ? '0' + m : m
     },
@@ -64,8 +76,10 @@ var FlowClass  = {
 
     rewrite_data: function (d) {
         if (d.length == 0) {
+            this.Data = [];
             return false
         }
+        this.Data = d;
         var ChartData = {};
         ChartData.options = {};
         ChartData.labels = [];
@@ -131,8 +145,8 @@ var FlowClass  = {
                 });
                 Count = d[s].Count;
                 ByteSize = d[s].ByteSize;
-                this.ByteSizeSum += ByteSize;
-                this.CountSum += Count;
+                this.ByteSizeSum += tSize;
+                this.CountSum += tCount;
             }
         }
         return data;
@@ -217,7 +231,9 @@ var FlowClass  = {
                 } else {
                     obj.rewrite_data(obj.incrementData(d));
                 }
-
+                if(obj.CallBack != null){
+                    obj.CallBack();
+                }
             }, 'json');
     },
 }
