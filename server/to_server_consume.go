@@ -132,13 +132,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 }
 
-func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
+func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pluginDriver.PluginDataType,b bool){
 	n := len(data.Rows)
 	if n == 0{
-		return true
+		return data,true
 	}
 	if len(This.FieldList) == 0{
-		return true
+		return data,true
 	}
 
 	if n == 1 {
@@ -148,8 +148,26 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 				m[key] = data.Rows[0][key]
 			}
 		}
-		data.Rows[0] = m
+		newData = &pluginDriver.PluginDataType{
+			Timestamp:data.Timestamp,
+			EventType:data.EventType,
+			SchemaName:data.SchemaName,
+			TableName:data.TableName,
+			BinlogFileNum:data.BinlogFileNum,
+			BinlogPosition:data.BinlogPosition,
+			Rows:make([]map[string]interface{},1),
+		}
+		newData.Rows[0] = m
 	}else{
+		newData = &pluginDriver.PluginDataType{
+			Timestamp:data.Timestamp,
+			EventType:data.EventType,
+			SchemaName:data.SchemaName,
+			TableName:data.TableName,
+			BinlogFileNum:data.BinlogFileNum,
+			BinlogPosition:data.BinlogPosition,
+			Rows:make([]map[string]interface{},2),
+		}
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})
 		var isNotUpdate bool = true
@@ -186,12 +204,12 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 		}
 		//假如所有字段内容都未变更，并且过滤了这个功能，则直接返回false
 		if isNotUpdate && This.FilterUpdate{
-			return  false
+			return  data,false
 		}
-		data.Rows[0] = m_before
-		data.Rows[1] = m_after
+		newData.Rows[0] = m_before
+		newData.Rows[1] = m_after
 	}
-	return true
+	return newData,true
 }
 
 func (This *ToServer) pluginReBack(){
@@ -245,7 +263,7 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 }
 
 
-func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
+func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
 		if err2 := recover();err2!=nil{
@@ -262,7 +280,8 @@ func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *
 	}()
 
 	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
-	if This.filterField(data) == false{
+	data,b := This.filterField(paramData)
+	if b == false{
 		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 	}
 	err = This.getPluginAndSetParam()

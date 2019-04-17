@@ -166,12 +166,12 @@ func (This *consume_channel_obj) consume_channel() {
 						continue
 					}
 					//这里要将数据完全拷贝一份出来,因为pluginDriver rows []map[string]interface{} 里map这里在各个toserver 同步到plugin的时候会各自过滤数据。
-					var MyData pluginDriver.PluginDataType
-					err1 := This.deepCopy(&MyData,pluginData)
-					if err1 != nil{
-						log.Println("consume_to_server deepCopy data:",err1," src data:",data)
-					}
-					This.sendToServerResult(toServerInfo,&MyData)
+					//var MyData pluginDriver.PluginDataType
+					//err1 := This.deepCopy(&MyData,pluginData)
+					//if err1 != nil{
+					//	log.Println("consume_to_server deepCopy data:",err1," src data:",data)
+					//}
+					This.sendToServerResult(toServerInfo,&pluginData)
 				}
 			}
 
