@@ -589,6 +589,14 @@
                     }
             );
             var doChangeToServer = function(){
+                if($("#addToServerKey").val()==null){
+                    if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                        window.location.href = "/toserver/list";
+                        return;
+                    }else{
+                        return;
+                    }
+                }
                 var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
@@ -610,6 +618,14 @@
 
             $("#addToServerBtn").click(
                     function(){
+                        if($("#addToServerKey").val()==null){
+                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                                window.location.href = "/toserver/list";
+                                return false;
+                            }else{
+                                return false;
+                            }
+                        }
                         var p = doGetPluginParam();
                         if (p.status == false){
                             alert(p.msg);
@@ -665,6 +681,14 @@
 
             $("#batchAddToServerBtn").click(
                     function(){
+                        if($("#addToServerKey").val()==null){
+                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                                window.location.href = "/toserver/list";
+                                return;
+                            }else{
+                                return;
+                            }
+                        }
                         var obj = $(this);
                         if ($(obj).text() == "正在提交"){
                             return false;
