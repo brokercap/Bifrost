@@ -42,10 +42,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 
 	SaveBinlog := func(){
 		if PluginBinlog != nil {
-			db.Lock()
-			This.BinlogFileNum = PluginBinlog.BinlogFileNum
-			This.BinlogPosition = PluginBinlog.BinlogPosition
-			db.Unlock()
+			//db.Lock()
+			This.BinlogFileNum,This.BinlogPosition = PluginBinlog.BinlogFileNum,PluginBinlog.BinlogPosition
+			//db.Unlock()
 			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
 			saveBinlogPosition(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
 		}
@@ -68,10 +67,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			Body:       body,
 		})
 	}
+	var noData bool = true
 	for {
 		CheckStatusFun()
 		select {
 		case data = <- c:
+			noData = false
 			CheckStatusFun()
 			fordo = 0
 			lastErrId = 0
@@ -125,6 +126,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			SaveBinlog()
 			break
 		case <-time.After(5 * time.Second):
+			if noData == false{
+				noData = true
+				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+			}
 			PluginBinlog,_ = This.commit()
 			SaveBinlog()
 			break
