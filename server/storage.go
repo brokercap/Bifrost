@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"strconv"
 	"fmt"
+	"sync"
+	"hash/crc32"
+	"time"
 )
 
 type positionStruct struct {
@@ -12,10 +15,47 @@ type positionStruct struct {
 	BinlogPosition uint32
 }
 
+type TmpPositioinStruct struct {
+	sync.Mutex
+	Data map[string]positionStruct
+}
 
 var toSaveDbConfigChan chan int8
+var TmpPositioin []TmpPositioinStruct
 
-func init() {}
+func init() {
+	TmpPositioin = make([]TmpPositioinStruct,100)
+	for i:=0;i<100;i++{
+		TmpPositioin[i] = TmpPositioinStruct{
+			Data:make(map[string]positionStruct,0),
+		}
+	}
+	go saveBinlogPositionToStorageFromCache()
+}
+
+func saveBinlogPositionToStorageFromCache()  {
+	for {
+		time.Sleep(2 * time.Second)
+		for _, t := range TmpPositioin {
+			t.Lock()
+			for k, v := range t.Data {
+				Val, _ := json.Marshal(v)
+				storage.PutKeyVal([]byte(k) , Val)
+				delete(t.Data,k)
+			}
+			t.Unlock()
+		}
+	}
+}
+
+var crc_table *crc32.Table = crc32.MakeTable(0xD5828281)
+
+func saveBinlogPositionByCache(key []byte,BinlogFileNum int,BinlogPosition uint32)  {
+	id := crc32.Checksum(key, crc_table) % 100
+	TmpPositioin[id].Lock()
+	TmpPositioin[id].Data[string(key)]=positionStruct{BinlogFileNum,BinlogPosition}
+	TmpPositioin[id].Unlock()
+}
 
 func InitStrageChan(ch chan int8){
 	toSaveDbConfigChan = ch
