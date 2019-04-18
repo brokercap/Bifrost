@@ -5,6 +5,7 @@ import (
 	"sync"
 	"log"
 	"strings"
+	"github.com/jc3wish/Bifrost/config"
 )
 
 type FlowCount struct {
@@ -107,7 +108,7 @@ func DelDB(db string){
 
 func setChannelChan(key string) chan *FlowCount{
 	if _,ok := dbChannelChanMap[key];!ok{
-		flowChan := make(chan *FlowCount,10000)
+		flowChan := make(chan *FlowCount,config.CountQueueSize)
 		dbChannelChanMap[key] = flowChan
 	}
 	return dbChannelChanMap[key]

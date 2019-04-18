@@ -192,6 +192,14 @@ func initParam(){
 		}
 	}
 
+	tmp = config.GetConfigVal("Bifrostd","count_queue_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.CountQueueSize = intA
+		}
+	}
+
 	initTLSParam()
 }
 
