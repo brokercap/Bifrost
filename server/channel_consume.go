@@ -26,7 +26,6 @@ import (
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"github.com/jc3wish/Bifrost/server/count"
 	"github.com/jc3wish/Bifrost/config"
-	"unsafe"
 	"strconv"
 	"sync"
 	"log"
@@ -182,7 +181,7 @@ func (This *consume_channel_obj) consume_channel() {
 				//Time:"",
 				Count:1,
 				TableId:&key,
-				ByteSize:int64(unsafe.Sizeof(data.Rows))*int64(len(toServerList)),
+				ByteSize:int64(data.Header.EventSize)*int64(len(toServerList)),
 			}
 		case <-time.After(5 * time.Second):
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
