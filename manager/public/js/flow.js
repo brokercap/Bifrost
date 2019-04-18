@@ -123,12 +123,22 @@ var FlowClass  = {
         ByteSizeType = "b";
         var Count = -1;
         var ByteSize = -1;
+        var lasttime = -1;
         for (s in d) {
             if (d[s].Time > 0) {
+
                 if (Count == -1) {
                     Count = d[s].Count;
                     ByteSize = d[s].ByteSize;
                     continue;
+                }
+
+                if (lasttime == 0){
+                    data.push({
+                        time: this.TimeFormat(d[s].Time-5),
+                        Count: 0,
+                        ByteSize: 0,
+                    });
                 }
                 var tSize = d[s].ByteSize - ByteSize;
                 if (tSize < 0) {
@@ -147,8 +157,13 @@ var FlowClass  = {
                 ByteSize = d[s].ByteSize;
                 this.ByteSizeSum += tSize;
                 this.CountSum += tCount;
+            }else{
+                Count = 0;
+                ByteSize = 0;
+                lasttime = 0;
             }
         }
+        console.log(data);
         return data;
     },
 
@@ -226,7 +241,7 @@ var FlowClass  = {
                     return false;
                 }
 
-                if (this.DisplayFormat == "full") {
+                if (obj.DisplayFormat == "full") {
                     obj.rewrite_data(obj.fullData(d));
                 } else {
                     obj.rewrite_data(obj.incrementData(d));
