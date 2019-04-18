@@ -22,6 +22,7 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
+	"github.com/jc3wish/Bifrost/config"
 )
 
 type dbSaveInfo struct {
@@ -88,6 +89,46 @@ func recoveryData(data map[string]dbSaveInfo){
 			//db close,channel must be close
 			ch.Close()
 		}
+
+		// 二进制文件格式是xxx.000001 ,后面数字是6位数，不够前面补0
+		index := strings.IndexAny(dbInfo.BinlogDumpFileName, ".")
+		binlogPrefix := dbInfo.BinlogDumpFileName[0:index]
+
+		var PerformanceTestingFileName string = ""
+		var PerformanceTestingFileNum int = 0
+		var PerformanceTestingPosition uint32 = 0
+		//假如在性能测试的配置文件中找到这个 找这个DbName，则直接加载配置文件中的位点
+		//并且只有配置合法，才可以通过
+		if PerformanceTestingParam := config.GetConfigVal("PerformanceTesting",dbInfo.Name);PerformanceTestingParam != ""{
+			log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam)
+			t := strings.Split(PerformanceTestingParam,",")
+			if len(t) == 2{
+				var err error
+				index := strings.IndexAny(t[0], ".")
+				binlogPrefix2 := t[0][0:index]
+				PerformanceTestingFileNum,err = strconv.Atoi(t[0][index+1:])
+				if err == nil {
+					//配置文件 和  原有DbName里设置的binlog 前缀必须一致
+					if binlogPrefix2 == binlogPrefix {
+						//位点也必须是数字
+						position, err := strconv.Atoi(t[1])
+						if err == nil && position >= 4 {
+							PerformanceTestingFileName = t[0]
+							PerformanceTestingPosition = uint32(position)
+						}else{
+							log.Println("PerformanceTesting",dbInfo.Name,err)
+						}
+					}else{
+						log.Println("PerformanceTesting",dbInfo.Name,"binlog prefix:",binlogPrefix2," not ==",binlogPrefix)
+					}
+				}else{
+					log.Println("PerformanceTesting",dbInfo.Name,t[0][index+1:],"not int",err)
+				}
+			}else{
+				log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam,"split error")
+			}
+		}
+
 		var BinlogFileNum int = 0
 		var BinlogPosition uint32 = 0
 		var lastAllToServerNoraml bool = true
@@ -98,7 +139,6 @@ func recoveryData(data map[string]dbSaveInfo){
 				tableName := tKey[i+1:]
 				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
 				for _, toServer := range tInfo.ToServerList {
-
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{
 						toServer.BinlogFileNum  = toServerBinlogPosition.BinlogFileNum
@@ -108,6 +148,14 @@ func recoveryData(data map[string]dbSaveInfo){
 					if toServerLastBinlogPosition != nil{
 						toServer.LastBinlogFileNum = toServerLastBinlogPosition.BinlogFileNum
 						toServer.LastBinlogPosition = toServerLastBinlogPosition.BinlogPosition
+					}
+
+					//假如是性能测试，能强制修改为指定位点
+					if PerformanceTestingFileName != ""{
+						toServer.BinlogFileNum = PerformanceTestingFileNum
+						toServer.BinlogPosition = PerformanceTestingPosition
+						toServer.LastBinlogFileNum = PerformanceTestingFileNum
+						toServer.LastBinlogPosition = PerformanceTestingPosition
 					}
 
 					db.AddTableToServer(schemaName, tableName,
@@ -178,9 +226,6 @@ func recoveryData(data map[string]dbSaveInfo){
 				}
 			}
 		}
-		// 二进制文件格式是xxx.000001 ,后面数字是6位数，不够前面补0
-		index := strings.IndexAny(dbInfo.BinlogDumpFileName, ".")
-		binlogPrefix := dbInfo.BinlogDumpFileName[0:index]
 
 		// 拿镜像数据里的 位点和level中存储 db 位点对比，取更大的值
 		// 因为镜像数据只有配置更改了才会修改，但是 level中的数据是只要有数据同步 及 每5秒强制刷一次
@@ -224,6 +269,11 @@ func recoveryData(data map[string]dbSaveInfo){
 			}
 		}
 		*/
+		//如果是性能测试配置，强制修改位点
+		if PerformanceTestingFileName != ""{
+			db.binlogDumpFileName = PerformanceTestingFileName
+			db.binlogDumpPosition = PerformanceTestingPosition
+		}
 
 		if dbInfo.ConnStatus == "closing"{
 			dbInfo.ConnStatus = "close"
