@@ -275,27 +275,8 @@ func forInsert(schema string,table string,count int){
 
 var StartTime int64 = 0
 var count *int
-func main() {
-	host := flag.String("h", "127.0.0.1", "-h")
-	user := flag.String("u", "root", "-u")
-	pwd := flag.String("p", "", "-p")
-	port := flag.String("P", "3306", "-P")
-	conndb := flag.String("conndb", "test", "-conndb")
-	table := flag.String("table", "bristol_performance_test", "-table")
-	schema := flag.String("schema", "bifrost_test", "-schema")
-	count = flag.Int("count", 100000, "-count")
-	onlydata := flag.String("onlydata", "false", "-onlydata")
-	flag.Parse()
 
-	DataSource := *user+":"+*pwd+"@tcp("+*host+":"+*port+")/"+*conndb
-
-	//DataSource := "root:root@tcp(127.0.0.1:3306)/test"
-	Schema := *schema
-	TableName := *table
-	DbConn.Uri = DataSource
-	DbConn.DBConnect()
-
-
+func producData(Schema,TableName string){
 	var sqlList = []string{
 		"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `"+Schema+"`",
 		//"DROP TABLE IF EXISTS "+Schema+".`"+TableName+"`",
@@ -337,16 +318,64 @@ func main() {
 		//log.Println("exec sql:",sql)
 		DbConn.ExecSQL(sql)
 	}
+	log.Println("insert data start")
+	StartTime = time.Now().Unix()
+	forInsert(Schema,TableName,*count)
+	EndTime := time.Now().Unix()
+	log.Println("insert data over")
+	log.Println("use time",EndTime - StartTime,"s")
+}
+func main() {
+	host := flag.String("h", "127.0.0.1", "-h")
+	user := flag.String("u", "root", "-u")
+	pwd := flag.String("p", "", "-p")
+	port := flag.String("P", "3306", "-P")
+	conndb := flag.String("conndb", "test", "-conndb")
+	table := flag.String("table", "bristol_performance_test", "-table")
+	schema := flag.String("schema", "bifrost_test", "-schema")
+	count = flag.Int("count", 100000, "-count")
+	onlydata := flag.String("onlydata", "false", "-onlydata")
+	master_log_file := flag.String("master_log_file", "", "-master_log_file")
+	master_log_pos := flag.Int("master_log_pos", 0, "-master_log_pos")
+	flag.Parse()
 
-	BinlogInfo := DbConn.GetBinLogInfo()
-	if BinlogInfo.File == ""{
-		log.Println("not support binlod")
-		os.Exit(1)
+	DataSource := *user+":"+*pwd+"@tcp("+*host+":"+*port+")/"+*conndb
+
+
+	//DataSource := "root:root@tcp(127.0.0.1:3306)/test"
+	Schema := *schema
+	TableName := *table
+
+	DbConn.Uri = DataSource
+	DbConn.DBConnect()
+	var filename string
+	var position uint32
+	DbConn.DBConnect()
+	if *master_log_file == "" || *master_log_pos <= 0{
+
+		producData(Schema,TableName)
+
+		BinlogInfo := DbConn.GetBinLogInfo()
+		if BinlogInfo.File == ""{
+			log.Println("not support binlod")
+			os.Exit(1)
+		}
+		filename = BinlogInfo.File
+		position = uint32(BinlogInfo.Position)
+
+		if *onlydata == "true"{
+			producData(Schema,TableName)
+			log.Println("onlydata == true, no test Bristol")
+			os.Exit(0)
+		}
+	}else{
+		filename = *master_log_file
+		position = uint32(*master_log_pos)
 	}
+
 	MastSeverId := DbConn.GetServerId()
 	MyServerID := uint32(MastSeverId+249)
-	filename := BinlogInfo.File
-	var position uint32 = uint32(BinlogInfo.Position)
+
 	reslut := make(chan error, 1)
 	m := make(map[string]uint8, 0)
 	m[Schema] = 1
@@ -354,19 +383,13 @@ func main() {
 		DataSource:    DataSource,
 		CallbackFun:   callback,
 		ReplicateDoDb: m,
-		OnlyEvent:     []mysql.EventType{ mysql.WRITE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2,mysql.WRITE_ROWS_EVENTv0},
+		OnlyEvent:     []mysql.EventType{
+			mysql.WRITE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2,mysql.WRITE_ROWS_EVENTv0,
+			mysql.UPDATE_ROWS_EVENTv0,mysql.UPDATE_ROWS_EVENTv1,mysql.UPDATE_ROWS_EVENTv2,
+			mysql.DELETE_ROWS_EVENTv0,mysql.DELETE_ROWS_EVENTv1,mysql.DELETE_ROWS_EVENTv2,
+			},
 	}
-	log.Println("insert data start")
-	StartTime = time.Now().Unix()
-	forInsert(Schema,TableName,*count)
-	EndTime := time.Now().Unix()
-	log.Println("insert data over")
-	log.Println("use time",EndTime - StartTime,"s")
 	log.Println("analysis binlog start")
-	if *onlydata == "true"{
-		log.Println("onlydata == true, no test Bristol")
-		os.Exit(0)
-	}
 	log.Println("start binlog info:",filename,position)
 	StartTime = time.Now().Unix()
 	go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)

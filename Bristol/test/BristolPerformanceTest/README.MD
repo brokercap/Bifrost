@@ -14,6 +14,7 @@ go build ./BristolPerformanceTest.go
 
 ```
 ./BristolPerformanceTest -count 1 -u root -p root -P 3306 -conndb test -schema bifrost_test -table bristol_performance_test
+
 ```
 ```
 ./BristolPerformanceTest -count 1 -h 127.0.01 -u root -P 3306 -conndb test -schema bifrost_test -table bristol_performance_test
@@ -50,6 +51,11 @@ go build ./BristolPerformanceTest.go
 > -schema      : 性能测试数据所有库,如果不存在则自动创建 ,默认 bifrost_test
 >
 > -table       : 性能测试数据所在表,如果表不存在则会自动删除再创建 , 默认 bristol_performance_test
->
+
 > -count       : 测试多少条数据,默认 100000
+
 > -onlydata    : true的话,只造数据,不做二进制解析,默认 false,使用方法为  -onydata true
+
+> -master_log_file    : mysql 当前的位点文件，
+
+> -master_log_pos     : mysql 当前的位点文件位点，当master_log_file及 master_log_pos 存在的时候，不会创建数据，直接去解析binlog
