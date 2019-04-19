@@ -28,17 +28,20 @@ func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,Del
 		This.status = "close"
 		return false,err
 		}
+	timer := time.NewTimer(10 * time.Second)
 	select {
 	case d := <-This.confirmWait:
 		if d.DeliveryTag >= 0{
+			timer.Stop()
 			return true,nil
 		}
 		This.err = fmt.Errorf("unkonw err")
 		break
-	case <-time.After(10 * time.Second):
+	case <-timer.C:
 		This.err = fmt.Errorf("server no response")
 		break
 	}
+	timer.Stop()
 	This.status = "close"
 	return false,This.err
 }

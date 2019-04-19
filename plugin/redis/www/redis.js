@@ -2,19 +2,7 @@ function doGetPluginParam(){
 	var result = {data:{},status:false,msg:"error"}
     var data = {};
 	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
-    var AddEventType = false;
-	if ($("#Redis_Plugin_Contair input[name='AddEventType']:checked").val() == "1"){
-		AddEventType = true;
-	}
-	var AddSchemaName = false;
-	if ($("#Redis_Plugin_Contair input[name='AddSchemaName']:checked").val() == "1"){
-		AddSchemaName = true;
-	}
-	var AddTableName = false;
-    if ($("#Redis_Plugin_Contair input[name='AddTableName']:checked").val() == "1"){
-		AddTableName = true;
-	}
-	
+
     var DataType = $("#Redis_Plugin_Contair #Redis_DataType").val();
     var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();
 	var ValueConfig = $("#Redis_Plugin_Contair #ValueConfig").val();
@@ -33,10 +21,6 @@ function doGetPluginParam(){
 		result.msg = "Expir must be int!"
         return result;
     }
-
-    data["AddSchemaName"] = AddSchemaName;
-    data["AddTableName"] = AddTableName;
-    data["AddEventType"] = AddEventType;
     data["KeyConfig"] = KeyConfig;
     data["ValueConfig"] = ValueConfig;
     data["Expir"] = parseInt(Expir);

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
+	"github.com/jc3wish/Bifrost/config"
 )
 
 type dbSaveInfo struct {
@@ -46,6 +47,34 @@ type channelSaveInfo struct {
 	MaxThreadNum     int // 消费通道的最大线程数
 	CurrentThreadNum int
 	Status           string //stop ,starting,running,wait
+}
+
+func CompareBinlogPositionAndReturnGreater(BinlogFileNum1 int, BinlogPosition1 uint32,BinlogFileNum2 int,BinlogPosition2 uint32)(int,uint32){
+	if BinlogFileNum1 > BinlogFileNum2{
+		return BinlogFileNum1,BinlogPosition1
+	}else if BinlogFileNum1 == BinlogFileNum2{
+		if BinlogPosition1 >= BinlogPosition2 {
+			return BinlogFileNum1, BinlogPosition1
+		}else{
+			return BinlogFileNum2, BinlogPosition2
+		}
+	}else{
+		return BinlogFileNum2, BinlogPosition2
+	}
+}
+
+func CompareBinlogPositionAndReturnLess(BinlogFileNum1 int, BinlogPosition1 uint32,BinlogFileNum2 int,BinlogPosition2 uint32)(int,uint32){
+	if BinlogFileNum1 > BinlogFileNum2{
+		return BinlogFileNum2,BinlogPosition2
+	}else if BinlogFileNum1 == BinlogFileNum2{
+		if BinlogPosition1 >= BinlogPosition2 {
+			return BinlogFileNum2, BinlogPosition2
+		}else{
+			return BinlogFileNum1, BinlogPosition1
+		}
+	}else{
+		return BinlogFileNum1, BinlogPosition1
+	}
 }
 
 func Recovery(content *json.RawMessage){
@@ -88,6 +117,46 @@ func recoveryData(data map[string]dbSaveInfo){
 			//db close,channel must be close
 			ch.Close()
 		}
+
+		// 二进制文件格式是xxx.000001 ,后面数字是6位数，不够前面补0
+		index := strings.IndexAny(dbInfo.BinlogDumpFileName, ".")
+		binlogPrefix := dbInfo.BinlogDumpFileName[0:index]
+
+		var PerformanceTestingFileName string = ""
+		var PerformanceTestingFileNum int = 0
+		var PerformanceTestingPosition uint32 = 0
+		//假如在性能测试的配置文件中找到这个 找这个DbName，则直接加载配置文件中的位点
+		//并且只有配置合法，才可以通过
+		if PerformanceTestingParam := config.GetConfigVal("PerformanceTesting",dbInfo.Name);PerformanceTestingParam != ""{
+			log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam)
+			t := strings.Split(PerformanceTestingParam,",")
+			if len(t) == 2{
+				var err error
+				index := strings.IndexAny(t[0], ".")
+				binlogPrefix2 := t[0][0:index]
+				PerformanceTestingFileNum,err = strconv.Atoi(t[0][index+1:])
+				if err == nil {
+					//配置文件 和  原有DbName里设置的binlog 前缀必须一致
+					if binlogPrefix2 == binlogPrefix {
+						//位点也必须是数字
+						position, err := strconv.Atoi(t[1])
+						if err == nil && position >= 4 {
+							PerformanceTestingFileName = t[0]
+							PerformanceTestingPosition = uint32(position)
+						}else{
+							log.Println("PerformanceTesting",dbInfo.Name,err)
+						}
+					}else{
+						log.Println("PerformanceTesting",dbInfo.Name,"binlog prefix:",binlogPrefix2," not ==",binlogPrefix)
+					}
+				}else{
+					log.Println("PerformanceTesting",dbInfo.Name,t[0][index+1:],"not int",err)
+				}
+			}else{
+				log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam,"split error")
+			}
+		}
+
 		var BinlogFileNum int = 0
 		var BinlogPosition uint32 = 0
 		var lastAllToServerNoraml bool = true
@@ -98,16 +167,25 @@ func recoveryData(data map[string]dbSaveInfo){
 				tableName := tKey[i+1:]
 				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
 				for _, toServer := range tInfo.ToServerList {
-
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{
-						toServer.BinlogFileNum  = toServerBinlogPosition.BinlogFileNum
-						toServer.BinlogPosition = toServerBinlogPosition.BinlogPosition
+						toServer.BinlogFileNum,toServer.BinlogPosition  = CompareBinlogPositionAndReturnGreater(
+							toServer.BinlogFileNum,toServer.BinlogPosition,
+							toServerBinlogPosition.BinlogFileNum,toServerBinlogPosition.BinlogPosition)
 					}
 					toServerLastBinlogPosition,_ := getBinlogPosition(getToServerLastBinlogkey(db,toServer))
 					if toServerLastBinlogPosition != nil{
-						toServer.LastBinlogFileNum = toServerLastBinlogPosition.BinlogFileNum
-						toServer.LastBinlogPosition = toServerLastBinlogPosition.BinlogPosition
+						toServer.LastBinlogFileNum,toServer.LastBinlogPosition  = CompareBinlogPositionAndReturnGreater(
+							toServer.LastBinlogFileNum,toServer.LastBinlogPosition,
+							toServerLastBinlogPosition.BinlogFileNum,toServerLastBinlogPosition.BinlogPosition)
+					}
+
+					//假如是性能测试，能强制修改为指定位点
+					if PerformanceTestingFileName != ""{
+						toServer.BinlogFileNum = PerformanceTestingFileNum
+						toServer.BinlogPosition = PerformanceTestingPosition
+						toServer.LastBinlogFileNum = PerformanceTestingFileNum
+						toServer.LastBinlogPosition = PerformanceTestingPosition
 					}
 
 					db.AddTableToServer(schemaName, tableName,
@@ -131,56 +209,32 @@ func recoveryData(data map[string]dbSaveInfo){
 						if lastAllToServerNoraml == false{
 							//假如有一个同步不太正常的情况下，取小值
 							//这里用判断 BinlogFileNum == 0 是因为 绝对不会出现，因为绝对 第一次循环 lastAllToServerNoraml == true
-							if BinlogFileNum > toServer.BinlogFileNum{
-								BinlogFileNum = toServer.BinlogFileNum
-								BinlogPosition = toServer.BinlogPosition
-							}else{
-								if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition{
-									BinlogPosition = toServer.BinlogPosition
-								}
-							}
+							BinlogFileNum,BinlogPosition  = CompareBinlogPositionAndReturnLess(
+								BinlogFileNum,BinlogPosition,
+								toServer.BinlogFileNum,toServer.BinlogPosition)
+
 						}else{
 							//假如所有表都还是正常同步的情况下，取大值
-							if BinlogFileNum == 0 || BinlogFileNum < toServer.BinlogFileNum{
-								BinlogFileNum = toServer.BinlogFileNum
-								BinlogPosition = toServer.BinlogPosition
-							}else{
-								if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition < toServer.BinlogPosition{
-									BinlogPosition = toServer.BinlogPosition
-								}
-							}
+							BinlogFileNum, BinlogPosition = CompareBinlogPositionAndReturnGreater(
+								BinlogFileNum, BinlogPosition,
+								toServer.BinlogFileNum, toServer.BinlogPosition)
 						}
 						continue
+					}else{
+						lastAllToServerNoraml = false
 					}
-					lastAllToServerNoraml = false
 
 					if toServer.LastBinlogFileNum == 0 && toServer.BinlogFileNum > 0{
 						saveBinlogPosition(getToServerLastBinlogkey(db,toServer),toServer.BinlogFileNum,toServer.BinlogPosition)
 					}
 
-					if BinlogFileNum == 0{
-						BinlogFileNum = toServer.BinlogFileNum
-						BinlogPosition = toServer.BinlogPosition
-					}else{
-						if BinlogFileNum < toServer.BinlogFileNum{
-							continue
-						}
-						if BinlogFileNum == toServer.BinlogFileNum && BinlogPosition > toServer.BinlogPosition{
-							BinlogPosition = toServer.BinlogPosition
-							continue
-						}
-						if toServer.BinlogFileNum > 0 && BinlogFileNum > toServer.BinlogFileNum{
-							BinlogFileNum = toServer.BinlogFileNum
-							BinlogPosition = toServer.BinlogPosition
-							continue
-						}
-					}
+					//取大值
+					BinlogFileNum, BinlogPosition = CompareBinlogPositionAndReturnGreater(
+						BinlogFileNum, BinlogPosition,
+						toServer.BinlogFileNum, toServer.BinlogPosition)
 				}
 			}
 		}
-		// 二进制文件格式是xxx.000001 ,后面数字是6位数，不够前面补0
-		index := strings.IndexAny(dbInfo.BinlogDumpFileName, ".")
-		binlogPrefix := dbInfo.BinlogDumpFileName[0:index]
 
 		// 拿镜像数据里的 位点和level中存储 db 位点对比，取更大的值
 		// 因为镜像数据只有配置更改了才会修改，但是 level中的数据是只要有数据同步 及 每5秒强制刷一次
@@ -188,42 +242,33 @@ func recoveryData(data map[string]dbSaveInfo){
 		DBBinlogKey := getDBBinlogkey(db)
 		DBLastBinlogPosition,_ := getBinlogPosition(DBBinlogKey)
 		if DBLastBinlogPosition != nil{
-			if LastDBBinlogFileNum < DBLastBinlogPosition.BinlogFileNum{
-				LastDBBinlogFileNum = DBLastBinlogPosition.BinlogFileNum
-				db.binlogDumpPosition = DBLastBinlogPosition.BinlogPosition
-			}else if LastDBBinlogFileNum == DBLastBinlogPosition.BinlogFileNum{
-				if db.binlogDumpPosition < DBLastBinlogPosition.BinlogPosition{
-					db.binlogDumpPosition = DBLastBinlogPosition.BinlogPosition
-				}
-			}
+			//假如key val存储中DB 的位点值存在 取大值
+			LastDBBinlogFileNum, db.binlogDumpPosition = CompareBinlogPositionAndReturnGreater(
+				LastDBBinlogFileNum, db.binlogDumpPosition,
+				DBLastBinlogPosition.BinlogFileNum, DBLastBinlogPosition.BinlogPosition)
 		}
 		db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",LastDBBinlogFileNum)
 
 
 		//假如所有表数据同步都是正常的，则取 db 里的位点配置，否则取 同步表里最小位点
+		//假如有一个表的数据同步位点不正常,则取不正常位点的最小值,否则取和当前db最后保存的位 及表位点的最大值
 		if lastAllToServerNoraml == false{
 			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",BinlogFileNum)
 			db.binlogDumpPosition = BinlogPosition
 		}else{
-			db.binlogDumpFileName = dbInfo.BinlogDumpFileName
+			//这里为什么要取大值,是因为位点是定时刷盘的,有可能在哪些特殊情况下,表位点成功了,db位点没保存成功
+			LastDBBinlogFileNum, db.binlogDumpPosition = CompareBinlogPositionAndReturnGreater(
+				LastDBBinlogFileNum, db.binlogDumpPosition,
+				BinlogFileNum, BinlogPosition)
+			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",LastDBBinlogFileNum)
 			db.binlogDumpPosition = dbInfo.BinlogDumpPosition
 		}
 
-		//找到最小的位点位置进行更新到 db 配置中去，进行slave连接
-		/*
-		if BinlogFileNum > 0 && BinlogPosition > 0{
-			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",BinlogFileNum)
-			db.binlogDumpPosition = BinlogPosition
-			log.Println("Change binlog postion ",db.Name,"binlogDumpFileName:",db.binlogDumpFileName,"binlogDumpPosition:",db.binlogDumpPosition)
-		}else{
-			DBBinlogKey := getDBBinlogkey(db)
-			DBBinlogPosition,_ := getBinlogPosition(DBBinlogKey)
-			if DBBinlogPosition != nil{
-				db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",DBBinlogPosition.BinlogFileNum)
-				db.binlogDumpPosition = DBBinlogPosition.BinlogPosition
-			}
+		//如果是性能测试配置，强制修改位点
+		if PerformanceTestingFileName != ""{
+			db.binlogDumpFileName = PerformanceTestingFileName
+			db.binlogDumpPosition = PerformanceTestingPosition
 		}
-		*/
 
 		if dbInfo.ConnStatus == "closing"{
 			dbInfo.ConnStatus = "close"

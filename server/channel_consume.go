@@ -26,7 +26,6 @@ import (
 	"github.com/jc3wish/Bifrost/Bristol/mysql"
 	"github.com/jc3wish/Bifrost/server/count"
 	"github.com/jc3wish/Bifrost/config"
-	"unsafe"
 	"strconv"
 	"sync"
 	"log"
@@ -84,13 +83,12 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		ToServerInfo.Status = "running"
 	}
 	//修改toserver 对应最后接收的 位点信息
-	ToServerInfo.LastBinlogFileNum = pluginData.BinlogFileNum
-	ToServerInfo.LastBinlogPosition = pluginData.BinlogPosition
+	ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition = pluginData.BinlogFileNum,pluginData.BinlogPosition
 	ToServerInfo.Unlock()
 	if ToServerInfo.LastBinlogKey == nil{
 		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
 	}
-	saveBinlogPosition(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
+	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
@@ -128,22 +126,25 @@ func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut
 	log.Println("channel",c.Name," consume_channel start")
+	timer := time.NewTimer(5 * time.Second)
 	defer func() {
 		log.Println("channel",c.Name," consume_channel over; CurrentThreadNum:",c.CurrentThreadNum)
+		timer.Stop()
 	}()
+	var key string
+
 	for {
 		select {
 		case data = <-This.c.chanName:
-			key := data.SchemaName + "-" + data.TableName
 			if This.db.killStatus == 1{
 				return
 			}
+			timer.Reset(5  * time.Second)
+			key = data.SchemaName + "-" + data.TableName
 			This.checkChannleStatus()
 			toServerList := This.db.tableMap[key].ToServerList
 			pluginData := This.transferToPluginData(&data)
-			n := len(toServerList)
-			if n == 1{
-				toServerInfo := toServerList[0]
+			for _, toServerInfo := range toServerList {
 				if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
 					continue
 				}
@@ -154,25 +155,6 @@ func (This *consume_channel_obj) consume_channel() {
 					continue
 				}
 				This.sendToServerResult(toServerInfo,&pluginData)
-			}else{
-				for _, toServerInfo := range toServerList {
-					if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
-						continue
-					}
-					if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
-						continue
-					}
-					if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
-						continue
-					}
-					//这里要将数据完全拷贝一份出来,因为pluginDriver rows []map[string]interface{} 里map这里在各个toserver 同步到plugin的时候会各自过滤数据。
-					var MyData pluginDriver.PluginDataType
-					err1 := This.deepCopy(&MyData,pluginData)
-					if err1 != nil{
-						log.Println("consume_to_server deepCopy data:",err1," src data:",data)
-					}
-					This.sendToServerResult(toServerInfo,&MyData)
-				}
 			}
 
 			if This.db.killStatus == 1{
@@ -181,10 +163,11 @@ func (This *consume_channel_obj) consume_channel() {
 			c.countChan <- &count.FlowCount{
 				//Time:"",
 				Count:1,
-				TableId:&key,
-				ByteSize:int64(unsafe.Sizeof(data.Rows))*int64(len(toServerList)),
+				TableId:key,
+				ByteSize:int64(data.Header.EventSize)*int64(len(toServerList)),
 			}
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
+			timer.Reset(5 * time.Second)
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
 			//log.Println("count:",count)
 		}

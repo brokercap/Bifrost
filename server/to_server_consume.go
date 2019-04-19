@@ -42,12 +42,11 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 
 	SaveBinlog := func(){
 		if PluginBinlog != nil {
-			db.Lock()
-			This.BinlogFileNum = PluginBinlog.BinlogFileNum
-			This.BinlogPosition = PluginBinlog.BinlogPosition
-			db.Unlock()
+			//db.Lock()
+			This.BinlogFileNum,This.BinlogPosition = PluginBinlog.BinlogFileNum,PluginBinlog.BinlogPosition
+			//db.Unlock()
 			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
-			saveBinlogPosition(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
+			saveBinlogPositionByCache(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
 		}
 	}
 	var fordo int = 0
@@ -68,14 +67,19 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			Body:       body,
 		})
 	}
+	var noData bool = true
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
 	for {
 		CheckStatusFun()
 		select {
 		case data = <- c:
+			noData = false
 			CheckStatusFun()
 			fordo = 0
 			lastErrId = 0
 			warningStatus = false
+			timer.Reset(5  * time.Second)
 			for {
 				errs = nil
 				PluginBinlog,errs = This.sendToServer(data)
@@ -124,7 +128,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			//这里保存位点，为是了显示的时候，可以直接从内存中读取
 			SaveBinlog()
 			break
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
+			timer.Reset(5 * time.Second)
+			if noData == false{
+				noData = true
+				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+			}
 			PluginBinlog,_ = This.commit()
 			SaveBinlog()
 			break
@@ -132,13 +141,13 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 }
 
-func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
+func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pluginDriver.PluginDataType,b bool){
 	n := len(data.Rows)
 	if n == 0{
-		return true
+		return data,true
 	}
 	if len(This.FieldList) == 0{
-		return true
+		return data,true
 	}
 
 	if n == 1 {
@@ -148,8 +157,26 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 				m[key] = data.Rows[0][key]
 			}
 		}
-		data.Rows[0] = m
+		newData = &pluginDriver.PluginDataType{
+			Timestamp:data.Timestamp,
+			EventType:data.EventType,
+			SchemaName:data.SchemaName,
+			TableName:data.TableName,
+			BinlogFileNum:data.BinlogFileNum,
+			BinlogPosition:data.BinlogPosition,
+			Rows:make([]map[string]interface{},1),
+		}
+		newData.Rows[0] = m
 	}else{
+		newData = &pluginDriver.PluginDataType{
+			Timestamp:data.Timestamp,
+			EventType:data.EventType,
+			SchemaName:data.SchemaName,
+			TableName:data.TableName,
+			BinlogFileNum:data.BinlogFileNum,
+			BinlogPosition:data.BinlogPosition,
+			Rows:make([]map[string]interface{},2),
+		}
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})
 		var isNotUpdate bool = true
@@ -186,12 +213,12 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) bool{
 		}
 		//假如所有字段内容都未变更，并且过滤了这个功能，则直接返回false
 		if isNotUpdate && This.FilterUpdate{
-			return  false
+			return  data,false
 		}
-		data.Rows[0] = m_before
-		data.Rows[1] = m_after
+		newData.Rows[0] = m_before
+		newData.Rows[1] = m_after
 	}
-	return true
+	return newData,true
 }
 
 func (This *ToServer) pluginReBack(){
@@ -245,7 +272,7 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 }
 
 
-func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
+func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
 		if err2 := recover();err2!=nil{
@@ -262,7 +289,8 @@ func (This *ToServer) sendToServer(data *pluginDriver.PluginDataType) ( Binlog *
 	}()
 
 	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
-	if This.filterField(data) == false{
+	data,b := This.filterField(paramData)
+	if b == false{
 		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 	}
 	err = This.getPluginAndSetParam()

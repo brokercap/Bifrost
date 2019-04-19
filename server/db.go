@@ -258,9 +258,12 @@ func (db *db) Close() bool {
 
 func (db *db) monitorDump(reslut chan error) (r bool) {
 	var lastStatus string = ""
+	timer := time.NewTimer( 3 * time.Second)
+	defer timer.Stop()
 	for {
 		select {
-			case v := <-reslut:
+		case v := <-reslut:
+			timer.Reset(3 * time.Second)
 			switch v.Error() {
 			case "stop":
 				db.ConnStatus = "stop"
@@ -295,7 +298,8 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 				return
 			}
 			break
-		case <- time.After(3 * time.Second):
+		case <- timer.C:
+			timer.Reset(3 * time.Second)
 			db.saveBinlog()
 			break
 		}
@@ -308,14 +312,14 @@ func (db *db) saveBinlog(){
 	if FileName == ""{
 		return
 	}
-	db.Lock()
+	//db.Lock()
 	//保存位点,这个位点在重启 配置文件恢复的时候
 	//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
 	db.binlogDumpFileName,db.binlogDumpPosition = FileName,Position
 	if db.DBBinlogKey == nil{
 		db.DBBinlogKey = getDBBinlogkey(db)
 	}
-	db.Unlock()
+	//db.Unlock()
 	index := strings.IndexAny(FileName, ".")
 
 	BinlogFileNum,_ := strconv.Atoi(FileName[index+1:])

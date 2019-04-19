@@ -30,9 +30,9 @@
                     <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="float:right; font-size:14px; font-weight:600; color:#666; cursor:pointer">Hide</div>
                 </div>
                 <style type="text/css">
-                    .tableDiv{display:block; width:100%; height: 25px;}
+                    .tableDiv{display:block; width:100%; height: 25px; position: relative}
                     .tableDiv .left{ display:block; float:left; width:79%; line-height:100%;word-wrap: break-word;  }
-                    .tableDiv .right{ display:block; float:right; width:21%; line-height: 25px;}
+                    .tableDiv .right{ display:block; position: absolute; right: -10px ;top: 0px; width:75px; line-height: 25px;}
                     .tableDiv .right .button{ float: left;}
                     .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
                 </style>
@@ -45,7 +45,7 @@
                         <button data-toggle="button" class="btn-sm btn-warning" id="batchTableChanneBindBtn" type="button">批量绑定通道</button>
                     </div>
 
-                    <div id="batchDelOrAddTableResultDiv" style="padding-top: 20px;"></div>
+                    <div id="batchDelOrAddTableResultDiv" style="padding-top: 20px; display:none"></div>
                 </div>
             </div>
         </div>
@@ -543,7 +543,7 @@
                     if (v.ChannelName != ""){
                         title = " title='Bind Channel : "+v.ChannelName+"' ";
                     }
-                    html += '<a class="list-group-item"><div class="tableDiv" id="'+schema_name+'-'+v.TableName+'">';
+                    html += '<a class="list-group-item"><div class="tableDiv" title="'+v.TableName+'" id="'+schema_name+'-'+v.TableName+'">';
                     html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
                     html += '<div class="right">';
                     if (v.AddStatus == false){
@@ -589,6 +589,14 @@
                     }
             );
             var doChangeToServer = function(){
+                if($("#addToServerKey").val()==null){
+                    if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                        window.location.href = "/toserver/list";
+                        return;
+                    }else{
+                        return;
+                    }
+                }
                 var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
@@ -610,6 +618,14 @@
 
             $("#addToServerBtn").click(
                     function(){
+                        if($("#addToServerKey").val()==null){
+                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                                window.location.href = "/toserver/list";
+                                return false;
+                            }else{
+                                return false;
+                            }
+                        }
                         var p = doGetPluginParam();
                         if (p.status == false){
                             alert(p.msg);
@@ -665,6 +681,14 @@
 
             $("#batchAddToServerBtn").click(
                     function(){
+                        if($("#addToServerKey").val()==null){
+                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                                window.location.href = "/toserver/list";
+                                return;
+                            }else{
+                                return;
+                            }
+                        }
                         var obj = $(this);
                         if ($(obj).text() == "正在提交"){
                             return false;
