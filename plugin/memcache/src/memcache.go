@@ -46,9 +46,6 @@ type PluginParam struct {
 	Expir 			int32
 	DataType 		string
 	ValConfig 		string
-	AddSchemaName 	bool
-	AddTableName 	bool
-	AddEventType 	bool
 }
 
 
@@ -147,17 +144,6 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 		Val = []byte(This.getVal(data,index))
 	}else{
 		p := data.Rows[index]
-		if This.p.DataType == "json"{
-			if This.p.AddTableName {
-				p["TableName"] = data.TableName
-			}
-			if This.p.AddSchemaName {
-				p["SchemaName"] = data.SchemaName
-			}
-			if This.p.AddEventType {
-				p["EventType"] = data.EventType
-			}
-		}
 		Val, _ = json.Marshal(p)
 	}
 	var err error
