@@ -258,9 +258,12 @@ func (db *db) Close() bool {
 
 func (db *db) monitorDump(reslut chan error) (r bool) {
 	var lastStatus string = ""
+	timer := time.NewTimer( 3 * time.Second)
+	defer timer.Stop()
 	for {
 		select {
-			case v := <-reslut:
+		case v := <-reslut:
+			timer.Reset(3 * time.Second)
 			switch v.Error() {
 			case "stop":
 				db.ConnStatus = "stop"
@@ -295,7 +298,8 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 				return
 			}
 			break
-		case <- time.After(3 * time.Second):
+		case <- timer.C:
+			timer.Reset(3 * time.Second)
 			db.saveBinlog()
 			break
 		}

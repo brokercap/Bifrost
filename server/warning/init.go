@@ -43,12 +43,14 @@ func init()  {
 //新增报警内容
 func AppendWarning(data WarningContent){
 	//这里为什么 要有一个写入超时，是为了防止 chan 满了情况下阻塞，然后影响了正常数据同步
+	timer := time.NewTimer(2 * time.Second)
 	select {
 		case WarningChan <- data:
 		break
-	case <-time.After(2 * time.Minute):
+	case <-timer.C:
 		break
 	}
+	timer.Stop()
 }
 
 func getIP() string{
@@ -79,9 +81,12 @@ func getWarningBody(data WarningContent) string{
 }
 
 func consumeWarning(){
+	timer := time.NewTimer( 30 * time.Minute)
+	defer timer.Stop()
 	for{
 		select {
 		case data := <- WarningChan:
+			timer.Reset( 30 * time.Minute)
 			body := getWarningBody(data)
 			var title string
 			switch data.Type {
@@ -101,7 +106,8 @@ func consumeWarning(){
 			}
 			l.RUnlock()
 			break
-		case <-time.After(30 * time.Minute):
+		case <-timer.C:
+			timer.Reset( 30 * time.Minute)
 			break
 		}
 	}

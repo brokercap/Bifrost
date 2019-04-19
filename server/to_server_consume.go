@@ -46,7 +46,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			This.BinlogFileNum,This.BinlogPosition = PluginBinlog.BinlogFileNum,PluginBinlog.BinlogPosition
 			//db.Unlock()
 			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
-			saveBinlogPosition(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
+			saveBinlogPositionByCache(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
 		}
 	}
 	var fordo int = 0
@@ -68,6 +68,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		})
 	}
 	var noData bool = true
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
 	for {
 		CheckStatusFun()
 		select {
@@ -77,6 +79,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			fordo = 0
 			lastErrId = 0
 			warningStatus = false
+			timer.Reset(5  * time.Second)
 			for {
 				errs = nil
 				PluginBinlog,errs = This.sendToServer(data)
@@ -125,7 +128,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			//这里保存位点，为是了显示的时候，可以直接从内存中读取
 			SaveBinlog()
 			break
-		case <-time.After(5 * time.Second):
+		case <-timer.C:
+			timer.Reset(5 * time.Second)
 			if noData == false{
 				noData = true
 				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")

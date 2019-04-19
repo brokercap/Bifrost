@@ -10,7 +10,7 @@ import (
 
 type FlowCount struct {
 	Time int64
-	TableId *string
+	TableId string
 	Count int64
 	ByteSize int64
 }

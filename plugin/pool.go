@@ -49,13 +49,14 @@ func GetPlugin(ToServerKey string)  (driver.ConnFun, string){
 		return f,stringKey
 	}
 	t.Unlock()
-
+	timer := time.NewTimer(5 * time.Second)
 	select {
 	case toServerChanContentData = <-toServerChanMap[ToServerKey]:
 		break
-	case <- time.After(5 * time.Second):
+	case <- timer.C:
 		break
 	}
+	timer.Stop()
 	if toServerChanContentData == nil{
 		return nil,""
 	}
