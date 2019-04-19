@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/jc3wish/Bifrost/server/storage"
+	"github.com/jc3wish/Bifrost/config"
 	"encoding/json"
 	"strconv"
 	"fmt"
@@ -16,22 +17,32 @@ type positionStruct struct {
 }
 
 type TmpPositioinStruct struct {
-	sync.Mutex
+	sync.RWMutex
 	Data map[string]positionStruct
 }
 
 var toSaveDbConfigChan chan int8
-var TmpPositioin []TmpPositioinStruct
+var TmpPositioin []*TmpPositioinStruct
 
-func init() {
-	TmpPositioin = make([]TmpPositioinStruct,100)
-	for i:=0;i<100;i++{
-		TmpPositioin[i] = TmpPositioinStruct{
-			Data:make(map[string]positionStruct,0),
+var cachePoolCount uint32 = 0
+
+func init() {}
+
+func InitStorage(){
+	storage.InitStorage()
+	cachePoolCount = uint32(config.KeyCachePoolSize)
+	TmpPositioin = make([]*TmpPositioinStruct,cachePoolCount)
+	if cachePoolCount > 0 {
+		var i uint32 = 0
+		for i = 0; i < cachePoolCount; i++ {
+			TmpPositioin[i] = &TmpPositioinStruct{
+				Data: make(map[string]positionStruct, 0),
+			}
 		}
+		go saveBinlogPositionToStorageFromCache()
 	}
-	go saveBinlogPositionToStorageFromCache()
 }
+
 
 func saveBinlogPositionToStorageFromCache()  {
 	for {
@@ -41,8 +52,8 @@ func saveBinlogPositionToStorageFromCache()  {
 			for k, v := range t.Data {
 				Val, _ := json.Marshal(v)
 				storage.PutKeyVal([]byte(k) , Val)
-				delete(t.Data,k)
 			}
+			t.Data = make(map[string]positionStruct,0)
 			t.Unlock()
 		}
 	}
@@ -51,10 +62,25 @@ func saveBinlogPositionToStorageFromCache()  {
 var crc_table *crc32.Table = crc32.MakeTable(0xD5828281)
 
 func saveBinlogPositionByCache(key []byte,BinlogFileNum int,BinlogPosition uint32)  {
-	id := crc32.Checksum(key, crc_table) % 100
+	if cachePoolCount <= 0{
+		saveBinlogPosition(key,BinlogFileNum,BinlogPosition)
+		return
+	}
+	id := crc32.Checksum(key, crc_table) % cachePoolCount
 	TmpPositioin[id].Lock()
 	TmpPositioin[id].Data[string(key)]=positionStruct{BinlogFileNum,BinlogPosition}
 	TmpPositioin[id].Unlock()
+}
+
+func getBinlogPositionByCache(key []byte) (positionStruct,error){
+	id := crc32.Checksum(key, crc_table) % cachePoolCount
+	TmpPositioin[id].RLock()
+	defer TmpPositioin[id].RUnlock()
+	if _,ok:=TmpPositioin[id].Data[string(key)];ok{
+		return TmpPositioin[id].Data[string(key)],nil
+	}else{
+		return positionStruct{},fmt.Errorf("no found")
+	}
 }
 
 func InitStrageChan(ch chan int8){
@@ -65,10 +91,6 @@ func SaveDBConfigInfo(){
 	if toSaveDbConfigChan != nil{
 		toSaveDbConfigChan <- 1
 	}
-}
-
-func InitStorage(){
-	storage.InitStorage()
 }
 
 func getToServerLastBinlogkey(db *db ,toserver *ToServer) []byte{
@@ -91,6 +113,12 @@ func saveBinlogPosition(key []byte,BinlogFileNum int,BinlogPosition uint32) erro
 }
 
 func getBinlogPosition(key []byte) (*positionStruct,error) {
+	if cachePoolCount > 0 {
+		data0, err := getBinlogPositionByCache(key)
+		if err == nil {
+			return &data0, nil
+		}
+	}
 	s, err := storage.GetKeyVal(key)
 	if err != nil{
 		return nil,err

@@ -200,6 +200,14 @@ func initParam(){
 		}
 	}
 
+	tmp = config.GetConfigVal("Bifrostd","key_cache_pool_size")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.KeyCachePoolSize = intA
+		}
+	}
+
 	initTLSParam()
 }
 
