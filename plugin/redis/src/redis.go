@@ -75,7 +75,6 @@ type Conn struct {
 	status 		string
 	conn   		redis.Conn
 	err    		error
-	expir  		int
 	p 			*PluginParam
 }
 
@@ -85,9 +84,6 @@ type PluginParam struct {
 	DataType 		string
 	ValConfig 		string
 	Type 			string
-	AddSchemaName 	bool
-	AddTableName 	bool
-	AddEventType 	bool
 }
 
 
@@ -203,38 +199,30 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 	}
 	index := len(data.Rows)-1
 	Key := This.getKeyVal(data,index)
-	var Val string
 	var err error
 	switch This.p.Type {
 	case "set":
 		if This.p.ValConfig != ""{
-			Val = This.getVal(data,index)
-		}else{
-			p := data.Rows[index]
-			if This.p.DataType == "json"{
-				if This.p.AddTableName {
-					p["TableName"] = data.TableName
-				}
-				if This.p.AddSchemaName {
-					p["SchemaName"] = data.SchemaName
-				}
-				if This.p.AddEventType {
-					p["EventType"] = data.EventType
-				}
+			if This.p.Expir > 0{
+				_, err = This.conn.Do("SET", Key,This.getVal(data,index),"ex",This.p.Expir)
+			}else{
+				_, err = This.conn.Do("SET", Key,This.getVal(data,index))
 			}
-			vbyte, _ := json.Marshal(p)
-			Val = string(vbyte)
-		}
-		if This.p.Expir > 0{
-			_, err = This.conn.Do("SET", Key,Val,"ex",This.expir)
 		}else{
-			_, err = This.conn.Do("SET", Key,Val)
+			vbyte, _ := json.Marshal(data.Rows[index])
+			if This.p.Expir > 0{
+				_, err = This.conn.Do("SET", Key,string(vbyte),"ex",This.p.Expir)
+			}else{
+				_, err = This.conn.Do("SET", Key,string(vbyte))
+			}
 		}
 		break
 	case "list":
 		_,err = This.SendToList(Key,data)
+		break
 	default:
 		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
+		break
 	}
 
 	if err != nil {
