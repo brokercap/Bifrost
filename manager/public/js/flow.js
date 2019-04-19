@@ -202,51 +202,8 @@ var FlowClass  = {
 
     fullData: function (d) {
         var data = [];
-        /*
-        CountType = "条"
-        ByteSizeType = "b"
-        if (d[0].Count > 100000) {
-            CountType = "k"
-        }
-        if (d[0].ByteSize >= 1024000) {
-            ByteSizeType = "kb"
-        }
-
-        if (d[0].ByteSize >= 1024000000) {
-            ByteSizeType = "MB"
-        }
-
-        if (d[0].ByteSize >= 1024000000000) {
-            ByteSizeType = "GB"
-        }
-        */
-
         for (s in d) {
             if (d[s].Time != "") {
-                /*
-                var Count = 0
-                if (CountType == "k") {
-                    Count = (d[s].Count / 1000).toFixed(2)
-                } else {
-                    Count = d[s].Count
-                }
-                var ByteSize = 0
-                switch (ByteSizeType) {
-                    case "b":
-                        ByteSize = d[s].ByteSize;
-                        break
-                    case "kb":
-                        ByteSize = (d[s].ByteSize / 1024).toFixed(2)
-                        break
-                    case "MB":
-                        ByteSize = (d[s].ByteSize / 1024000).toFixed(2)
-                        break
-                    case "GB":
-                        ByteSize = (d[s].ByteSize / 1024000000).toFixed(2)
-                        break
-                }
-                */
-
                 data.push({
                     time: this.TimeFormat(d[s].Time),
                     Count: d[s].Count,
