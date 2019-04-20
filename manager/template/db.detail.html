@@ -32,7 +32,7 @@
                 <style type="text/css">
                     .tableDiv{display:block; width:100%; height: 25px; position: relative}
                     .tableDiv .left{ display:block; float:left; width:79%; line-height:100%;word-wrap: break-word;  }
-                    .tableDiv .right{ display:block; position: absolute; right: -10px ;top: 0px; width:75px; line-height: 25px;}
+                    .tableDiv .right{ display:block; position: absolute; right: -10px ;top: 0px; width:78px; line-height: 25px;}
                     .tableDiv .right .button{ float: left;}
                     .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
                 </style>
@@ -257,6 +257,9 @@
         $("#bachTableDelOrAddBtnDiv").hide();
 
         function showAddTable(table_names){
+            if (table_names == ""){
+                return false;
+            }
             var addTableSchemaName = $("#DatabaseListContair a.active").find("h3").text();
             $("#addTableSchema").val(addTableSchemaName);
             var dbname = $("#dbname").val();
@@ -358,6 +361,9 @@
         }
 
         function DelTable(table_names){
+            if(table_names == ""){
+                return false;
+            }
             if (!confirm("确定删除 [ "+table_names+" ] ?删除后不能恢复!!!")){
                 return false;
             }
@@ -523,7 +529,13 @@
         function showFieldsList(key) {
             var html = "";
             TableMap.get(key).forEach(function (value, k, map) {
-                html += '<p class="fieldsname" style="font-size: 16px; cursor: pointer">&nbsp;<input type="checkbox" style="width: 20px; height: 20px;" value="'+value+'">&nbsp;&nbsp;'+value+' </p>'
+                var phtml = "";
+                phtml +='<input type="checkbox" style="width: 20px; height: 20px;" data=\''+JSON.stringify(value)+'\' title="'+value.COLUMN_COMMENT+'" value="'+value.COLUMN_NAME+'">';
+                phtml += "&nbsp;&nbsp;"+value.COLUMN_NAME;
+                if (value.COLUMN_KEY == "PRI"){
+                    phtml += " (PRI)";
+                }
+                html += '<p class="fieldsname" style="font-size: 16px; cursor: pointer">&nbsp;'+phtml+' </p>'
             });
             $("#TableFieldsContair").html(html);
         }
