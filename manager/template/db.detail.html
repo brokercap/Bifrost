@@ -624,7 +624,7 @@
                 if (OnFoucsInputId == ""){
                     return false;
                 }
-                var fieldName = $(this).text();
+                var fieldName = $(this).find("input").val();
                 $("#"+OnFoucsInputId).val($("#"+OnFoucsInputId).val()+"{$"+($.trim(fieldName))+"}");
             });
 
