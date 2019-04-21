@@ -235,6 +235,18 @@
 
         var dbname = "{{.DbName}}";
         var OnFoucsInputId = "";
+        var tableDataTypeMap = {};
+
+        function getTableFieldType(field) {
+            return tableDataTypeMap[field];
+        }
+
+        function clearTableDataMap() {
+            tableDataTypeMap = {};
+        }
+        function setTableFieldType(field,dataType) {
+            tableDataTypeMap[field] = dataType;
+        }
 
         function showOrHideMyWeb(){
             var status = $("#MyWebHideBtn").attr("status");
@@ -528,9 +540,11 @@
         }
         function showFieldsList(key) {
             var html = "";
+            clearTableDataMap();
             TableMap.get(key).forEach(function (value, k, map) {
                 var phtml = "";
-                phtml +='<input type="checkbox" style="width: 20px; height: 20px;" data=\''+JSON.stringify(value)+'\' title="'+value.COLUMN_COMMENT+'" value="'+value.COLUMN_NAME+'">';
+                setTableFieldType(value.COLUMN_NAME,value)
+                phtml +='<input type="checkbox" style="width: 20px; height: 20px;" title="'+value.COLUMN_COMMENT+'" value="'+value.COLUMN_NAME+'">';
                 phtml += "&nbsp;&nbsp;"+value.COLUMN_NAME;
                 if (value.COLUMN_KEY == "PRI"){
                     phtml += " (PRI)";
