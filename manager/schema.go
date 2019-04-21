@@ -105,12 +105,15 @@ type TableStruct struct {
 	COLUMN_KEY 			string
 	EXTRA 				string
 	COLUMN_COMMENT 		string
+	DATA_TYPE			string
+	NUMERIC_PRECISION	string
+	NUMERIC_SCALE		string
 }
 
 func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string) []TableStruct{
 
 	FieldList := make([]TableStruct,0)
-	sql := "SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_KEY`,`EXTRA`,`COLUMN_COMMENT` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
+	sql := "SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_KEY`,`EXTRA`,`COLUMN_COMMENT`,`DATA_TYPE`,`NUMERIC_PRECISION`,`NUMERIC_SCALE` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? "
 
 	stmt,err := db.Prepare(sql)
 	if err !=nil{
@@ -129,7 +132,7 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 	}
 
 	for {
-		dest := make([]driver.Value, 7, 7)
+		dest := make([]driver.Value, 10, 10)
 		err := rows.Next(dest)
 		if err != nil {
 			break
@@ -141,6 +144,10 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		var COLUMN_KEY string
 		var EXTRA string
 		var COLUMN_COMMENT string
+		var DATA_TYPE string
+		var NUMERIC_PRECISION string
+		var NUMERIC_SCALE string
+
 		COLUMN_NAME 		= string(dest[0].([]byte))
 		COLUMN_DEFAULT 		= string(dest[1].([]byte))
 		IS_NULLABLE 		= string(dest[2].([]byte))
@@ -148,6 +155,9 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		COLUMN_KEY 			= string(dest[4].([]byte))
 		EXTRA 				= string(dest[5].([]byte))
 		COLUMN_COMMENT 		= string(dest[6].([]byte))
+		DATA_TYPE 			= string(dest[7].([]byte))
+		NUMERIC_PRECISION 	= string(dest[8].([]byte))
+		NUMERIC_SCALE 		= string(dest[9].([]byte))
 
 		FieldList = append(FieldList,TableStruct{
 			COLUMN_NAME:	COLUMN_NAME,
@@ -157,6 +167,9 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 			COLUMN_KEY:		COLUMN_KEY,
 			EXTRA:			EXTRA,
 			COLUMN_COMMENT:	COLUMN_COMMENT,
+			DATA_TYPE:		DATA_TYPE,
+			NUMERIC_PRECISION:NUMERIC_PRECISION,
+			NUMERIC_SCALE:	NUMERIC_SCALE,
 		})
 	}
 	return FieldList
