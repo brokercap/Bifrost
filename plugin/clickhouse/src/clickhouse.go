@@ -5,6 +5,8 @@ import (
 	"sync"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap/tidb/meta"
+	"database/sql"
 )
 
 
@@ -14,13 +16,14 @@ const BIFROST_VERION = "v1.1.0"
 var l sync.RWMutex
 
 type dataTableStruct struct {
-	lastEventype string
-	Data map[string]string
+	lastEventype 	string
+	MetaMap			map[string]string //字段类型
+	Data 			[]*pluginDriver.PluginDataType
 }
 
 type dataStruct struct {
 	sync.RWMutex
-	Data map[string][]*pluginDriver.PluginDataType
+	Data map[string]*dataTableStruct
 }
 
 var dataMap map[string]*dataStruct
@@ -28,8 +31,10 @@ var dataMap map[string]*dataStruct
 type PluginParam struct {
 	Field 			map[string]string
 	BactchSize      int16
+	CkSchema		string
+	CkTable			string
+	ckDatakey		string
 }
-
 
 func init(){
 	pluginDriver.Register("clickhouse",&MyConn{},VERSION,BIFROST_VERION)
@@ -54,12 +59,16 @@ type Conn struct {
 	uri    	string
 	status  string
 	p		*PluginParam
+	conn    *clickhouseDB
+	err 	error
 }
 
 func newConn(uri string) *Conn{
 	f := &Conn{
 		uri:uri,
 	}
+	f.conn = newClickHouseDBConn(uri)
+	f.err = f.conn.err
 	return f
 }
 
@@ -70,8 +79,6 @@ func (This *Conn) GetConnStatus() string {
 func (This *Conn) SetConnStatus(status string) {
 	This.status = status
 }
-
-
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
@@ -86,6 +93,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	if param.BactchSize == 0{
 		param.BactchSize = 200
 	}
+	param.ckDatakey = param.CkSchema+"-"+param.CkTable
 	This.p = &param
 	return &param,nil
 }
@@ -106,7 +114,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 func (This *Conn) Connect() bool {
 	if _,ok:= dataMap[This.uri];!ok{
 		dataMap[This.uri] = &dataStruct{
-			Data: make(map[string][]*pluginDriver.PluginDataType,0),
+			Data: make(map[string]*dataTableStruct,0),
 		}
 	}
 	return true
@@ -128,10 +136,15 @@ func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType) {
 	l.RLock()
 	t := dataMap[This.uri]
 	t.Lock()
-	if _,ok := t.Data[data.TableName];!ok{
-		t.Data[data.TableName] = make([]*pluginDriver.PluginDataType,0)
+	if _,ok := t.Data[This.p.ckDatakey];!ok{
+		t.Data[This.p.ckDatakey] = &dataTableStruct{
+			lastEventype:"",
+			MetaMap:make(map[string]string,0),
+			Data:make([]*pluginDriver.PluginDataType,0),
+		}
 	}
-	t.Data[data.TableName] = append(t.Data[data.TableName],data)
+	t.Data[This.p.ckDatakey].lastEventype = data.EventType
+	t.Data[This.p.ckDatakey].Data = append(t.Data[This.p.ckDatakey].Data,data)
 	t.Unlock()
 	l.RUnlock()
 }
@@ -156,5 +169,42 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 }
 
 func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
+	t := dataMap[This.uri]
+	t.Lock()
+	defer t.Unlock()
+	if _,ok := t.Data[This.p.ckDatakey];!ok{
+		return nil,nil
+	}
+	n := len(t.Data[This.p.ckDatakey].Data)
+	if n > int(This.p.BactchSize){
+		n = int(This.p.BactchSize)
+	}
+	list := t.Data[This.p.ckDatakey].Data[:n]
+
+	var stmtMap = make(map[string]*sql.Stmt)
+
+	var getStmt = func(Type string,tx *sql.Tx) *sql.Stmt{
+		if _,ok := stmtMap[Type];ok{
+			return stmtMap[Type]
+		}
+		switch Type {
+		case "insert":
+			stmtMap[Type],_ = tx.Prepare("INSERT INTO example (country_code, os_id, browser_id, categories, action_day, action_time) VALUES (?, ?, ?, ?, ?, ?)")
+				break
+		}
+
+		return stmtMap[Type]
+	}
+
+	tx,err:=This.conn.conn.Begin()
+	if err != nil{
+		This.err = err
+		This.conn.err = err
+		return nil,nil
+	}
+	for _,data := range list{
+		getStmt(data.EventType,tx)
+	}
+	tx.Commit()
 	return nil, nil
 }
