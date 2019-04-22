@@ -17,7 +17,7 @@ package manager
 import (
 	"net/http"
 	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/plugin"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 	"strings"
 	"encoding/json"
 )
@@ -81,7 +81,7 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 		return
 	}
 
-	if plugin.GetToServerInfo(toServerKey) == nil{
+	if pluginStorage.GetToServerInfo(toServerKey) == nil{
 		w.Write(returnResult(false,toServerKey+"not exsit"))
 		return
 	}

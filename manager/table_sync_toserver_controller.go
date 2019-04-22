@@ -7,7 +7,7 @@ import (
 	"strings"
 	"html/template"
 	"log"
-	"github.com/jc3wish/Bifrost/plugin"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 )
 
 func init(){
@@ -80,7 +80,7 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 			TableName 		string
 			ToServerKey 	string
 			SyncList 		[]syncListStruct
-			ToServerKeyList map[string]*plugin.ToServer
+			ToServerKeyList map[string]*pluginStorage.ToServer
 			DbList 			map[string]server.DbListStruct
 			ChannelID		int
 			ChannelList		map[int]*server.Channel
@@ -97,7 +97,7 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 			SyncList:syncList,
 			ChannelID:ChannelID,
 			DbList:server.GetListDb(),
-			ToServerKeyList:plugin.ToServerMap,
+			ToServerKeyList:pluginStorage.ToServerMap,
 			ChannelList:ChannelList,
 		}
 		data.Title = "SyncList - Bifrost"
