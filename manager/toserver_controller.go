@@ -16,7 +16,7 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	toserver "github.com/jc3wish/Bifrost/plugin"
+	toserver "github.com/jc3wish/Bifrost/plugin/storage"
 	"github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/server"
 	"html/template"

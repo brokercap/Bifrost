@@ -1,9 +1,10 @@
-package plugin
+package storage
 
 import (
 	"sync"
 	"github.com/jc3wish/Bifrost/plugin/driver"
 	"log"
+	"encoding/json"
 )
 
 var l sync.RWMutex
@@ -100,4 +101,27 @@ func DelToServerInfo(key string) bool{
 	delete(ToServerMap,key);
 	l.Unlock()
 	return true
+}
+
+
+func Recovery(data *json.RawMessage){
+	var toData map[string]ToServer
+	errors := json.Unmarshal([]byte(*data),&toData)
+	if errors != nil{
+		log.Println("to server recovry error:",errors)
+		return
+	}
+	for name,v:=range toData{
+		SetToServerInfo(name,
+			ToServer{
+				PluginName:v.PluginName,
+				ConnUri:v.ConnUri,
+				Notes:v.Notes,
+				MaxConn:v.MaxConn,
+			})
+	}
+}
+
+func SaveToServerData() interface{}{
+	return ToServerMap
 }

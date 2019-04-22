@@ -4,7 +4,7 @@ import (
 	"sync"
 	"log"
 	"github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/plugin"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 
 	"encoding/json"
 )
@@ -45,7 +45,7 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 			toserver.ToServerID = db.tableMap[key].LastToServerID
 		}
 		if toserver.PluginName == ""{
-			ToServerInfo := plugin.GetToServerInfo(toserver.ToServerKey)
+			ToServerInfo := pluginStorage.GetToServerInfo(toserver.ToServerKey)
 			if ToServerInfo != nil{
 				toserver.PluginName = ToServerInfo.PluginName
 			}
