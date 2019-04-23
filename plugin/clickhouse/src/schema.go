@@ -125,7 +125,7 @@ func (This *clickhouseDB) getSchemaTableList(schema string) (data []string) {
 	if schema == ""{
 		return
 	}
-	rows,err := This.conn.Query("select name from tables where database = '"+schema+"'")
+	rows,err := This.conn.Query("select name from system.tables where database = '"+schema+"'")
 	if err != nil {
 		This.err = err
 		return

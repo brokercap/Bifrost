@@ -17,7 +17,6 @@ function getClickHouseTableCreateSQL(tableName) {
 		alert("请先选择 MYSQL 表");
 		return;
 	}
-
 	var ddlSql = "";
 	var index = "";
     $.each($("#TableFieldsContair .fieldsname input"),
@@ -115,3 +114,66 @@ function getClickHouseTableCreateSQL(tableName) {
     }
     return SQL;
 }
+
+function GetCkSchameList() {
+    $.get(
+        "/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val(),
+        function (d, status) {
+            if (status != "success") {
+                console.log("/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val());
+                return false;
+            }
+            var html = "<option value=''>请选择数据库</option>";
+            for(i in d){
+                var SchemaName = d[i];
+                html += "<option value=\""+SchemaName+"\">"+SchemaName+"</option>";
+            }
+            $("#clickhouse_schema").html(html);
+        }, 'json');
+}
+
+function GetCkSchameTableList(schemaName) {
+    $("#CKTableFieldsTable").html("");
+    if(schemaName == ""){
+        $("#clickohuse_table").html("");
+
+        return
+    }
+    $.get(
+        "/bifrost/clickhouse/tablelist?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName,
+        function (d, status) {
+            if (status != "success") {
+                return false;
+            }
+
+            var html = "<option value=''>请选择表</option>";
+            for(i in d){
+                var TableName = d[i];
+                html += "<option value=\""+TableName+"\">"+TableName+"</option>";
+            }
+            $("#clickohuse_table").html(html);
+        }, 'json');
+}
+
+function GetCkTableDesc(schemaName,tableName) {
+    $("#CKTableFieldsTable").html("");
+    $.get(
+        "/bifrost/clickhouse/tableinfo?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
+        function (d, status) {
+            if (status != "success") {
+                return false;
+            }
+
+            var html = "";
+            for(i in d){
+                var htmlTr = "<tr>";
+                htmlTr += "<td> <input type=\"text\" value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_file_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
+                htmlTr += "<td> <input type=\"text\"  name=\"mysql_file_name\"  class=\"form-control\" placeholder=\"\"></td>";
+                htmlTr += "</tr>";
+                html += htmlTr;
+            }
+            $("#CKTableFieldsTable").html(html);
+        }, 'json');
+}
+
+GetCkSchameList();

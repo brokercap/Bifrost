@@ -8,12 +8,12 @@
 
     <div class="form-group">
         <div class="col-sm-3">
-            <select class="form-control" name="clickhouse_schema" id="clickhouse_schema">
+            <select class="form-control" name="clickhouse_schema" id="clickhouse_schema" onchange="GetCkSchameTableList($(this).val());">
                 <option value="true" selected="selected">请选择数据库</option>
             </select>
         </div>
         <div class="col-sm-9">
-            <select class="form-control" name="clickohuse_table" id="clickohuse_table">
+            <select class="form-control" name="clickohuse_table" id="clickohuse_table" onchange="GetCkTableDesc($('#clickhouse_schema').val(),$(this).val());" >
                 <option value="true" selected="selected">请选择表</option>
             </select>
             如果ClickHouse还没建表,<a href="javasripts:return false;" onclick="showClickHouseCreateSQL();"> 点击获取 参考建表 SQL</a>
@@ -22,11 +22,7 @@
 
     <div class="form-group">
     <div class="col-sm-12" >
-        <table>
-            <tr>
-                <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
-                <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
-            </tr>
+        <table id="CKTableFieldsTable">
             <tr>
                 <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
                 <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
