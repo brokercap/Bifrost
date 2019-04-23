@@ -105,7 +105,7 @@ func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
 			return
 		}
 	}()
-	t := pluginStorage.GetToServerInfo(key)
+	t := pluginStorage.GetToServerInfo(ToServerKey)
 	if t == nil{
 		return true
 	}
