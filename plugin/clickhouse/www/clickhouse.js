@@ -184,6 +184,7 @@ function GetCkTableDesc(schemaName,tableName) {
                 var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
                 htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
+                htmlTr += "<td> <input type='checkbox' style='width: 20px; height: 20px' class=\"form-control ck_pri_checkbox\" /></td>";
                 htmlTr += "</tr>";
                 html += htmlTr;
             }
