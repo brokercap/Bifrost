@@ -1,5 +1,9 @@
 function doGetPluginParam(){
 	var result = {data:{},status:true,msg:"success"}
+
+    $.each($("#TableFieldsContair input:checkbox"),function(){
+        $(this).attr("checked",false);
+    });
 	return result;
 }
 
@@ -164,11 +168,22 @@ function GetCkTableDesc(schemaName,tableName) {
                 return false;
             }
 
+            var fieldsMap = {};
+            $.each($("#TableFieldsContair input"),function(){
+                fieldsMap[$(this).val()] = getTableFieldType($(this).val());
+            });
+
             var html = "";
             for(i in d){
-                var htmlTr = "<tr>";
-                htmlTr += "<td> <input type=\"text\" value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_file_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
-                htmlTr += "<td> <input type=\"text\"  name=\"mysql_file_name\"  class=\"form-control\" placeholder=\"\"></td>";
+
+                var toField = "";
+                if(fieldsMap.hasOwnProperty(d[i].Name)){
+                    toField = d[i].Name;
+                }
+
+                var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
+                htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
+                htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
                 htmlTr += "</tr>";
                 html += htmlTr;
             }
@@ -177,3 +192,27 @@ function GetCkTableDesc(schemaName,tableName) {
 }
 
 GetCkSchameList();
+
+var CK_OnFoucsInputId = "";
+
+function ClickHouse_Input_onFocus(obj) {
+    CK_OnFoucsInputId = $(obj).attr("id");
+}
+
+
+$("#TableFieldsContair").on("dblclick","p.fieldsname",function(){
+    if (CK_OnFoucsInputId == ""){
+        return false;
+    }
+    var fieldName = $(this).find("input").val();
+    $("#"+CK_OnFoucsInputId).val($.trim(fieldName));
+});
+
+$("#TableFieldsContair p.fieldsname input:checkbox").click(
+    function (){
+        if (CK_OnFoucsInputId == ""){
+            return false;
+        }
+        var fieldName = $(this).val();
+        $("#"+CK_OnFoucsInputId).val($.trim(fieldName));
+});
