@@ -1,9 +1,51 @@
 function doGetPluginParam(){
-	var result = {data:{},status:true,msg:"success"}
+	var result = {data:{},status:false,msg:"failed"}
+
+	var CkTable = $("#clickohuse_table").val();
+    var CkSchema = $("#clickhouse_schema").val();
+    if (CkSchema == ""){
+        result.msg = "请选择 ClickHouse 数据库!";
+        return result;
+    }
+
+    if (CkTable == ""){
+        result.msg = "请选择 ClickHouse 数据数据表!";
+        return result;
+    }
+
+	var PriKey = "";
+	var FieldsMap = {};
+
+    $.each($("#CKTableFieldsTable tr"),function () {
+        var ck_field_name = $(this).find("input[name=ck_field_name]").val();
+        var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
+
+        if($(this).find("input[name=ck_pri_checkbox]").is(':checked')) {
+            if (ck_field_name == "" || mysql_field_name == "") {
+                result.msg = "PRI:" + ck_field_name + " not empty";
+                return result;
+            }
+            PriKey = ck_field_name;
+        }
+        FieldsMap[ck_field_name] = mysql_field_name;
+    });
+
+    if(PriKey == ""){
+        result.msg = "请选择一个字段为主键！";
+        return result;
+    }
 
     $.each($("#TableFieldsContair input:checkbox"),function(){
         $(this).attr("checked",false);
     });
+
+    result.msg = "success";
+    result.status = true;
+    result.data["Field"]    = FieldsMap;
+    result.data["PriKey"]   = PriKey;
+    result.data["CkSchema"] = CkSchema;
+    result.data["CkTable"]  = CkTable;
+
 	return result;
 }
 
@@ -83,7 +125,7 @@ function getClickHouseTableCreateSQL(tableName) {
                     return getDDL("Float64");
                     break;
                 case "decimal":
-                    return getDDL("Decimal");
+                    return getDDL("Decimal("+data.NUMERIC_PRECISION+","+data.NUMERIC_SCALE+")");
                     break;
                 case "time":
                     return getDDL("String");
@@ -112,7 +154,7 @@ function getClickHouseTableCreateSQL(tableName) {
 	);
 
 
-    var SQL = "CREATE TABLE "+tableName+"("+ddlSql+") ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/"+tableName+"','{replica}') ";
+    var SQL = "CREATE TABLE "+tableName+"("+ddlSql+") ENGINE = MergeTree() ";
     if (index != ""){
         SQL += "ORDER BY ("+index+")";
     }
@@ -184,7 +226,7 @@ function GetCkTableDesc(schemaName,tableName) {
                 var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
                 htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
-                htmlTr += "<td> <input type='checkbox' style='width: 20px; height: 20px' class=\"form-control ck_pri_checkbox\" /></td>";
+                htmlTr += "<td> <input type='radio' style='width: 20px; height: 20px' name='ck_pri_checkbox' class=\"form-control ck_pri_checkbox\" /></td>";
                 htmlTr += "</tr>";
                 html += htmlTr;
             }
