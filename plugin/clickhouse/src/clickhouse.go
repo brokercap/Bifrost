@@ -5,6 +5,7 @@ import (
 	"sync"
 	"encoding/json"
 	"fmt"
+	dbDriver "database/sql/driver"
 	"database/sql"
 )
 
@@ -25,16 +26,24 @@ type dataStruct struct {
 	Data map[string]*dataTableStruct
 }
 
+type fieldStruct struct {
+	CK 		string
+	MySQL 	string
+}
+
 var dataMap map[string]*dataStruct
 
 type PluginParam struct {
-	Field 			map[string]string
+	Field 			[]fieldStruct
 	BactchSize      int
 	CkSchema		string
 	CkTable			string
 	ckDatakey		string
-	PriKey			string //主键字段
+	//PriKey			string //主键字段
 	replaceInto		bool  // 记录当前表是否有replace into操作
+	PriKey			[]fieldStruct
+	ckPriKey		string   // ck 主键字段
+	mysqlPriKey		string  //ck对应 mysql 的主键id
 }
 
 func init(){
@@ -99,6 +108,9 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 		param.BactchSize = 200
 	}
 	param.ckDatakey = param.CkSchema+"."+param.CkTable
+	param.ckPriKey = param.PriKey[0].CK
+	param.mysqlPriKey = param.PriKey[0].MySQL
+	//param.mysqlPriKey = param.Field[param.PriKey]
 	This.p = &param
 	return &param,nil
 }
@@ -217,19 +229,27 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 		case "insert":
 			fields := ""
 			values := ""
-			for k,_:= range This.p.Field{
+			for _,v:= range This.p.Field{
 				if fields == ""{
-					fields = k
+					fields = v.CK
 					values = "?"
 				}else{
-					fields = ","+fields
-					values = ",?"
+					fields += ","+v.CK
+					values += ",?"
 				}
 			}
 			stmtMap[Type],_ = tx.Prepare("INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")")
 			break
 		case "delete":
-			stmtMap[Type],_ = tx.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+This.p.PriKey+"=?")
+			where := ""
+			for _,v:= range This.p.PriKey{
+				if where == ""{
+					where = v.CK+"=?"
+				}else{
+					where += " AND "+v.CK+"=?"
+				}
+			}
+			stmtMap[Type],_ = tx.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
 			break
 		}
 		return stmtMap[Type]
@@ -247,10 +267,19 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 	//有一种比较糟糕的情况就是在源端replace into 操作，这个操作是先delete再insert操作，所以这种情况。假如自动发现了，则应该采用第二套方案处理
 
 	if This.p.replaceInto == false {
-		opMap := make(map[interface{}]string, 0)
-		var checkOpMap = func(key interface{}, EvenType string) bool {
-			if opMap[key] == "insert" && EvenType == "delete" {
-				This.p.replaceInto = true
+		type opLog struct{
+			Data *[]dbDriver.Value
+			EventType string
+		}
+		needDoubleInsertOp := make([]dbDriver.Value,0)
+		opMap := make(map[interface{}]*opLog, 0)
+		var checkOpMap = func(key interface{}, EvenType string,data *[]dbDriver.Value) bool {
+			if opMap[key] == nil{
+				return true
+			}
+			if opMap[key].EventType == "insert" && EvenType == "delete" {
+				opMap[key].EventType = "delete"
+				needDoubleInsertOp = append(needDoubleInsertOp,*opMap[key].Data)
 				return false
 			}
 			return true
@@ -259,44 +288,36 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			data := list[i]
 			switch data.EventType {
 			case "update":
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.PriKey])
-				getStmt("insert", tx).Exec(data.Rows[1])
-				opMap[data.Rows[1][This.p.PriKey]] = "update"
+				getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
+				val := make([]dbDriver.Value,0)
+				for _,v:=range This.p.Field{
+					val = append(val,data.Rows[1][v.MySQL])
+				}
+				getStmt("insert", tx).Exec(val)
+				opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
 				break
 			case "delete":
-				if checkOpMap(data.Rows[0][This.p.PriKey], "delete") == false {
-					tx.Rollback()
-					goto Loop
-					break
+				if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete",nil) == false {
+					getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
 				}
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.PriKey])
-				opMap[data.Rows[0][This.p.PriKey]] = "delete"
+				getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
 				break
 			case "insert":
-				getStmt("insert", tx).Exec(data.Rows[0])
-				opMap[data.Rows[0][This.p.PriKey]] = "insert"
+				val := make([]dbDriver.Value,0)
+				for _,v:=range This.p.Field{
+					val = append(val,data.Rows[0][v.MySQL])
+				}
+				getStmt("insert", tx).Exec(val)
+				opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
 				break
 			}
+		}
+
+		for _,val := range needDoubleInsertOp{
+			getStmt("insert", tx).Exec(val)
 		}
 	}
 
-	Loop:
-	if This.p.replaceInto == true{
-		for _,data := range list{
-			switch data.EventType {
-			case "update":
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.PriKey])
-				getStmt("insert", tx).Exec(data.Rows[1])
-				break
-			case "delete":
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.PriKey])
-				break
-			case "insert":
-				getStmt("insert", tx).Exec(data.Rows[0])
-				break
-			}
-		}
-	}
 	tx.Commit()
 
 	if n == int(This.p.BactchSize){
