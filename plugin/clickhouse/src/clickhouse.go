@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	dbDriver "database/sql/driver"
-	"database/sql"
 )
 
 
@@ -32,19 +31,6 @@ type fieldStruct struct {
 }
 
 var dataMap map[string]*dataStruct
-
-type PluginParam struct {
-	Field 			[]fieldStruct
-	BactchSize      int
-	CkSchema		string
-	CkTable			string
-	ckDatakey		string
-	//PriKey			string //主键字段
-	replaceInto		bool  // 记录当前表是否有replace into操作
-	PriKey			[]fieldStruct
-	ckPriKey		string   // ck 主键字段
-	mysqlPriKey		string  //ck对应 mysql 的主键id
-}
 
 func init(){
 	pluginDriver.Register("clickhouse",&MyConn{},VERSION,BIFROST_VERION)
@@ -93,6 +79,19 @@ func (This *Conn) GetConnStatus() string {
 func (This *Conn) SetConnStatus(status string) {
 	This.status = status
 }
+
+type PluginParam struct {
+	Field 			[]fieldStruct
+	BactchSize      int
+	CkSchema		string
+	CkTable			string
+	ckDatakey		string
+	replaceInto		bool  // 记录当前表是否有replace into操作
+	PriKey			[]fieldStruct
+	ckPriKey		string   // ck 主键字段
+	mysqlPriKey		string  //ck对应 mysql 的主键id
+}
+
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
@@ -178,7 +177,7 @@ func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType)  (*pluginDr
 	t.Unlock()
 	l.RUnlock()
 
-	if This.p.BactchSize > n{
+	if This.p.BactchSize <= n{
 		return This.Commit()
 	}
 	return nil,nil
@@ -219,9 +218,9 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 	}
 	list := t.Data[This.p.ckDatakey].Data[:n]
 
-	var stmtMap = make(map[string]*sql.Stmt)
+	var stmtMap = make(map[string]dbDriver.Stmt)
 
-	var getStmt = func(Type string,tx *sql.Tx) *sql.Stmt{
+	var getStmt = func(Type string) dbDriver.Stmt{
 		if _,ok := stmtMap[Type];ok{
 			return stmtMap[Type]
 		}
@@ -238,7 +237,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 					values += ",?"
 				}
 			}
-			stmtMap[Type],_ = tx.Prepare("INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")")
+			stmtMap[Type],_ = This.conn.conn.Prepare("INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")")
 			break
 		case "delete":
 			where := ""
@@ -249,76 +248,91 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 					where += " AND "+v.CK+"=?"
 				}
 			}
-			stmtMap[Type],_ = tx.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
+			stmtMap[Type],_ = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
 			break
 		}
 		return stmtMap[Type]
 	}
 
-	tx,err:=This.conn.conn.Begin()
+	_,err := This.conn.conn.Begin()
 	if err != nil{
 		This.err = err
-		This.conn.err = err
 		return nil,nil
 	}
 
 	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
 	//假如update之前，则说明，后面遍历的同一条数据都不需要再更新了
-	//有一种比较糟糕的情况就是在源端replace into 操作，这个操作是先delete再insert操作，所以这种情况。假如自动发现了，则应该采用第二套方案处理
+	//有一种比较糟糕的情况就是在源端replace into 操作，这个操作是先delete再insert操作，
+	//所以这种情况。假如自动发现了，则应该是再删除一次,然后再最后再重新执行一次insert最后的记录
 
-	if This.p.replaceInto == false {
-		type opLog struct{
-			Data *[]dbDriver.Value
-			EventType string
-		}
-		needDoubleInsertOp := make([]dbDriver.Value,0)
-		opMap := make(map[interface{}]*opLog, 0)
-		var checkOpMap = func(key interface{}, EvenType string,data *[]dbDriver.Value) bool {
-			if opMap[key] == nil{
-				return true
-			}
-			if opMap[key].EventType == "insert" && EvenType == "delete" {
-				opMap[key].EventType = "delete"
-				needDoubleInsertOp = append(needDoubleInsertOp,*opMap[key].Data)
-				return false
-			}
+	type opLog struct{
+		Data *[]dbDriver.Value
+		EventType string
+	}
+	//在最后是Insert但 之前又有delete操作的情况下,把最后insert的数据,存储在这个list中,在代码最后再执行一次insert
+	needDoubleInsertOp := make([][]dbDriver.Value,0)
+
+	//用于存储数据库中最后一次操作记录
+	opMap := make(map[interface{}]*opLog, 0)
+
+	var checkOpMap = func(key interface{}, EvenType string,data *[]dbDriver.Value) bool {
+		if opMap[key] == nil{
 			return true
 		}
-		for i := n - 1; i > 0; i-- {
-			data := list[i]
-			switch data.EventType {
-			case "update":
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
-				val := make([]dbDriver.Value,0)
-				for _,v:=range This.p.Field{
-					val = append(val,data.Rows[1][v.MySQL])
-				}
-				getStmt("insert", tx).Exec(val)
-				opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
-				break
-			case "delete":
-				if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete",nil) == false {
-					getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
-				}
-				getStmt("delete", tx).Exec(data.Rows[0][This.p.mysqlPriKey])
-				break
-			case "insert":
-				val := make([]dbDriver.Value,0)
-				for _,v:=range This.p.Field{
-					val = append(val,data.Rows[0][v.MySQL])
-				}
-				getStmt("insert", tx).Exec(val)
-				opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
-				break
-			}
+		//假如insert了,但是又delete,则说明 db中有先delete再insert的操作,这个时候需要将insert的内容存储起来,最后再insert一次
+		if opMap[key].EventType == "insert" && EvenType == "delete" {
+			opMap[key].EventType = "delete"
+			needDoubleInsertOp = append(needDoubleInsertOp,*opMap[key].Data)
+			return false
 		}
+		return true
+	}
 
-		for _,val := range needDoubleInsertOp{
-			getStmt("insert", tx).Exec(val)
+	//从最后一条数据开始遍历
+	for i := n - 1; i > 0; i-- {
+		data := list[i]
+		switch data.EventType {
+		case "update":
+			where := make([]dbDriver.Value,1)
+			where[0] = data.Rows[0][This.p.mysqlPriKey]
+			getStmt("delete").Exec(where)
+			val := make([]dbDriver.Value,0)
+			for _,v:=range This.p.Field{
+				val = append(val,data.Rows[1][v.MySQL])
+			}
+			getStmt("insert").Exec(val)
+			opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
+			break
+		case "delete":
+			where := make([]dbDriver.Value,1)
+			where[0] = data.Rows[0][This.p.mysqlPriKey]
+			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete",nil) == false {
+				getStmt("delete").Exec(where)
+			}else{
+				getStmt("delete").Exec(where)
+				opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"delete"}
+			}
+			break
+		case "insert":
+			val := make([]dbDriver.Value,0)
+			for _,v:=range This.p.Field{
+				val = append(val,data.Rows[0][v.MySQL])
+			}
+			getStmt("insert").Exec(val)
+			opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
+			break
 		}
 	}
 
-	tx.Commit()
+	for _,val := range needDoubleInsertOp{
+		getStmt("insert").Exec(val)
+	}
+
+	err2 := This.conn.conn.Commit()
+	if err2 != nil{
+		This.err = err2
+		return nil,nil
+	}
 
 	if n == int(This.p.BactchSize){
 		t.Data[This.p.ckDatakey].Data = make([]*pluginDriver.PluginDataType,0)

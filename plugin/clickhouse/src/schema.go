@@ -1,12 +1,14 @@
 package src
 
 import (
-	"database/sql"
-	_ "github.com/kshvakov/clickhouse"
+	"database/sql/driver"
+	"github.com/kshvakov/clickhouse"
 	"github.com/jc3wish/Bifrost/manager/xgo"
 	"net/http"
 	"encoding/json"
 	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+
+
 )
 
 func init()  {
@@ -84,12 +86,12 @@ func newClickHouseDBConn(uri string) *clickhouseDB {
 
 type clickhouseDB struct {
 	uri 	string
-	conn 	*sql.DB
+	conn 	clickhouse.Clickhouse
 	err 	error
 }
 
 func(This *clickhouseDB) Open() bool{
-	This.conn, This.err = sql.Open("clickhouse", This.uri)
+	This.conn, This.err = clickhouse.OpenDirect(This.uri)
 	return true
 }
 
@@ -101,22 +103,20 @@ func(This *clickhouseDB) Close() bool{
 }
 
 func (This *clickhouseDB) getSchemaList() (data []string) {
-	rows,err := This.conn.Query("SHOW DATABASES")
+	This.conn.Begin()
+	stmt, _ := This.conn.Prepare("SHOW DATABASES")
+	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
 		return
 	}
 	defer rows.Close()
-	for rows.Next() {
-		var (
-			Name            string
-		)
-		if err := rows.Scan(&Name); err != nil {
-			This.err = err
-			return
-		}
-		data = append(data,Name)
+	row := make([]driver.Value, 1)
+
+	for rows.Next(row) == nil {
+		data = append(data,row[0].(string))
 	}
+	This.conn.Commit()
 	return
 }
 
@@ -125,46 +125,49 @@ func (This *clickhouseDB) getSchemaTableList(schema string) (data []string) {
 	if schema == ""{
 		return
 	}
-	rows,err := This.conn.Query("select name from system.tables where database = '"+schema+"'")
+
+	This.conn.Begin()
+	stmt, _ := This.conn.Prepare("select name from system.tables where database = '"+schema+"'")
+	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
 		return
 	}
 	defer rows.Close()
-	for rows.Next() {
-		var (
-			Name            string
+	row := make([]driver.Value, 1)
 
-		)
-		if err := rows.Scan(&Name); err != nil {
-			This.err = err
-			return
-		}
-		data = append(data,Name)
+	for rows.Next(row) == nil {
+		data = append(data,row[0].(string))
 	}
+	This.conn.Commit()
 	return
 }
 
 
 func (This *clickhouseDB) getTableFields(TableName string) (data []ckFieldStruct) {
-	rows,err := This.conn.Query("DESC TABLE "+TableName)
+	This.conn.Begin()
+	stmt, _ := This.conn.Prepare("DESC TABLE "+TableName)
+	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
 		return
 	}
 	defer rows.Close()
-	for rows.Next() {
+	row := make([]driver.Value, 1)
+
+	for rows.Next(row) == nil {
 		var (
 			Name            string
 			Type           	string
 			default_type	string
 			default_expression string
 		)
-		if err := rows.Scan(&Name, &Type,&default_type,&default_expression); err != nil {
-			This.err = err
-			return
-		}
+		Name = row[0].(string)
+		Type = row[1].(string)
+		default_type = row[2].(string)
+		default_expression = row[3].(string)
 		data = append(data,ckFieldStruct{Name:Name,Type:Type,DefaultType:default_type,DefaultExpression:default_expression})
 	}
+	This.conn.Commit()
 	return
 }

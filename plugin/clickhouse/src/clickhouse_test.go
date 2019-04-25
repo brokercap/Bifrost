@@ -4,10 +4,10 @@ import (
 	"testing"
 	"log"
 	"github.com/jc3wish/Bifrost/test/pluginTest"
-	MyPlugin "github.com/jc3wish/Bifrost/plugin/http/src"
+	MyPlugin "github.com/jc3wish/Bifrost/plugin/clickhouse/src"
 )
 
-var url string = "http://127.0.0.1:3332/bifrost_http_api_test"
+var url string = "tcp://10.40.2.41:9000?Database=testdebug=true&compress=1"
 
 func TestChechUri(t *testing.T){
 	myConn := MyPlugin.MyConn{}
@@ -18,40 +18,41 @@ func TestChechUri(t *testing.T){
 	}
 }
 
-func TestSetParam(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(nil)
+type fieldStruct struct {
+	CK 		string
+	MySQL 	string
 }
 
-func TestInsert(t *testing.T){
+func Test(t *testing.T){
 	myConn := MyPlugin.MyConn{}
 	conn := myConn.Open(url)
+
+	param := make(map[string]interface{},0)
+	Field := make([]fieldStruct,0)
+	Field = append(Field,fieldStruct{"id","id"})
+	Field = append(Field,fieldStruct{"testfloat","testfloat"})
+	Field = append(Field,fieldStruct{"testtimestamp","testtimestamp"})
+	param["Field"] = Field
+
+	PriKey := make([]fieldStruct,1)
+	PriKey[0] = fieldStruct{"id","id"}
+	param["PriKey"] = PriKey
+	param["CkSchema"] = "test"
+	param["CkTable"] = "binlog_field_test"
+
+	p,err := conn.SetParam(param)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	log.Println("p:",p)
+
 	conn.Insert(pluginTest.GetTestInsertData())
-}
-
-func TestUpate(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestUpdateData())
-}
+	conn.Update(pluginTest.GetTestInsertData())
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		log.Fatal(err2)
+	}
 
 
-func TestDelete(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestDeleteData())
-}
-
-
-func TestQuery(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestQueryData())
-}
-
-func TestCommit(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Commit()
 }

@@ -13,24 +13,27 @@ function doGetPluginParam(){
         return result;
     }
 
-	var PriKey = "";
-	var FieldsMap = {};
+	var PriKey = [];
+	var Field = [];
 
     $.each($("#CKTableFieldsTable tr"),function () {
         var ck_field_name = $(this).find("input[name=ck_field_name]").val();
         var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
 
+        var d       = {};
+        d["CK"]     = ck_field_name;
+        d["MySQL"]  = mysql_field_name;
         if($(this).find("input[name=ck_pri_checkbox]").is(':checked')) {
             if (ck_field_name == "" || mysql_field_name == "") {
                 result.msg = "PRI:" + ck_field_name + " not empty";
                 return result;
             }
-            PriKey = ck_field_name;
+            PriKey.push(d);
         }
-        FieldsMap[ck_field_name] = mysql_field_name;
+        Field.push(d);
     });
 
-    if(PriKey == ""){
+    if(PriKey.length == 0){
         result.msg = "请选择一个字段为主键！";
         return result;
     }
@@ -41,7 +44,7 @@ function doGetPluginParam(){
 
     result.msg = "success";
     result.status = true;
-    result.data["Field"]    = FieldsMap;
+    result.data["Field"]    = Field;
     result.data["PriKey"]   = PriKey;
     result.data["CkSchema"] = CkSchema;
     result.data["CkTable"]  = CkTable;
