@@ -3,11 +3,13 @@ package src_test
 import (
 	"testing"
 	"log"
+	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/test/pluginTest"
 	MyPlugin "github.com/jc3wish/Bifrost/plugin/clickhouse/src"
+	"time"
 )
 
-var url string = "tcp://10.40.2.41:9000?Database=testdebug=true&compress=1"
+var url string = "tcp://10.40.2.41:9000?Database=test&debug=true&compress=1"
 
 func TestChechUri(t *testing.T){
 	myConn := MyPlugin.MyConn{}
@@ -35,8 +37,7 @@ func TestGetTableFields(t *testing.T)  {
 	log.Println(c.GetTableFields("test.binlog_field_test"))
 }
 
-
-func TestCommit(t *testing.T){
+func getPluginConn() pluginDriver.ConnFun {
 	type fieldStruct struct {
 		CK 		string
 		MySQL 	string
@@ -94,7 +95,12 @@ func TestCommit(t *testing.T){
 	}
 
 	log.Println("p:",p)
+	return conn
+}
 
+
+func TestCommit(t *testing.T){
+	conn := getPluginConn()
 	conn.Insert(pluginTest.GetTestInsertData())
 	//conn.Del(pluginTest.GetTestDeleteData())
 	conn.Update(pluginTest.GetTestUpdateData())
@@ -102,4 +108,32 @@ func TestCommit(t *testing.T){
 	if err2 != nil{
 		log.Fatal(err2)
 	}
+}
+
+
+func TestReConnCommit(t *testing.T){
+	conn := getPluginConn()
+	conn.Insert(pluginTest.GetTestInsertData())
+	_,err1:=conn.Commit()
+	if err1 != nil{
+		log.Println("err1",err1)
+		return
+	}else{
+		log.Println("insert 1 success")
+	}
+
+	conn.Del(pluginTest.GetTestDeleteData())
+	conn.Update(pluginTest.GetTestUpdateData())
+	time.Sleep(20 * time.Second)
+	for{
+		time.Sleep(3 * time.Second)
+		_,err2 := conn.Commit()
+		if err2 != nil{
+			log.Println("err2:",err2)
+		}else{
+			break
+		}
+	}
+	log.Println("success")
+
 }

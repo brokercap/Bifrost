@@ -70,6 +70,7 @@ type Conn struct {
 func newConn(uri string) *Conn{
 	f := &Conn{
 		uri:uri,
+		needReconn:false,
 	}
 	f.Connect()
 	return f
@@ -131,7 +132,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 }
 
 func (This *Conn) getCktFieldType() {
-	if This.err != nil{
+	if This.needReconn {
 		return
 	}
 	if This.p == nil{
@@ -175,7 +176,6 @@ func (This *Conn) Connect() bool {
 
 func (This *Conn) ReConnect() bool {
 	if This.needReconn == false{
-		This.err = nil
 		return  true
 	}
 	if This.conn != nil{
@@ -240,10 +240,11 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 }
 
 func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
-	if This.err != nil {
+	if This.needReconn {
 		This.ReConnect()
 	}
-	if This.err != nil {
+	if This.needReconn {
+		log.Println("ssssss111")
 		return nil,This.err
 	}
 	t := dataMap[This.uri]
@@ -256,12 +257,12 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 	if n == 0{
 		return nil,nil
 	}
-	if n > int(This.p.BatchSize){
-		n = int(This.p.BatchSize)
+	if n > This.p.BatchSize{
+		n = This.p.BatchSize
 	}
 	list := t.Data[This.p.ckDatakey].Data[:n]
 
-	var stmtMap = make(map[string]dbDriver.Stmt)
+	var stmtMap = make(map[string]dbDriver.Stmt,0)
 
 	var getStmt = func(Type string) dbDriver.Stmt{
 		if _,ok := stmtMap[Type];ok{
@@ -306,9 +307,13 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 		return stmtMap[Type]
 	}
 
+	log.Println("0000")
+
 	_,err := This.conn.conn.Begin()
+	log.Println("1111")
 	if err != nil{
 		This.err = err
+		log.Println("ssssss")
 		This.needReconn = true
 		return nil,This.err
 	}
@@ -340,9 +345,9 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 		}
 		return true
 	}
-
 	//从最后一条数据开始遍历
 	var toV interface{}
+	var stmt dbDriver.Stmt
 	for i := n - 1; i >= 0; i-- {
 		data := list[i]
 		switch data.EventType {
@@ -351,8 +356,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			for _,v:=range This.p.Field{
 				toV,This.err = ckDataTypeTransfer(data.Rows[1][v.MySQL],v.CK,v.CkType)
 				if This.err != nil{
-					This.conn.conn.Rollback()
-					return nil,This.err
+					goto errLoop
 				}
 				val = append(val,toV)
 			}
@@ -363,7 +367,15 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 
 			where := make([]dbDriver.Value,1)
 			where[0] = data.Rows[0][This.p.mysqlPriKey]
-			_,This.err = getStmt("delete").Exec(where)
+			stmt = getStmt("delete")
+			if stmt == nil{
+				goto errLoop
+			}
+			_,This.err = stmt.Exec(where)
+			stmt = getStmt("insert")
+			if stmt == nil{
+				goto errLoop
+			}
 			_,This.err = getStmt("insert").Exec(val)
 			opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
 			break
@@ -371,7 +383,11 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			where := make([]dbDriver.Value,1)
 			where[0] = data.Rows[0][This.p.mysqlPriKey]
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
-				_,This.err = getStmt("delete").Exec(where)
+				stmt = getStmt("delete")
+				if stmt == nil{
+					goto errLoop
+				}
+				_,This.err = stmt.Exec(where)
 				opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"delete"}
 			}
 			break
@@ -380,8 +396,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			for _,v:=range This.p.Field{
 				toV,This.err = ckDataTypeTransfer(data.Rows[0][v.MySQL],v.CK,v.CkType)
 				if This.err != nil{
-					This.conn.conn.Rollback()
-					return nil,This.err
+					goto errLoop
 				}
 				val = append(val,toV)
 			}
@@ -391,17 +406,30 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			}
 
 			//log.Println("insert:",val)
-			_,This.err = getStmt("insert").Exec(val)
+			stmt = getStmt("insert")
+			if stmt == nil{
+				goto errLoop
+			}
+			log.Println("33333")
+
+			_,This.err = stmt.Exec(val)
 			opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
 			break
 		}
 
 		if This.err != nil{
+			log.Println("44444")
 			This.conn.conn.Rollback()
 			return nil,This.err
 		}
 	}
 
+	errLoop:
+		if This.err != nil{
+			log.Println("55555")
+			This.conn.conn.Rollback()
+			return nil,This.err
+		}
 	for _,val := range needDoubleInsertOp{
 		getStmt("insert").Exec(val)
 	}
@@ -409,6 +437,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 	err2 := This.conn.conn.Commit()
 	if err2 != nil{
 		This.err = err2
+		log.Println("6666")
 		This.needReconn = true
 		return nil,This.err
 	}
