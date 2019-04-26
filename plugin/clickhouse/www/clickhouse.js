@@ -3,6 +3,8 @@ function doGetPluginParam(){
 
 	var CkTable = $("#clickohuse_table").val();
     var CkSchema = $("#clickhouse_schema").val();
+    var BatchSize = $("#CK_BatchSize").val();
+
     if (CkSchema == ""){
         result.msg = "请选择 ClickHouse 数据库!";
         return result;
@@ -10,6 +12,11 @@ function doGetPluginParam(){
 
     if (CkTable == ""){
         result.msg = "请选择 ClickHouse 数据数据表!";
+        return result;
+    }
+
+    if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)){
+        result.msg = "BatchSize must be int!"
         return result;
     }
 
@@ -48,6 +55,7 @@ function doGetPluginParam(){
     result.data["PriKey"]   = PriKey;
     result.data["CkSchema"] = CkSchema;
     result.data["CkTable"]  = CkTable;
+    result.data["BatchSize"] = parseInt(BatchSize);
 
 	return result;
 }
@@ -128,7 +136,7 @@ function getClickHouseTableCreateSQL(tableName) {
                     return getDDL("Float64");
                     break;
                 case "decimal":
-                    return getDDL("Decimal("+data.NUMERIC_PRECISION+","+data.NUMERIC_SCALE+")");
+                    return getDDL("Float64");
                     break;
                 case "time":
                     return getDDL("String");
@@ -147,7 +155,7 @@ function getClickHouseTableCreateSQL(tableName) {
                     return getDDL("Int16");
                     break;
                 case "bit":
-                    return getDDL("Int");
+                    return getDDL("Int64");
                     break
                 default:
                     return getDDL("String");
@@ -222,14 +230,22 @@ function GetCkTableDesc(schemaName,tableName) {
             for(i in d){
 
                 var toField = "";
+                var isPri = false;
                 if(fieldsMap.hasOwnProperty(d[i].Name)){
                     toField = d[i].Name;
+                    if(fieldsMap[d[i].Name].COLUMN_KEY == "PRI"){
+                        isPri = true;
+                    }
                 }
 
                 var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
                 htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
-                htmlTr += "<td> <input type='radio' style='width: 20px; height: 20px' name='ck_pri_checkbox' class=\"form-control ck_pri_checkbox\" /></td>";
+                htmlTr += "<td> <input type='radio'"
+                if(isPri){
+                    htmlTr += " checked='checked' ";
+                }
+                htmlTr += " style='width: 20px; height: 20px' name='ck_pri_checkbox' class=\"form-control ck_pri_checkbox\" /></td>";
                 htmlTr += "</tr>";
                 html += htmlTr;
             }

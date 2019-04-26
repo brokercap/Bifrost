@@ -32,9 +32,9 @@ func getClickHouseSchemaList(w http.ResponseWriter,req *http.Request)  {
 		w.Write([]byte(ToServerKey+" no found"))
 		return
 	}
-	c := newClickHouseDBConn(toServerInfo.ConnUri)
+	c := NewClickHouseDBConn(toServerInfo.ConnUri)
 	defer c.Close()
-	m := c.getSchemaList()
+	m := c.GetSchemaList()
 	b,_:=json.Marshal(m)
 	w.Write(b)
 	return
@@ -49,9 +49,9 @@ func getClickHouseSchemaTableList(w http.ResponseWriter,req *http.Request)  {
 		return
 	}
 	schema := req.Form.Get("schema")
-	c := newClickHouseDBConn(toServerInfo.ConnUri)
+	c := NewClickHouseDBConn(toServerInfo.ConnUri)
 	defer c.Close()
-	m := c.getSchemaTableList(schema)
+	m := c.GetSchemaTableList(schema)
 	b,_:=json.Marshal(m)
 	w.Write(b)
 	return
@@ -68,15 +68,15 @@ func getClickHouseTableFields(w http.ResponseWriter,req *http.Request)  {
 	}
 	schema := req.Form.Get("schema")
 	TableName := req.Form.Get("table_name")
-	c := newClickHouseDBConn(toServerInfo.ConnUri)
+	c := NewClickHouseDBConn(toServerInfo.ConnUri)
 	defer c.Close()
-	m := c.getTableFields(schema+"."+TableName)
+	m := c.GetTableFields(schema+"."+TableName)
 	b,_:=json.Marshal(m)
 	w.Write(b)
 	return
 }
 
-func newClickHouseDBConn(uri string) *clickhouseDB {
+func NewClickHouseDBConn(uri string) *clickhouseDB {
 	c := &clickhouseDB{
 		uri:uri,
 	}
@@ -102,7 +102,7 @@ func(This *clickhouseDB) Close() bool{
 	return true
 }
 
-func (This *clickhouseDB) getSchemaList() (data []string) {
+func (This *clickhouseDB) GetSchemaList() (data []string) {
 	This.conn.Begin()
 	stmt, _ := This.conn.Prepare("SHOW DATABASES")
 	rows, err := stmt.Query([]driver.Value{})
@@ -121,7 +121,7 @@ func (This *clickhouseDB) getSchemaList() (data []string) {
 }
 
 
-func (This *clickhouseDB) getSchemaTableList(schema string) (data []string) {
+func (This *clickhouseDB) GetSchemaTableList(schema string) (data []string) {
 	if schema == ""{
 		return
 	}
@@ -144,7 +144,7 @@ func (This *clickhouseDB) getSchemaTableList(schema string) (data []string) {
 }
 
 
-func (This *clickhouseDB) getTableFields(TableName string) (data []ckFieldStruct) {
+func (This *clickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct) {
 	This.conn.Begin()
 	stmt, _ := This.conn.Prepare("DESC TABLE "+TableName)
 	rows, err := stmt.Query([]driver.Value{})
@@ -152,8 +152,9 @@ func (This *clickhouseDB) getTableFields(TableName string) (data []ckFieldStruct
 		This.err = err
 		return
 	}
+
 	defer rows.Close()
-	row := make([]driver.Value, 1)
+	row := make([]driver.Value, 4)
 
 	for rows.Next(row) == nil {
 		var (

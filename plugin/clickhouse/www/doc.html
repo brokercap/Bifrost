@@ -1,27 +1,49 @@
-<p><strong>Http 插件</strong></p>
+<p><strong>ClickHouse</strong></p>
 
-<p>采用 Http 推送插件情况下，Bifrost 将数据以Http POST 请求方式推送到 指定的 URL 服务端，支持 HTTP Authorization 认证</p>
+<p>必须先选择 MySQL 的表后，再选择 ClickHouse 插件，再选择 ClickHouse 库表的时候，如果ClickHouse表字段和MySQL表字段一致的情况下会自动填充</p>
+<p>&nbsp;</p>
+<p>ClickHouse 对应用MySQL里的存储类型</p>
+<p>括号里的代表是ClickHouse里的存储类型</p>
+<p>TINYINT ( Int8 | UInt8 ) , SMALLINT ( Int16 | UInt16 ) , MEDIUMINT ( Int32 | UInt32 ), INT ( Int32 | UInt32 ) , BIGINT ( Int64 | UInt64 )<p>
+<p>FLOAT ( Float64 ) , DOUBLE ( Float64 ) ,REAL ( Float64 )</p>
+<p>DECIMAL , NUMERIC( Float64 )</p>
+<p>DATE ( Date )</p>
+<p>TIME ( String ) </p>
+<p>YEAR ( Int16 ) </p>
+<p>DATETIME , TIMESTAMP   ( DateTime )</p>
+<p>CHAR , VARCHAR ( String ) </p>
+<p>TEXT , TINYTEXT , MEDIUMINTTEXT , LONGTEXT ( String )</p>
+<p>BLOB, TINYBLOB , MEDIUMINTBLOB , LONGBLOB ( String )</p>
+<p>ENUM ( String )</p>
+<p>SET ( String )</p>
+<p>BIT ( Int64 )</p>
+<p>BOOL ( Int8 )</p>
+
+<p><strong>连接配置</strong></p>
+
+<p>eg  : tcp://127.0.0.1:9000?Database=test&username=&compress=true</p>
+
+
+<p><strong>自动过滤规则</strong></p>
+
+<p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作</p>
 
 <p>&nbsp;</p>
-<h4>URL 格式</h4>
+<p>1. 假如 id = 1 这条数据，连接有 insert ,delete ,update 操作</p>
+<p>则只会执行最后的 update 操作，不会执行前面insert 及 delete操作</p>
 
-<pre>
-http://10.40.2.41:3332/bifrost_http_api_test
-</pre>
-
-<p>URL 这个请求必须同时支持 GET 和 POST 请求</p>
-<p>GET 请求只用于在添加 ToServer 的时候使用，用于 Check URL 是否合法</p>
-<p>POST 请求用于推送数据的时候采用。比如insert,update,delete,sql 等事件的时候将 POST 请求数据过来</p>
 <p>&nbsp;</p>
+<p>2. 假如 id = 1 这条数据，连接有 insert ,delete ,insert ,delete 顺序操作</p>
+<p>则只会执行最后的 delete 操作一次，不会执行 insert</p>
 
-<h4>POST数据格式</h4>
+<p>&nbsp;</p>
+<p>update 操作是转换成 delete 再 insert 两次操作 </p>
 
-<p><strong>EventType : </strong>事件类型,(insert,update,delete,sql)</p>
-<p><strong>SchemaName : </strong>数据库名</p>
-<p><strong>TableName : </strong>数据表名</p>
-<p><strong>data : </strong>字符串，数据结构 EventType 有关</p>
 
-<p>EventType == insert | delete 的时候，data 数据格式为  map[string]interfacle{} 格式的 json 字符串, 字符名作为key， 字段内容作为值</p>
-<p>EventType ==  update 的时候，data 数据格式为 []map[string]interfacle{} 数组里是map格式的 json字符串, 数组 下标0 里的数据是更新之前的数据， 下标 1 里的数据是更新之后的数据</p>
-<p>EventType ==  sql 的时候，data 数据为 执行的 sql 语句</p>
+<p><strong>备注</strong></p>
 
+<p>必须只能选择一个字段为主键</p>
+<p>不支持批量设置表</p>
+<p>ClickHouse 18+ 版本</p>
+<p>不支持 NULL 值字段</p>
+<p>BatchSize参数代表累积多少条数据刷一次数据到ClickHouse，假如一直没有数据从 MySQL 过来，则默认5秒超时，也会进行刷一次</p>
