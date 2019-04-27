@@ -3,18 +3,19 @@ package plugin
 import (
 	"encoding/json"
 	"log"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 )
 
 func Recovery(data *json.RawMessage){
-	var toData map[string]ToServer
+	var toData map[string]pluginStorage.ToServer
 	errors := json.Unmarshal([]byte(*data),&toData)
 	if errors != nil{
 		log.Println("to server recovry error:",errors)
 		return
 	}
 	for name,v:=range toData{
-		SetToServerInfo(name,
-			ToServer{
+		pluginStorage.SetToServerInfo(name,
+			pluginStorage.ToServer{
 				PluginName:v.PluginName,
 				ConnUri:v.ConnUri,
 				Notes:v.Notes,
@@ -24,5 +25,5 @@ func Recovery(data *json.RawMessage){
 }
 
 func SaveToServerData() interface{}{
-	return ToServerMap
+	return pluginStorage.SaveToServerData()
 }

@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"github.com/jc3wish/Bifrost/server"
 	"github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/plugin"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 	"encoding/json"
 	"runtime"
 	"github.com/jc3wish/Bifrost/config"
@@ -56,7 +56,7 @@ func overview_controller(w http.ResponseWriter,req *http.Request){
 
 	PluginCount := len(driver.Drivers())
 
-	ToServerCount := len(plugin.GetToServerMap())
+	ToServerCount := len(pluginStorage.GetToServerMap())
 
 	data = OverView{
 		DbCount:				DbCount,

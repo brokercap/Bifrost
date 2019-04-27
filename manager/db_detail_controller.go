@@ -20,7 +20,7 @@ import (
 	"html/template"
 	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
-	toserver "github.com/jc3wish/Bifrost/plugin"
+	toserver "github.com/jc3wish/Bifrost/plugin/storage"
 )
 
 func init(){

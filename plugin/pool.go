@@ -4,14 +4,18 @@ import (
 	"strconv"
 	"log"
 	"github.com/jc3wish/Bifrost/plugin/driver"
+	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 	"runtime/debug"
 	"time"
+	"sync"
 )
 
 type toServerChanContent struct {
 	key  		string
 	conn		driver.ConnFun
 }
+
+var l sync.RWMutex
 
 var ToServerConnList map[string]map[string]driver.ConnFun
 var toServerChanMap map[string]chan *toServerChanContent
@@ -22,12 +26,11 @@ func init()  {
 }
 
 func GetPlugin(ToServerKey string)  (driver.ConnFun, string){
-
-	if _,ok := ToServerMap[ToServerKey];!ok{
+	t := pluginStorage.GetToServerInfo(ToServerKey)
+	if t == nil{
 		log.Println("ToServer:",ToServerKey," no exsit,start error")
 		return nil,""
 	}
-	t := ToServerMap[ToServerKey]
 	var toServerChanContentData *toServerChanContent
 	t.Lock()
 	if t.AvailableConn > 0 {
@@ -73,13 +76,17 @@ func startPlugin(key string) (driver.ConnFun,string) {
 		toServerChanMap[key] = make(chan *toServerChanContent,500)
 	}
 	l.Unlock()
+
+	t := pluginStorage.GetToServerInfo(key)
+	if t == nil{
+		return nil,""
+	}
 	var F driver.ConnFun
 	var stringKey string
-	F = driver.Open(ToServerMap[key].PluginName,ToServerMap[key].ConnUri)
+	F = driver.Open(t.PluginName,t.ConnUri)
 	if F == nil{
 		return nil,""
 	}
-	t := ToServerMap[key]
 	t.Lock()
 	t.LastID++
 	stringKey = strconv.Itoa(t.LastID)
@@ -98,13 +105,10 @@ func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
 			return
 		}
 	}()
-	l.RLock()
-	if _,ok := ToServerMap[ToServerKey];!ok{
-		l.RUnlock()
+	t := pluginStorage.GetToServerInfo(ToServerKey)
+	if t == nil{
 		return true
 	}
-	l.RUnlock()
-	t:=ToServerMap[ToServerKey]
 	t.Lock()
 	if t.CurrentConn > t.MaxConn{
 		t.CurrentConn--

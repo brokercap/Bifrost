@@ -13,6 +13,11 @@ function doGetPluginParam(){
     var Expir = $("#ActiveMQ_Plugin_Contair input[name='Expir']").val();
     var Persistent = transferBool($("#RabbitMQ_Plugin_Contair #RabbitMQ_Persistent").val());
 
+    if(QueueName == ""){
+        result.msg = "QueueName not be empty!"
+        return result;
+    }
+
     if (Expir != "" && Expir != null && isNaN(Expir)){
         result.msg = "Expir must be int!"
         return result;

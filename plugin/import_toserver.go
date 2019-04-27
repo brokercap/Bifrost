@@ -10,4 +10,5 @@ import (
 	_ "github.com/jc3wish/Bifrost/plugin/ActiveMQ/src"
 	_ "github.com/jc3wish/Bifrost/plugin/MongoDB/src"
 	_ "github.com/jc3wish/Bifrost/plugin/blackhole/src"
+	_ "github.com/jc3wish/Bifrost/plugin/clickhouse/src"
 )

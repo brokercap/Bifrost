@@ -16,6 +16,7 @@ before_install:
     - go get github.com/streadway/amqp
     - go get github.com/garyburd/redigo/redis
     - go get github.com/syndtr/goleveldb/leveldb
+    - go get github.com/kshvakov/clickhouse
 
 install:
     - go get github.com/mattn/goveralls

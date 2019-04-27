@@ -2,7 +2,6 @@
 
 
 [![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/jc3wish/Bifrost)
-[![Join the chat at https://gitter.im/jc3wish-Bifrost/Lobby](https://img.shields.io/badge/GITTER-join%20chat-green.svg)](https://gitter.im/jc3wish-Bifrost/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
@@ -19,6 +18,7 @@
 * ActiveMQ
 * Kafka
 * Mongodb
+* ClickHouse
 * [Http 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
@@ -144,7 +144,7 @@ tls_crt_file=./etc/server.crt
 
 ##### 生成https证书
 
-[参数证书生成](https://github.com/jc3wish/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
+[参考证书生成](https://github.com/jc3wish/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
 
 ##### 启动
 `````shell
@@ -200,6 +200,7 @@ https://127.0.0.1:21036
 - github.com/streadway/amqp
 - github.com/garyburd/redigo/redis
 - github.com/syndtr/goleveldb/leveldb
+- github.com/kshvakov/clickhouse
 
 ### QQ群号： 70331601
 <img src="https://github.com/jc3wish/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>
