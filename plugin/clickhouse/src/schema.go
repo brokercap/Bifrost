@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
 
-
+	"log"
 )
 
 func init()  {
@@ -96,6 +96,11 @@ func(This *clickhouseDB) Open() bool{
 }
 
 func(This *clickhouseDB) Close() bool{
+	defer func() {
+		if err := recover();err != nil{
+			log.Println("clickhouseDB close err:",err)
+		}
+	}()
 	if This.conn != nil{
 		This.conn.Close()
 	}
@@ -114,6 +119,10 @@ func (This *clickhouseDB) GetSchemaList() (data []string) {
 	row := make([]driver.Value, 1)
 
 	for rows.Next(row) == nil {
+		//过滤system库
+		if row[0].(string) == "system"{
+			continue
+		}
 		data = append(data,row[0].(string))
 	}
 	This.conn.Commit()
@@ -169,6 +178,6 @@ func (This *clickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct
 		default_expression = row[3].(string)
 		data = append(data,ckFieldStruct{Name:Name,Type:Type,DefaultType:default_type,DefaultExpression:default_expression})
 	}
-	This.conn.Commit()
+	This.err = This.conn.Commit()
 	return
 }

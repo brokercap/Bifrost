@@ -8,6 +8,8 @@ import (
 	dbDriver "database/sql/driver"
 	"log"
 	"strconv"
+	"runtime/debug"
+	"strings"
 )
 
 
@@ -50,7 +52,11 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 	if c.err != nil{
 		return c.err
 	}
-	c.Close()
+	if c.conn == nil{
+		c.Close()
+		return fmt.Errorf("connect")
+	}
+
 	return nil
 }
 
@@ -63,14 +69,12 @@ type Conn struct {
 	status  string
 	p		*PluginParam
 	conn    *clickhouseDB
-	needReconn bool
 	err 	error
 }
 
 func newConn(uri string) *Conn{
 	f := &Conn{
 		uri:uri,
-		needReconn:false,
 	}
 	f.Connect()
 	return f
@@ -132,9 +136,11 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 }
 
 func (This *Conn) getCktFieldType() {
-	if This.needReconn {
-		return
-	}
+	defer func() {
+		if err := recover();err != nil{
+			This.conn.err = fmt.Errorf(fmt.Sprint(err))
+		}
+	}()
 	if This.p == nil{
 		return
 	}
@@ -142,12 +148,11 @@ func (This *Conn) getCktFieldType() {
 	ckFields := This.conn.GetTableFields(This.p.ckDatakey)
 	if This.conn.err != nil{
 		This.err = This.conn.err
-		This.needReconn = true
 		return
 	}
 	if len(ckFields) == 0{
 		return
-	}
+}
 	ckFieldsMap := make(map[string]string)
 	for _,v:=range ckFields{
 		ckFieldsMap[v.Name] = v.Type
@@ -165,29 +170,20 @@ func (This *Conn) Connect() bool {
 		}
 	}
 	This.conn = NewClickHouseDBConn(This.uri)
-	This.err = This.conn.err
-	if This.err != nil{
-		This.needReconn = true
-	}else{
-		This.needReconn = false
-	}
 	return true
 }
 
 func (This *Conn) ReConnect() bool {
-	if This.needReconn == false{
-		return  true
-	}
 	if This.conn != nil{
 		defer func() {
 			if err := recover();err !=nil{
-				This.err = fmt.Errorf(fmt.Sprint(err))
+				This.conn.err = fmt.Errorf(fmt.Sprint(err))
 			}
 		}()
 		This.conn.Close()
 	}
 	This.Connect()
-	if This.err == nil{
+	if This.conn.err == nil{
 		This.getCktFieldType()
 	}
 	return  true
@@ -239,13 +235,18 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 	return nil,nil
 }
 
-func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
-	if This.needReconn {
+func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
+	defer func() {
+		if err := recover();err != nil{
+			e = fmt.Errorf(string(debug.Stack()))
+			This.conn.err = e
+		}
+	}()
+	if This.conn.err != nil {
 		This.ReConnect()
 	}
-	if This.needReconn {
-		log.Println("ssssss111")
-		return nil,This.err
+	if This.conn.err != nil {
+		return nil,This.conn.err
 	}
 	t := dataMap[This.uri]
 	t.Lock()
@@ -282,10 +283,9 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 				}
 			}
 			sql := "INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")"
-			stmtMap[Type],This.err = This.conn.conn.Prepare(sql)
-			if This.err != nil{
-				This.needReconn = true
-				log.Println("clickhouse getStmt insert err:",This.err)
+			stmtMap[Type],This.conn.err = This.conn.conn.Prepare(sql)
+			if This.conn.err != nil{
+				log.Println("clickhouse getStmt insert err:",This.conn.err)
 			}
 			break
 		case "delete":
@@ -297,25 +297,18 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 					where += " AND "+v.CK+"=?"
 				}
 			}
-			stmtMap[Type],This.err = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
-			if This.err != nil{
-				This.needReconn = true
-				log.Println("clickhouse getStmt delete err:",This.err)
+			stmtMap[Type],This.conn.err = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
+			if This.conn.err != nil{
+				log.Println("clickhouse getStmt delete err:",This.conn.err)
 			}
 			break
 		}
 		return stmtMap[Type]
 	}
 
-	log.Println("0000")
-
-	_,err := This.conn.conn.Begin()
-	log.Println("1111")
-	if err != nil{
-		This.err = err
-		log.Println("ssssss")
-		This.needReconn = true
-		return nil,This.err
+	_,This.conn.err = This.conn.conn.Begin()
+	if This.conn.err != nil{
+		return nil,This.conn.err
 	}
 
 	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
@@ -356,7 +349,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			for _,v:=range This.p.Field{
 				toV,This.err = ckDataTypeTransfer(data.Rows[1][v.MySQL],v.CK,v.CkType)
 				if This.err != nil{
-					goto errLoop
+					return nil,This.err
 				}
 				val = append(val,toV)
 			}
@@ -376,7 +369,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			if stmt == nil{
 				goto errLoop
 			}
-			_,This.err = getStmt("insert").Exec(val)
+			_,This.conn.err = stmt.Exec(val)
 			opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
 			break
 		case "delete":
@@ -387,7 +380,10 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 				if stmt == nil{
 					goto errLoop
 				}
-				_,This.err = stmt.Exec(where)
+				_,This.conn.err = stmt.Exec(where)
+				if This.conn.err != nil{
+					goto errLoop
+				}
 				opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"delete"}
 			}
 			break
@@ -396,7 +392,7 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			for _,v:=range This.p.Field{
 				toV,This.err = ckDataTypeTransfer(data.Rows[0][v.MySQL],v.CK,v.CkType)
 				if This.err != nil{
-					goto errLoop
+					return nil,This.err
 				}
 				val = append(val,toV)
 			}
@@ -410,23 +406,20 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 			if stmt == nil{
 				goto errLoop
 			}
-			log.Println("33333")
 
-			_,This.err = stmt.Exec(val)
+			_,This.conn.err = stmt.Exec(val)
+			if This.conn.err != nil{
+				This.conn.conn.Rollback()
+				return nil,This.conn.err
+			}
 			opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
 			break
 		}
 
-		if This.err != nil{
-			log.Println("44444")
-			This.conn.conn.Rollback()
-			return nil,This.err
-		}
 	}
 
 	errLoop:
 		if This.err != nil{
-			log.Println("55555")
 			This.conn.conn.Rollback()
 			return nil,This.err
 		}
@@ -436,10 +429,8 @@ func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error) {
 
 	err2 := This.conn.conn.Commit()
 	if err2 != nil{
-		This.err = err2
-		log.Println("6666")
-		This.needReconn = true
-		return nil,This.err
+		This.conn.err = err2
+		return nil,This.conn.err
 	}
 
 	if len(t.Data[This.p.ckDatakey].Data) <= int(This.p.BatchSize){
@@ -459,9 +450,20 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 	}()
 	switch toDataType {
 	case "String","Enum8","Enum16","Enum","Date","DateTime","UUID":
-		v = fmt.Sprint(data)
+		switch data.(type) {
+		case []string:
+			v = strings.Replace(strings.Trim(fmt.Sprint(data), "[]"), " ", ",", -1)
+			break
+		default:
+			v = fmt.Sprint(data)
+			break
+		}
 		break
 	case "Int8":
+		if data == nil{
+			v = int(0)
+			break
+		}
 		switch data.(type) {
 		case bool:
 			if data.(bool) == true{
@@ -469,59 +471,105 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			}else{
 				v = int8(0)
 			}
+			break
 		default:
 			v = data.(int8)
+			break
 		}
 		break
 	case "UInt8":
+		if data == nil{
+			v = uint(0)
+			break
+		}
 		v = data.(uint8)
 		break
 	case "Int16":
+		if data == nil{
+			v = int16(0)
+			break
+		}
 		//mysql year 类型对应go int类型，但是ck里可能是Int16
 		switch data.(type) {
 		case string:
 			s1,_ := strconv.Atoi(data.(string))
 			v = int16(s1)
+			break
 		case int:
 			v = int16(data.(int))
+			break
 		default:
 			v = data.(int16)
+			break
 		}
 		break
 	case "UInt16":
+		if data == nil{
+			v = uint16(0)
+			break
+		}
 		v = data.(uint16)
 		break
 	case "Int32":
+		if data == nil{
+			v = int32(0)
+			break
+		}
 		v = data.(int32)
 		break
 	case "UInt32":
+		if data == nil{
+			v = uint32(0)
+			break
+		}
 		v = data.(uint32)
 		break
 	case "Int64":
+		if data == nil{
+			v = int64(0)
+			break
+		}
 		v = data.(int64)
 		break
 	case "UInt64":
+		if data == nil{
+			v = uint64(0)
+			break
+		}
 		v = data.(uint64)
 		break
 	case "Float64":
+		if data == nil{
+			v = float64(0.00)
+			break
+		}
 		// 有可能是decimal 类型，binlog解析出来decimal 对应go string类型
 		switch data.(type) {
 		case string:
 			s1,_ := strconv.ParseFloat(data.(string), 64)
 			v = s1
+			break
 		case float32:
 			v = float64(data.(float32))
+			break
 		default:
 			v = data.(float64)
+			break
 		}
 		break
 	case "Float32":
+		if data == nil{
+			v = float32(0.00)
+			break
+		}
 		switch data.(type) {
 		case string:
 			s1,_ := strconv.ParseFloat(data.(string), 32)
 			v = s1
+			break
 		default:
-			v = data.(float64)
+			v = data.(float32)
+			break
 		}
 		break
 	default:

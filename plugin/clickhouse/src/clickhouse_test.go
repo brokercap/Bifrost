@@ -11,6 +11,12 @@ import (
 
 var url string = "tcp://10.40.2.41:9000?Database=test&debug=true&compress=1"
 
+/*
+ddl
+
+CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);
+ */
+
 func TestChechUri(t *testing.T){
 	myConn := MyPlugin.MyConn{}
 	if err := myConn.CheckUri(url);err!= nil{
@@ -24,7 +30,6 @@ func TestGetSchemaList(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
 	log.Println(c.GetSchemaList())
 }
-
 
 
 func TestGetSchemaTableList(t *testing.T)  {
@@ -103,7 +108,7 @@ func TestCommit(t *testing.T){
 	conn := getPluginConn()
 	conn.Insert(pluginTest.GetTestInsertData())
 	//conn.Del(pluginTest.GetTestDeleteData())
-	conn.Update(pluginTest.GetTestUpdateData())
+	//conn.Update(pluginTest.GetTestUpdateData())
 	_,err2 := conn.Commit()
 	if err2 != nil{
 		log.Fatal(err2)
