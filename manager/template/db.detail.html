@@ -51,9 +51,17 @@
         </div>
         <div class="col-sm-7" style=" padding-left: 0px;" id="MyWebLeft_3">
             <div class="ibox float-e-margins">
-                <div class="ibox-title">
+                <div class="ibox-title" >
                     <h5>Table ToServer List
-                        <a style="display: none" href="#" id="tableFlowBtn" target="_blank"><button class="btn-sm btn-primary" type="button" style="margin-top: -8px">Flow</button></a>
+                        <span id="tableSelectShowDiv" style="display: none">
+                        <a  href="#" id="tableFlowBtn" target="_blank"><button class="btn-sm btn-primary" type="button" style="margin-top: -8px">Flow</button></a>
+                        &nbsp;
+                        <button class="btn-sm btn-primary" id="historyAddBtn" type="button" style="margin-top: -8px" title="点击后可配置读取数据表的数据进行初始化数据">刷历史数据</button>
+                        &nbsp;
+                        <a href="#" id="tableHistoryListBtn">
+                        <button class="btn-sm btn-primary" id="" type="button" style="margin-top: -8px">查看刷数据列表</button>
+                        </a>
+                        </span>
                     </h5>
                 </div>
                 <div class="ibox-content">
@@ -228,6 +236,73 @@
         </div>
     </div>
     <!--add table over-->
+
+
+
+    <!--add hisotry start-->
+    <div class="modal inmodal fade" id="addHistoryDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h3 class="modal-title">Add New History</h3>
+                </div>
+                <div class="modal-body">
+                    <table width="100%" border="0">
+                        <tr>
+                            <td align="right" height="50" width="20%">DB : </td>
+                            <td style="text-indent:10px" >
+                                <input type="text" name="dbname" id="addHisotryDbName" class="form-control" placeholder="Database" value="{{.DbName}}" disabled>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="right" height="50" width="20%">Schema : </td>
+                            <td style="text-indent:10px" >
+                                <input type="text" name="schema" class="form-control" placeholder="Database" value="" id="addHisotrySchema" disabled>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="right" height="50" width="20%">TableName : </td>
+                            <td style="text-indent:10px" >
+                                <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addHisotryTableName" disabled>
+                            </td>
+                        </tr>
+
+
+                        <tr>
+                            <td align="right" height="50" width="20%">ThreadNum : </td>
+                            <td style="text-indent:10px" >
+                                <input type="text" name="ThreadCount" class="form-control" placeholder="ThreadNum" value="1" id="addHisotryThreadNum">
+                                <span>开启多少个连接并发查询</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="right" height="50" width="20%">ThreadCountPer : </td>
+                            <td style="text-indent:10px" >
+                                <input type="text" name="ThreadCountPer" class="form-control" placeholder="ThreadCountPer" value="1000" id="addHisotryThreadCountPer">
+                                <span>每次查询读取多少条数据</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right" height="50">ToServer :  </td>
+                            <td style="text-indent:10px" id="addHisotryToServer">
+
+                            </td>
+                        </tr>
+                    </table>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn-sm btn-primary" id="AddHistoryBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--add hisotry over-->
 
     <script src="/js/bootstrap.min.js?v=3.3.6"></script>
     <script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
@@ -412,7 +487,8 @@
         }
         function ChangeTableFlowBtnHref(schema_name,table_name){
             $("#tableFlowBtn").attr("href","/flow/index?dbname="+dbname+"&schema="+schema_name+"&table_name="+table_name);
-            $("#tableFlowBtn").show();
+            $("#tableHistoryListBtn").attr("href","/history/list?dbname="+dbname+"&schema="+schema_name+"&table_name="+table_name);
+            $("#tableSelectShowDiv").show();
         }
 
         //将表设置为 选中 或 非选中 状态
@@ -847,6 +923,83 @@
         }
 
         init();
+
+
+        $("#historyAddBtn").click(
+            function () {
+                var url = "/table/toserverlist";
+                var dbname = $("#dbname").val();
+                var schema_name = $("#tableToServerListContair").attr("schema");
+                var table_name = $("#tableToServerListContair").attr("table_name");
+                $.post(url,
+                        {dbname:dbname,schema_name:schema_name,table_name:table_name},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            var Html = "";
+                            $.each(data,function(index,v){
+                                Html += "<p><input style='height: 20px; width: 20px;' type='checkbox' name='addHistoryToServerID' value='"+ v.ToServerID + "' />"+v.PluginName +"-"+v.ToServerKey+"</p>";
+                            });
+
+                            $("#addHisotryToServer").html(Html);
+                        },
+                        'json');
+
+                $("#addHisotrySchema").val(schema_name);
+                $("#addHisotryTableName").val(table_name);
+                $("#addHistoryDiv").modal('show');
+            }
+        );
+        
+        $("#AddHistoryBtn").click(
+            function () {
+                var ThreadNum       = $("#addHisotryThreadNum").val();
+                var ThreadCountPer  = $("#addHisotryThreadCountPer").val();
+                var dbname          = $("#addHisotryDbName").val();
+                var schema_name     = $("#addHisotrySchema").val();
+                var table_name      = $("#addHisotryTableName").val();
+
+                var ToServerIds = [];
+                $.each($("#addHisotryToServer input:checkbox:checked"),function(){
+                    ToServerIds.push(parseInt($(this).val()));
+                });
+                if (isNaN(ThreadNum)){
+                    alert("ThreadNum must be int!");
+                    return false;
+                }
+                if (isNaN(ThreadCountPer)){
+                    alert("ThreadCountPer must be int!");
+                    return false;
+                }
+                if (ToServerIds.length == 0){
+                    alert("请选择 ToServer");
+                    return false;
+                }
+                var Property = {};
+                Property["ThreadNum"]       = parseInt(ThreadNum);
+                Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
+
+                var url = "/history/add";
+                $.post(url,
+                        {dbname:dbname,schema_name:schema_name,table_name:table_name,property:JSON.stringify(Property),ToserverIds:JSON.stringify(ToServerIds)},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(data.status) {
+                                alert("success,请点击开始按钮进行开启 初始化操作")
+                                window.location.href = "/history/list?dbname=" + dbname + "&schema_name=" + schema_name + "&table_name=" + table_name;
+                            }else{
+                                alert(data.msg);
+                            }
+                        },
+                        'json');
+
+            }
+        );
 
     </script>
 
