@@ -20,10 +20,10 @@ import (
 	"fmt"
 )
 
-type Type int16
+type Type int8
 
 const (
-	BOOL_TYPE		Type = 1 << iota
+	BOOL_TYPE		Type = iota + 1
 	INT8_TYPE
 	UINT8_TYPE
 	INT16_TYPE
