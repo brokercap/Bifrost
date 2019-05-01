@@ -325,7 +325,7 @@ func (This *History) threadStart(i int)  {
 					m[v.COLUMN_NAME] = nil
 					continue
 				}
-				switch v.COLUMN_TYPE {
+				switch v.DATA_TYPE {
 				case "set":
 					s :=  string(dest[i].([]byte))
 					m[v.COLUMN_NAME] = strings.Split(s, ",")

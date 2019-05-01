@@ -77,15 +77,19 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		NUMERIC_SCALE 		= string(dest[9].([]byte))
 
 		var ToDataType dataType.Type
-		switch COLUMN_TYPE {
+		switch DATA_TYPE {
 		case "char","varchar","set","enum","text","blob","mediumblob","longblob","tinyblob","mediumtext","longtext","tinytext","time","date","datetime","timestamp":
 			ToDataType = dataType.STRING_TYPE
 			break
 		case "tinyint":
-			if strings.Index(COLUMN_TYPE,"unsigned") >= 0{
-				ToDataType = dataType.UINT8_TYPE
-			}else{
-				ToDataType = dataType.INT8_TYPE
+			if COLUMN_TYPE == "tinyint(1)"{
+				ToDataType = dataType.BOOL_TYPE
+			}else {
+				if strings.Index(COLUMN_TYPE, "unsigned") >= 0 {
+					ToDataType = dataType.UINT8_TYPE
+				} else {
+					ToDataType = dataType.INT8_TYPE
+				}
 			}
 			break
 		case "smallint":
@@ -110,17 +114,20 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 			}
 			break
 
-		case "float","double":
+		case "float":
+			ToDataType = dataType.FLOAT32_TYPE
+			break
+		case "double":
 			ToDataType = dataType.FLOAT64_TYPE
 			break
 		case "decimal":
 			ToDataType = dataType.STRING_TYPE
 			break
 		case "year":
-			ToDataType = dataType.INT16_TYPE
+			ToDataType = dataType.STRING_TYPE
 			break
 		case "bit":
-			ToDataType = dataType.INT64_TYPE
+			ToDataType = dataType.BIT_TYPE
 			break
 		case "bool":
 			ToDataType = dataType.BOOL_TYPE
