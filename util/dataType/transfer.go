@@ -16,8 +16,8 @@ limitations under the License.
 package dataType
 
 import (
-	"math"
 	"fmt"
+	"strconv"
 )
 
 type Type int8
@@ -37,22 +37,23 @@ const (
 	BYTES_TYPE
 	FLOAT32_TYPE
 	FLOAT64_TYPE
+	BIT_TYPE
 )
 
 func TransferDataType(data []byte,dataType Type)(v interface{},err error) {
 	switch dataType {
 	case BOOL_TYPE:
-		if data[0] == 1{
+		if string(data) == "1"{
 			v = true
 		}else{
 			v = false
 		}
 		break
 	case INT8_TYPE:
-		v = int8(data[0])
+		v = BytesToInt8(data)
 		break
 	case UINT8_TYPE:
-		v = uint8(data[0])
+		v = BytesToUInt8(data)
 		break
 	case INT16_TYPE:
 		v = BytesToInt16(data)
@@ -87,6 +88,9 @@ func TransferDataType(data []byte,dataType Type)(v interface{},err error) {
 	case BYTES_TYPE:
 		v = data
 		break
+	case BIT_TYPE:
+		v = int64(data[0])
+		break
 	default:
 		v = nil
 		err = fmt.Errorf("dataType not found")
@@ -94,53 +98,62 @@ func TransferDataType(data []byte,dataType Type)(v interface{},err error) {
 	return
 }
 
+func BytesToInt8(b []byte) (n int8) {
+	a,_:=strconv.Atoi(string(b))
+	n = int8(a)
+	return
+}
+
+func BytesToUInt8(b []byte) (n uint8) {
+	a,_:=strconv.Atoi(string(b))
+	n = uint8(a)
+	return
+}
+
 func BytesToInt16(b []byte) (n int16) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= int16(b[i]) << (i * 8)
-	}
+	a,_:=strconv.Atoi(string(b))
+	n = int16(a)
 	return
 }
 
 func BytesToUInt16(b []byte) (n uint16) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= uint16(b[i]) << (i * 8)
-	}
+	a,_:=strconv.ParseUint(string(b),10,32)
+	n = uint16(a)
 	return
 }
 
 
 func BytesToInt32(b []byte) (n int32) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= int32(b[i]) << (i * 8)
-	}
+	a,_:=strconv.ParseInt(string(b),10,32)
+	n = int32(a)
 	return
 }
 
 func BytesToUInt32(b []byte) (n uint32) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= uint32(b[i]) << (i * 8)
-	}
+	a,_:=strconv.ParseUint(string(b),10,32)
+	n = uint32(a)
 	return
+
 }
 
 func BytesToInt64(b []byte) (n int64) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= int64(b[i]) << (i * 8)
-	}
+	a,_:=strconv.ParseInt(string(b),10,64)
+	n = int64(a)
 	return
 }
 
 func BytesToUInt64(b []byte) (n uint64) {
-	for i := uint8(0); i < uint8(len(b)); i++ {
-		n |= uint64(b[i]) << (i * 8)
-	}
+	a,_:=strconv.ParseUint(string(b),10,64)
+	n = uint64(a)
 	return
 }
 
 func BytesToFloat32(b []byte) (n float32) {
-	return math.Float32frombits(BytesToUInt32(b))
+	a, _:= strconv.ParseFloat(string(b), 32)
+	return float32(a)
 }
 
 func BytesToFloat64(b []byte) float64 {
-	return math.Float64frombits(BytesToUInt64(b))
+	n, _:= strconv.ParseFloat(string(b), 64)
+	return n
 }
