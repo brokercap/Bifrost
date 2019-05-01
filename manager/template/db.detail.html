@@ -56,10 +56,10 @@
                         <span id="tableSelectShowDiv" style="display: none">
                         <a  href="#" id="tableFlowBtn" target="_blank"><button class="btn-sm btn-primary" type="button" style="margin-top: -8px">Flow</button></a>
                         &nbsp;
-                        <button class="btn-sm btn-primary" id="historyAddBtn" type="button" style="margin-top: -8px" title="点击后可配置读取数据表的数据进行初始化数据">刷历史数据</button>
+                        <button class="btn-sm btn-primary" id="historyAddBtn" type="button" style="margin-top: -8px" title="点击后可配置读取数据表的数据进行全量数据初始化">刷全量数据</button>
                         &nbsp;
                         <a href="#" id="tableHistoryListBtn">
-                        <button class="btn-sm btn-primary" id="" type="button" style="margin-top: -8px">查看刷数据列表</button>
+                        <button class="btn-sm btn-primary" id="" type="button" style="margin-top: -8px">查看全量任务列表</button>
                         </a>
                         </span>
                     </h5>
@@ -72,7 +72,7 @@
                             <table id="tableToServerListContair" schema="" table_name="" dbname="" data-toggle="table" data-query-params="queryParams" data-mobile-responsive="true" data-height="auto" data-pagination="false" data-icon-size="outline">
                                 <thead>
                                 <tr>
-                                    <th data-field="sliceid">sliceId</th>
+                                    <th data-field="sliceid">sliceId/ID</th>
                                     <th data-field="PluginName">PluginType</th>
                                     <th data-field="ToServerKey">ToServerKey</th>
                                     <th data-field="FieldList">FieldList</th>
@@ -549,7 +549,7 @@
                             others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
                             e.push({
-                                sliceid:index,
+                                sliceid:index+"/"+v.ToServerID,
                                 PluginName:v.PluginName,
                                 ToServerKey:v.ToServerKey,
                                 FieldList:"<p style='max-width: 200px;word-wrap:break-word'>"+fields+"</p>",

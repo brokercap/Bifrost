@@ -46,6 +46,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 
 	SaveBinlog := func(){
 		if PluginBinlog != nil {
+			if PluginBinlog.BinlogFileNum == 0{
+				return
+			}
 			//db.Lock()
 			This.BinlogFileNum,This.BinlogPosition = PluginBinlog.BinlogFileNum,PluginBinlog.BinlogPosition
 			//db.Unlock()

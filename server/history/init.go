@@ -9,11 +9,14 @@ import (
 	"github.com/jc3wish/Bifrost/util/dataType"
 	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
 	"github.com/jc3wish/Bifrost/server"
+	"github.com/jc3wish/Bifrost/server/count"
 	"github.com/jc3wish/Bifrost/config"
+
 	"strings"
 	"log"
 	"time"
 	"runtime/debug"
+	"unsafe"
 )
 
 var historyMap map[string]map[int]*History
@@ -166,6 +169,7 @@ func (This *History) Start() error {
 	}
 	This.StartTime = time.Now().Format("2006-01-02 15:04:05")
 	This.Status = RUNNING
+	This.NowStartI = 0
 	This.Unlock()
 	This.Fields = make([]TableStruct,0)
 	This.ThreadPool = make([]*ThreadStatus,This.Property.ThreadNum)
@@ -247,7 +251,8 @@ func (This *History) threadStart(i int)  {
 			}
 		}
 	}
-
+	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
+	CountKey := This.SchemaName + "-" + This.TableName
 	var sendToServerResult = func(ToServerInfo *server.ToServer,pluginData *pluginDriver.PluginDataType)  {
 		ToServerInfo.Lock()
 		status := ToServerInfo.Status
@@ -264,32 +269,44 @@ func (This *History) threadStart(i int)  {
 			}
 			go ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
 		}
+		ToServerInfo.Unlock()
 		ToServerInfo.ToServerChan.To <- pluginData
 	}
 
-	p := make([]driver.Value, 0)
-
+	//sql := "select * from " + This.SchemaName + "." + This.TableName + " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
+	/*
+	sql := "select * from " + This.SchemaName + "." + This.TableName + " LIMIT ?,"+strconv.Itoa(This.Property.ThreadCountPer)
+	stmt, err := db.Prepare(sql)
+	if err != nil{
+		log.Println("sssssssss")
+		This.ThreadPool[i].Error = err
+		stmt.Close()
+		return
+	}
+	*/
+	n := len(This.Fields)
+	hadData := false
 	for {
 		This.Lock()
 		start = This.NowStartI
 		This.NowStartI += This.Property.ThreadCountPer
 		This.Unlock()
 		sql := "select * from " + This.SchemaName + "." + This.TableName + " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
-		log.Println(sql)
 		stmt, err := db.Prepare(sql)
-		This.ThreadPool[i].NowStartI = start
 		if err != nil{
 			This.ThreadPool[i].Error = err
 			stmt.Close()
 			return
 		}
+		This.ThreadPool[i].NowStartI = start
+		p:=make([]driver.Value,0)
+		//p[0]=strconv.Itoa(start)
 		rows, err := stmt.Query(p)
 		if err != nil{
 			This.ThreadPool[i].Error = err
 			return
 		}
-		n := len(This.Fields)
-		m := make(map[string]interface{}, n)
+		hadData = false
 		for {
 			if This.Status == KILLED{
 				return
@@ -297,8 +314,12 @@ func (This *History) threadStart(i int)  {
 			dest := make([]driver.Value, n, n)
 			err := rows.Next(dest)
 			if err != nil {
+				//log.Println("ssssssssff err:",err)
 				break
 			}
+			hadData = true
+			m := make(map[string]interface{}, n)
+			sizeCount := int64(0)
 			for i, v := range This.Fields {
 				if dest[i] == nil{
 					m[v.COLUMN_NAME] = nil
@@ -313,26 +334,40 @@ func (This *History) threadStart(i int)  {
 					m[v.COLUMN_NAME], _ = dataType.TransferDataType(dest[i].([]byte), v.ToDataType)
 					break
 				}
+				sizeCount += int64(unsafe.Sizeof(m[v.COLUMN_NAME]))
+			}
+			if len(m) == 0{
+				return
+			}
+			Rows := make([]map[string]interface{},1)
+			Rows[0] = m
+			d := &pluginDriver.PluginDataType{
+				Timestamp:		uint32(time.Now().Unix()),
+				EventType: 		"insert",
+				Rows:           Rows,
+				Query:          "",
+				SchemaName:		This.SchemaName,
+				TableName:		This.TableName,
+				BinlogFileNum:	0,
+				BinlogPosition:	0,
+			}
+
+			for _,toServerInfo := range toServerList{
+				sendToServerResult(toServerInfo,d)
+			}
+
+			countChan <- &count.FlowCount{
+				//Time:"",
+				Count:1,
+				TableId:CountKey,
+				ByteSize:sizeCount*int64(len(toServerList)),
 			}
 		}
 		rows.Close()
 		stmt.Close()
 
-		Rows := make([]map[string]interface{},1)
-		Rows[0] = m
-		d := &pluginDriver.PluginDataType{
-			Timestamp:		uint32(time.Now().Unix()),
-			EventType: 		"insert",
-			Rows:           Rows,
-			Query:          "",
-			SchemaName:		This.SchemaName,
-			TableName:		This.TableName,
-			BinlogFileNum:	0,
-			BinlogPosition:	0,
-		}
-
-		for _,toServerInfo := range toServerList{
-			sendToServerResult(toServerInfo,d)
+		if hadData == false{
+			return
 		}
 	}
 }

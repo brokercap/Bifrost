@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"html/template"
 	"github.com/jc3wish/Bifrost/server/history"
+	"github.com/jc3wish/Bifrost/server"
 	"encoding/json"
 )
 func init(){
@@ -33,6 +34,7 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		SchemaName string
 		TableName string
 		HistoryList []history.History
+		DbList 			map[string]server.DbListStruct
 	}
 	var data HistoryListInfo
 	data = HistoryListInfo{
@@ -40,6 +42,7 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		TableName:tablename,
 		SchemaName:schema,
 		HistoryList:HistoryList,
+		DbList:server.GetListDb(),
 	}
 
 	data.Title = "History List - Bifrost"

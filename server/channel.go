@@ -75,6 +75,10 @@ func (Channel *Channel) SetFlowCountChan(flowChan chan *count.FlowCount) {
 	Channel.countChan = flowChan
 }
 
+func (Channel *Channel) GetCountChan() chan *count.FlowCount {
+	return Channel.countChan
+}
+
 func (Channel *Channel) Start() chan mysql.EventReslut {
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
 	Channel.Status = "running"

@@ -14,16 +14,29 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>
-                    {{if ne .DbName ""}}
-                    {{.DbName}} -
+                        History List
+                    {{if ne .TableName ""}}
+                    {{.TableName}} -
                     {{end}}
                     {{if ne .SchemaName ""}}
                     {{.SchemaName}} -
                     {{end}}
-                    {{if ne .TableName ""}}
-                    {{.TableName}} -
-                    {{end}}
-                     History List</h5>
+
+                    </h5>
+
+                    <!--dbname list-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                        <select class="form-control" name="dbname" id="dbname">
+                            <option value="" > 数据源 </option>
+                        {{range $i, $db := .DbList}}
+                            <option value="{{$db.Name}}"> {{$db.Name}} </option>
+                        {{end}}
+                        </select>
+
+                    </div>
+                    <script type="text/javascript">$("#dbname").val("{{.DbName}}")</script>
+
+
                     <div class="ibox-tools">
                         <a class="collapse-link">
                             <i class="fa fa-chevron-up"></i>
@@ -78,12 +91,24 @@
                                 <td>{{$v.OverTime}}</td>
                                 <td>{{$v.Status}}</td>
                                 <td>
+                                <p>
                                     {{if eq $v.Status "running"}}
                                         <button data-toggle="button" class="btn-sm btn-primary stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'stop')" >Stop</button>
                                      {{else}}
-                                        <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
                                         <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
+                                        <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
                                      {{end}}
+                                </p>
+
+                                        <p>
+                                        <a href="/db/detail?dbname={{$v.DbName}}&schema={{$v.SchemaName}}&table_name={{$v.TableName}}">
+                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
+                                        </a>
+
+                                        <a href="/flow/index?dbname={{$v.DbName}}&schema={{$v.SchemaName}}&table_name={{$v.TableName}}">
+                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                        </a>
+                                        </p>
                                 </td>
                             </tr>
                             {{end}}
@@ -91,7 +116,14 @@
                         </table>
                     </div>
 
+
+                    <div>
+                        <p><strong>备注:</strong></p>
+                        <p>1. 全量数据任务不会持久化,重启之后,任务会被清除掉</p>
+                    </div>
+
                 </div>
+
             </div>
         </div>
 
@@ -112,7 +144,7 @@
             }
         }
         var url = "/history/"+status;
-        var trObj = $(obj).parent().parent();
+        var trObj = $(obj).parent().parent().parent();
         var dbname = trObj.children().eq(1).html();
         var id = trObj.children().eq(0).html();
 
