@@ -79,7 +79,7 @@ func KillHistory(dbName string,ID int) error {
 	if _,ok:=historyMap[dbName][ID];!ok{
 		return fmt.Errorf("%s %s not exist",dbName,ID)
 	}
-
+	historyMap[dbName][ID].Status = KILLED
 	return nil
 }
 
@@ -285,7 +285,6 @@ func (This *History) threadStart(i int)  {
 	}
 	*/
 	n := len(This.Fields)
-	hadData := false
 	for {
 		This.Lock()
 		start = This.NowStartI
@@ -306,7 +305,7 @@ func (This *History) threadStart(i int)  {
 			This.ThreadPool[i].Error = err
 			return
 		}
-		hadData = false
+		rowCount := 0
 		for {
 			if This.Status == KILLED{
 				return
@@ -317,7 +316,7 @@ func (This *History) threadStart(i int)  {
 				//log.Println("ssssssssff err:",err)
 				break
 			}
-			hadData = true
+			rowCount++
 			m := make(map[string]interface{}, n)
 			sizeCount := int64(0)
 			for i, v := range This.Fields {
@@ -366,7 +365,7 @@ func (This *History) threadStart(i int)  {
 		rows.Close()
 		stmt.Close()
 
-		if hadData == false{
+		if rowCount < This.Property.ThreadCountPer{
 			return
 		}
 	}
