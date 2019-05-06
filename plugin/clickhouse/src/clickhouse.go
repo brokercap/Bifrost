@@ -449,7 +449,35 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		}
 	}()
 	switch toDataType {
-	case "String","Enum8","Enum16","Enum","Date","DateTime","UUID":
+	case "Date":
+		if data == nil{
+			v = int16(0)
+		}else{
+			s := fmt.Sprint(data)
+			if s == "0000-00-00"{
+				v = int16(0)
+			}else{
+				v = s
+			}
+		}
+		break
+	case "DateTime":
+		if data == nil{
+			v = int32(0)
+		}else{
+			s := fmt.Sprint(data)
+			if s == "0000-00-00 00:00:00"{
+				v = int32(0)
+			}else{
+				v = s
+			}
+		}
+		break
+	case "String","Enum8","Enum16","Enum","UUID":
+		if data == nil{
+			v = ""
+			break
+		}
 		switch data.(type) {
 		case []string:
 			v = strings.Replace(strings.Trim(fmt.Sprint(data), "[]"), " ", ",", -1)
