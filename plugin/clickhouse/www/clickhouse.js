@@ -223,7 +223,7 @@ function GetCkTableDesc(schemaName,tableName) {
 
             var fieldsMap = {};
             $.each($("#TableFieldsContair input"),function(){
-                fieldsMap[$(this).val()] = getTableFieldType($(this).val());
+                fieldsMap[$(this).val()] = getTableFieldType($(this).val().toLowerCase());
             });
 
             var html = "";
@@ -231,7 +231,7 @@ function GetCkTableDesc(schemaName,tableName) {
 
                 var toField = "";
                 var isPri = false;
-                if(fieldsMap.hasOwnProperty(d[i].Name)){
+                if(fieldsMap.hasOwnProperty(d[i].Name.toLowerCase())){
                     toField = d[i].Name;
                     if(fieldsMap[d[i].Name].COLUMN_KEY == "PRI"){
                         isPri = true;
