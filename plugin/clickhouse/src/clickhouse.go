@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 
@@ -57,6 +58,17 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 		return fmt.Errorf("connect")
 	}
 
+	var schemaList []string
+	func(){
+		defer func() {
+			return
+		}()
+		schemaList = c.conn.GetSchemaList()
+	}()
+	if len(schemaList) == 0{
+		c.Close()
+		return fmt.Errorf("schema count is 0 (not in system)")
+	}
 	return nil
 }
 
@@ -453,11 +465,10 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		if data == nil{
 			v = int16(0)
 		}else{
-			s := fmt.Sprint(data)
-			if s == "0000-00-00"{
+			if data.(string) == "0000-00-00"{
 				v = int16(0)
 			}else{
-				v = s
+				v = data
 			}
 		}
 		break
@@ -465,11 +476,13 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		if data == nil{
 			v = int32(0)
 		}else{
-			s := fmt.Sprint(data)
-			if s == "0000-00-00 00:00:00"{
+			if data.(string) == "0000-00-00 00:00:00"{
 				v = int32(0)
 			}else{
-				v = s
+				//log.Println("DateTime:",time.Now().Format("2006-01-02 15:04:05"))
+				loc, _ := time.LoadLocation("Local")                            //重要：获取时区
+				theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
+				v = theTime.Unix()
 			}
 		}
 		break

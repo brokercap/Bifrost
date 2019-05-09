@@ -106,7 +106,9 @@ func getPluginConn() pluginDriver.ConnFun {
 
 func TestCommit(t *testing.T){
 	conn := getPluginConn()
-	conn.Insert(pluginTest.GetTestInsertData())
+	insertdata := pluginTest.GetTestInsertData()
+	log.Println("testtimestamp",insertdata.Rows[0]["testtimestamp"])
+	conn.Insert(insertdata)
 	//conn.Del(pluginTest.GetTestDeleteData())
 	//conn.Update(pluginTest.GetTestUpdateData())
 	_,err2 := conn.Commit()
@@ -140,5 +142,4 @@ func TestReConnCommit(t *testing.T){
 		}
 	}
 	log.Println("success")
-
 }
