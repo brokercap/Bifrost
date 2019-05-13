@@ -3,7 +3,7 @@ package storage
 import (
 "github.com/syndtr/goleveldb/leveldb"
 "github.com/syndtr/goleveldb/leveldb/util"
-"github.com/jc3wish/Bifrost/config"
+"github.com/brokercap/Bifrost/config"
 "path/filepath"
 "os"
 "log"

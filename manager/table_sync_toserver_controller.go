@@ -2,12 +2,12 @@ package manager
 
 import (
 	"net/http"
-	"github.com/jc3wish/Bifrost/server"
+	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
 	"strings"
 	"html/template"
 	"log"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 )
 
 func init(){

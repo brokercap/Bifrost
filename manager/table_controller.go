@@ -16,8 +16,8 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/jc3wish/Bifrost/server"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	"github.com/brokercap/Bifrost/server"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"strings"
 	"encoding/json"
 )

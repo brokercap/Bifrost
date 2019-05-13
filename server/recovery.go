@@ -22,7 +22,7 @@ import (
 	"strings"
 	"fmt"
 	"strconv"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/config"
 )
 
 type dbSaveInfo struct {

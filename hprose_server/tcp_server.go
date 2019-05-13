@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hprose/hprose-golang/rpc"
-	"github.com/jc3wish/Bifrost/hprose_server/serverdo"
+	"github.com/brokercap/Bifrost/hprose_server/serverdo"
 )
 
 func main() {

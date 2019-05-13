@@ -1,7 +1,7 @@
 package src
 
 import (
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"sync"
 	"encoding/json"
 	"fmt"

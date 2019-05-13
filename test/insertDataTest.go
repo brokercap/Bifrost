@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	"database/sql/driver"
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"time"
 	"strings"
 )

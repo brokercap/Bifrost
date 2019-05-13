@@ -3,12 +3,12 @@ package server
 import (
 	"time"
 	"log"
-	"github.com/jc3wish/Bifrost/plugin"
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"runtime"
 	"fmt"
 	"runtime/debug"
-	"github.com/jc3wish/Bifrost/server/warning"
+	"github.com/brokercap/Bifrost/server/warning"
 )
 
 func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)  {

@@ -1,7 +1,7 @@
 package warning
 
 import (
-	"github.com/jc3wish/Bifrost/server/storage"
+	"github.com/brokercap/Bifrost/server/storage"
 	"encoding/json"
 	"strings"
 	"strconv"

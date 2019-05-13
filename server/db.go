@@ -18,10 +18,10 @@ package server
 import (
 	"sync"
 
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"log"
-	"github.com/jc3wish/Bifrost/server/count"
-	"github.com/jc3wish/Bifrost/server/warning"
+	"github.com/brokercap/Bifrost/server/count"
+	"github.com/brokercap/Bifrost/server/warning"
 	"time"
 	"strings"
 	"strconv"

@@ -2,7 +2,7 @@ package storage
 
 import (
 	"sync"
-	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 	"encoding/json"
 )

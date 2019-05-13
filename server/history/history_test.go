@@ -2,10 +2,10 @@ package history_test
 
 import "testing"
 import (
-	"github.com/jc3wish/Bifrost/server/history"
+	"github.com/brokercap/Bifrost/server/history"
 	"log"
 	"strings"
-	"github.com/jc3wish/Bifrost/util/dataType"
+	"github.com/brokercap/Bifrost/util/dataType"
 	"database/sql/driver"
 	"reflect"
 )

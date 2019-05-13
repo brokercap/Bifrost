@@ -3,12 +3,12 @@ package manager
 import (
 	"net/http"
 	"html/template"
-	"github.com/jc3wish/Bifrost/server"
-	"github.com/jc3wish/Bifrost/plugin/driver"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	"github.com/brokercap/Bifrost/server"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"encoding/json"
 	"runtime"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/config"
 	"time"
 )
 

@@ -4,7 +4,7 @@ import "time"
 import (
 "flag"
 "log"
-"github.com/jc3wish/Bifrost/test/pluginTest"
+"github.com/brokercap/Bifrost/test/pluginTest"
 "net/http"
 "strconv"
 "os"

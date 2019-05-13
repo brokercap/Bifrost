@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/jc3wish/Bifrost/server/storage"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/server/storage"
+	"github.com/brokercap/Bifrost/config"
 	"encoding/json"
 	"strconv"
 	"fmt"

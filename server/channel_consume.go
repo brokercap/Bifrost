@@ -22,10 +22,10 @@ import (
 )
 
 import (
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
-	"github.com/jc3wish/Bifrost/server/count"
-	"github.com/jc3wish/Bifrost/config"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/server/count"
+	"github.com/brokercap/Bifrost/config"
 	"strconv"
 	"sync"
 	"log"

@@ -11,8 +11,8 @@ import (
 	"runtime"
 	"fmt"
 	"log"
-	"github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/config"
 )
 
 var lastLoadPluginTime int64 = 0

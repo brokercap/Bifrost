@@ -3,8 +3,8 @@ package manager
 import (
 	"net/http"
 	"html/template"
-	"github.com/jc3wish/Bifrost/server/history"
-	"github.com/jc3wish/Bifrost/server"
+	"github.com/brokercap/Bifrost/server/history"
+	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
 )
 func init(){

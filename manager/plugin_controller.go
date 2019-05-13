@@ -16,8 +16,8 @@ limitations under the License.
 package manager
 import (
 	"net/http"
-	"github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/plugin"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin"
 	"html/template"
 )
 

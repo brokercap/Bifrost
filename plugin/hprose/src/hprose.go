@@ -3,7 +3,7 @@ package src
 import (
 	"fmt"
 	"github.com/hprose/hprose-golang/rpc"
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 type Stub struct {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"log"
 	"strings"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/config"
 )
 
 type FlowCount struct {
