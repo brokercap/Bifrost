@@ -3,9 +3,9 @@ package src_test
 import (
 	"testing"
 	"log"
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
-	"github.com/jc3wish/Bifrost/test/pluginTest"
-	MyPlugin "github.com/jc3wish/Bifrost/plugin/clickhouse/src"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/test/pluginTest"
+	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
 	"time"
 )
 

@@ -7,7 +7,7 @@
 
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
 
-提供 [Linux](https://github.com/jc3wish/Bifrost/releases) , [mac](https://github.com/jc3wish/Bifrost/releases) , [windows](https://github.com/jc3wish/Bifrost/releases) , [freebsd](https://github.com/jc3wish/Bifrost/releases)  平台二进制可执行文件下载.
+提供 [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)  平台二进制可执行文件下载.
 
 
 *Bifrsot* 支持同步到多种目标库, for example:
@@ -19,15 +19,15 @@
 * Kafka
 * Mongodb
 * ClickHouse
-* [Http 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/jc3wish/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
-![image](https://github.com/jc3wish/Bifrost/blob/v1.1.x/bifrost1.jpg)
+![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/bifrost1.jpg)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/jc3wish/Bifrost/blob/v1.1.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/diagram.png)
 
 
 ### Bifrost 特点
@@ -50,7 +50,7 @@
 
 ### WIKI
 
-[Bifrost WIKI](https://github.com/jc3wish/Bifrost/wiki)
+[Bifrost WIKI](https://github.com/brokercap/Bifrost/wiki)
 
 ### MySQL 版本（经过测试）
 
@@ -72,7 +72,7 @@
 
 ```sh
 
-go get github.com/jc3wish/Bifrost
+go get github.com/brokercap/Bifrost
 
 # windows
 ./build.sh windows v1.1.x
@@ -91,7 +91,7 @@ go get github.com/jc3wish/Bifrost
 ##### 二进制文件下载
 `````sh
 
-wget https://github.com/jc3wish/Bifrost/releases/download/v1.1.x-release/linux.zip
+wget https://github.com/brokercap/Bifrost/releases/download/v1.1.x-release/linux.zip
 
 unzip linux.zip
 
@@ -146,7 +146,7 @@ tls_crt_file=./etc/server.crt
 
 ##### 生成https证书
 
-[参考证书生成](https://github.com/jc3wish/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
+[参考证书生成](https://github.com/brokercap/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
 
 ##### 启动
 `````shell
@@ -167,7 +167,7 @@ tls_crt_file=./etc/server.crt
  FROM centos:centos6.8
  MAINTAINER jc3wish "jc3wish@126.com"
  RUN yum install -y wget unzip
- RUN wget https://github.com/jc3wish/Bifrost/releases/download/v1.1.x-release/linux.zip
+ RUN wget https://github.com/brokercap/Bifrost/releases/download/v1.1.x-release/linux.zip
  RUN unzip linux && cd linux && chmod a+x ./Bifrost-server
  ENTRYPOINT ["linux/Bifrost-server","start"]
  EXPOSE 21036
@@ -205,4 +205,4 @@ https://127.0.0.1:21036
 - github.com/kshvakov/clickhouse
 
 ### QQ群号： 70331601
-<img src="https://github.com/jc3wish/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>
+<img src="https://github.com/brokercap/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>

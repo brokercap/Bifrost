@@ -3,10 +3,10 @@ package src
 import (
 	"database/sql/driver"
 	"github.com/kshvakov/clickhouse"
-	"github.com/jc3wish/Bifrost/manager/xgo"
+	"github.com/brokercap/Bifrost/manager/xgo"
 	"net/http"
 	"encoding/json"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 
 	"log"
 )

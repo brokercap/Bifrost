@@ -18,9 +18,9 @@ package manager
 import (
 	"net/http"
 	"html/template"
-	"github.com/jc3wish/Bifrost/server"
+	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
-	toserver "github.com/jc3wish/Bifrost/plugin/storage"
+	toserver "github.com/brokercap/Bifrost/plugin/storage"
 )
 
 func init(){

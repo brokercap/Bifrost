@@ -2,10 +2,10 @@ package history
 
 
 import (
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"log"
-	"github.com/jc3wish/Bifrost/util/dataType"
+	"github.com/brokercap/Bifrost/util/dataType"
 	"strings"
 )
 

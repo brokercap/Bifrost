@@ -17,7 +17,7 @@ package manager
 
 import (
 	"net/http"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/config"
 )
 
 func init()  {

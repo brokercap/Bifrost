@@ -19,9 +19,9 @@ package server
 import (
 	"sync"
 
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
-	"github.com/jc3wish/Bifrost/server/count"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/server/count"
+	"github.com/brokercap/Bifrost/config"
 	"log"
 )
 

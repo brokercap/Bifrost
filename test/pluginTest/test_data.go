@@ -1,7 +1,7 @@
 package pluginTest
 
 import (
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"time"
 	"encoding/json"
 )

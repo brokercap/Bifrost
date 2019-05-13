@@ -16,7 +16,7 @@ limitations under the License.
 package manager
 
 import (
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"log"
 	"strconv"

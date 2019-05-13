@@ -1,7 +1,7 @@
 package main
 
 import (
-_ "github.com/jc3wish/Bifrost/plugin/ActiveMQ/src"
+_ "github.com/brokercap/Bifrost/plugin/ActiveMQ/src"
 )
 
 func main() {

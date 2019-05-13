@@ -2,7 +2,7 @@ package src
 
 
 import (
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 const VERSION  = "v1.1.0"

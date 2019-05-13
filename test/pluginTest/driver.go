@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"bytes"
 	"log"
-	"github.com/jc3wish/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"strings"
 	"encoding/json"

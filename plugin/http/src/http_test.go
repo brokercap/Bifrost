@@ -3,8 +3,8 @@ package src_test
 import (
 	"testing"
 	"log"
-	"github.com/jc3wish/Bifrost/test/pluginTest"
-	MyPlugin "github.com/jc3wish/Bifrost/plugin/http/src"
+	"github.com/brokercap/Bifrost/test/pluginTest"
+	MyPlugin "github.com/brokercap/Bifrost/plugin/http/src"
 )
 
 var url string = "http://127.0.0.1:3332/bifrost_http_api_test"

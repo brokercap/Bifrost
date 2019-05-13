@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/jc3wish/Bifrost/plugin/driver"
-	_ "github.com/jc3wish/Bifrost/plugin/redis/src"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	_ "github.com/brokercap/Bifrost/plugin/redis/src"
 	"log"
 	_ "net/http/pprof"
 	"net/http"
 	"time"
-	"github.com/jc3wish/Bifrost/plugin/redis/src"
+	"github.com/brokercap/Bifrost/plugin/redis/src"
 )
 
 func main()  {

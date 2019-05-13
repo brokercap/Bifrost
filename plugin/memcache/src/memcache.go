@@ -1,7 +1,7 @@
 package src
 
 import (
-	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/bradfitz/gomemcache/memcache"
 	"fmt"
 	"encoding/json"

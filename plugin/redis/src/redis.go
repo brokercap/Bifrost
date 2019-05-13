@@ -2,7 +2,7 @@ package src
 
 import (
 	"log"
-	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/garyburd/redigo/redis"
 	"fmt"
 	"encoding/json"

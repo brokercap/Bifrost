@@ -1,7 +1,7 @@
 package main
 
-import "github.com/jc3wish/Bifrost/toserver"
-import "github.com/jc3wish/Bifrost/server"
+import "github.com/brokercap/Bifrost/toserver"
+import "github.com/brokercap/Bifrost/server"
 
 func main(){
 	doStart()

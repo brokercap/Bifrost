@@ -18,7 +18,7 @@ package manager
 import (
 	"net/http"
 	"html/template"
-	"github.com/jc3wish/Bifrost/config"
+	"github.com/brokercap/Bifrost/config"
 
 )
 

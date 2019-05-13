@@ -3,8 +3,8 @@ package plugin
 import (
 	"strconv"
 	"log"
-	"github.com/jc3wish/Bifrost/plugin/driver"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"runtime/debug"
 	"time"
 	"sync"

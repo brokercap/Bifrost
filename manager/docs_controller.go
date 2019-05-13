@@ -18,7 +18,7 @@ package manager
 import (
 	"net/http"
 	"text/template"
-	"github.com/jc3wish/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func init(){

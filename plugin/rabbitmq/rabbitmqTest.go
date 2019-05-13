@@ -4,7 +4,7 @@ import "time"
 import (
 	"flag"
 	"log"
-	"github.com/jc3wish/Bifrost/test/pluginTest"
+	"github.com/brokercap/Bifrost/test/pluginTest"
 	"strconv"
 	"os"
 	"syscall"
@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/streadway/amqp"
-	pluginDriver "github.com/jc3wish/Bifrost/plugin/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func init() {}

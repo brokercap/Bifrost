@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"html/template"
 	"encoding/json"
-	"github.com/jc3wish/Bifrost/server/warning"
+	"github.com/brokercap/Bifrost/server/warning"
 	"strings"
 )
 

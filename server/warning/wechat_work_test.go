@@ -2,7 +2,7 @@ package warning_test
 
 import (
 	"testing"
-	"github.com/jc3wish/Bifrost/server/warning"
+	"github.com/brokercap/Bifrost/server/warning"
 	"log"
 )
 

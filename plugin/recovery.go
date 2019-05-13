@@ -3,7 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"log"
-	pluginStorage "github.com/jc3wish/Bifrost/plugin/storage"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 )
 
 func Recovery(data *json.RawMessage){
