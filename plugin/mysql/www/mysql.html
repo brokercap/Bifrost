@@ -1,0 +1,54 @@
+<style type="text/css">
+#ToMYQL_Contair td{
+    height: 30px; line-height: 30px; width: 50%;
+}
+
+</style>
+<div class="form-group" id="ToMYQL_Contair">
+
+    <div class="form-group">
+        <div class="col-sm-3">
+            <select class="form-control" name="to_mysql_schema" id="to_mysql_schema" onchange="GetToSchameTableList($(this).val());">
+                <option value="true" selected="selected">请选择数据库</option>
+            </select>
+        </div>
+        <div class="col-sm-9">
+            <select class="form-control" name="to_mysql_table" id="to_mysql_table" onchange="GetToTableDesc($('#to_mysql_schema').val(),$(this).val());" >
+                <option value="true" selected="selected">请选择表</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+    <div class="col-sm-12" >
+        <table style="width: 100%">
+            <thead>
+            <tr>
+                <th width="45%" height="35">To MySQL Field</th>
+                <th width="45%">From DB Field</th>
+                <th>PRI</th>
+            </tr>
+            </thead>
+            <tbody id="ToTableFieldsTable">
+
+
+            </tbody>
+            <!--
+            <tr>
+                <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
+                <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
+            </tr>
+            -->
+        </table>
+        <p>&nbsp;</p>
+    </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">BatchSize：</label>
+        <div class="col-sm-9">
+            <input type="text" name="BatchSize" id="MySQL_BatchSize" value="500" class="form-control" placeholder="">
+            <span class="help-block m-b-none">* 多少条刷一次数据</span>
+        </div>
+    </div>
+</div>
