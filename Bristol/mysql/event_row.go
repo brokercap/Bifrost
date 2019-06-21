@@ -367,7 +367,11 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			data = buf.Next(3)
 			timeInt := int(int(data[0]) + (int(data[1]) << 8) + (int(data[2]) << 16))
 			if timeInt == 0 {
-				row[column_name] = nil
+				if tableSchemaMap[i].COLUMN_DEFAULT != ""{
+					row[column_name] = tableSchemaMap[i].COLUMN_DEFAULT
+				}else{
+					row[column_name] = nil
+				}
 			} else {
 				year := (timeInt & (((1 << 15) - 1) << 9)) >> 9
 				month := (timeInt & (((1 << 4) - 1) << 5)) >> 5
@@ -393,7 +397,11 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			data = buf.Next(3)
 			timeInt := int(int(data[0]) + (int(data[1]) << 8) + (int(data[2]) << 16))
 			if timeInt == 0 {
-				row[column_name] = nil
+				if tableSchemaMap[i].COLUMN_DEFAULT != ""{
+					row[column_name] = tableSchemaMap[i].COLUMN_DEFAULT
+				}else{
+					row[column_name] = nil
+				}
 			} else {
 				hour := int(timeInt / 10000)
 				minute := int((timeInt % 10000) / 100)
@@ -472,6 +480,9 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			year := d / 10000
 
 			row[column_name] = time.Date(year, month, day, hour, minute, second, 0, time.UTC).Format(TIME_FORMAT)
+			if row[column_name] == "-0001-11-30 00:00:00"{
+				row[column_name] = "0000:00:00 00:00:00"
+			}
 			break
 
 		case FIELD_TYPE_DATETIME2:

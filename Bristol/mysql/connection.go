@@ -177,6 +177,7 @@ func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, error) {
+
 	if len(args) > 0 {
 		return nil, driver.ErrSkip
 	}

@@ -19,6 +19,8 @@ type column_schema_type struct {
 	is_primary         bool
 	unsigned 		   bool
 	auto_increment     bool
+	COLUMN_DEFAULT	   string
+	DATA_TYPE		   string
 }
 
 type MysqlConnection interface {

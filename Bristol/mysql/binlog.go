@@ -189,7 +189,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	}
 	//set dbAndTable Name tableId
 	parser.tableNameMap[database+"."+tablename] = tableId
-	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
+	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
 	stmt, err := parser.conn.Prepare(sql)
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
@@ -198,7 +198,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		return
 	}
 	for {
-		dest := make([]driver.Value, 7, 7)
+		dest := make([]driver.Value, 9, 9)
 		err := rows.Next(dest)
 		if err != nil {
 			break
@@ -210,6 +210,8 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		var is_primary bool = false
 		var auto_increment bool = false
 		var enum_values, set_values []string
+		var COLUMN_DEFAULT	string
+		var DATA_TYPE string
 
 		COLUMN_NAME = string(dest[0].([]byte))
 		COLUMN_KEY = string(dest[1].([]byte))
@@ -218,6 +220,14 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		COLLATION_NAME = string(dest[4].([]byte))
 		NUMERIC_SCALE = string(dest[5].([]byte))
 		EXTRA = string(dest[6].([]byte))
+
+		DATA_TYPE = string(dest[8].([]byte))
+
+		//bit类型这个地方比较特殊，不能直接转成string，并且当前只有 time,datetime 类型转换的时候会用到 默认值，这里不进行其他细节处理
+		if DATA_TYPE != "bit"{
+			COLUMN_DEFAULT = string(dest[7].([]byte))
+		}
+
 		if COLUMN_TYPE == "tinyint(1)"{
 			isBool = true
 		}
@@ -231,7 +241,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			is_primary = true
 		}
 
-		if COLUMN_TYPE[0:4] == "enum" {
+		if DATA_TYPE == "enum" {
 			d := strings.Replace(COLUMN_TYPE, "enum(", "", -1)
 			d = strings.Replace(d, ")", "", -1)
 			d = strings.Replace(d, "'", "", -1)
@@ -240,7 +250,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			enum_values = make([]string, 0)
 		}
 
-		if COLUMN_TYPE[0:3] == "set" {
+		if DATA_TYPE == "set" {
 			d := strings.Replace(COLUMN_TYPE, "set(", "", -1)
 			d = strings.Replace(d, ")", "", -1)
 			d = strings.Replace(d, "'", "", -1)
@@ -261,6 +271,8 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			CHARACTER_SET_NAME:CHARACTER_SET_NAME,
 			COLLATION_NAME:COLLATION_NAME,
 			NUMERIC_SCALE:NUMERIC_SCALE,
+			COLUMN_DEFAULT:COLUMN_DEFAULT,
+			DATA_TYPE:DATA_TYPE,
 		})
 	}
 	rows.Close()
