@@ -1,7 +1,7 @@
 ## Bifrost ---- 将MySQL数据实时同步 到 Redis , MongoDB等的高性能异构中间件
 
 
-[![Build Status](https://travis-ci.org/jc3wish/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/jc3wish/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
@@ -19,6 +19,7 @@
 * Kafka
 * Mongodb
 * ClickHouse
+* MySQL
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
