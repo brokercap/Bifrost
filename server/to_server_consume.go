@@ -77,6 +77,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var noData bool = true
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
+	var commitErrorCount int = 0
 	for {
 		CheckStatusFun()
 		select {
@@ -136,12 +137,28 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			SaveBinlog()
 			break
 		case <-timer.C:
-			timer.Reset(5 * time.Second)
+			PluginBinlog, errs = This.commit()
+			if errs == nil {
+				if commitErrorCount > 0 {
+					commitErrorCount = 0
+					This.DelWaitError()
+					lastErrId = 0
+					//自动恢复
+					doWarningFun(warning.WARNINGNORMAL, "Commit Automatically return to normal")
+				}
+			} else {
+				This.AddWaitError(errs, data)
+				commitErrorCount++
+				//连续6次发送都是失败的,则报警
+				if commitErrorCount == 6 {
+					doWarningFun(warning.WARNINGERROR, "Commit PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
+				}
+			}
 			if noData == false{
 				noData = true
 				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
-			PluginBinlog,_ = This.commit()
+			timer.Reset(5 * time.Second)
 			SaveBinlog()
 			break
 		}
