@@ -19,6 +19,7 @@
 * Kafka
 * Mongodb
 * ClickHouse
+* MySQL
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 

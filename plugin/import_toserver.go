@@ -11,4 +11,5 @@ import (
 	_ "github.com/brokercap/Bifrost/plugin/MongoDB/src"
 	_ "github.com/brokercap/Bifrost/plugin/blackhole/src"
 	_ "github.com/brokercap/Bifrost/plugin/clickhouse/src"
+	_ "github.com/brokercap/Bifrost/plugin/mysql/src"
 )

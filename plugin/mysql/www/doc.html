@@ -1,0 +1,104 @@
+<p><strong>ClickHouse</strong></p>
+
+<p>必须先选择 MySQL 的表后，再选择 目标库的MySQL 插件，在选择 目标 库表的时候，如果目标表字段和源MySQL表字段一致的情况下会自动填充</p>
+<p>&nbsp;</p>
+<p>目标库表数据类型尽可能和源库一致</p>
+<p>假如目标库表是varchar 等字符串类型，源表是其他类型,数据转换不会有问题</p>
+
+<p>以下是转换的大概情况</p>
+
+        <style type="text/css">
+            #typeDesc { padding: 20px 0px;}
+            #typeDesc table { border-color:Black; border-style:dotted; border-width:0px; border-right-width:1px; border-bottom-width:1px; margin:0; padding:0; border-spacing:0; }
+            #typeDesc td,th { border-color:Black; line-height: 200%; padding: 10px; border-style:dotted; border-width:0px; border-top-width:1px; border-left-width:1px;}
+        </style>
+        <div id="typeDesc">
+            <table>
+                <tr>
+                <th>源表类型</th>
+                <th>目标表类型</th>
+                <th>是否有问题</th>
+                <th>备注</th>
+                </tr>
+
+                <tr>
+                <td>varchar,char,text等字符串</td>
+                <td>int 等类型</td>
+                <td>Y</td>
+                <td>
+                    假如源表存的是数字，会转成int相应类型,但值不能超过目标类型的大小</br>
+                    假如源表是其他字符串数据，转换会有问题
+                </td>
+
+                </tr>
+
+                <tr>
+
+                <td>int,bit等类型</td>
+                <td>varchar,var等类型</td>
+                <td>N</td>
+                <td>
+                    只要int转成字符串长度，不超过目标表的类型长度就没有问题
+                </td>
+                </tr>
+
+                <tr>
+                <td>int,bit等类型</td>
+                <td>int,bit等类型</td>
+                <td>N</td>
+                <td>
+                    相同类型转换不会有问题
+                </td>
+                </tr>
+
+                <tr>
+                <td>varchar,char,text等字符串</td>
+                <td>varchar,char,text等字符串</td>
+                <td>N</td>
+                <td>
+                    相同类型转换不会有问题
+                </td>
+                </tr>
+
+                <tr>
+                <td>varchar,char,text等字符串</td>
+                <td>set</td>
+                <td>Y</td>
+                <td>
+                    源表数据，不在目标表范围内就会有问题
+                </td>
+                </tr>
+            </table>
+
+        </div>
+
+
+<p><strong>连接配置</strong></p>
+
+<p>eg  : root:root123@tcp(10.40.6.89:3306)/bifrost_test</p>
+
+
+<p><strong>自动过滤规则</strong></p>
+
+<p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作</p>
+
+<p>&nbsp;</p>
+<p>1. 假如 id = 1 这条数据，连接有 insert ,delete ,update 操作</p>
+<p>则只会执行最后的 update 操作，不会执行前面insert 及 delete操作</p>
+
+<p>&nbsp;</p>
+<p>2. 假如 id = 1 这条数据，连接有 insert ,delete ,insert ,delete 顺序操作</p>
+<p>则只会执行最后的 delete 操作一次，不会执行 insert</p>
+
+<p>&nbsp;</p>
+<p>update 操作是转换成 insert ** ON DUPLICATE KEY UPDATE 操作 </p>
+
+<p>&nbsp;</p>
+<p>insert 操作是转换成 replace insert  操作 </p>
+
+
+<p><strong>备注</strong></p>
+
+<p>必须只能选择一个字段为主键</p>
+<p>不支持批量设置表</p>
+<p>BatchSize参数代表累积多少条数据刷一次数据到MySQL，假如一直没有数据从 MySQL 过来，则默认5秒超时，也会进行刷一次</p>

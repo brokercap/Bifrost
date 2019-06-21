@@ -77,7 +77,7 @@ func KillHistory(dbName string,ID int) error {
 		return fmt.Errorf("%s not exist",dbName)
 	}
 	if _,ok:=historyMap[dbName][ID];!ok{
-		return fmt.Errorf("%s %s not exist",dbName,ID)
+		return fmt.Errorf("%s %d not exist",dbName,ID)
 	}
 	historyMap[dbName][ID].Status = KILLED
 	return nil
@@ -155,7 +155,7 @@ func Start(dbName string,ID int) error {
 		return fmt.Errorf("%s not exist",dbName)
 	}
 	if _,ok:=historyMap[dbName][ID];!ok{
-		return fmt.Errorf("%s %s not exist",dbName,ID)
+		return fmt.Errorf("%s %d not exist",dbName,ID)
 	}
 	return historyMap[dbName][ID].Start()
 }
