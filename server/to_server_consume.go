@@ -78,6 +78,56 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
 	var commitErrorCount int = 0
+
+	var forSendData = func(data *pluginDriver.PluginDataType) {
+		for {
+			errs = nil
+			PluginBinlog,errs = This.sendToServer(data)
+			if This.MustBeSuccess == true {
+				if errs == nil{
+					if lastErrId > 0 {
+						This.DelWaitError()
+						lastErrId = 0
+						//自动恢复
+						doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
+					}
+					break
+				} else {
+					if lastErrId > 0{
+						dealStatus := This.GetWaitErrorDeal()
+						if dealStatus == -1{
+							lastErrId = 0
+							break
+						}
+						if dealStatus == 1{
+							This.DelWaitError()
+							lastErrId = 0
+							//人工处理恢复
+							doWarningFun(warning.WARNINGNORMAL,"Return to normal by user")
+							break
+						}
+					}else{
+						This.AddWaitError(errs,data)
+						lastErrId = 1
+					}
+				}
+				fordo++
+				if fordo % 3 == 0{
+					CheckStatusFun()
+					//连续15次发送都是失败的,则报警
+					if fordo == 15 {
+						doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
+					}
+					time.Sleep(2 * time.Second)
+				}
+			}else{
+				PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}
+				break
+			}
+		}
+	}
+	var n1 int = 0
+	var n0 int = 0
 	for {
 		CheckStatusFun()
 		select {
@@ -88,50 +138,66 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			lastErrId = 0
 			warningStatus = false
 			timer.Reset(5  * time.Second)
-			for {
-				errs = nil
-				PluginBinlog,errs = This.sendToServer(data)
-				if This.MustBeSuccess == true {
-					if errs == nil{
-						if lastErrId > 0 {
-							This.DelWaitError()
-							lastErrId = 0
-							//自动恢复
-							doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
+			switch data.EventType {
+			case "sql":
+				forSendData(data)
+				break
+			case "insert","delete":
+				n1 = len(data.Rows)
+				if n1 > 1{
+					n0 = 0
+					for _,v := range data.Rows{
+						n0++
+						d := &pluginDriver.PluginDataType{
+							Timestamp:data.Timestamp,
+							EventType:data.EventType,
+							Query:"",
+							SchemaName:data.SchemaName,
+							TableName:data.TableName,
+							BinlogFileNum:0,
+							BinlogPosition:0,
+							Rows:make([]map[string]interface{},1),
 						}
-						break
-					} else {
-						if lastErrId > 0{
-							dealStatus := This.GetWaitErrorDeal()
-							if dealStatus == -1{
-								lastErrId = 0
-								break
-							}
-							if dealStatus == 1{
-								This.DelWaitError()
-								lastErrId = 0
-								//人工处理恢复
-								doWarningFun(warning.WARNINGNORMAL,"Return to normal by user")
-								break
-							}
-						}else{
-							This.AddWaitError(errs,data)
-							lastErrId = 1
+						if n0 == n1{
+							d.BinlogFileNum = data.BinlogFileNum
+							d.BinlogPosition = data.BinlogPosition
 						}
-					}
-					fordo++
-					if fordo % 3 == 0{
-						CheckStatusFun()
-						//连续15次发送都是失败的,则报警
-						if fordo == 15 {
-							doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
-						}
-						time.Sleep(2 * time.Second)
+						d.Rows[0] = v
+						forSendData(d)
 					}
 				}else{
-					PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}
-					break
+					forSendData(data)
 				}
+				break
+			case "update":
+				n1 = len(data.Rows)
+				if n1 > 2{
+					for n0 = 0;n0 < n1;n0+=2{
+						d := &pluginDriver.PluginDataType{
+							Timestamp:data.Timestamp,
+							EventType:data.EventType,
+							Query:"",
+							SchemaName:data.SchemaName,
+							TableName:data.TableName,
+							BinlogFileNum:0,
+							BinlogPosition:0,
+							Rows:make([]map[string]interface{},2),
+						}
+						if n0 == n1-2{
+							d.BinlogFileNum = data.BinlogFileNum
+							d.BinlogPosition = data.BinlogPosition
+						}
+						d.Rows[0] = data.Rows[n0]
+						d.Rows[1] = data.Rows[n0+1]
+						forSendData(d)
+					}
+				}else{
+					forSendData(data)
+				}
+				break
+			default:
+				forSendData(data)
+				break
 			}
 			//这里保存位点，为是了显示的时候，可以直接从内存中读取
 			SaveBinlog()

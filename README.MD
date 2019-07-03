@@ -49,6 +49,14 @@
 * 提供第三方监控平台访问接口(Http Basic验证)
 
 
+### Bifrost 还不足的地方
+
+* 全量 数据同步的时候，不支持带 - 符号的数据库名和表名，例如： *my-db*
+
+* 全量数据同步数据同步的时候，null 值全按""处理了，和 binlog 解析这个地方不一致，使用的时候，请避免 null
+
+* 支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka
+
 ### WIKI
 
 [Bifrost WIKI](https://github.com/brokercap/Bifrost/wiki)
@@ -107,6 +115,7 @@ vim Bifrost.ini
 
 [user]
 #登入用户名和密码
+#用户名在前，= 号后面是密码
 Bifrost=Bifrost123
 BifrostMonitor=Bifrost123
 
