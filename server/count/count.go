@@ -116,7 +116,9 @@ func setChannelChan(key string) chan *FlowCount{
 
 func delChannelChan(key string){
 	l.Lock()
-	dbChannelChanMap[key] <- &FlowCount{Count:-2}
+	if dbChannelChanMap[key] != nil{
+		dbChannelChanMap[key] <- &FlowCount{Count:-2}
+	}
 	delete(dbChannelChanMap,key)
 	l.Unlock()
 }
@@ -157,10 +159,10 @@ func DelChannel(db string,channelId string){
 	if _,ok := dbCountChanMap[db];!ok{
 		return
 	}
+	delChannelChan(db+"-"+channelId)
 	l.Lock()
 	delete(dbCountChanMap[db].ChannelMap,channelId)
 	l.Unlock()
-	delChannelChan(db+"-"+channelId)
 	log.Println(db,"del channelCount:",channelId)
 	return
 }
