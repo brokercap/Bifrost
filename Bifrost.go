@@ -295,13 +295,17 @@ func doSaveDbInfo(){
 		log.Println("open file error:",err2)
 		return
 	}
-	defer f.Close()
 	_, err1 := io.WriteString(f, string(b)) //写入文件(字符串)
 	if err1 != nil {
+		f.Close()
 		log.Printf("save data to file error:%s, data:%s \r\n",err1,string(b))
 		return
 	}
-	os.Rename(DataTmpFile,DataFile)
+	f.Close()
+	err := os.Rename(DataTmpFile,DataFile)
+	if err != nil{
+		log.Println("doSaveDbInfo os.Rename err:",err)
+	}
 }
 
 
