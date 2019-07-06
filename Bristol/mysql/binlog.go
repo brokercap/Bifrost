@@ -216,16 +216,35 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		COLUMN_NAME = string(dest[0].([]byte))
 		COLUMN_KEY = string(dest[1].([]byte))
 		COLUMN_TYPE = string(dest[2].([]byte))
-		CHARACTER_SET_NAME = string(dest[3].([]byte))
-		COLLATION_NAME = string(dest[4].([]byte))
-		NUMERIC_SCALE = string(dest[5].([]byte))
+		if dest[3] == nil{
+			CHARACTER_SET_NAME = "NULL"
+		}else{
+			CHARACTER_SET_NAME = string(dest[3].([]byte))
+		}
+
+		if dest[4] == nil{
+			COLLATION_NAME = "NULL"
+		}else{
+			COLLATION_NAME = string(dest[4].([]byte))
+		}
+
+		if dest[5] == nil{
+			NUMERIC_SCALE = "NULL"
+		}else{
+			NUMERIC_SCALE = string(dest[5].([]byte))
+		}
+
 		EXTRA = string(dest[6].([]byte))
 
 		DATA_TYPE = string(dest[8].([]byte))
 
 		//bit类型这个地方比较特殊，不能直接转成string，并且当前只有 time,datetime 类型转换的时候会用到 默认值，这里不进行其他细节处理
 		if DATA_TYPE != "bit"{
-			COLUMN_DEFAULT = string(dest[7].([]byte))
+			if dest[7] == nil{
+				COLUMN_DEFAULT = "NULL"
+			}else{
+				COLUMN_DEFAULT = string(dest[7].([]byte))
+			}
 		}
 
 		if COLUMN_TYPE == "tinyint(1)"{
