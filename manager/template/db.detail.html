@@ -44,6 +44,10 @@
                         <button data-toggle="button" class="btn-sm btn-danger" type="button" id="batchTableDeleteBtn">批量删除</button>
                         <button data-toggle="button" class="btn-sm btn-warning" id="batchTableChanneBindBtn" type="button">批量绑定通道</button>
                     </div>
+                    <div style="line-height: 150%; padding: 10px">
+                        <p>点击 ADD 按钮后再点击表名,让表名的背景变成绿色</p>
+                        <p>多选框选中只能用于批量操作,要针对某一个表添加同步设置，请<strong style="color: #F00">点击</strong>表名，让表背景变成绿色</p>
+                    </div>
 
                     <div id="batchDelOrAddTableResultDiv" style="padding-top: 20px; display:none"></div>
                 </div>
@@ -153,7 +157,7 @@
                                     <button data-toggle="button" class="btn-sm btn-primary" id="addToServerBtn" type="button">提交</button>
                                     <button data-toggle="button" class="btn-sm btn-success" id="batchAddToServerBtn" type="button">批量提交</button>
                                     <p>&nbsp;</p>
-                                    <p style="color:#F00">批量提交，将会提交到选中的表里,批量提交,字段不能选,默认全选</p>
+                                    <p style="color:#F00">批量提交，将会提交到多选框选中并且已绑定Channel的表里,批量提交,字段不能选,默认全选</p>
                                 </div>
                             </div>
 
@@ -370,12 +374,17 @@
         }
 
         function batchDelOrAddTableResultFun(content,type) {
-            if (type == 0){
+            if(type == -1){
+                $("#batchDelOrAddTableResultDiv").show();
+            }
+            if (type == 0 || type == -1 ){
                 $("#batchDelOrAddTableResultDiv").html("<p>"+content+"</p>");
             }else{
                 $("#batchDelOrAddTableResultDiv").append("<p>"+content+"</p>");
             }
-
+            if(type == -2){
+               // $("#batchDelOrAddTableResultDiv").hide();
+            }
         }
 
         $("#batchTableChanneBindBtn").click(
@@ -417,7 +426,7 @@
             var url = "/table/add";
             var arr = table_names.split(";");
             $("#addTableDiv").modal('hide');
-            batchDelOrAddTableResultFun("开始添加",0);
+            batchDelOrAddTableResultFun("开始添加",-1);
             for( var i in arr) {
                 var table_name = arr[i];
                 if ( table_name == "" ){
@@ -443,7 +452,7 @@
                     }
                 });
             }
-            batchDelOrAddTableResultFun("添加完成",1);
+            batchDelOrAddTableResultFun("添加完成",-2);
             $(obj).text("提交");
         }
 
@@ -458,7 +467,7 @@
             var schema_name = $("#DatabaseListContair a.active").find("h3").text();
             var url = "/table/del";
             var arr = table_names.split(";");
-            batchDelOrAddTableResultFun("开始删除",0);
+            batchDelOrAddTableResultFun("开始删除",-1);
             for( var i in arr) {
                 var table_name = arr[i];
                 if ( table_name == "" ){
@@ -483,7 +492,7 @@
                     }
                 });
             }
-            batchDelOrAddTableResultFun("删除完成",1);
+            batchDelOrAddTableResultFun("删除完成",-2);
         }
         function ChangeTableFlowBtnHref(schema_name,table_name){
             $("#tableFlowBtn").attr("href","/flow/index?dbname="+dbname+"&schema="+schema_name+"&table_name="+table_name);
