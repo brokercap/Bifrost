@@ -1,11 +1,12 @@
 ## Bifrost ---- 将MySQL数据实时同步 到 Redis , MongoDB等的高性能异构中间件
 
-
 [![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
-
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
+
+##### *实时同步数据只要在界面上 鼠标 点 点 点 .....*
+
 
 提供 [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)  平台二进制可执行文件下载.
 
@@ -23,7 +24,7 @@
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/bifrost1.jpg)
+![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
@@ -48,14 +49,13 @@
 
 * 提供第三方监控平台访问接口(Http Basic验证)
 
+* 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
+
 
 ### Bifrost 还不足的地方
 
-* 全量 数据同步的时候，不支持带 - 符号的数据库名和表名，例如： *my-db*
-
-* 全量数据同步数据同步的时候，null 值全按""处理了，和 binlog 解析这个地方不一致，使用的时候，请避免 null
-
 * 支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka
+
 
 ### WIKI
 
@@ -73,6 +73,31 @@
 
 * 8.0.11 (用户密码验证需要采用 mysql_native_password 方式)
 
+
+### 在线体验
+
+##### 在线Bifrost界面体验
+
+http://test.use.xbifrost.com:21037
+
+##### 在线执行指定的SQL,及查看同步到Redis的情况
+
+http://test.use.xbifrost.com:11522
+
+
+用户名 : Bifrost
+
+ 密码 :  Bifrost123
+
+
+##### 在线体验Docker镜像
+
+```
+docker pull jc3wish/bifrostdemo:1.1.0-xxxx
+
+docker run -it -d -p21036:21036 -p11522:11521 jc3wish/bifrostdemo:1.1.0-xxxx
+
+```
 
 
 ### 安装
