@@ -149,15 +149,29 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		var NUMERIC_SCALE string
 
 		COLUMN_NAME 		= string(dest[0].([]byte))
-		COLUMN_DEFAULT 		= string(dest[1].([]byte))
+		if dest[1] == nil{
+			COLUMN_DEFAULT 	= "NULL"
+		}else{
+			COLUMN_DEFAULT 	= string(dest[1].([]byte))
+		}
+
 		IS_NULLABLE 		= string(dest[2].([]byte))
 		COLUMN_TYPE 		= string(dest[3].([]byte))
 		COLUMN_KEY 			= string(dest[4].([]byte))
 		EXTRA 				= string(dest[5].([]byte))
 		COLUMN_COMMENT 		= string(dest[6].([]byte))
 		DATA_TYPE 			= string(dest[7].([]byte))
-		NUMERIC_PRECISION 	= string(dest[8].([]byte))
-		NUMERIC_SCALE 		= string(dest[9].([]byte))
+
+		if dest[8] == nil{
+			NUMERIC_PRECISION 	= "NULL"
+		}else{
+			NUMERIC_PRECISION 	= string(dest[8].([]byte))
+		}
+		if dest[9] == nil{
+			NUMERIC_SCALE 	= "NULL"
+		}else{
+			NUMERIC_SCALE 	= string(dest[9].([]byte))
+		}
 
 		FieldList = append(FieldList,TableStruct{
 			COLUMN_NAME:	COLUMN_NAME,

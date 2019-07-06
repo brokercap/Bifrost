@@ -283,6 +283,12 @@ func (This *History) threadStart(i int)  {
 		stmt.Close()
 		return
 	}
+
+
+	_,err := db.Exec("USE "+This.SchemaName ,[]driver.Value{})
+	if err != nil{
+		log.Println("use error:",err)
+	}
 	*/
 	n := len(This.Fields)
 	for {
@@ -290,16 +296,23 @@ func (This *History) threadStart(i int)  {
 		start = This.NowStartI
 		This.NowStartI += This.Property.ThreadCountPer
 		This.Unlock()
-		sql := "select * from " + This.SchemaName + "." + This.TableName + " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
+		sql := "select * from `"+This.SchemaName+"`.`"+This.TableName +"` LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
+		//sql := "select * from ? LIMIT ?,?"
+
 		stmt, err := db.Prepare(sql)
 		if err != nil{
 			This.ThreadPool[i].Error = err
-			stmt.Close()
+			log.Println("threadStart err:",err,"sql:",sql)
 			return
 		}
 		This.ThreadPool[i].NowStartI = start
 		p:=make([]driver.Value,0)
+		/*
+		p[0] = This.SchemaName+"."+This.TableName
+		p[1] = strconv.Itoa(start)
+		p[2] = strconv.Itoa(This.Property.ThreadCountPer)
 		//p[0]=strconv.Itoa(start)
+		*/
 		rows, err := stmt.Query(p)
 		if err != nil{
 			This.ThreadPool[i].Error = err
