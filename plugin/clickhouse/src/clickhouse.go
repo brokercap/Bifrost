@@ -520,7 +520,7 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		break
 	case "UInt8":
 		if data == nil{
-			v = uint(0)
+			v = uint8(0)
 			break
 		}
 		v = data.(uint8)
