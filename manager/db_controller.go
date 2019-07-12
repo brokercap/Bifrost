@@ -168,7 +168,7 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 			dbInfo.BinlogPosition = MasterBinlogInfo.Position
 			dbInfo.ServerId = GetServerId(dbconn)
 		}else{
-			e = fmt.Errorf("The binlog maybe not open")
+			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
 		return
 	}(dbUri)
