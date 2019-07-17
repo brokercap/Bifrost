@@ -59,6 +59,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	}
 
 	filename = parser.binlogFileName
+	//log.Println("EventType:",EventType(data[4]))
 	switch EventType(data[4]) {
 	case HEARTBEAT_EVENT,IGNORABLE_EVENT,GTID_EVENT,ANONYMOUS_GTID_EVENT,PREVIOUS_GTIDS_EVENT:
 		return
@@ -116,6 +117,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		var table_map_event *TableMapEvent
 		table_map_event, err = parser.parseTableMapEvent(buf)
 		parser.tableMap[table_map_event.tableId] = table_map_event
+		//log.Println("table_map_event:",*table_map_event,"tableId:",table_map_event.tableId," schemaName:",table_map_event.schemaName," tableName:",table_map_event.tableName)
 		if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok {
 			parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 		}
@@ -197,6 +199,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		errs = err
 		return
 	}
+	parser.tableSchemaMap[tableId] = make([]*column_schema_type,0)
 	for {
 		dest := make([]driver.Value, 9, 9)
 		err := rows.Next(dest)
@@ -299,7 +302,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	return
 }
 
-func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]string){
+func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]string,e error){
 	parser.connLock.Lock()
 	defer func() {
 		if err := recover(); err != nil {
@@ -307,12 +310,10 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 				parser.connStatus = 0
 				parser.conn.Close()
 			}
-			parser.connLock.Unlock()
 			log.Println("binlog.go GetConnectionInfo err:",err)
 			m = nil
-		}else{
-			parser.connLock.Unlock()
 		}
+		parser.connLock.Unlock()
 	}()
 	if parser.connStatus == 0 {
 		parser.initConn()
@@ -322,7 +323,7 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
-		return nil
+		return nil,err
 	}
 	m = make(map[string]string,2)
 	for {
@@ -335,7 +336,7 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 		m["STATE"]=string(dest[1].([]byte))
 		break
 	}
-	return
+	return m,nil
 }
 
 
@@ -348,18 +349,15 @@ func (parser *eventParser) KillConnect(connectionId string) (b bool){
 				parser.connStatus = 0
 				parser.conn.Close()
 			}
-			parser.connLock.Unlock()
 			b = false
-		}else{
-			parser.connLock.Unlock()
 		}
+		parser.connLock.Unlock()
 	}()
 	if parser.connStatus == 0 {
 		parser.initConn()
 	}
 	sql := "kill "+connectionId
-	p := make([]driver.Value, 0)
-	_, err := parser.conn.Exec(sql,p)
+	_, err := parser.conn.Exec(sql,[]driver.Value{})
 	if err != nil {
 		return false
 	}
@@ -399,7 +397,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (string, string) {
 func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("DumpBinlog err:",err,313)
+			log.Println("DumpBinlog err:",err)
 			result <- fmt.Errorf(fmt.Sprint(err))
 			log.Println(string(debug.Stack()))
 			return
@@ -434,6 +432,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 		} else if pkt[0] == 254 { // EOF packet
 			result <- fmt.Errorf("EOF packet")
 			break
+			//continue
 		}
 		if pkt[0] == 0 {
 			event, _, e := parser.parseEvent(pkt[1:])
@@ -521,6 +520,7 @@ type BinlogDump struct {
 	CallbackFun   		callback
 	mysqlConn  			MysqlConnection
 	mysqlConnStatus 	int
+	checkSlaveStatus    bool
 }
 
 func (This *BinlogDump) GetBinlog()(string,uint32){
@@ -629,7 +629,7 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 	}
 	result <- fmt.Errorf("running")
 	This.parser.connectionId = connectionId
-	//go This.checkDumpConnection(connectionId)
+	go This.checkDumpConnection()
 	//*** get connection id end
 
 	This.checksum_enabled()
@@ -651,35 +651,47 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 		result <- fmt.Errorf("starting")
 		This.Status = "stop"
 	}
-	This.parser.KillConnect(This.parser.connectionId)
+	This.parser.KillConnect(connectionId)
 }
 
-func (This *BinlogDump) checkDumpConnection(connectionId string) {
+func (This *BinlogDump) checkDumpConnection() {
 	defer func() {
 		if err := recover();err !=nil{
 			log.Println("binlog.go checkDumpConnection err:",err)
 		}
+	}()
+	This.parser.connLock.Lock()
+	if This.checkSlaveStatus == true{
+		This.parser.connLock.Unlock()
+		return
+	}
+	This.checkSlaveStatus = true
+	This.parser.connLock.Unlock()
+	defer func() {
+		This.checkSlaveStatus = false
 	}()
 	for{
 		time.Sleep(9 * time.Second)
 		if This.parser.dumpBinLogStatus >= 2{
 			break
 		}
+		This.parser.connLock.Lock()
+		connectionId := This.parser.connectionId
+		This.parser.connLock.Unlock()
+
 		var m map[string]string
+		var e error
+
 		for i:=0;i<3;i++{
-			m = This.parser.GetConnectionInfo(connectionId)
-			if m == nil{
+			m,e = This.parser.GetConnectionInfo(connectionId)
+			if e != nil{
 				time.Sleep(2 * time.Second)
 				continue
 			}
 			break
 		}
+
 		//log.Println("GetConnectionInfo:",m)
-		This.parser.connLock.Lock()
-		if connectionId != This.parser.connectionId{
-			This.parser.connLock.Unlock()
-			break
-		}
 		if m == nil || m["TIME"] == ""{
 			log.Println("This.mysqlConn close ,connectionId: ",connectionId)
 			This.connLock.Lock()
@@ -690,7 +702,6 @@ func (This *BinlogDump) checkDumpConnection(connectionId string) {
 			This.connLock.Unlock()
 			break
 		}
-		This.parser.connLock.Unlock()
 	}
 }
 

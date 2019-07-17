@@ -207,11 +207,11 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
-	defer rows.Close()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return MasterBinlogInfoStruct{}
 	}
+	defer rows.Close()
 	var File string
 	var Position int
 	var Binlog_Do_DB string
