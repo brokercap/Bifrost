@@ -154,6 +154,7 @@ func  GetRandomString(l int,cn int) string {
 		rand.Seed(int64(i))
 		result2 += str2Arr[rand.Intn(len(str2Arr))]
 	}
+	rand.Seed(time.Now().UnixNano())
 	return string(result1)+result2
 }
 
@@ -300,7 +301,6 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		}else{
 			randResult = 0
 		}
-
 		if EXTRA == "auto_increment" {
 			continue
 		} else {
@@ -382,9 +382,15 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			case "char","varchar":
 				var enSize,cnSize int = 0,0
 				if strings.Contains(columnType.CharacterSetName,"utf"){
-					cnSize = rand.Intn(columnType.CharacterMaximumLength)
+					if columnType.CharacterMaximumLength/4 > 0{
+						cnSize = rand.Intn(columnType.CharacterMaximumLength/4)
+						enSize = columnType.CharacterMaximumLength - cnSize*4
+					}else{
+						enSize = rand.Intn(columnType.CharacterMaximumLength-1)
+					}
+				}else{
+					enSize = rand.Intn(columnType.CharacterMaximumLength-1)
 				}
-				enSize = columnType.CharacterMaximumLength - cnSize
 				Value := GetRandomString(enSize,cnSize)
 				columnType.Value = Value
 				data = append(data,Value)
@@ -395,9 +401,10 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 
 				var n int
 				if *longstring == "true"{
-					n = rand.Intn(columnType.CharacterMaximumLength/4)
 					if columnType.ColumnType == "longblob"{
 						n = rand.Intn(65535/4)
+					}else{
+						n = rand.Intn(columnType.CharacterMaximumLength/4)
 					}
 				}else{
 					n = rand.Intn(255/4)
