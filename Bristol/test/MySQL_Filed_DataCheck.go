@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"database/sql/driver"
 	"flag"
+	"strings"
+	"math/rand"
 )
 
 func DBConnect(uri string) mysql.MysqlConnection{
@@ -104,45 +106,6 @@ func ExecSQL(db mysql.MysqlConnection,sql string){
 	return
 }
 
-var sqlList = []string{
-	"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `bifrost_test`",
-	"DROP TABLE IF EXISTS bifrost_test.`binlog_field_test`",
-	"CREATE TABLE bifrost_test.`binlog_field_test` ("+
-  		"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
-  		"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
-  		"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
-		"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
-  		"`testint` int(11) NOT NULL DEFAULT '-4',"+
-  		"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
-  		"`testvarchar` varchar(10) NOT NULL,"+
-  		"`testchar` char(2) NOT NULL,"+
-  		"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
-  		"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
-  		"`testtime` time NOT NULL DEFAULT '00:00:00',"+
-  		"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
-  		"`testyear` year(4) NOT NULL DEFAULT '1989',"+
-  		"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
-  		"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
-  		"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
-  		"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
-  		"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
-  		"`testtext` text NOT NULL,"+
-  		"`testblob` blob NOT NULL,"+
-  		"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
-  		"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
-  		"`testmediumblob` mediumblob NOT NULL,"+
-  		"`testlongblob` longblob NOT NULL,"+
-  		"`testtinyblob` tinyblob NOT NULL,"+
-  		"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
-  		"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
-  		"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
-  		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
-  		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
-  		"PRIMARY KEY (`id`)"+
-		") ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8",
-  	"insert  into bifrost_test.`binlog_field_test`(`id`,`testtinyint`,`testsmallint`,`testmediumint`,`testint`,`testbigint`,`testvarchar`,`testchar`,`testenum`,`testset`,`testtime`,`testdate`,`testyear`,`testtimestamp`,`testdatetime`,`testfloat`,`testdouble`,`testdecimal`,`testtext`,`testblob`,`testbit`,`testbool`,`testmediumblob`,`testlongblob`,`testtinyblob`,`test_unsinged_tinyint`,`test_unsinged_smallint`,`test_unsinged_mediumint`,`test_unsinged_int`,`test_unsinged_bigint`) values (1,-1,-2,-3,-4,-5,'testvarcha','te','en2','set1,set3','15:39:59','2018-05-08',2018,'2018-05-08 15:30:21','2018-05-08 15:30:21',9.39,9.39,9.39,'testtext','testblob','',1,'testmediumblob','testlongblob','testtinyblob',1,2,3,4,5)",
-}
-
 func evenTypeName(e mysql.EventType) string {
 	switch e {
 	case mysql.WRITE_ROWS_EVENTv0, mysql.WRITE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2:
@@ -155,394 +118,455 @@ func evenTypeName(e mysql.EventType) string {
 	return fmt.Sprintf("%d", e)
 }
 
-func callback2(d *mysql.EventReslut) {
-	fmt.Println("schema:",d.SchemaName,"table:",d.TableName, "EventType:",evenTypeName(d.Header.EventType))
+type Column struct {
+	ColumnName string
+	ColumnKey string
+	ColumnDefault string
+	DataType string
+	Extra string
+	ColumnType string
+	CharacterSetName string
+	CollationName string
+	NumbericScale int
+	IsBool bool
+	Unsigned bool
+	IsPrimary bool
+	AutoIncrement bool
+	EnumValues []string
+	SetValues []string
+	CharacterMaximumLength int
+	NumbericPrecision int
+	Value interface{}
+}
 
-	if d.Header.EventType == mysql.QUERY_EVENT{
-		log.Println(d.Query)
+
+func  GetRandomString(l int,cn int) string {
+	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ^&*'\";\\/%$#@90-_|<>?{}[]+.!~`,=0"
+	str2Arr := []string{"测","试","数","据"}
+	bytes := []byte(str)
+	result1 := []byte{}
+	result2 := ""
+	for i := 0; i < l; i++ {
+		rand.Seed(int64(i))
+		result1 = append(result1, bytes[rand.Intn(len(bytes))])
+	}
+	for i:=0;i < cn;i++{
+		rand.Seed(int64(i))
+		result2 += str2Arr[rand.Intn(len(str2Arr))]
+	}
+	return string(result1)+result2
+}
+
+func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column){
+	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
+	data = make([]driver.Value,0)
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return "", make([]driver.Value,0),columnData
+	}
+	p := make([]driver.Value, 0)
+	//p = append(p,schema)
+	//p = append(p,table)
+	rows, err := stmt.Query(p)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return "", make([]driver.Value,0),columnData
+	}
+	columnData = make(map[string]*Column,0)
+	var sqlk ,sqlv = "",""
+	for {
+		dest := make([]driver.Value, 11, 11)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		var COLUMN_NAME, COLUMN_KEY, COLUMN_TYPE string
+		var CHARACTER_SET_NAME,COLLATION_NAME,EXTRA string
+		var NUMERIC_SCALE int
+		var isBool bool = false
+		var unsigned bool = false
+		var is_primary bool = false
+		var auto_increment bool = false
+		var enum_values, set_values []string
+		var COLUMN_DEFAULT	string
+		var DATA_TYPE string
+		var CHARACTER_MAXIMUM_LENGTH int
+		var NUMERIC_PRECISION int
+
+		COLUMN_NAME = string(dest[0].([]byte))
+		COLUMN_KEY = string(dest[1].([]byte))
+		COLUMN_TYPE = string(dest[2].([]byte))
+		if dest[3] == nil{
+			CHARACTER_SET_NAME = "NULL"
+		}else{
+			CHARACTER_SET_NAME = string(dest[3].([]byte))
+		}
+
+		if dest[4] == nil{
+			COLLATION_NAME = "NULL"
+		}else{
+			COLLATION_NAME = string(dest[4].([]byte))
+		}
+
+		if dest[5] == nil{
+			NUMERIC_SCALE = int(0)
+		}else{
+			NUMERIC_SCALE,_ = strconv.Atoi(string(dest[5].([]byte)))
+		}
+
+		EXTRA = string(dest[6].([]byte))
+
+		DATA_TYPE = string(dest[8].([]byte))
+
+		//bit类型这个地方比较特殊，不能直接转成string，并且当前只有 time,datetime 类型转换的时候会用到 默认值，这里不进行其他细节处理
+		if DATA_TYPE != "bit"{
+			if dest[7] == nil{
+				COLUMN_DEFAULT = "NULL"
+			}else{
+				COLUMN_DEFAULT = string(dest[7].([]byte))
+			}
+		}
+
+		if COLUMN_TYPE == "tinyint(1)"{
+			isBool = true
+		}
+		if EXTRA == "auto_increment"{
+			auto_increment = true
+		}
+		if strings.Contains(COLUMN_TYPE,"unsigned"){
+			unsigned = true
+		}
+		if COLUMN_KEY != ""{
+			is_primary = true
+		}
+
+		if DATA_TYPE == "enum" {
+			d := strings.Replace(COLUMN_TYPE, "enum(", "", -1)
+			d = strings.Replace(d, ")", "", -1)
+			d = strings.Replace(d, "'", "", -1)
+			enum_values = strings.Split(d, ",")
+		} else {
+			enum_values = make([]string, 0)
+		}
+
+		if DATA_TYPE == "set" {
+			d := strings.Replace(COLUMN_TYPE, "set(", "", -1)
+			d = strings.Replace(d, ")", "", -1)
+			d = strings.Replace(d, "'", "", -1)
+			set_values = strings.Split(d, ",")
+		} else {
+			set_values = make([]string, 0)
+		}
+
+		if dest[9] == nil{
+			CHARACTER_MAXIMUM_LENGTH = int(0)
+		}else{
+			CHARACTER_MAXIMUM_LENGTH,_ = strconv.Atoi(string(dest[9].([]byte)))
+		}
+
+		if dest[10] == nil{
+			NUMERIC_PRECISION = int(0)
+		}else{
+			NUMERIC_PRECISION,_ = strconv.Atoi(string(dest[10].([]byte)))
+		}
+
+		columnType := &Column{
+			ColumnName: COLUMN_NAME,
+			ColumnKey:COLUMN_KEY,
+			ColumnType:COLUMN_TYPE,
+			ColumnDefault:COLUMN_DEFAULT,
+			DataType:DATA_TYPE,
+			Extra:EXTRA,
+			CharacterSetName:CHARACTER_SET_NAME,
+			CollationName:COLLATION_NAME,
+			NumbericScale:NUMERIC_SCALE,
+			IsBool:isBool,
+			Unsigned:unsigned,
+			IsPrimary:is_primary,
+			AutoIncrement:auto_increment,
+			EnumValues:enum_values,
+			SetValues:set_values,
+			CharacterMaximumLength:CHARACTER_MAXIMUM_LENGTH,
+			NumbericPrecision:NUMERIC_PRECISION,
+		}
+		columnData[COLUMN_NAME] = columnType
+
+		rand.Seed(time.Now().UnixNano())
+		var randResult int
+		if rand.Intn(2) >= 1{
+			randResult = 1
+		}else{
+			randResult = 0
+		}
+
+		if EXTRA == "auto_increment" {
+			continue
+		} else {
+			switch columnType.DataType {
+			case "int", "tinyint", "smallint", "mediumint", "bigint":
+				if columnType.IsBool{
+					if randResult == 1{
+						data = append(data,"1")
+						columnType.Value = true
+					}else{
+						data = append(data,"0")
+						columnType.Value = false
+					}
+				}else{
+					b := ""
+					var Value interface{}
+					switch columnType.DataType {
+					case "tinyint":
+						if columnType.Unsigned == true{
+							Value = uint8(255)
+						}else{
+							if randResult == 1{
+								Value = int8(127)
+							}else{
+								Value = int8(-128)
+							}
+						}
+						break
+					case "smallint":
+						if columnType.Unsigned == true{
+							Value = uint16(65535)
+						}else{
+							if randResult == 1{
+								Value = int16(32767)
+							}else{
+								Value = int16(-32768)
+							}
+						}
+						break
+					case "mediumint":
+						if columnType.Unsigned == true{
+							Value = uint32(16777215)
+						}else{
+							if randResult == 1{
+								Value = int32(8388607)
+							}else{
+								Value = int32(-8388608)
+							}
+						}
+						break
+					case "int":
+						if columnType.Unsigned == true{
+							Value = uint32(4294967295)
+						}else{
+							if randResult == 1{
+								Value = int32(2147483647)
+							}else{
+								Value = int32(-2147483648)
+							}
+						}
+						break
+					case "bigint":
+						if columnType.Unsigned == true{
+							Value = uint64(uint64(2)^64-1)
+						}else{
+							if randResult == 1{
+								Value = int64(int64(2)^63-1)
+							}else{
+								Value = int64(int64(-2)^63)
+							}
+						}
+						break
+					}
+					b = fmt.Sprint(Value)
+					columnType.Value = Value
+					data = append(data,b)
+				}
+				break
+			case "char","varchar":
+				var enSize,cnSize int = 0,0
+				if strings.Contains(columnType.CharacterSetName,"utf"){
+					cnSize = rand.Intn(columnType.CharacterMaximumLength)
+				}
+				enSize = columnType.CharacterMaximumLength - cnSize
+				Value := GetRandomString(enSize,cnSize)
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "tinytext","tinyblob","text","mediumtext","smalltext","blob","mediumblob","smallblob","longblob":
+				var enSize,cnSize int = 0,0
+				rand.Seed(time.Now().UnixNano())
+
+				var n int
+				if *longstring == "true"{
+					n = rand.Intn(columnType.CharacterMaximumLength/4)
+					if columnType.ColumnType == "longblob"{
+						n = rand.Intn(65535/4)
+					}
+				}else{
+					n = rand.Intn(255/4)
+				}
+
+				if strings.Contains(columnType.CharacterSetName,"utf"){
+					cnSize = rand.Intn(n)
+				}
+				enSize = n - cnSize
+				Value := GetRandomString(enSize,cnSize)
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "year":
+				Value := time.Now().Format("2006")
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "time":
+				Value := time.Now().Format("15:04:05")
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "date":
+				Value := time.Now().Format("2006-01-02")
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "datetime","timestamp":
+				Value := time.Now().Format("2006-01-02 15:04:05")
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "bit":
+				var Value int64 = 1
+				if columnType.NumbericPrecision < 16{
+					Value = int64(rand.Intn(127))
+				}
+				if columnType.NumbericPrecision >=16 && columnType.NumbericPrecision < 32{
+					Value = int64(rand.Intn(32767))
+				}
+				if columnType.NumbericPrecision >= 32 && columnType.NumbericPrecision < 64{
+					Value = int64(rand.Int31())
+				}
+				if columnType.NumbericPrecision == 64{
+					Value = rand.Int63()
+				}
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			case "float":
+				Value := strconv.FormatFloat(float64(rand.Float32()),'f',2,32)
+				Value2,_ := strconv.ParseFloat(Value, 32)
+				columnType.Value = float32(Value2)
+				data = append(data,fmt.Sprint(Value2))
+				break
+			case "double":
+				Value := strconv.FormatFloat(float64(rand.Float64()),'f',2,64)
+				Value2,_ := strconv.ParseFloat(Value, 64)
+				columnType.Value = Value2
+				data = append(data,fmt.Sprint(Value2))
+				break
+			case "decimal":
+				Value := strconv.FormatFloat(float64(rand.Float64()),'f',2,64)
+				Value2,_ := strconv.ParseFloat(Value, 64)
+				columnType.Value = Value
+				data = append(data,fmt.Sprint(Value2))
+				break
+			case "set":
+				d := strings.Replace(COLUMN_TYPE, "set(", "", -1)
+				d = strings.Replace(d, ")", "", -1)
+				d = strings.Replace(d, "'", "", -1)
+				set_values := strings.Split(d, ",")
+				Value := make([]string,0)
+				//Value := set_values[rand.Intn(len(set_values)-1)]
+				if len(set_values) > 1{
+					Value = append(Value,set_values[0])
+					Value = append(Value,set_values[len(set_values)-1])
+				}else{
+					Value = append(Value,set_values[0])
+				}
+				columnType.Value = Value
+				data = append(data,strings.Replace(strings.Trim(fmt.Sprint(Value), "[]"), " ", ",", -1))
+				break
+			case "enum":
+				d := strings.Replace(COLUMN_TYPE, "enum(", "", -1)
+				d = strings.Replace(d, ")", "", -1)
+				d = strings.Replace(d, "'", "", -1)
+				enum_values := strings.Split(d, ",")
+				Value := enum_values[rand.Intn(len(enum_values)-1)]
+				columnType.Value = Value
+				data = append(data,Value)
+				break
+			default:
+				data = append(data,"0")
+				break
+			}
+
+			if sqlk == "" {
+				sqlk = "`" + columnType.ColumnName + "`"
+				sqlv = "?"
+			} else {
+				sqlk += ",`" + columnType.ColumnName + "`"
+				sqlv += ",?"
+			}
+		}
+	}
+	sqlstring = "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlv+")"
+	log.Println("sqlstring:",sqlstring)
+	log.Println("data:",len(data))
+	log.Println("columnData:",len(columnData))
+	return sqlstring,data,columnData
+}
+
+var ColumnData map[string]*Column
+var table *string
+var database *string
+var longstring *string
+
+func callback3(d *mysql.EventReslut) {
+	if d.TableName != *table{
+		log.Println(d)
 		return
 	}
-	index := 0
-	if len(d.Rows) > 1{
-		index = 1
-	}
-	data := d.Rows[index]
-	if d.SchemaName == "bifrost_test" && d.TableName == "binlog_field_test"{
 
-	}else{
-		for k,v := range data{
-			log.Println(k,":",v)
-		}
+	if d.Query != ""{
+		log.Println(d)
 		return
 	}
-	noError := true
-	for k,v := range data{
-		switch k {
-		case "id":
-			switch v.(type) {
-			case uint32:
-				if v.(uint32) != 1{
-					log.Println(k,1,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,1,"==",v,"filed-Type:","uint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,1,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		case "testtinyint":
-			switch v.(type) {
-			case int8:
-				if v.(int8) != -1{
-					log.Println(k,-1,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,1,"==",v,"filed-Type:","tinyint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,-1,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		case "testsmallint":
-			switch v.(type) {
-			case int16:
-				if v.(int16) != -2{
-					log.Println(k,-2,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,-2,"==",v,"filed-Type:","smallint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,-3,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		case "testmediumint":
-			switch v.(type) {
-			case int32:
-				if v.(int32) != -3{
-					log.Println(k,-3,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,-3,"==",v,"filed-Type:","mediumint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,-3,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		case "testint":
-			switch v.(type) {
-			case int32:
-				if v.(int32) != -4{
-					log.Println(k,-4,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,-4,"==",v,"filed-Type:","int","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,-4,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		case "testbigint":
-			switch v.(type) {
-			case int64:
-				if v.(int64) != -5{
-					log.Println(k,-5,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,-5,"==",v,"filed-Type:","bigint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,-5,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
 
-		case "testvarchar":
-			if v.(string) != "testvarcha"{
-				log.Println(k,"testvarcha","!=",v)
-				noError  = false
+	var AutoIncrementField string = ""
+
+	var isAllRight bool = true
+	errorFieldList := make([]string,0)
+	for columnName,v := range d.Rows[len(d.Rows)-1]{
+		if _,ok:= ColumnData[columnName];!ok{
+			log.Println("columnName:",columnName," not esxit")
+			continue
+		}
+		columnType := ColumnData[columnName]
+		if columnType.AutoIncrement {
+			AutoIncrementField = columnName
+			log.Println(columnName,"==",v," is AutoIncrement")
+			continue
+		}
+		if reflect.TypeOf(v) == reflect.TypeOf(columnType.Value){
+			if fmt.Sprint(v) == fmt.Sprint(columnType.Value){
+				log.Println(columnName,"==",v)
 			}else{
-				log.Println(k,"testvarcha","==",v,"filed-Type:","varchar","golang-type:",reflect.TypeOf(v)," is right")
+				isAllRight = false
+				errorFieldList = append(errorFieldList,columnName)
+				//log.Println(columnName,"value:",v,"(",reflect.TypeOf(v),")"," != ",columnType.Value,"(",reflect.TypeOf(columnType.Value),")"+ " type is right")
 			}
-
-			break
-		case "testchar":
-			if v.(string) != "te"{
-				log.Println(k,"te","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"te","==",v,"filed-Type:","char","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testenum":
-			if v.(string) != "en2"{
-				log.Println(k,"te","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"en2","==",v,"filed-Type:","enum","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testset":
-			f := v.([]string)
-			var b bool = true
-			if f[0] != "set1" && f[1] != "set1"{
-				log.Println(k,"set1 no exsit",f)
-				noError  = false
-				b = false
-			}
-			if f[1] != "set3" && f[0] != "set3"{
-				log.Println(k,"set3 no exsit",f)
-				noError  = false
-				b = false
-			}
-			if b == true{
-				log.Println(k,"(set1,set3)","==",v,"filed-Type:","set","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testtime":
-			if v.(string) != "15:39:59"{
-				log.Println(k,"15:39:59","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"15:39:59","==",v,"filed-Type:","time","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testdate":
-			if v.(string) != "2018-05-08"{
-				log.Println(k,"2018-05-08","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"2018-05-08","==",v,"filed-Type:","date","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testyear":
-			if v.(string) != "2018"{
-				log.Println(k,"2018","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"2018","==",v,"filed-Type:","year","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testtimestamp":
-			if v.(string) != "2018-05-08 15:30:21"{
-				log.Println(k,"2018-05-08 15:30:21","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"2018-05-08 15:30:21","==",v,"filed-Type:","timestamp","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testdatetime":
-			if v.(string) != "2018-05-08 15:30:21"{
-				log.Println(k,"2018-05-08 15:30:21","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"2018-05-08 15:30:21","==",v,"filed-Type:","datetime","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testfloat":
-			if v.(float32) != 9.39{
-				log.Println(k,9.39,"!=",v)
-				noError  = false
-			}else{
-				log.Println(k,9.39,"==",v,"filed-Type:","float","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-		case "testdouble":
-			if v.(float64) != 9.39{
-				log.Println(k,9.39,"!=",v)
-				noError  = false
-			}else{
-				log.Println(k,9.39,"==",v,"filed-Type:","double","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testdecimal":
-			if v.(string) != "9.39"{
-				log.Println(k,9.39,"!=",v)
-				noError  = false
-			}else{
-				log.Println(k,9.39,"==",v,"filed-Type:","decimal","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testtext":
-			if v.(string) != "testtext"{
-				log.Println(k,"testtext","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"testtext","==",v,"filed-Type:","text","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testblob":
-			if v.(string) != "testblob"{
-				log.Println(k,"testblob","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"testblob","==",v,"filed-Type:","blob","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testbit":
-			switch v.(type) {
-			case int64:
-				if v.(int64) != 8{
-					log.Println(k,8,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"8","==",v,"filed-Type:","bit","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,8,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-
-		case "testbool":
-
-			switch v.(type) {
-			case bool:
-				if v.(bool) != true{
-					log.Println(k,"true","!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"true","==",v,"filed-Type:","bool","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,"true","!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-
-		case "testmediumblob":
-			if v.(string) != "testmediumblob"{
-				log.Println(k,"testmediumblob","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"testmediumblob","==",v,"filed-Type:","mediumblob","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testlongblob":
-			if v.(string) != "testlongblob"{
-				log.Println(k,"testlongblob","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"testlongblob","==",v,"filed-Type:","longblob","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "testtinyblob":
-			if v.(string) != "testtinyblob"{
-				log.Println(k,"testtinyblob","!=",v)
-				noError  = false
-			}else{
-				log.Println(k,"testtinyblob","==",v,"filed-Type:","tinyblob","golang-type:",reflect.TypeOf(v)," is right")
-			}
-			break
-
-		case "test_unsinged_tinyint":
-			switch v.(type) {
-			case uint8:
-				if v.(uint8) != 1{
-					log.Println(k,1,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"1","==",v,"filed-Type:","unsinged_tinyint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,1,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-
-			break
-
-		case "test_unsinged_smallint":
-			switch v.(type) {
-			case uint16:
-				if v.(uint16) != 2{
-					log.Println(k,2,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"2","==",v,"filed-Type:","unsinged_smallint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,2,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-
-		case "test_unsinged_mediumint":
-			switch v.(type) {
-			case uint32:
-				if v.(uint32) != 3{
-					log.Println(k,3,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"3","==",v,"filed-Type:","unsinged_mediumint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,3,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-
-		case "test_unsinged_int":
-			switch v.(type) {
-			case uint32:
-				if v.(uint32) != 4{
-					log.Println(k,4,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"4","==",v,"filed-Type:","unsinged_int","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,4,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-
-		case "test_unsinged_bigint":
-			switch v.(type) {
-			case uint64:
-				if v.(uint64) != 5{
-					log.Println(k,5,"!=",v)
-					noError  = false
-				}else{
-					log.Println(k,"5","==",v,"filed-Type:","unsinged_bigint","golang-type:",reflect.TypeOf(v)," is right")
-				}
-				break
-			default:
-				log.Println(k,5,"!=",v, " type:",reflect.TypeOf(v))
-				noError  = false
-			}
-			break
-		default:
-			fmt.Println(k,":",v," error type")
-			noError  = false
+		}else{
+			isAllRight = false
+			//log.Println(columnName,"value:",v,"(",reflect.TypeOf(v),")"," != ",columnType.Value,"(",columnType.Value,")"+ " type is error")
 		}
 	}
-	if noError  == true{
+
+	if isAllRight == true{
+		fmt.Println("")
+		if AutoIncrementField != ""{
+			log.Println(AutoIncrementField,"==",d.Rows[len(d.Rows)-1][AutoIncrementField])
+		}
 		log.Println(" type and value is all right ")
+	}else{
+		for _, columnName := range errorFieldList{
+			log.Println(columnName,"value:",d.Rows[len(d.Rows)-1][columnName],"(",reflect.TypeOf(d.Rows[len(d.Rows)-1][columnName]),")"," != ",ColumnData[columnName].Value,"(",reflect.TypeOf(ColumnData[columnName].Value),")")
+		}
 	}
 	os.Exit(0)
 }
@@ -550,10 +574,12 @@ func callback2(d *mysql.EventReslut) {
 func main() {
 
 	userName := flag.String("u", "root", "-u root")
-	password := flag.String("p", "", "-p password")
+	password := flag.String("p", "root", "-p password")
 	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
 	port := flag.String("P", "3306", "-P 3306")
-	database := flag.String("database", "test", "-database test")
+	database = flag.String("database", "test", "-database test")
+	table = flag.String("table", "binlog_field_test", "-table bifrost_test")
+	longstring = flag.String("longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
 	flag.Parse()
 
 	var filename,dataSource string
@@ -579,19 +605,91 @@ func main() {
 	masterServerId := GetServerId(db)
 	MyServerID = uint32(masterServerId+250)
 
+
 	log.Println("load data start")
-	for _,sql := range  sqlList{
-		log.Println("exec sql:",sql)
-		ExecSQL(db,sql)
+	if *table == "" {
+		var sqlList = []string{
+			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `bifrost_test`",
+			"DROP TABLE IF EXISTS `"+*database+"`.`binlog_field_test`",
+			"CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
+				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
+				"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
+				"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
+				"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
+				"`testint` int(11) NOT NULL DEFAULT '-4',"+
+				"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
+				"`testvarchar` varchar(10) NOT NULL,"+
+				"`testchar` char(2) NOT NULL,"+
+				"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
+				"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
+				"`testtime` time NOT NULL DEFAULT '00:00:00',"+
+				"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
+				"`testyear` year(4) NOT NULL DEFAULT '1989',"+
+				"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
+				"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
+				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
+				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
+				"`testtext` text NOT NULL,"+
+				"`testblob` blob NOT NULL,"+
+				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
+				"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
+				"`testmediumblob` mediumblob NOT NULL,"+
+				"`testlongblob` longblob NOT NULL,"+
+				"`testtinyblob` tinyblob NOT NULL,"+
+				"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
+				"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
+				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
+				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
+				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
+				"PRIMARY KEY (`id`)"+
+				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8",
+		}
+		log.Println("create table binlog_field_test start")
+		for _, sql := range sqlList {
+			log.Println("exec sql:", sql)
+			ExecSQL(db, sql)
+		}
+		log.Println("create table binlog_field_test over")
+		*table = "binlog_field_test"
 	}
+	sqlPre,sqlValue,tableInfo := GetSchemaTableFieldAndVal(db,*database,*table)
+	if sqlPre == ""{
+		log.Println("GetSchemaTableFieldAndVal ,sql is empty")
+		os.Exit(0)
+	}
+
+	stmt,err := db.Prepare(sqlPre)
+	if err != nil{
+		log.Fatal(err,"sqlPre:",sqlPre)
+	}
+	for k,v:=range tableInfo{
+		log.Println(k,"==",v.Value,"(",reflect.TypeOf(v.Value),")")
+	}
+
+	fmt.Println("")
+
+	for k,v:=range sqlValue{
+		log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
+	}
+
+	Result,err := stmt.Exec(sqlValue)
+	if err != nil{
+		log.Println(sqlValue)
+		log.Fatal("sql Exec",err)
+	}
+	log.Println("sql exec ResultL:",Result)
 	log.Println("load data over")
+
+	ColumnData = tableInfo
 
 	reslut := make(chan error, 1)
 	m := make(map[string]uint8, 0)
-	m["bifrost_test"] = 1
+	m[*database] = 1
+	log.Println("m:",m)
 	BinlogDump := &mysql.BinlogDump{
 		DataSource:    dataSource,
-		CallbackFun:   callback2,
+		CallbackFun:   callback3,
 		ReplicateDoDb: m,
 		OnlyEvent:     []mysql.EventType{
 			mysql.QUERY_EVENT,
@@ -600,6 +698,7 @@ func main() {
 			mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
 		},
 	}
+	log.Println("filename:",filename,"position:",position)
 	go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)
 	go func() {
 		for {
