@@ -136,11 +136,20 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				bint, e = readFixedLengthInteger(buf, 3)
 				row[column_name] = uint32(bint)
 			}else{
-				var a,b,c int8
-				binary.Read(buf,binary.LittleEndian,&a)
-				binary.Read(buf,binary.LittleEndian,&b)
-				binary.Read(buf,binary.LittleEndian,&c)
-				row[column_name] = int32(a + (b << 8) + (c << 16))
+				var a,b,c uint8
+
+				var tmp byte
+				tmp,e = buf.ReadByte()
+				a = uint8(tmp)
+				tmp,e = buf.ReadByte()
+				b = uint8(tmp)
+				tmp,e = buf.ReadByte()
+				c = uint8(tmp)
+				res := int32(a) | (int32(b) << 8) | (int32(c) << 16)
+				if res >= 0x800000 {
+					res -= 0x1000000
+				}
+				row[column_name] = res
 			}
 			break
 
@@ -368,7 +377,9 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			default:
 				index = 0
 			}
-			result := make(map[string]int, 0)
+
+			//result := make(map[string]int, 0)
+			result := make([]string,0)
 			var mathPower = func (x int, n int) int {
 					ans := 1
 					for n != 0 {
@@ -381,14 +392,17 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			for i, val := range tableSchemaMap[i].set_values {
 				s := index & mathPower(2,i)
 				if s > 0 {
-					result[val] = 1
+					result = append(result,val)
+					//result[val] = 1
 				}
 			}
+			/*
 			f := make([]string, 0)
 			for key, _ := range result {
 				f = append(f, key)
 			}
-			row[column_name] = f
+			*/
+			row[column_name] = result
 			break
 
 		case FIELD_TYPE_BLOB,FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
@@ -487,12 +501,12 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				minute := int((timeInt % 10000) / 100)
 				second := int(timeInt % 100)
 				var minuteStr, secondStr string
-				if minute > 10 {
+				if minute >= 10 {
 					minuteStr = strconv.Itoa(minute)
 				} else {
 					minuteStr = "0" + strconv.Itoa(minute)
 				}
-				if second > 10 {
+				if second >= 10 {
 					secondStr = strconv.Itoa(second)
 				} else {
 					secondStr = "0" + strconv.Itoa(second)
@@ -520,12 +534,12 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			second := read_binary_slice(timeInt,18,6,24)
 
 			var minuteStr, secondStr string
-			if minute > 10 {
+			if minute >= 10 {
 				minuteStr = strconv.Itoa(int(minute))
 			} else {
 				minuteStr = "0" + strconv.Itoa(int(minute))
 			}
-			if second > 10 {
+			if second >= 10 {
 				secondStr = strconv.Itoa(int(second))
 			} else {
 				secondStr = "0" + strconv.Itoa(int(second))
@@ -536,14 +550,14 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 		case FIELD_TYPE_TIMESTAMP:
 			timestamp := int64(bytesToUint32(buf.Next(4)))
-			tm := time.Unix(timestamp, 0)
+			tm := time.Unix(timestamp, 0).UTC()
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break
 
 		case FIELD_TYPE_TIMESTAMP2:
 			var timestamp int32
 			binary.Read(buf,binary.BigEndian,&timestamp)
-			tm := time.Unix(int64(timestamp), 0)
+			tm := time.Unix(int64(timestamp), 0).UTC()
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break
 
