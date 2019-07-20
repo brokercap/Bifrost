@@ -14,6 +14,8 @@ import (
 	"math/rand"
 )
 
+const VERSION  = "0.1.0"
+
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
 	return db
@@ -102,7 +104,11 @@ func GetServerId(db mysql.MysqlConnection) int{
 
 func ExecSQL(db mysql.MysqlConnection,sql string){
 	p := make([]driver.Value, 0)
-	db.Exec(sql,p)
+	_,err := db.Exec(sql,p)
+	if err != nil{
+		log.Println("sql:",sql)
+		log.Println("err: ",err)
+	}
 	return
 }
 
@@ -147,11 +153,11 @@ func  GetRandomString(l int,cn int) string {
 	result1 := []byte{}
 	result2 := ""
 	for i := 0; i < l; i++ {
-		rand.Seed(int64(i))
+		rand.Seed(time.Now().UnixNano()+int64(i))
 		result1 = append(result1, bytes[rand.Intn(len(bytes))])
 	}
 	for i:=0;i < cn;i++{
-		rand.Seed(int64(i))
+		rand.Seed(time.Now().UnixNano()+int64(i))
 		result2 += str2Arr[rand.Intn(len(str2Arr))]
 	}
 	rand.Seed(time.Now().UnixNano())
@@ -580,6 +586,7 @@ func callback3(d *mysql.EventReslut) {
 
 func main() {
 
+	fmt.Println("VERSION:",VERSION)
 	userName := flag.String("u", "root", "-u root")
 	password := flag.String("p", "root", "-p password")
 	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
@@ -611,6 +618,24 @@ func main() {
 	position = uint32(masterInfo.Position)
 	masterServerId := GetServerId(db)
 	MyServerID = uint32(masterServerId+250)
+
+	stmt0,err := db.Prepare("select version()")
+	rows0,_ := stmt0.Query([]driver.Value{})
+	var MysqlVersion string
+	for {
+		dest := make([]driver.Value, 1, 1)
+
+		err := rows0.Next(dest)
+		if err != nil {
+			break
+		}
+		MysqlVersion = string(dest[0].([]byte))
+		break
+	}
+
+	fmt.Println("mysql version:",MysqlVersion)
+
+	fmt.Println("")
 
 
 	log.Println("load data start")
@@ -666,6 +691,7 @@ func main() {
 		os.Exit(0)
 	}
 
+	db.Exec("SET NAMES utf8",[]driver.Value{})
 	stmt,err := db.Prepare(sqlPre)
 	if err != nil{
 		log.Fatal(err,"sqlPre:",sqlPre)
@@ -676,9 +702,11 @@ func main() {
 
 	fmt.Println("")
 
+	/*
 	for k,v:=range sqlValue{
 		log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
 	}
+	*/
 
 	Result,err := stmt.Exec(sqlValue)
 	if err != nil{
