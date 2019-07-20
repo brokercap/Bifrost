@@ -377,7 +377,9 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			default:
 				index = 0
 			}
-			result := make(map[string]int, 0)
+
+			//result := make(map[string]int, 0)
+			result := make([]string,0)
 			var mathPower = func (x int, n int) int {
 					ans := 1
 					for n != 0 {
@@ -390,14 +392,17 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			for i, val := range tableSchemaMap[i].set_values {
 				s := index & mathPower(2,i)
 				if s > 0 {
-					result[val] = 1
+					result = append(result,val)
+					//result[val] = 1
 				}
 			}
+			/*
 			f := make([]string, 0)
 			for key, _ := range result {
 				f = append(f, key)
 			}
-			row[column_name] = f
+			*/
+			row[column_name] = result
 			break
 
 		case FIELD_TYPE_BLOB,FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
