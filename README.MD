@@ -5,7 +5,7 @@
 
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
 
-##### *实时同步数据只要在界面上 鼠标 点 点 点 .....*
+##### *实时同步数据只要在界面上用 鼠标 点 点 点 .....*
 
 
 提供 [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)  平台二进制可执行文件下载.
@@ -55,6 +55,8 @@
 ### Bifrost 还不足的地方
 
 * 支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka
+
+* datetime,timestamp 解析还不支持精确到毫秒,毫秒部分将会自动被丢弃
 
 
 ### WIKI
