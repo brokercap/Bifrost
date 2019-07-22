@@ -109,7 +109,10 @@ func(This *clickhouseDB) Close() bool{
 
 func (This *clickhouseDB) GetSchemaList() (data []string) {
 	This.conn.Begin()
-	stmt, _ := This.conn.Prepare("SHOW DATABASES")
+	stmt, err := This.conn.Prepare("SHOW DATABASES")
+	if err == nil{
+		defer stmt.Close()
+	}
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
@@ -136,7 +139,10 @@ func (This *clickhouseDB) GetSchemaTableList(schema string) (data []string) {
 	}
 
 	This.conn.Begin()
-	stmt, _ := This.conn.Prepare("select name from system.tables where database = '"+schema+"'")
+	stmt, err := This.conn.Prepare("select name from system.tables where database = '"+schema+"'")
+	if err == nil{
+		defer stmt.Close()
+	}
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
@@ -155,7 +161,10 @@ func (This *clickhouseDB) GetSchemaTableList(schema string) (data []string) {
 
 func (This *clickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct) {
 	This.conn.Begin()
-	stmt, _ := This.conn.Prepare("DESC TABLE "+TableName)
+	stmt, err := This.conn.Prepare("DESC TABLE "+TableName)
+	if err == nil{
+		defer stmt.Close()
+	}
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
