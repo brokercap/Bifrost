@@ -8,19 +8,45 @@ import (
 func TestGetTestData(t *testing.T){
 	e := NewEvent()
 
-	t.Log("GetTestInsertData:", e.GetTestInsertData())
+	data := e.GetTestInsertData()
+
+	t.Log("GetTestInsertData:",data )
+	t.Log("id:",data.Rows[0]["id"])
 
 	t.Log("")
 
-	t.Log("GetTestUpdateData:", e.GetTestUpdateData())
+	data = e.GetTestDeleteData()
+	t.Log("GetTestDeleteData:", data)
+
+	t.Log("id:",data.Rows[0]["id"])
 
 	t.Log("")
 
-	t.Log("GetTestDeleteData:", e.GetTestDeleteData())
+	data = e.GetTestUpdateData()
+
+	t.Log("GetTestUpdateData:", data)
+	t.Log("id:",data.Rows[1]["id"])
+
+
 
 	t.Log("")
 
 	t.Log("GetTestQueryData:", e.GetTestQueryData())
+
+
+	data = e.GetTestInsertData()
+
+	t.Log("GetTestInsertData:",data )
+	t.Log("id:",data.Rows[0]["id"])
+
+	t.Log("")
+
+	data = e.GetTestDeleteData()
+	t.Log("GetTestDeleteData:", data)
+
+	t.Log("id:",data.Rows[0]["id"])
+
+	t.Log("")
 }
 
 func TestGetTestDataCheck(t *testing.T){
