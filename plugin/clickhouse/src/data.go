@@ -2,12 +2,13 @@ package src
 
 import "database/sql/driver"
 
-func (This *clickhouseDB) GetTableDataList(schema string,table string,where string) (data []map[string]driver.Value) {
+func (This *ClickhouseDB) GetTableDataList(schema string,table string,where string) (data []map[string]driver.Value) {
 	if schema == ""{
 		return make([]map[string]driver.Value,0)
 	}
 
 	This.conn.Begin()
+	defer This.conn.Commit()
 	stmt, err := This.conn.Prepare("select * from "+schema+"."+table+" where 1=1 and "+where)
 	if err == nil{
 		defer stmt.Close()
@@ -29,6 +30,21 @@ func (This *clickhouseDB) GetTableDataList(schema string,table string,where stri
 		}
 		data = append(data,d)
 	}
-	This.conn.Commit()
 	return data
+}
+
+
+func (This *ClickhouseDB) Exec(sql string,value []driver.Value) error {
+	This.conn.Begin()
+	defer This.conn.Commit()
+	stmt,e:=This.conn.Prepare(sql)
+	if e != nil{
+		return e
+	}
+	defer stmt.Close()
+	_,e1:= stmt.Exec(value)
+	if e != nil{
+		return e1
+	}
+	return nil
 }

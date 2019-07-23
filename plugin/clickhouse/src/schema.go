@@ -76,26 +76,26 @@ func getClickHouseTableFields(w http.ResponseWriter,req *http.Request)  {
 	return
 }
 
-func NewClickHouseDBConn(uri string) *clickhouseDB {
-	c := &clickhouseDB{
+func NewClickHouseDBConn(uri string) *ClickhouseDB {
+	c := &ClickhouseDB{
 		uri:uri,
 	}
 	c.Open()
 	return c
 }
 
-type clickhouseDB struct {
+type ClickhouseDB struct {
 	uri 	string
 	conn 	clickhouse.Clickhouse
 	err 	error
 }
 
-func(This *clickhouseDB) Open() bool{
+func(This *ClickhouseDB) Open() bool{
 	This.conn, This.err = clickhouse.OpenDirect(This.uri)
 	return true
 }
 
-func(This *clickhouseDB) Close() bool{
+func(This *ClickhouseDB) Close() bool{
 	defer func() {
 		if err := recover();err != nil{
 			log.Println("clickhouseDB close err:",err)
@@ -107,7 +107,7 @@ func(This *clickhouseDB) Close() bool{
 	return true
 }
 
-func (This *clickhouseDB) GetSchemaList() (data []string) {
+func (This *ClickhouseDB) GetSchemaList() (data []string) {
 	This.conn.Begin()
 	stmt, err := This.conn.Prepare("SHOW DATABASES")
 	if err == nil{
@@ -133,7 +133,7 @@ func (This *clickhouseDB) GetSchemaList() (data []string) {
 }
 
 
-func (This *clickhouseDB) GetSchemaTableList(schema string) (data []string) {
+func (This *ClickhouseDB) GetSchemaTableList(schema string) (data []string) {
 	if schema == ""{
 		return
 	}
@@ -159,7 +159,7 @@ func (This *clickhouseDB) GetSchemaTableList(schema string) (data []string) {
 }
 
 
-func (This *clickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct) {
+func (This *ClickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct) {
 	This.conn.Begin()
 	stmt, err := This.conn.Prepare("DESC TABLE "+TableName)
 	if err == nil{
