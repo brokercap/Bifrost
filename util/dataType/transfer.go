@@ -89,7 +89,7 @@ func TransferDataType(data []byte,dataType Type)(v interface{},err error) {
 		v = data
 		break
 	case BIT_TYPE:
-		v = BitBytesToInt64(data)
+		v = BytesToInt64(data)
 		break
 	default:
 		v = nil
@@ -158,6 +158,7 @@ func BytesToFloat64(b []byte) float64 {
 	return n
 }
 func BitBytesToInt64(bb []byte) (n int64) {
+
 	var resp string = ""
 	var bit uint
 	var end byte

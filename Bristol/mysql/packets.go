@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+	"strconv"
 )
 
 // Read packet to buffer
@@ -872,6 +873,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			switch rc.columns[i].fieldType {
 			case FIELD_TYPE_NULL:
 				row[i] = nil
+				break
 
 			// Numeric Typs
 			case FIELD_TYPE_TINY:
@@ -881,6 +883,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
 				}
 				pos++
+				break
 
 			case FIELD_TYPE_SHORT, FIELD_TYPE_YEAR:
 				if unsigned {
@@ -889,6 +892,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2]))))
 				}
 				pos += 2
+				break
 
 			case FIELD_TYPE_INT24, FIELD_TYPE_LONG:
 				if unsigned {
@@ -897,6 +901,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = intToByteStr(int64(int32(bytesToUint32(data[pos : pos+4]))))
 				}
 				pos += 4
+				break
 
 			case FIELD_TYPE_LONGLONG:
 				if unsigned {
@@ -905,14 +910,17 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = intToByteStr(int64(bytesToUint64(data[pos : pos+8])))
 				}
 				pos += 8
+				break
 
 			case FIELD_TYPE_FLOAT:
 				row[i] = float32ToByteStr(bytesToFloat32(data[pos : pos+4]))
 				pos += 4
+				break
 
 			case FIELD_TYPE_DOUBLE:
 				row[i] = float64ToByteStr(bytesToFloat64(data[pos : pos+8]))
 				pos += 8
+				break
 
 			case FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL:
 				row[i], n, isNull, e = readLengthCodedBinary(data[pos:])
@@ -924,9 +932,10 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = nil
 				}
 				pos += n
+				break
 
 			// Length coded Binary Strings
-			case FIELD_TYPE_VARCHAR, FIELD_TYPE_BIT, FIELD_TYPE_ENUM,
+			case FIELD_TYPE_VARCHAR, FIELD_TYPE_ENUM,
 				FIELD_TYPE_SET, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
 				FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING,
 				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY:
@@ -939,8 +948,43 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = nil
 				}
 				pos += n
+				break
+			case FIELD_TYPE_BIT:
+				var bb []byte
+				bb, n, isNull, e = readLengthCodedBinary(data[pos:])
+				if e != nil {
+					return
+				}
+				if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
+					row[i] = nil
+					break
+				}
+				var resp string = ""
+				var bit uint
+				var end byte
+				end = 8
+				for k := 0; k < len(bb); k++ {
+					var current_byte []string
+					var data int
+					data = int(bb[k])
+					for bit = 0; bit < uint(end); bit++ {
+						tmp := 1 << bit
+						if (data & tmp) > 0 {
+							current_byte = append(current_byte, "1")
+						} else {
+							current_byte = append(current_byte, "0")
+						}
+					}
+					for k := len(current_byte); k > 0; k-- {
+						resp += current_byte[k-1]
+					}
+				}
+				bitInt, _ := strconv.ParseInt(resp, 2, 64)
+				row[i] = []byte(strconv.FormatInt(bitInt,10))
+				pos += n
+				break
 
-			// Date YYYY-MM-DD
+				// Date YYYY-MM-DD
 			case FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
 				var num uint64
 				num, n, e = bytesToLengthCodedBinary(data[pos:])
@@ -976,6 +1020,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 						data[pos+8]))
 				}
 				pos += n + int(num)
+				break
 
 			// Timestamp YYYY-MM-DD HH:MM:SS
 			case FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATETIME:
@@ -1007,6 +1052,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 						data[pos+6]))
 				}
 				pos += int(num)
+				break
 
 			// Please report if this happens!
 			default:
