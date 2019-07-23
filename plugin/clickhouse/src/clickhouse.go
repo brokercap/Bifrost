@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-beta.01"
+const VERSION  = "v1.1.0-beta.02"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
@@ -35,11 +35,9 @@ type fieldStruct struct {
 	CkType  string
 }
 
-var dataMap map[string]*dataStruct
 
 func init(){
 	pluginDriver.Register("clickhouse",&MyConn{},VERSION,BIFROST_VERION)
-	dataMap = make(map[string]*dataStruct,0)
 }
 
 type MyConn struct {}
@@ -80,7 +78,7 @@ type Conn struct {
 	uri    	string
 	status  string
 	p		*PluginParam
-	conn    *clickhouseDB
+	conn    *ClickhouseDB
 	err 	error
 }
 
@@ -110,6 +108,7 @@ type PluginParam struct {
 	PriKey			[]fieldStruct
 	ckPriKey		string   // ck 主键字段
 	mysqlPriKey		string  //ck对应 mysql 的主键id
+	Data			*dataTableStruct
 }
 
 
@@ -129,6 +128,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	param.ckDatakey = param.CkSchema+"."+param.CkTable
 	param.ckPriKey = param.PriKey[0].CK
 	param.mysqlPriKey = param.PriKey[0].MySQL
+	param.Data = &dataTableStruct{Data:make([]*pluginDriver.PluginDataType,0)}
 	This.p = &param
 	This.getCktFieldType()
 	return &param,nil
@@ -176,11 +176,6 @@ func (This *Conn) getCktFieldType() {
 }
 
 func (This *Conn) Connect() bool {
-	if _,ok:= dataMap[This.uri];!ok{
-		dataMap[This.uri] = &dataStruct{
-			Data: make(map[string]*dataTableStruct,0),
-		}
-	}
 	This.conn = NewClickHouseDBConn(This.uri)
 	return true
 }
@@ -211,20 +206,8 @@ func (This *Conn) Close() bool {
 
 func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType)  (*pluginDriver.PluginBinlog,error){
 	var n int
-	l.RLock()
-	t := dataMap[This.uri]
-	t.Lock()
-	if _,ok := t.Data[This.p.ckDatakey];!ok{
-		t.Data[This.p.ckDatakey] = &dataTableStruct{
-			MetaMap:make(map[string]string,0),
-			Data:make([]*pluginDriver.PluginDataType,0),
-		}
-	}
-	t.Data[This.p.ckDatakey].Data = append(t.Data[This.p.ckDatakey].Data,data)
-	n = len(t.Data[This.p.ckDatakey].Data)
-	t.Unlock()
-	l.RUnlock()
-
+	This.p.Data.Data = append(This.p.Data.Data,data)
+	n = len(This.p.Data.Data)
 	if This.p.BatchSize <= n{
 		return This.Commit()
 	}
@@ -247,6 +230,49 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 	return nil,nil
 }
 
+func (This *Conn) getStmt(Type string) dbDriver.Stmt {
+	var stmt dbDriver.Stmt
+	switch Type {
+	case "insert":
+		fields := ""
+		values := ""
+		for _,v:= range This.p.Field{
+			if fields == ""{
+				fields = v.CK
+				values = "?"
+			}else{
+				fields += ","+v.CK
+				values += ",?"
+			}
+		}
+		sql := "INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")"
+		stmt,This.conn.err = This.conn.conn.Prepare(sql)
+		if This.conn.err != nil{
+			log.Println("clickhouse getStmt insert err:",This.conn.err)
+		}
+		break
+	case "delete":
+		where := ""
+		for _,v:= range This.p.PriKey{
+			if where == ""{
+				where = v.CK+"=?"
+			}else{
+				where += " AND "+v.CK+"=?"
+			}
+		}
+		stmt,This.conn.err = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
+		if This.conn.err != nil{
+			log.Println("clickhouse getStmt delete err:",This.conn.err)
+		}
+		break
+	}
+
+	if This.conn.err != nil{
+		return nil
+	}
+	return stmt
+}
+
 func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
@@ -260,184 +286,120 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	if This.conn.err != nil {
 		return nil,This.conn.err
 	}
-	t := dataMap[This.uri]
-	t.Lock()
-	defer t.Unlock()
-	if _,ok := t.Data[This.p.ckDatakey];!ok{
-		return nil,nil
-	}
-	n := len(t.Data[This.p.ckDatakey].Data)
+
+	n := len(This.p.Data.Data)
 	if n == 0{
 		return nil,nil
 	}
 	if n > This.p.BatchSize{
 		n = This.p.BatchSize
 	}
-	list := t.Data[This.p.ckDatakey].Data[:n]
+	list := This.p.Data.Data[:n]
 
-	var stmtMap = make(map[string]dbDriver.Stmt,0)
+	deleteDataMap := make(map[interface{}]map[string]interface{},0)
+	insertDataMap := make(map[interface{}]map[string]interface{},0)
 
-	var getStmt = func(Type string) dbDriver.Stmt{
-		if _,ok := stmtMap[Type];ok{
-			return stmtMap[Type]
-		}
-		switch Type {
+	var ok bool
+	for i := n - 1; i >= 0; i-- {
+		v := list[i]
+		switch v.EventType {
 		case "insert":
-			fields := ""
-			values := ""
-			for _,v:= range This.p.Field{
-				if fields == ""{
-					fields = v.CK
-					values = "?"
-				}else{
-					fields += ","+v.CK
-					values += ",?"
+			for _,row := range v.Rows{
+				key := row[This.p.mysqlPriKey]
+				if _,ok=deleteDataMap[key];!ok {
+					if _, ok = insertDataMap[key]; !ok {
+						insertDataMap[key] = row
+					}
 				}
 			}
-			sql := "INSERT INTO "+This.p.ckDatakey+" ("+fields+") VALUES ("+values+")"
-			stmtMap[Type],This.conn.err = This.conn.conn.Prepare(sql)
-			if This.conn.err != nil{
-				log.Println("clickhouse getStmt insert err:",This.conn.err)
+			break
+		case "update":
+			for i,row := range v.Rows{
+				key := row[This.p.mysqlPriKey]
+				if i%2 == 0{
+					if _,ok:=deleteDataMap[key];!ok{
+						deleteDataMap[key] = row
+					}
+				}else{
+					if _,ok=deleteDataMap[key];!ok {
+						if _, ok = insertDataMap[key]; !ok {
+							insertDataMap[key] = row
+						}
+					}
+				}
 			}
 			break
 		case "delete":
-			where := ""
-			for _,v:= range This.p.PriKey{
-				if where == ""{
-					where = v.CK+"=?"
-				}else{
-					where += " AND "+v.CK+"=?"
+			for _,row := range v.Rows{
+				key := row[This.p.mysqlPriKey]
+				if _,ok:=deleteDataMap[key];!ok{
+					deleteDataMap[key] = row
 				}
 			}
-			stmtMap[Type],This.conn.err = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
-			if This.conn.err != nil{
-				log.Println("clickhouse getStmt delete err:",This.conn.err)
-			}
+			break
+		default:
+			continue
 			break
 		}
-		return stmtMap[Type]
 	}
 
 	_,This.conn.err = This.conn.conn.Begin()
 	if This.conn.err != nil{
 		return nil,This.conn.err
 	}
-
-	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
-	//假如update之前，则说明，后面遍历的同一条数据都不需要再更新了
-	//有一种比较糟糕的情况就是在源端replace into 操作，这个操作是先delete再insert操作，
-	//所以这种情况。假如自动发现了，则应该是再删除一次,然后再最后再重新执行一次insert最后的记录
-
-	type opLog struct{
-		Data *[]dbDriver.Value
-		EventType string
-	}
-	//在最后是Insert但 之前又有delete操作的情况下,把最后insert的数据,存储在这个list中,在代码最后再执行一次insert
-	needDoubleInsertOp := make([][]dbDriver.Value,0)
-
-	//用于存储数据库中最后一次操作记录
-	opMap := make(map[interface{}]*opLog, 0)
-
-	var checkOpMap = func(key interface{}, EvenType string) bool {
-		if opMap[key] == nil{
-			return false
-		}
-		//假如insert了,但是又delete,则说明 db中有先delete再insert的操作,这个时候需要将insert的内容存储起来,最后再insert一次
-		if opMap[key].EventType != "update" && EvenType == "delete" {
-			opMap[key].EventType = "delete"
-			needDoubleInsertOp = append(needDoubleInsertOp,*opMap[key].Data)
-			return false
-		}
-		return true
-	}
-	//从最后一条数据开始遍历
-	var toV interface{}
 	var stmt dbDriver.Stmt
-	for i := n - 1; i >= 0; i-- {
-		data := list[i]
-		switch data.EventType {
-		case "update":
-			val := make([]dbDriver.Value,0)
-			for _,v:=range This.p.Field{
-				toV,This.err = ckDataTypeTransfer(data.Rows[1][v.MySQL],v.CK,v.CkType)
-				if This.err != nil{
-					return nil,This.err
-				}
-				val = append(val,toV)
-			}
-
-			if checkOpMap(data.Rows[1][This.p.mysqlPriKey], "update") == true {
-				continue
-			}
-
-			where := make([]dbDriver.Value,1)
-			where[0] = data.Rows[0][This.p.mysqlPriKey]
-			stmt = getStmt("delete")
-			if stmt == nil{
-				goto errLoop
-			}
-			_,This.err = stmt.Exec(where)
-			stmt = getStmt("insert")
-			if stmt == nil{
-				goto errLoop
-			}
-			_,This.conn.err = stmt.Exec(val)
-			opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
-			break
-		case "delete":
-			where := make([]dbDriver.Value,1)
-			where[0] = data.Rows[0][This.p.mysqlPriKey]
-			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
-				stmt = getStmt("delete")
-				if stmt == nil{
-					goto errLoop
-				}
-				_,This.conn.err = stmt.Exec(where)
-				if This.conn.err != nil{
-					goto errLoop
-				}
-				opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"delete"}
-			}
-			break
-		case "insert":
-			val := make([]dbDriver.Value,0)
-			for _,v:=range This.p.Field{
-				toV,This.err = ckDataTypeTransfer(data.Rows[0][v.MySQL],v.CK,v.CkType)
-				if This.err != nil{
-					return nil,This.err
-				}
-				val = append(val,toV)
-			}
-
-			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "insert") == true {
-				continue
-			}
-
-			//log.Println("insert:",val)
-			stmt = getStmt("insert")
-			if stmt == nil{
-				goto errLoop
-			}
-
-			_,This.conn.err = stmt.Exec(val)
-			if This.conn.err != nil{
-				This.conn.conn.Rollback()
-				return nil,This.conn.err
-			}
-			opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
-			break
+	if len(deleteDataMap) > 0{
+		stmt = This.getStmt("delete")
+		if stmt == nil{
+			goto errLoop
 		}
+		for _,v:=range deleteDataMap{
+			where := make([]dbDriver.Value,1)
+			where[0] = v[This.p.mysqlPriKey]
+			_,This.err = stmt.Exec(where)
+			if This.err != nil{
+				stmt.Close()
+				goto errLoop
+			}
+		}
+		stmt.Close()
+	}
 
+	if len(insertDataMap) > 0{
+		stmt = This.getStmt("insert")
+		if stmt == nil{
+			goto errLoop
+		}
+		var toV interface{}
+		for _,dataMap:=range insertDataMap{
+			val := make([]dbDriver.Value,0)
+			for _,v:=range This.p.Field{
+				toV,This.err = ckDataTypeTransfer(dataMap[v.MySQL],v.CK,v.CkType)
+				if This.err != nil{
+					stmt.Close()
+					goto errLoop
+				}
+				val = append(val,toV)
+			}
+			_,This.err = stmt.Exec(val)
+			if This.err != nil{
+				stmt.Close()
+				goto errLoop
+			}
+		}
+		stmt.Close()
 	}
 
 	errLoop:
+		if This.conn.err != nil{
+			This.err = This.conn.err
+			This.conn.conn.Rollback()
+			return nil,This.conn.err
+		}
 		if This.err != nil{
 			This.conn.conn.Rollback()
 			return nil,This.err
 		}
-	for _,val := range needDoubleInsertOp{
-		getStmt("insert").Exec(val)
-	}
 
 	err2 := This.conn.conn.Commit()
 	if err2 != nil{
@@ -445,10 +407,10 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		return nil,This.conn.err
 	}
 
-	if len(t.Data[This.p.ckDatakey].Data) <= int(This.p.BatchSize){
-		t.Data[This.p.ckDatakey].Data = make([]*pluginDriver.PluginDataType,0)
+	if len(This.p.Data.Data) <= int(This.p.BatchSize){
+		This.p.Data.Data = make([]*pluginDriver.PluginDataType,0)
 	}else{
-		t.Data[This.p.ckDatakey].Data = t.Data[This.p.ckDatakey].Data[n+1:]
+		This.p.Data.Data = This.p.Data.Data[n+1:]
 	}
 
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil

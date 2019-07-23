@@ -12,9 +12,10 @@ import (
 	"flag"
 	"strings"
 	"math/rand"
+	"encoding/json"
 )
 
-const VERSION  = "0.1.0"
+const VERSION  = "0.1.1"
 
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
@@ -164,13 +165,14 @@ func  GetRandomString(l int,cn int) string {
 	return string(result1)+result2
 }
 
-func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column){
+func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
 	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
 	data = make([]driver.Value,0)
 	stmt,err := db.Prepare(sql)
+	columnList := make([]Column,0)
 	if err !=nil{
 		log.Println(err)
-		return "", make([]driver.Value,0),columnData
+		return "", make([]driver.Value,0),columnData,columnList
 	}
 	p := make([]driver.Value, 0)
 	//p = append(p,schema)
@@ -179,7 +181,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	defer rows.Close()
 	if err != nil {
 		log.Printf("%v\n", err)
-		return "", make([]driver.Value,0),columnData
+		return "", make([]driver.Value,0),columnData,columnList
 	}
 	columnData = make(map[string]*Column,0)
 	var sqlk ,sqlv = "",""
@@ -299,6 +301,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			NumbericPrecision:NUMERIC_PRECISION,
 		}
 		columnData[COLUMN_NAME] = columnType
+		columnList = append(columnList,*columnType)
 
 		rand.Seed(time.Now().UnixNano())
 		var randResult int
@@ -416,6 +419,9 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 					n = rand.Intn(255/4)
 				}
 
+				if n == 0{
+					n = 1
+				}
 				if strings.Contains(columnType.CharacterSetName,"utf"){
 					cnSize = rand.Intn(n)
 				}
@@ -464,20 +470,35 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			case "float":
 				Value := strconv.FormatFloat(float64(rand.Float32()),'f',2,32)
 				Value2,_ := strconv.ParseFloat(Value, 32)
-				columnType.Value = float32(Value2)
-				data = append(data,fmt.Sprint(Value2))
+				f1 := float32(rand.Intn(999999))
+				f2 := f1+float32(Value2)
+				if randResult == 1{
+					f2 = 0-f2
+				}
+				columnType.Value = f2
+				data = append(data,fmt.Sprint(f2))
 				break
 			case "double":
 				Value := strconv.FormatFloat(float64(rand.Float64()),'f',2,64)
 				Value2,_ := strconv.ParseFloat(Value, 64)
-				columnType.Value = Value2
-				data = append(data,fmt.Sprint(Value2))
+				f1 := float64(rand.Intn(999999))
+				f2 := f1+float64(Value2)
+				if randResult == 1{
+					f2 = 0-f2
+				}
+				columnType.Value = f2
+				data = append(data,fmt.Sprint(f2))
 				break
 			case "decimal":
 				Value := strconv.FormatFloat(float64(rand.Float64()),'f',2,64)
 				Value2,_ := strconv.ParseFloat(Value, 64)
-				columnType.Value = Value
-				data = append(data,fmt.Sprint(Value2))
+				f1 := float64(rand.Intn(999999))
+				f2 := f1+float64(Value2)
+				if randResult == 1{
+					f2 = 0-f2
+				}
+				columnType.Value = fmt.Sprint(f2)
+				data = append(data,fmt.Sprint(f2))
 				break
 			case "set":
 				d := strings.Replace(COLUMN_TYPE, "set(", "", -1)
@@ -522,7 +543,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	log.Println("sqlstring:",sqlstring)
 	log.Println("data:",len(data))
 	log.Println("columnData:",len(columnData))
-	return sqlstring,data,columnData
+	return sqlstring,data,columnData,columnList
 }
 
 var ColumnData map[string]*Column
@@ -685,11 +706,14 @@ func main() {
 		log.Println("create table binlog_field_test over")
 		*table = "binlog_field_test"
 	}
-	sqlPre,sqlValue,tableInfo := GetSchemaTableFieldAndVal(db,*database,*table)
+	sqlPre,sqlValue,tableInfo,columnList := GetSchemaTableFieldAndVal(db,*database,*table)
 	if sqlPre == ""{
 		log.Println("GetSchemaTableFieldAndVal ,sql is empty")
 		os.Exit(0)
 	}
+
+	columnListByte,_:=json.Marshal(columnList)
+	fmt.Println("columnListJson:",string(columnListByte))
 
 	db.Exec("SET NAMES utf8",[]driver.Value{})
 	stmt,err := db.Prepare(sqlPre)
