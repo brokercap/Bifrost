@@ -4,7 +4,6 @@ import (
 	"testing"
 	"log"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/brokercap/Bifrost/test/pluginTest"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/mysql/src"
 	dbDriver "database/sql/driver"
@@ -16,7 +15,7 @@ import (
 	"fmt"
 )
 
-var url string = "root:root123@tcp(10.40.6.89:3306)/bifrost_test"
+var url string = "root:root@tcp(10.40.2.41:3306)/bifrost_test"
 
 var SchemaName string = "bifrost_test"
 var TableName string = "binlog_field_test"
@@ -144,12 +143,20 @@ func getPluginConn() pluginDriver.ConnFun {
 
 
 func TestCommit(t *testing.T){
+
+	beforeTest()
 	conn := getPluginConn()
-	insertdata := pluginTest.GetTestInsertData()
-	log.Println("testtimestamp",insertdata.Rows[0]["testtimestamp"])
-	conn.Insert(insertdata)
-	conn.Del(pluginTest.GetTestDeleteData())
-	conn.Update(pluginTest.GetTestUpdateData())
+	initDBTable(false)
+
+	e := pluginTestData.NewEvent()
+
+	conn.Insert(e.GetTestInsertData())
+	conn.Del(e.GetTestDeleteData())
+	conn.Update(e.GetTestUpdateData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+
 	_,err2 := conn.Commit()
 	if err2 != nil{
 		log.Fatal(err2)
@@ -323,4 +330,3 @@ func checkDataRight(eventDataMap map[string]interface{}) (map[string][]string,er
 
 	return result,nil
 }
-
