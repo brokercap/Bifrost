@@ -35,11 +35,15 @@ type Column struct {
 	Value interface{}
 }
 
-type EventType byte
+type EventType int8
 const (
-	INSERT EventType = 1
-	UPDATE EventType = 2
-	DELETE EventType = 3
+	RANDALL	EventType = -1
+	INSERT EventType = 0
+	UPDATE EventType = 1
+	DELETE EventType = 2
+	SQLTYPE EventType = 3
+	COMMIT EventType = 4
+	OTHERTYPE EventType = 5
 )
 
 func GetRandomString(l int,cn int) string {
@@ -201,12 +205,12 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column,eventType Even
 					break
 				case "bigint":
 					if columnType.Unsigned == true{
-						Value = uint64(uint64(2)^64-1)
+						Value = uint64(18446744073709551615)
 					}else{
 						if randResult == 1{
-							Value = int64(int64(2)^63-1)
+							Value = int64(9223372036854775807)
 						}else{
-							Value = int64(int64(-2)^63)
+							Value = int64(-9223372036854775808)
 						}
 					}
 					break

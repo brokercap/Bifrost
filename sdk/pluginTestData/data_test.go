@@ -2,7 +2,7 @@ package pluginTestData
 
 import (
 	"testing"
-	"reflect"
+	"encoding/json"
 )
 
 func TestGetTestData(t *testing.T){
@@ -53,12 +53,27 @@ func TestGetTestDataCheck(t *testing.T){
 	e := NewEvent()
 	data := e.GetTestInsertData()
 	m := data.Rows[0]
-	for _,columnType := range e.ColumnList{
-		if _,ok := m[columnType.ColumnName];!ok{
-			t.Error(columnType.ColumnName," not esxit")
-			continue
-		}
-		t.Log(columnType.ColumnName,"==",m[columnType.ColumnName],"(",reflect.TypeOf(m[columnType.ColumnName]),")")
+	c,err:=json.Marshal(m)
+	if err != nil{
+		t.Fatal(err)
+	}
+	checkResult,err := e.CheckData(m,string(c))
+	if err != nil{
+		t.Fatal(err)
 	}
 
+	if err != nil{
+		t.Fatal(err)
+	}
+
+
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
+
+	t.Log("test over")
 }

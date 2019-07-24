@@ -1,0 +1,214 @@
+package pluginTestData
+
+import (
+	"encoding/json"
+	"reflect"
+	"fmt"
+)
+
+type dataStruct struct {
+	Id 							uint32 `json:"id"`
+	Test_unsinged_bigint		uint64 `json:"test_unsinged_bigint"`
+	Test_unsinged_int			uint32 `json:"test_unsinged_int"`
+	Test_unsinged_mediumint		uint32 `json:"test_unsinged_mediumint"`
+	Test_unsinged_smallint		uint16 `json:"test_unsinged_smallint"`
+	Test_unsinged_tinyint		uint8  `json:"test_unsinged_tinyint"`
+
+	Testtinyint					int8  `json:"testtinyint"`
+	Testsmallint				int16  `json:"testsmallint"`
+	Testmediumint				int32  `json:"testmediumint"`
+	Testint						int32  `json:"testint"`
+	Testbigint					int64  `json:"testbigint"`
+
+	Testbit						int64  `json:"testbit"`
+	Testbool					bool   `json:"testbool"`
+
+	Testvarchar					string  `json:"testvarchar"`
+	Testchar					string  `json:"testchar"`
+
+	Testtime					string  `json:"testtime"`
+	Testdate					string  `json:"testdate"`
+	Testyear					string  `json:"testyear"`
+	Testtimestamp				string  `json:"testtimestamp"`
+	Testdatetime				string  `json:"testdatetime"`
+
+	Testfloat					float32 `json:"testfloat"`
+	Testdouble					float64 `json:"testdouble"`
+	Testdecimal					string  `json:"testdecimal"`
+
+	Testtext					string  `json:"testtext"`
+	Testblob					string  `json:"testblob"`
+	Testmediumblob				string  `json:"testmediumblob"`
+	Testlongblob				string  `json:"testlongblob"`
+	Testtinyblob				string  `json:"testtinyblob"`
+
+	Testenum					string  `json:"testenum"`
+	Testset						[]string `json:"testset"`
+}
+
+func (This *Event) CheckData(src map[string]interface{},destJsonString string) (map[string][]string,error){
+	var err error
+	var dest dataStruct
+	err = json.Unmarshal([]byte(destJsonString),&dest)
+	if err != nil{
+		return nil,err
+	}
+
+	result := make(map[string][]string,0)
+	result["ok"] = make([]string,0)
+	result["error"] = make([]string,0)
+
+	var key string
+	var srcV interface{}
+
+	srcV = dest.Id
+	key = "id"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Test_unsinged_bigint
+	key = "test_unsinged_bigint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Test_unsinged_int
+	key = "test_unsinged_int"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Test_unsinged_mediumint
+	key = "test_unsinged_mediumint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Test_unsinged_smallint
+	key = "test_unsinged_smallint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Test_unsinged_tinyint
+	key = "test_unsinged_tinyint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testtinyint
+	key = "testtinyint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testsmallint
+	key = "testsmallint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testmediumint
+	key = "testmediumint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testint
+	key = "testint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testbigint
+	key = "testbigint"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testbit
+	key = "testbit"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testbool
+	key = "testbool"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testdate
+	key = "testdate"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testyear
+	key = "testyear"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testvarchar
+	key = "testvarchar"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testchar
+	key = "testchar"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testtime
+	key = "testtime"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testdate
+	key = "testdate"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testyear
+	key = "testyear"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testtimestamp
+	key = "testtimestamp"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testdatetime
+	key = "testdatetime"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testfloat
+	key = "testfloat"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testdouble
+	key = "testdouble"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testdecimal
+	key = "testdecimal"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+
+	srcV = dest.Testtext
+	key = "testtext"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testblob
+	key = "testblob"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testmediumblob
+	key = "testmediumblob"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testlongblob
+	key = "testlongblob"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+	srcV = dest.Testtinyblob
+	key = "testtinyblob"
+	This.CheckData0(srcV,src[key],key,result)
+
+
+
+	srcV = dest.Testenum
+	key = "testenum"
+	This.CheckData0(srcV,src[key],key,result)
+
+	srcV = dest.Testset
+	key = "testset"
+	This.CheckData0(srcV,src[key],key,result)
+
+	return result,nil
+}
+
+func (This *Event) CheckData0(srcV interface{},destV interface{},key string,result map[string][]string) {
+	if reflect.TypeOf(srcV) == reflect.TypeOf(destV) && fmt.Sprint(srcV) == fmt.Sprint(destV){
+		s := fmt.Sprint(key," == ",srcV," ( ",reflect.TypeOf(srcV)," ) ")
+		result["ok"] = append(result["ok"],s)
+	}else{
+		s := fmt.Sprint(key," ",srcV," ( ",reflect.TypeOf(srcV)," ) "," != ",destV,reflect.TypeOf(destV))
+		result["error"] = append(result["error"],s)
+	}
+}
