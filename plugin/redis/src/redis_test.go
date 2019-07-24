@@ -8,8 +8,7 @@ import (
 	"github.com/brokercap/Bifrost/test/pluginTest"
 	"github.com/garyburd/redigo/redis"
 	"fmt"
-	"encoding/json"
-	"reflect"
+	"strings"
 )
 
 var url string = "10.40.2.41:6379"
@@ -103,11 +102,13 @@ func TestCheckData(t *testing.T){
 
 	e := pluginTestData.NewEvent()
 
-	log.Println("")
-	log.Println("insert test start")
+	var checkResult map[string][]string
+
+	t.Log("")
+	t.Log("insert test start")
 
 	insertData := e.GetTestInsertData()
-	log.Println(insertData)
+	//log.Println(insertData)
 	_, err = conn.Insert(insertData)
 	if err != nil{
 		t.Fatal(err)
@@ -120,10 +121,25 @@ func TestCheckData(t *testing.T){
 		t.Fatal(err)
 	}
 
-	chekcData(insertData.Rows[0],c)
+	log.Println("insertDataJsonString:",c)
 
-	log.Println("")
-	log.Println("update test start")
+	checkResult,err = e.CheckData(insertData.Rows[0],c)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
+
+
+	t.Log("")
+	t.Log("update test start")
 
 	updateData := e.GetTestUpdateData()
 	_, err = conn.Update(updateData)
@@ -137,11 +153,22 @@ func TestCheckData(t *testing.T){
 		t.Fatal(err)
 	}
 
-	chekcData(updateData.Rows[1],c)
+	checkResult,err = e.CheckData(updateData.Rows[1],c)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
 
 
-	log.Println("")
-	log.Println("delete test start")
+	t.Log("")
+	t.Log("delete test start")
 
 	deleteData := e.GetTestDeleteData()
 
@@ -152,39 +179,53 @@ func TestCheckData(t *testing.T){
 
 	key = deleteData.SchemaName+"-"+deleteData.TableName+"-"+fmt.Sprint(deleteData.Rows[0]["id"])
 	c,err = redis.String(redisConn.Do("GET", key))
-	if err != nil{
-		t.Error("key not delete",key,"==",c)
+	if err != nil {
+		if strings.Contains(fmt.Sprint(err),"nil returned") {
+			t.Log("key:",key, " delete success")
+		}else{
+			t.Error("key:",key, " delete error,",err)
+		}
 	}
 
 	log.Println("test over")
 }
 
-func chekcData(src map[string]interface{},dest string)  {
-	var destMap map[string]interface{}
-	json.Unmarshal([]byte(dest),&destMap)
-
-	errorList := make([]string,0)
-	for k,v := range src{
-		if _,ok := destMap[k];!ok{
-			errorList = append(errorList,k)
-			continue
-		}
-
-		if reflect.TypeOf(v) == reflect.TypeOf(destMap[k]){
-			if fmt.Sprint(v) == fmt.Sprint(destMap[k]){
-				log.Println(k,"==",v)
-			}else{
-				errorList = append(errorList,k)
-			}
-		}else{
-			errorList = append(errorList,k)
-		}
+//模拟正式环境刷数据
+func TestSyncLikeProduct(t *testing.T)  {
+	p := pluginTestData.NewPlugin("redis",url)
+	err0 := p.SetParam(getParam())
+	if err0 != nil{
+		t.Fatal(err0)
 	}
-	if len(errorList) > 0 {
-		for _, k := range errorList {
-			log.Println(k, "value:", src[k], "(", reflect.TypeOf(src[k]), ")", " != ", destMap[k], "(", reflect.TypeOf(destMap[k]), ")")
-		}
+
+	var n uint = 10
+	err := p.DoTestStart(n)
+
+	if err != nil{
+		t.Fatal(err)
 	}else{
-		log.Println(" type and value is all right ")
+		t.Log("test success")
 	}
+
+}
+
+
+//模拟正式环境性能测试(只随机生成一条数据。循环提交)
+func TestSyncLikeProductForSpeed(t *testing.T)  {
+	p := pluginTestData.NewPlugin("redis",url)
+	err0 := p.SetParam(getParam())
+	p.SetEventType(pluginTestData.INSERT)
+	if err0 != nil{
+		t.Fatal(err0)
+	}
+
+	var n uint = 100
+	err := p.DoTestStartForSpeed(n)
+
+	if err != nil{
+		t.Fatal(err)
+	}else{
+		t.Log("test success")
+	}
+
 }
