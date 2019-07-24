@@ -314,9 +314,10 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			}
 			break
 		case "update":
-			for i,row := range v.Rows{
+			for k := len(v.Rows)-1; k >= 0;k--{
+				row := v.Rows[k]
 				key := row[This.p.mysqlPriKey]
-				if i%2 == 0{
+				if k%2 == 0{
 					if _,ok:=deleteDataMap[key];!ok{
 						deleteDataMap[key] = row
 					}

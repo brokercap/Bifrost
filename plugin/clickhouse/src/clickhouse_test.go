@@ -79,7 +79,7 @@ func TestGetTableFields(t *testing.T)  {
 	log.Println(c.GetTableFields("test.binlog_field_test"))
 }
 
-func initSyncParam() {
+func getParam() map[string]interface{} {
 	type fieldStruct struct {
 		CK 		string
 		MySQL 	string
@@ -127,8 +127,11 @@ func initSyncParam() {
 	param["PriKey"] = PriKey
 	param["CkSchema"] = SchemaName
 	param["CkTable"] = TableName
+	return param
+}
 
-	p,err := conn.SetParam(param)
+func initSyncParam() {
+	p,err := conn.SetParam(getParam())
 	if err != nil{
 		log.Println("set param fatal err")
 		log.Fatal(err)
@@ -202,9 +205,10 @@ func TestCommitAndCheckData(t *testing.T){
 	initDBTable(true)
 	initSyncParam()
 	event := pluginTestData.NewEvent()
-	event.GetTestInsertData()
-	eventData := event.GetTestUpdateData()
+	eventData := event.GetTestInsertData()
+	eventData = event.GetTestUpdateData()
 	conn.Update(eventData)
+	//conn.Insert(eventData)
 	_,err2 := conn.Commit()
 	if err2 != nil{
 		t.Fatal(err2)
@@ -298,6 +302,29 @@ func TestCommitAndCheckData(t *testing.T){
 		t.Log("test over;", "data is all right")
 	}else{
 		t.Error("test over;"," some data is error")
+	}
+
+}
+
+
+
+//模拟正式环境刷数据
+func TestSyncLikeProduct(t *testing.T)  {
+	initDBTable(true)
+	p := pluginTestData.NewPlugin("clickhouse",url)
+	err0 := p.SetParam(getParam())
+	p.SetEventType(pluginTestData.INSERT)
+	if err0 != nil{
+		t.Fatal(err0)
+	}
+
+	var n uint = 10000
+	err := p.DoTestStart(n)
+
+	if err != nil{
+		t.Fatal(err)
+	}else{
+		t.Log("test success")
 	}
 
 }
