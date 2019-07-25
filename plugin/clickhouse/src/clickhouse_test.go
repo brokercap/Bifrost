@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"math"
 	"database/sql/driver"
+	"math/rand"
 )
 
 var url string = "tcp://10.40.2.41:9000?Database=test&debug=true&compress=1"
@@ -200,6 +201,30 @@ func TestReConnCommit(t *testing.T){
 	log.Println("success")
 }
 
+func TestInsertNullAndChekcData(t *testing.T){
+	testBefore()
+	initDBTable(true)
+	initSyncParam()
+	e := pluginTestData.NewEvent()
+	e.SetIsNull(true)
+	insertdata := e.GetTestInsertData()
+	conn.Insert(insertdata)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+
+	c := MyPlugin.NewClickHouseDBConn(url)
+	dataList := c.GetTableDataList(insertdata.SchemaName,insertdata.TableName,"id="+fmt.Sprint(insertdata.Rows[0]["id"]))
+
+	for k,v := range dataList {
+		log.Println("k:",k)
+		for key,val := range v{
+			log.Println(key,val)
+		}
+	}
+}
+
 func TestCommitAndCheckData(t *testing.T){
 	testBefore()
 	initDBTable(true)
@@ -223,16 +248,39 @@ func TestCommitAndCheckData(t *testing.T){
 		t.Fatal("select data len == 0")
 	}
 
-	errDataList := make([]string,0)
-	for columnName,v := range dataList[0]{
+	resultData := make(map[string][]string,0)
+	resultData["ok"] = make([]string,0)
+	resultData["error"] = make([]string,0)
+
+	checkDataRight(m,dataList[0],resultData)
+
+	for _,v := range resultData["ok"] {
+		t.Log(v)
+	}
+
+	for _,v := range resultData["error"] {
+		t.Error(v)
+	}
+
+	if len(resultData["error"]) == 0{
+		t.Log("test over;", "data is all right")
+	}else{
+		t.Error("test over;"," some data is error")
+	}
+
+}
+
+func checkDataRight(m map[string]interface{},destMap map[string]driver.Value,resultData map[string][]string)  {
+	for columnName,v := range destMap{
 		if _,ok:=m[columnName];!ok{
-			t.Error(columnName," not exsit")
+			resultData["error"] = append(resultData["error"],fmt.Sprint(columnName," not exsit"))
 		}
 		var result bool = false
 		switch m[columnName].(type) {
 		case bool:
 			if m[columnName].(bool) == true{
 				if fmt.Sprint(v) == "1"{
+
 					result = true
 				}
 			}else{
@@ -249,9 +297,15 @@ func TestCommitAndCheckData(t *testing.T){
 			break
 		case float32,float64:
 			//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
-
+			floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
+			floatSource,_ := strconv.ParseFloat(fmt.Sprint(m[columnName]),64)
+			if math.Abs(floatDest - floatSource) < 0.05{
+				result = true
+			}
+			break
+			/*
 			switch v.(type) {
-			case float64:
+			case float64,float32:
 				floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
 				floatSource,_ := strconv.ParseFloat(fmt.Sprint(m[columnName]),64)
 				if math.Abs(floatDest - floatSource) < 0.05{
@@ -265,45 +319,119 @@ func TestCommitAndCheckData(t *testing.T){
 				break
 			}
 			break
+			*/
 		default:
 
 			switch v.(type) {
-				case time.Time:
-					// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
-					descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
-					if descTime == fmt.Sprint(m[columnName]) || strings.Index(descTime,fmt.Sprint(m[columnName])) == 0{
-						result = true
-					}else{
-						t.Log(columnName,":",descTime)
-					}
-					break
-				default:
-					if fmt.Sprint(v) == fmt.Sprint(m[columnName]){
-						result = true
-					}
-					break
+			case time.Time:
+				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
+				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
+				if descTime == fmt.Sprint(m[columnName]) || strings.Index(descTime,fmt.Sprint(m[columnName])) == 0{
+					result = true
+				}
+				break
+			default:
+				if fmt.Sprint(v) == fmt.Sprint(m[columnName]){
+					result = true
+				}
+				break
 			}
 
 			break
 		}
 		if result{
-			t.Log(columnName," ",v,"(",reflect.TypeOf(v),")"," == ",m[columnName],"(",reflect.TypeOf(m[columnName]),")")
+			resultData["ok"] = append(resultData["ok"],fmt.Sprint(columnName," dest: ",v,"(",reflect.TypeOf(v),")"," == ",m[columnName],"(",reflect.TypeOf(m[columnName]),")"))
 		}else{
-			errDataList = append(errDataList,columnName)
+			resultData["error"] = append(resultData["error"],fmt.Sprint(columnName," dest: ",v,"(",reflect.TypeOf(v),")"," != ",m[columnName],"(",reflect.TypeOf(m[columnName]),")"))
+		}
+	}
+}
+
+func TestFloat(t *testing.T)  {
+	v := float64(0.3)
+	v2 := "0.30"
+	floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
+	floatSource,_ := strconv.ParseFloat(fmt.Sprint(v2),64)
+	if math.Abs(floatDest - floatSource) < 0.05{
+		t.Log("test success")
+	}else{
+		t.Error("test failed")
+	}
+}
+
+func TestRandDataAndCheck(t *testing.T){
+
+	var n int = 100
+
+	e := pluginTestData.NewEvent()
+
+	testBefore()
+	initDBTable(true)
+
+	initSyncParam()
+
+	for i:=0;i<n;i++{
+		var eventData *pluginDriver.PluginDataType
+		rand.Seed(time.Now().UnixNano()+int64(i))
+		switch rand.Intn(3){
+		case 0:
+			eventData = e.GetTestInsertData()
+			conn.Insert(eventData)
+			break
+		case 1:
+			eventData = e.GetTestUpdateData()
+			conn.Update(eventData)
+			break
+		case 2:
+			eventData = e.GetTestDeleteData()
+			conn.Del(eventData)
+			break
+		case 3:
+			eventData = e.GetTestQueryData()
+			conn.Query(eventData)
+			break
+		}
+	}
+	conn.Commit()
+
+	resultData := make(map[string][]string,0)
+	resultData["ok"] = make([]string,0)
+	resultData["error"] = make([]string,0)
+
+	c := MyPlugin.NewClickHouseDBConn(url)
+	dataList := c.GetTableDataList(SchemaName,TableName,"")
+
+	count := uint64(len(dataList))
+	if count != uint64(len(e.GetDataMap())){
+		for k,v := range e.GetDataMap(){
+			t.Log(k ," ",v)
+		}
+		t.Fatal("ck Table Count:",count, " != srcDataCount:",len(e.GetDataMap()))
+	}
+
+	destMap := make(map[string]map[string]driver.Value,0)
+
+	for _,v := range dataList{
+		destMap[fmt.Sprint(v["id"])] = v
+	}
+
+	for _,data := range e.GetDataMap(){
+		id:=fmt.Sprint(data["id"])
+		checkDataRight(data,destMap[id],resultData)
+	}
+
+	for _,v := range resultData["ok"]{
+		t.Log(v)
+	}
+	if len(resultData["error"]) > 0{
+		for _,v := range resultData["error"]{
+			t.Error(v)
 		}
 	}
 
-	for _,columnName := range errDataList{
-		v := dataList[0][columnName]
-		t.Error(columnName," ",v,"(",reflect.TypeOf(v),")"," != ",m[columnName],"(",reflect.TypeOf(m[columnName]),")")
-	}
+	t.Log("ck Table Count:",count," srcDataCount:",len(e.GetDataMap()))
 
-	if len(errDataList) == 0{
-		t.Log("test over;", "data is all right")
-	}else{
-		t.Error("test over;"," some data is error")
-	}
-
+	t.Log("test over")
 }
 
 
@@ -328,3 +456,6 @@ func TestSyncLikeProduct(t *testing.T)  {
 	}
 
 }
+
+
+

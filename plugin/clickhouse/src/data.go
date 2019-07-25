@@ -9,7 +9,11 @@ func (This *ClickhouseDB) GetTableDataList(schema string,table string,where stri
 
 	This.conn.Begin()
 	defer This.conn.Commit()
-	stmt, err := This.conn.Prepare("select * from "+schema+"."+table+" where 1=1 and "+where)
+	sql := "select * from "+schema+"."+table+" where 1=1"
+	if where != ""{
+		sql += " and "+where
+	}
+	stmt, err := This.conn.Prepare(sql)
 	if err == nil{
 		defer stmt.Close()
 	}
