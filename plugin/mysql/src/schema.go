@@ -167,15 +167,15 @@ func (This *mysqlDB) GetSchemaTableList(schema string) (data []string) {
 
 type TableStruct struct {
 	COLUMN_NAME 		string
-	COLUMN_DEFAULT 		string
+	COLUMN_DEFAULT 		*string
 	IS_NULLABLE 		string
 	COLUMN_TYPE			string
 	COLUMN_KEY 			string
 	EXTRA 				string
 	COLUMN_COMMENT 		string
 	DATA_TYPE			string
-	NUMERIC_PRECISION	string
-	NUMERIC_SCALE		string
+	NUMERIC_PRECISION	*string
+	NUMERIC_SCALE		*string
 }
 
 
@@ -206,21 +206,22 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 			break
 		}
 		var COLUMN_NAME string
-		var COLUMN_DEFAULT string
+		var COLUMN_DEFAULT *string
 		var IS_NULLABLE string
 		var COLUMN_TYPE string
 		var COLUMN_KEY string
 		var EXTRA string
 		var COLUMN_COMMENT string
 		var DATA_TYPE string
-		var NUMERIC_PRECISION string
-		var NUMERIC_SCALE string
+		var NUMERIC_PRECISION *string
+		var NUMERIC_SCALE *string
 
 		COLUMN_NAME 		= string(dest[0].([]byte))
 		if dest[1] == nil{
-			COLUMN_DEFAULT 	= "NULL"
+			COLUMN_DEFAULT 	= nil
 		}else{
-			COLUMN_DEFAULT 	= string(dest[1].([]byte))
+			t := string(dest[1].([]byte))
+			COLUMN_DEFAULT 	= &t
 		}
 
 		IS_NULLABLE 		= string(dest[2].([]byte))
@@ -231,14 +232,16 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 		DATA_TYPE 			= string(dest[7].([]byte))
 
 		if dest[8] == nil{
-			NUMERIC_PRECISION 	= "NULL"
+			NUMERIC_PRECISION 	= nil
 		}else{
-			NUMERIC_PRECISION 	= string(dest[8].([]byte))
+			t := string(dest[8].([]byte))
+			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
-			NUMERIC_SCALE 	= "NULL"
+			NUMERIC_SCALE 	= nil
 		}else{
-			NUMERIC_SCALE 	= string(dest[9].([]byte))
+			t := string(dest[9].([]byte))
+			NUMERIC_SCALE 	= &t
 		}
 
 		if COLUMN_TYPE=="tinyint(1)"{

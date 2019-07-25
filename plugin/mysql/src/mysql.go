@@ -39,6 +39,7 @@ type fieldStruct struct {
 	ToField 		string
 	FromMysqlField 	string
 	ToFieldType  	string
+	ToFieldDefault	*string
 }
 
 var dataMap map[string]*dataStruct
@@ -161,8 +162,9 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 
 func (This *Conn) getCktFieldType() {
 	defer func() {
-		if err := recover();err != nil{
-			This.conn.err = fmt.Errorf(fmt.Sprint(err))
+		if err := recover();err !=nil{
+			log.Println(string(debug.Stack()))
+			This.conn.err = fmt.Errorf(string(debug.Stack()))
 		}
 	}()
 	if This.p == nil{
@@ -177,13 +179,14 @@ func (This *Conn) getCktFieldType() {
 	if len(fields) == 0{
 		return
 	}
-	ckFieldsMap := make(map[string]string)
+	ckFieldsMap := make(map[string]TableStruct)
 	for _,v:=range fields{
-		ckFieldsMap[v.COLUMN_NAME] = v.DATA_TYPE
+		ckFieldsMap[v.COLUMN_NAME] = v
 	}
 
 	for k,v:=range This.p.Field{
-		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField]
+		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField].DATA_TYPE
+		This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
 	}
 }
 
@@ -252,6 +255,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(string(debug.Stack()))
+			log.Fatal(string(debug.Stack()))
 			This.conn.err = e
 		}
 	}()
@@ -304,7 +308,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -326,7 +330,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
-				toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
@@ -345,7 +349,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -395,15 +399,20 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func dataTypeTransfer(data interface{},fieldName string,toDataType string) (v dbDriver.Value,e error) {
+func dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
+			log.Fatal(string(debug.Stack()))
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
 		}
 	}()
 	if data == nil{
-		v = nil
-		return
+		if defaultVal == nil{
+			v = nil
+			return
+		}else{
+			data = *defaultVal
+		}
 	}
 	switch toDataType {
 	case "bool":
