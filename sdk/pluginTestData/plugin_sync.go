@@ -50,6 +50,7 @@ func (This *Plugin) DoTestStart(n uint)  error{
 	}
 	var i uint = 0
 	e := NewEvent()
+	e.SetSaveHistory(false)
 	var intN EventType
 	var startTime = time.Now().UnixNano()
 
@@ -160,6 +161,7 @@ func (This *Plugin) DoTestStartForSpeed(n uint)  error{
 	}
 	var i uint = 0
 	e := NewEvent()
+	e.SetSaveHistory(false)
 
 	switch This.eventType {
 	case INSERT,UPDATE,DELETE,SQLTYPE:
@@ -232,7 +234,7 @@ func (This *Plugin) DoTestStartForSpeed(n uint)  error{
 		}
 
 		if err != nil{
-			return fmt.Errorf("err:",err," data:",data)
+			return fmt.Errorf("err:"+fmt.Sprint(err)+" data:"+fmt.Sprint(data))
 		}
 	}
 
