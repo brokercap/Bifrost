@@ -203,12 +203,38 @@ func (This *Event) CheckData(src map[string]interface{},destJsonString string) (
 	return result,nil
 }
 
+func (This *Event) CheckData2(src map[string]interface{},destJsonString string) (map[string][]string,error) {
+	type pluginType struct {
+		Timestamp 		uint32
+		EventType 		string
+		Rows            []dataStruct
+		Query          	string
+		SchemaName     	string
+		TableName      	string
+		BinlogFileNum 	int
+		BinlogPosition 	uint32
+	}
+
+	var data pluginType
+	err := json.Unmarshal([]byte(destJsonString),&data)
+	if err != nil{
+		return  nil,err
+	}
+
+	c ,err := json.Marshal(data.Rows[len(data.Rows)-1])
+	if err != nil{
+		return  nil,err
+	}
+
+	return This.CheckData(src,string(c))
+}
+
 func (This *Event) CheckData0(srcV interface{},destV interface{},key string,result map[string][]string) {
 	if reflect.TypeOf(srcV) == reflect.TypeOf(destV) && fmt.Sprint(srcV) == fmt.Sprint(destV){
 		s := fmt.Sprint(key," == ",srcV," ( ",reflect.TypeOf(srcV)," ) ")
 		result["ok"] = append(result["ok"],s)
 	}else{
-		s := fmt.Sprint(key," ",srcV," ( ",reflect.TypeOf(srcV)," ) "," != ",destV,reflect.TypeOf(destV))
+		s := fmt.Sprint(key," ",srcV," ( ",reflect.TypeOf(srcV)," ) "," != ( ",destV,reflect.TypeOf(destV)," )")
 		result["error"] = append(result["error"],s)
 	}
 }
