@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-type dataStruct struct {
+type DataStruct struct {
 	Id 							uint32 `json:"id"`
 	Test_unsinged_bigint		uint64 `json:"test_unsinged_bigint"`
 	Test_unsinged_int			uint32 `json:"test_unsinged_int"`
@@ -48,7 +48,7 @@ type dataStruct struct {
 
 func (This *Event) CheckData(src map[string]interface{},destJsonString string) (map[string][]string,error){
 	var err error
-	var dest dataStruct
+	var dest DataStruct
 	err = json.Unmarshal([]byte(destJsonString),&dest)
 	if err != nil{
 		return nil,err
@@ -207,7 +207,7 @@ func (This *Event) CheckData2(src map[string]interface{},destJsonString string) 
 	type pluginType struct {
 		Timestamp 		uint32
 		EventType 		string
-		Rows            []dataStruct
+		Rows            []DataStruct
 		Query          	string
 		SchemaName     	string
 		TableName      	string
