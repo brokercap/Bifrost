@@ -1,0 +1,12 @@
+v1.1.0-beta.12   2019-07-26
+===========================
+
+1. 随机生成数据完成，方便插件开发及测试，包括提供插件性能测试方法及数据校验
+2. ck,mysql,mongodb,http,rpc,redis,rabbitmq 等插件的单元测试完善 及 bug的修复。数据校验通过测试
+3. mysql插件,源表为 null 值的情况下,目标表存在默认值的情况下，以默认值进行填充
+4. http 插件，传值的key:data 变更 为 Data
+5. 修复rabbitmq　Expir 参数设置之后报错的bug
+6. http rabbitmq mongodb等文档的更新
+7. 经测试部分组件或者语言不支持 大于 int64 的值(mongodb,php 已测试不支持)，请使用的时候注意
+8. 修复 ck 插件 delete再insert 之后可能存在的bug, 进行更新更简单的过滤做法 已解决，并经过数据校验测试
+9. mysql 插件修复 stmt 没有关闭的隐性bug
