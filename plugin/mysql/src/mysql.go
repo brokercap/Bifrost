@@ -16,12 +16,19 @@ import (
 const VERSION  = "v1.1.0-apha.01"
 const BIFROST_VERION = "v1.1.0"
 
-var l sync.RWMutex
-
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
 	Data 			[]*pluginDriver.PluginDataType
 }
+
+type EventType int8
+
+const (
+	INSERT EventType = 0
+	UPDATE EventType = 1
+	DELETE EventType = 2
+	SQLTYPE EventType = 3
+)
 
 type dataStruct struct {
 	sync.RWMutex
@@ -32,6 +39,7 @@ type fieldStruct struct {
 	ToField 		string
 	FromMysqlField 	string
 	ToFieldType  	string
+	ToFieldDefault	*string
 }
 
 var dataMap map[string]*dataStruct
@@ -111,6 +119,7 @@ type PluginParam struct {
 	mysqlPriKey		string  //	对应 from mysql 的主键id
 	Data			*dataTableStruct
 	fieldCount		int
+	stmtArr			[]dbDriver.Stmt
 }
 
 
@@ -132,6 +141,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
 	param.fieldCount = len(param.Field)
+	param.stmtArr = make([]dbDriver.Stmt,3)
 	This.p = &param
 	This.getCktFieldType()
 	return &param,nil
@@ -152,8 +162,9 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 
 func (This *Conn) getCktFieldType() {
 	defer func() {
-		if err := recover();err != nil{
-			This.conn.err = fmt.Errorf(fmt.Sprint(err))
+		if err := recover();err !=nil{
+			log.Println(string(debug.Stack()))
+			This.conn.err = fmt.Errorf(string(debug.Stack()))
 		}
 	}()
 	if This.p == nil{
@@ -168,13 +179,14 @@ func (This *Conn) getCktFieldType() {
 	if len(fields) == 0{
 		return
 	}
-	ckFieldsMap := make(map[string]string)
+	ckFieldsMap := make(map[string]TableStruct)
 	for _,v:=range fields{
-		ckFieldsMap[v.COLUMN_NAME] = v.DATA_TYPE
+		ckFieldsMap[v.COLUMN_NAME] = v
 	}
 
 	for k,v:=range This.p.Field{
-		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField]
+		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField].DATA_TYPE
+		This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
 	}
 }
 
@@ -195,6 +207,7 @@ func (This *Conn) ReConnect() bool {
 				This.conn.err = fmt.Errorf(fmt.Sprint(err))
 			}
 		}()
+		This.closeStmt()
 		This.conn.Close()
 	}
 	This.Connect()
@@ -242,6 +255,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(string(debug.Stack()))
+			log.Fatal(string(debug.Stack()))
 			This.conn.err = e
 		}
 	}()
@@ -259,71 +273,6 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		n = This.p.BatchSize
 	}
 	list := This.p.Data.Data[:n]
-
-	var stmtMap = make(map[string]dbDriver.Stmt,0)
-
-	var getStmt = func(Type string) dbDriver.Stmt{
-		if _,ok := stmtMap[Type];ok{
-			return stmtMap[Type]
-		}
-		switch Type {
-		case "insert":
-			fields := ""
-			values := ""
-			for _,v:= range This.p.Field{
-				if fields == ""{
-					fields = v.ToField
-					values = "?"
-				}else{
-					fields += ","+v.ToField
-					values += ",?"
-				}
-			}
-			sql := "REPLACE INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
-			stmtMap[Type],This.conn.err = This.conn.conn.Prepare(sql)
-			if This.conn.err != nil{
-				log.Println("mysql getStmt insert err:",This.conn.err,sql)
-			}
-			break
-		case "delete":
-			where := ""
-			for _,v:= range This.p.PriKey{
-				if where == ""{
-					where = v.ToField+"=?"
-				}else{
-					where += " AND "+v.ToField+"=?"
-				}
-			}
-			stmtMap[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
-			if This.conn.err != nil{
-				log.Println("mysql getStmt delete err:",This.conn.err)
-			}
-			break
-		case "update":
-			fields := ""
-			values := ""
-			fields2 := ""
-			for _,v:= range This.p.Field{
-				if fields == ""{
-					fields = v.ToField
-					values = "?"
-					fields2 = v.ToField+"=?"
-				}else{
-					fields += ","+v.ToField
-					values += ",?"
-					fields2 += ","+v.ToField+"=?"
-				}
-			}
-			sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
-			stmtMap[Type],This.conn.err = This.conn.conn.Prepare(sql)
-			if This.conn.err != nil{
-				log.Println("mysql getStmt update err:",This.conn.err,sql)
-			}
-			break
-		}
-
-		return stmtMap[Type]
-	}
 
 	This.conn.err = This.conn.Begin()
 	if This.conn.err != nil{
@@ -359,7 +308,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -371,7 +320,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			if checkOpMap(data.Rows[1][This.p.mysqlPriKey], "update") == true {
 				continue
 			}
-			stmt = getStmt("update")
+			stmt = This.getStmt(UPDATE)
 			if stmt == nil{
 				goto errLoop
 			}
@@ -381,11 +330,11 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
-				toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
-				stmt = getStmt("delete")
+				stmt = This.getStmt(DELETE)
 				if stmt == nil{
 					goto errLoop
 				}
@@ -400,7 +349,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType)
+				toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -411,7 +360,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "insert") == true {
 				continue
 			}
-			stmt = getStmt("insert")
+			stmt = This.getStmt(INSERT)
 			if stmt == nil{
 				goto errLoop
 			}
@@ -450,15 +399,20 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func dataTypeTransfer(data interface{},fieldName string,toDataType string) (v dbDriver.Value,e error) {
+func dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
+			log.Fatal(string(debug.Stack()))
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
 		}
 	}()
 	if data == nil{
-		v = nil
-		return
+		if defaultVal == nil{
+			v = nil
+			return
+		}else{
+			data = *defaultVal
+		}
 	}
 	switch toDataType {
 	case "bool":
@@ -506,4 +460,77 @@ func dataTypeTransfer(data interface{},fieldName string,toDataType string) (v db
 		break
 	}
 	return
+}
+
+
+func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
+	if This.p.stmtArr[Type] != nil{
+		return This.p.stmtArr[Type]
+	}
+	switch Type {
+	case INSERT:
+		fields := ""
+		values := ""
+		for _,v:= range This.p.Field{
+			if fields == ""{
+				fields = v.ToField
+				values = "?"
+			}else{
+				fields += ","+v.ToField
+				values += ",?"
+			}
+		}
+		sql := "REPLACE INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
+		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
+		if This.conn.err != nil{
+			log.Println("mysql getStmt insert err:",This.conn.err,sql)
+		}
+		break
+	case DELETE:
+		where := ""
+		for _,v:= range This.p.PriKey{
+			if where == ""{
+				where = v.ToField+"=?"
+			}else{
+				where += " AND "+v.ToField+"=?"
+			}
+		}
+		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
+		if This.conn.err != nil{
+			log.Println("mysql getStmt delete err:",This.conn.err)
+		}
+		break
+	case UPDATE:
+		fields := ""
+		values := ""
+		fields2 := ""
+		for _,v:= range This.p.Field{
+			if fields == ""{
+				fields = v.ToField
+				values = "?"
+				fields2 = v.ToField+"=?"
+			}else{
+				fields += ","+v.ToField
+				values += ",?"
+				fields2 += ","+v.ToField+"=?"
+			}
+		}
+		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
+		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
+		if This.conn.err != nil{
+			log.Println("mysql getStmt update err:",This.conn.err,sql)
+		}
+		break
+	}
+
+	return This.p.stmtArr[Type]
+}
+
+func (This *Conn) closeStmt(){
+	for k,stmt := range This.p.stmtArr{
+		if stmt != nil{
+			stmt.Close()
+		}
+		This.p.stmtArr[k] = nil
+	}
 }

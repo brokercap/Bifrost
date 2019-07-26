@@ -19,7 +19,7 @@ http://10.40.2.41:3332/bifrost_http_api_test
 <p><strong>EventType : </strong>事件类型,(insert,update,delete,sql)</p>
 <p><strong>SchemaName : </strong>数据库名</p>
 <p><strong>TableName : </strong>数据表名</p>
-<p><strong>data : </strong>字符串，数据结构 EventType 有关</p>
+<p><strong>Data : </strong>字符串，数据结构 EventType 有关</p>
 
 <p>EventType == insert | delete 的时候，data 数据格式为  map[string]interfacle{} 格式的 json 字符串, 字符名作为key， 字段内容作为值</p>
 <p>EventType ==  update 的时候，data 数据格式为 []map[string]interfacle{} 数组里是map格式的 json字符串, 数组 下标0 里的数据是更新之前的数据， 下标 1 里的数据是更新之后的数据</p>

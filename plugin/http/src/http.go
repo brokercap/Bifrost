@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"bytes"
+	"net/url"
 )
 
 
@@ -102,9 +104,16 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 }
 
 func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,data string) error {
-	pstring := "EventType="+EventType+"&SchemaName="+SchemaName+"&TableName="+TableName+"&data="+data
+	form := url.Values{
+		"SchemaName": {SchemaName},
+		"TableName":  {TableName},
+		"EventType":  {EventType},
+		"Data":     {data},
+	}
+	body := bytes.NewBufferString(form.Encode())
+	//pstring := "EventType="+EventType+"&SchemaName="+SchemaName+"&TableName="+TableName+"&data="+data
 	client := &http.Client{Timeout:10 * time.Second}
-	req, err := http.NewRequest("POST", This.uri, strings.NewReader(pstring))
+	req, err := http.NewRequest("POST", This.uri, body)
 	if err != nil {
 		return err
 	}

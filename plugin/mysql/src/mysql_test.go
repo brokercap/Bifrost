@@ -4,9 +4,8 @@ import (
 	"testing"
 	"log"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/brokercap/Bifrost/test/pluginTest"
+	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/mysql/src"
-	"time"
 	dbDriver "database/sql/driver"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"strings"
@@ -14,10 +13,16 @@ import (
 	"github.com/brokercap/Bifrost/server/history"
 	"reflect"
 	"fmt"
+	"math/rand"
+	"time"
+	"strconv"
 )
 
-var url string = "root:root123@tcp(10.40.6.89:3306)/bifrost_test"
+var url string = "root:root@tcp(10.40.2.41:3306)/bifrost_test"
 
+var SchemaName string = "bifrost_test"
+var TableName string = "binlog_field_test"
+var mysqlConn mysql.MysqlConnection
 /*
 ddl
 
@@ -35,28 +40,78 @@ func TestChechUri(t *testing.T){
 
 func TestGetSchemaList(t *testing.T)  {
 	c := MyPlugin.NewMysqlDBConn(url)
-	log.Println(c.GetSchemaList())
+	defer c.Close()
+	list := c.GetSchemaList()
+	if len(list) > 0{
+		t.Log(list)
+		t.Log("TestGetSchemaList success")
+	}else{
+		t.Error("TestGetSchemaList failed")
+	}
 }
 
 
 func TestGetSchemaTableList(t *testing.T)  {
 	c := MyPlugin.NewMysqlDBConn(url)
-	log.Println(c.GetSchemaTableList("test"))
+	defer c.Close()
+	list := c.GetSchemaTableList("mysql")
+	if len(list) > 0{
+		t.Log(list)
+		t.Log("TestGetSchemaTableList success")
+	}else{
+		t.Error("TestGetSchemaTableList failed")
+	}
 }
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewMysqlDBConn(url)
-	log.Println(c.GetTableFields("bifrost_test","binlog_field_test"))
+	c.Close()
+	list := c.GetTableFields(SchemaName,TableName)
+	if len(list) > 0{
+		t.Log(list)
+		t.Log("TestGetTableFields success")
+	}else{
+		t.Error("TestGetTableFields failed")
+	}
 }
 
-func getPluginConn() pluginDriver.ConnFun {
+func beforeTest()  {
+	
+}
+
+func initDBTable(delTable bool) {
+	c := mysql.NewConnect(url)
+	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
+	_,err := c.Exec(sql1,[]dbDriver.Value{})
+	if err != nil{
+		log.Fatal(err)
+	}
+	sql2:="CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64) NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT NULL DEFAULT '5', PRIMARY KEY (`id`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
+	if delTable == false{
+		_,err = c.Exec(sql2,[]dbDriver.Value{})
+		if err != nil{
+			log.Fatal(err)
+		}
+	}else{
+		sql3 := "DROP TABLE IF EXISTS `"+SchemaName+"`.`"+TableName+"`"
+		_,err = c.Exec(sql3,[]dbDriver.Value{})
+		if err != nil{
+			log.Fatal(err)
+		}
+		_,err = c.Exec(sql2,[]dbDriver.Value{})
+		if err != nil{
+			log.Fatal(err)
+		}
+	}
+	c.Close()
+}
+
+
+func getParam()  map[string]interface{}{
 	type fieldStruct struct {
 		ToField 		string
 		FromMysqlField 	string
 	}
-
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
 
 	param := make(map[string]interface{},0)
 	Field := make([]fieldStruct,0)
@@ -64,6 +119,7 @@ func getPluginConn() pluginDriver.ConnFun {
 	Field = append(Field,fieldStruct{"test_unsinged_bigint","test_unsinged_bigint"})
 	Field = append(Field,fieldStruct{"test_unsinged_int","test_unsinged_int"})
 	Field = append(Field,fieldStruct{"test_unsinged_mediumint","test_unsinged_mediumint"})
+	Field = append(Field,fieldStruct{"test_unsinged_smallint","test_unsinged_smallint"})
 	Field = append(Field,fieldStruct{"test_unsinged_tinyint","test_unsinged_tinyint"})
 	Field = append(Field,fieldStruct{"testtinyint","testtinyint"})
 	Field = append(Field,fieldStruct{"testsmallint","testsmallint"})
@@ -102,10 +158,17 @@ func getPluginConn() pluginDriver.ConnFun {
 	PriKey := make([]fieldStruct,1)
 	PriKey[0] = fieldStruct{"id","id"}
 	param["PriKey"] = PriKey
-	param["Schema"] = "bifrost_test"
-	param["Table"] = "binlog_field_test"
+	param["Schema"] = SchemaName
+	param["Table"] = TableName
 
-	p,err := conn.SetParam(param)
+	return param
+}
+
+func getPluginConn() pluginDriver.ConnFun {
+	myConn := MyPlugin.MyConn{}
+	conn := myConn.Open(url)
+
+	p,err := conn.SetParam(getParam())
 	if err != nil{
 		log.Println("set param fatal err")
 		log.Fatal(err)
@@ -117,12 +180,20 @@ func getPluginConn() pluginDriver.ConnFun {
 
 
 func TestCommit(t *testing.T){
+
+	beforeTest()
 	conn := getPluginConn()
-	insertdata := pluginTest.GetTestInsertData()
-	log.Println("testtimestamp",insertdata.Rows[0]["testtimestamp"])
-	conn.Insert(insertdata)
-	conn.Del(pluginTest.GetTestDeleteData())
-	conn.Update(pluginTest.GetTestUpdateData())
+	initDBTable(false)
+
+	e := pluginTestData.NewEvent()
+
+	conn.Insert(e.GetTestInsertData())
+	conn.Del(e.GetTestDeleteData())
+	conn.Update(e.GetTestUpdateData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+
 	_,err2 := conn.Commit()
 	if err2 != nil{
 		log.Fatal(err2)
@@ -130,14 +201,131 @@ func TestCommit(t *testing.T){
 }
 
 
-func TestCheckDataRight(t *testing.T)  {
+func TestInsertAndChekcData(t *testing.T){
+	beforeTest()
+	initDBTable(false)
+	conn := getPluginConn()
+	e := pluginTestData.NewEvent()
+	insertdata := e.GetTestInsertData()
+	conn.Insert(insertdata)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
 
-	insertdata := pluginTest.GetTestUpdateData()
-	fmap := insertdata.Rows[1]
+	checkResult,err := checkDataRight(insertdata.Rows[len(insertdata.Rows)-1])
+	if err != nil{
+		t.Fatal(err)
+	}
 
-	schema := "bifrost_test"
-	table := "binlog_field_test"
-	conn := mysql.NewConnect(url)
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
+}
+
+
+func TestInsertNullAndChekcData(t *testing.T){
+	beforeTest()
+	initDBTable(false)
+	conn := getPluginConn()
+	e := pluginTestData.NewEvent()
+	e.SetIsNull(true)
+	insertdata := e.GetTestInsertData()
+	conn.Insert(insertdata)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+
+	checkResult,err := checkDataRight(insertdata.Rows[len(insertdata.Rows)-1])
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
+}
+
+
+func TestUpdateAndChekcData(t *testing.T){
+	beforeTest()
+	initDBTable(false)
+	conn := getPluginConn()
+	e := pluginTestData.NewEvent()
+	insertdata := e.GetTestInsertData()
+	conn.Insert(insertdata)
+
+	updateData := e.GetTestUpdateData()
+	conn.Update(updateData)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+
+	checkResult,err := checkDataRight(updateData.Rows[len(updateData.Rows)-1])
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	for _,v := range checkResult["ok"]{
+		t.Log(v)
+	}
+
+	for _,v := range checkResult["error"]{
+		t.Error(v)
+	}
+}
+
+
+func TestDelAndChekcData(t *testing.T){
+	beforeTest()
+	initDBTable(false)
+	conn := getPluginConn()
+	e := pluginTestData.NewEvent()
+	insertdata := e.GetTestInsertData()
+	conn.Insert(insertdata)
+
+	updateData := e.GetTestUpdateData()
+	conn.Update(updateData)
+
+	deleteData := e.GetTestDeleteData()
+	conn.Del(deleteData)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+	m,err:=getMysqlData(fmt.Sprint(deleteData.Rows[len(deleteData.Rows)-1]["id"]))
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if len(m) == 0{
+		t.Log("test delete success")
+	}else{
+		t.Error("test delete error,delete failed")
+	}
+}
+
+func getMysqlConn() mysql.MysqlConnection  {
+	if mysqlConn == nil{
+		mysqlConn = mysql.NewConnect(url)
+	}
+	return mysqlConn
+}
+
+func getMysqlData(id string)  (map[string]interface{},error){
+	schema := SchemaName
+	table := TableName
+	conn := getMysqlConn()
 	Fields := history.GetSchemaTableFieldList(conn,schema,table)
 	sql := ""
 	for index,Field := range Fields{
@@ -147,18 +335,20 @@ func TestCheckDataRight(t *testing.T)  {
 			sql += ","+Field.COLUMN_NAME
 		}
 	}
-	sql = "select "+sql +" from "+schema+"."+table +" where id = 1"
+	sql = "select "+sql +" from `"+schema+"`.`"+table +"` where id = "+id
 
 	//sql := "select id,test_unsinged_bigint,test_unsinged_int,test_unsinged_mediumint,test_unsinged_tinyint,testtinyint,testsmallint,testmediumint,testint,testbigint,testbit,testbool,testvarchar,testchar,testtime,testdate,testyear,testtimestamp,testdatetime,testfloat,testdouble,testdecimal,testtext,testblob,testmediumblob,testlongblob,testtinyblob,testenum,testset from bifrost_test.binlog_field_test where id = 1"
 
 	stmt,err := conn.Prepare(sql)
 	if err != nil{
-		log.Fatal(err)
+		return nil,err
 	}
+	defer stmt.Close()
 	rows,err := stmt.Query([]dbDriver.Value{})
 	if err != nil{
-		log.Fatal(err)
+		return  nil,err
 	}
+	defer rows.Close()
 	n := len(Fields)
 	m := make(map[string]interface{}, n)
 	for {
@@ -185,124 +375,122 @@ func TestCheckDataRight(t *testing.T)  {
 		break
 	}
 
-	var typeof = func(v interface{}) string {
-		return reflect.TypeOf(v).String()
+	return m, nil
+}
+
+func getTableCount() (uint64,error){
+	conn := getMysqlConn()
+	sql := "select count(*) from `"+SchemaName+"`.`"+TableName +"`"
+	stmt,err := conn.Prepare(sql)
+	if err != nil{
+		return 0,err
 	}
-
-
-	valTest := true
-	for key,val := range fmap{
-		if _,ok := m[key];!ok{
-			log.Fatal("field:",key," not esxit")
-		}
-
-		if typeof(val) != typeof(m[key]){
-			log.Println("field:",key," 类型不对", "写入类型:",typeof(val)," 读出类型:",typeof(m[key]))
-		}
-
-		if key=="testfloat"{
-			if fmt.Sprint(val) != fmt.Sprint(m[key]) {
-				valTest =false
-				log.Println("field:",key," 值不对", "写入:",val," 读出:",m[key])
-			}
-		}else if key == "testset"{
-			if fmt.Sprint(val) != fmt.Sprint(m[key]){
-				valTest =false
-				log.Println("field:",key," 值不对", "写入:",val," 读出:",m[key])
-			}
-		} else{
-			if val != m[key]{
-				valTest =false
-				log.Println("field:",key," 值不对", "写入:",val," 读出:",m[key])
-			}
-		}
+	defer stmt.Close()
+	rows,err := stmt.Query([]dbDriver.Value{})
+	if err != nil{
+		return  0,err
 	}
-
-	if valTest {
-		log.Println(" success over, val is all right")
-	}else{
-		log.Println(" success over")
-	}
-
+	defer rows.Close()
+	dest := make([]dbDriver.Value, 1, 1)
+	rows.Next(dest)
+	uint64, err := strconv.ParseUint(string(dest[0].([]byte)), 10, 64)
+	return uint64,err
 
 }
 
-func TestReConnCommit(t *testing.T){
-	conn := getPluginConn()
-	conn.Insert(pluginTest.GetTestInsertData())
-	_,err1:=conn.Commit()
-	if err1 != nil{
-		log.Println("err1",err1)
-		return
-	}else{
-		log.Println("insert 1 success")
+func checkDataRight(eventDataMap map[string]interface{}) (map[string][]string,error) {
+
+	m,err :=getMysqlData(fmt.Sprint(eventDataMap["id"]))
+	if err != nil{
+		return nil,err
 	}
 
-	conn.Del(pluginTest.GetTestDeleteData())
-	conn.Update(pluginTest.GetTestUpdateData())
-	time.Sleep(20 * time.Second)
-	for{
-		time.Sleep(3 * time.Second)
-		_,err2 := conn.Commit()
-		if err2 != nil{
-			log.Println("err2:",err2)
+	result := make(map[string][]string,0)
+	result["ok"] = make([]string,0)
+	result["error"] = make([]string,0)
+
+	for key,val := range eventDataMap{
+		if _,ok := m[key];!ok{
+			s := fmt.Sprint("field:",key," not esxit")
+			result["error"] = append(result["error"],s)
+		}
+		if reflect.TypeOf(val) == reflect.TypeOf(m[key]) && fmt.Sprint(val) == fmt.Sprint(m[key]){
+			s := fmt.Sprint(key," == ",val," ( ",reflect.TypeOf(val)," ) ")
+			result["ok"] = append(result["ok"],s)
 		}else{
+			s := fmt.Sprint(key," src: ",val," ( ",reflect.TypeOf(val)," ) "," != ",m[key]," ( ",reflect.TypeOf(m[key])," )")
+			result["error"] = append(result["error"],s)
+		}
+	}
+
+	return result,nil
+}
+
+func TestRandDataAndCheck(t *testing.T){
+
+	var n int = 1000
+
+	e := pluginTestData.NewEvent()
+
+	beforeTest()
+	initDBTable(true)
+
+	conn := getPluginConn()
+
+	for i:=0;i<n;i++{
+		var eventData *pluginDriver.PluginDataType
+		rand.Seed(time.Now().UnixNano()+int64(i))
+		switch rand.Intn(3){
+		case 0:
+			eventData = e.GetTestInsertData()
+			conn.Insert(eventData)
+			break
+		case 1:
+			eventData = e.GetTestUpdateData()
+			conn.Update(eventData)
+			break
+		case 2:
+			eventData = e.GetTestDeleteData()
+			conn.Del(eventData)
+			break
+		case 3:
+			eventData = e.GetTestQueryData()
+			conn.Query(eventData)
 			break
 		}
 	}
-	log.Println("success")
-}
+	conn.Commit()
 
-func TestMysqlInsert(t *testing.T) {
-	sql := "REPLACE INTO bifrost_test.binlog_field_test (id,testtinyint,testsmallint,testmediumint,testint,testbigint,testvarchar,testchar,testenum,testset,testtime,testdate,testyear,testtimestamp,testdatetime,testfloat,testdouble,testdecimal,testtext,testblob,testbit,testbool,testmediumblob,testlongblob,testtinyblob,test_unsinged_tinyint,test_unsinged_smallint,test_unsinged_mediumint,test_unsinged_int,test_unsinged_bigint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-	conn := mysql.NewConnect(url)
-	stmt,err := conn.Prepare(sql)
-	if err!=nil{
-		log.Fatal(err)
+	count,err := getTableCount()
+	if err != nil{
+		t.Fatal(err)
 	}
 
-	val := make([]dbDriver.Value,30)
-	//id,testtinyint,testsmallint,testmediumint,testint,testbigint,testvarchar,testchar,testenum,testset,testtime,testdate,testyear,testtimestamp,testdatetime,testfloat,testdouble,testdecimal,testtext,testblob,testbit,testbool,testmediumblob,testlongblob,testtinyblob,test_unsinged_tinyint,test_unsinged_smallint,test_unsinged_mediumint,test_unsinged_int,test_unsinged_bigint
-	//2 -1 -2 -3 -4 -5 2 2 en1 set1 NULL NULL 1989 2019-06-20 14:55:07 NULL 0 0 0.00 2 2 0 0 2 2 2 1 2 3 4 5
-	val[0] = "2"
-	val[1] = "-1"
-	val[2] = "-2"
-	val[3] = "-3"
-	val[4] = "-4"
-	val[5] = "-5"
-	val[6] = "2"
-	val[7] = "2"
-	val[8] = "en1"
-	val[9]= "set1"
-	val[10]= nil
-	val[11]= nil
-	val[12]= "1989"
-
-	val[13]= "2019-06-20 14:55:07"
-	val[14]= "NULL"
-	val[15]= "0"
-	val[16]= "0"
-	val[17]= "0.00"
-	val[18]= "2"
-	val[19]= "2"
-	val[20]= int64(100)
-	val[21]= "0"
-	val[22]= "2"
-	val[23]= "2"
-	val[24]= "2"
-	val[25]= "1"
-	val[26]= "2"
-	val[27]= "3"
-	val[28]= "4"
-	val[29]= "5"
-
-	log.Println("start exec")
-	r,err2 := stmt.Exec(val)
-	if err2!=nil{
-		log.Fatal(err2)
+	if count != uint64(len(e.GetDataMap())){
+		for k,v := range e.GetDataMap(){
+			t.Log(k ," ",v)
+		}
+		t.Fatal("mysql Table Count:",count, " != srcDataCount:",len(e.GetDataMap()))
 	}
-	log.Println("over exec")
 
-	log.Println(r)
+	for _,data := range e.GetDataMap(){
+		checkResult,err := checkDataRight(data)
+		if err != nil{
+			t.Error("data:",data,"err:",err)
+			continue
+		}
+		if len(checkResult["error"]) > 0{
+			t.Error("id:",data["id"]," failed")
+			for _,v := range checkResult["error"]{
+				t.Error(v)
+			}
+		}else{
+			t.Log("id:",data["id"],data)
+			t.Log("id:",data["id"]," success")
+		}
+	}
 
+	t.Log("mysql Table Count:",count," srcDataCount:",len(e.GetDataMap()))
+
+	t.Log("test over")
 }

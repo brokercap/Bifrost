@@ -186,7 +186,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 		return nil,err2
 	}
 	if param.Expir > 0{
-		param.expir = strconv.Itoa(This.p.Expir)
+		param.expir = strconv.Itoa(param.Expir)
 	}
 	if param.Persistent ==  true{
 		param.deliveryMode = 2
