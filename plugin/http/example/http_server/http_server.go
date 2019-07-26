@@ -31,7 +31,7 @@ func post(w http.ResponseWriter,req *http.Request)  {
 	//log.Println("EventType",req.Form.Get("EventType"))
 	//log.Println("SchemaName",req.Form.Get("SchemaName"))
 	//log.Println("TableName",req.Form.Get("TableName"))
-	log.Println(i,req.Form.Get("EventType"),req.Form.Get("SchemaName"),req.Form.Get("TableName"),"Data",req.Form.Get("data"))
+	log.Println(i,req.Form.Get("EventType"),req.Form.Get("SchemaName"),req.Form.Get("TableName"),"Data",req.Form.Get("Data"))
 	i++
 	return
 }
