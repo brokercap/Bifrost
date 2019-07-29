@@ -375,7 +375,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		for _,dataMap:=range insertDataMap{
 			val := make([]dbDriver.Value,0)
 			for _,v:=range This.p.Field{
-				toV,This.err = ckDataTypeTransfer(dataMap[v.MySQL],v.CK,v.CkType)
+				toV,This.err = CkDataTypeTransfer(dataMap[v.MySQL],v.CK,v.CkType)
 				if This.err != nil{
 					stmt.Close()
 					goto errLoop
@@ -417,7 +417,23 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v interface{},e error) {
+func AllTypeToInt64(s interface{}) (int64,error) {
+	i64,err := strconv.ParseInt(fmt.Sprint(s),10,64)
+	if err != nil {
+		return 0,err
+	}
+	return i64,nil
+}
+
+func AllTypeToUInt64(s interface{}) (uint64,error) {
+	ui64,err := strconv.ParseUint(fmt.Sprint(s),10,64)
+	if err != nil {
+		return 0,err
+	}
+	return ui64,nil
+}
+
+func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v interface{},e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
@@ -427,26 +443,53 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 	case "Date":
 		if data == nil{
 			v = int16(0)
-		}else{
+			break
+		}
+		switch data.(type) {
+		case int16:
+			v = data
+			break
+		case string:
 			if data.(string) == "0000-00-00"{
 				v = int16(0)
 			}else{
 				v = data
 			}
+			break
+		default:
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = int16(i64)
+			break
 		}
 		break
 	case "DateTime":
 		if data == nil{
 			v = int32(0)
-		}else{
+			break
+		}
+		switch data.(type) {
+		case int32:
+			v = data
+			break
+		case string:
 			if data.(string) == "0000-00-00 00:00:00"{
 				v = int32(0)
 			}else{
-				//log.Println("DateTime:",time.Now().Format("2006-01-02 15:04:05"))
 				loc, _ := time.LoadLocation("Local")                            //重要：获取时区
 				theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
 				v = theTime.Unix()
 			}
+			break
+		default:
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = int32(i64)
+			break
 		}
 		break
 	case "String","Enum8","Enum16","Enum","UUID":
@@ -465,7 +508,7 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		break
 	case "Int8":
 		if data == nil{
-			v = int(0)
+			v = int8(0)
 			break
 		}
 		switch data.(type) {
@@ -476,8 +519,15 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 				v = int8(0)
 			}
 			break
+		case int8:
+			v = data
+			break
 		default:
-			v = data.(int8)
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = int8(i64)
 			break
 		}
 		break
@@ -486,7 +536,18 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = uint8(0)
 			break
 		}
-		v = data.(uint8)
+		switch data.(type) {
+		case uint8:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToUInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = uint8(i64)
+			break
+		}
 		break
 	case "Int16":
 		if data == nil{
@@ -495,15 +556,15 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		}
 		//mysql year 类型对应go int类型，但是ck里可能是Int16
 		switch data.(type) {
-		case string:
-			s1,_ := strconv.Atoi(data.(string))
-			v = int16(s1)
-			break
-		case int:
-			v = int16(data.(int))
+		case int16:
+			v = data
 			break
 		default:
-			v = data.(int16)
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = int16(i64)
 			break
 		}
 		break
@@ -512,35 +573,90 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = uint16(0)
 			break
 		}
-		v = data.(uint16)
+		switch data.(type) {
+		case uint16:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToUInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = uint16(i64)
+			break
+		}
 		break
 	case "Int32":
 		if data == nil{
 			v = int32(0)
 			break
 		}
-		v = data.(int32)
+		switch data.(type) {
+		case int32:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = int32(i64)
+			break
+		}
 		break
 	case "UInt32":
 		if data == nil{
 			v = uint32(0)
 			break
 		}
-		v = data.(uint32)
+		switch data.(type) {
+		case uint32:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToUInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = uint32(i64)
+			break
+		}
 		break
 	case "Int64":
 		if data == nil{
 			v = int64(0)
 			break
 		}
-		v = data.(int64)
+		switch data.(type) {
+		case int64:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = i64
+			break
+		}
 		break
 	case "UInt64":
 		if data == nil{
 			v = uint64(0)
 			break
 		}
-		v = data.(uint64)
+		switch data.(type) {
+		case uint64:
+			v = data
+			break
+		default:
+			i64,err := AllTypeToUInt64(data)
+			if err != nil{
+				return 0,err
+			}
+			v = i64
+			break
+		}
 		break
 	case "Float64":
 		if data == nil{
@@ -549,15 +665,18 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		}
 		// 有可能是decimal 类型，binlog解析出来decimal 对应go string类型
 		switch data.(type) {
-		case string:
-			s1,_ := strconv.ParseFloat(data.(string), 64)
-			v = s1
+		case float64:
+			v = data
 			break
 		case float32:
 			v = float64(data.(float32))
 			break
 		default:
-			v = data.(float64)
+			s1,err := strconv.ParseFloat(fmt.Sprint(data), 64)
+			if err != nil{
+				e = err
+			}
+			v = s1
 			break
 		}
 		break
@@ -566,13 +685,20 @@ func ckDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float32(0.00)
 			break
 		}
+
 		switch data.(type) {
-		case string:
-			s1,_ := strconv.ParseFloat(data.(string), 32)
-			v = s1
+		case float32:
+			v = data
+			break
+		case float64:
+			v = float32(data.(float64))
 			break
 		default:
-			v = data.(float32)
+			s1,err := strconv.ParseFloat(fmt.Sprint(data), 32)
+			if err != nil{
+				e = err
+			}
+			v = s1
 			break
 		}
 		break

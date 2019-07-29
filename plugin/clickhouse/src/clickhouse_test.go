@@ -361,7 +361,7 @@ func TestFloat(t *testing.T)  {
 
 func TestRandDataAndCheck(t *testing.T){
 
-	var n int = 100
+	var n int = 1000
 
 	e := pluginTestData.NewEvent()
 
@@ -454,8 +454,22 @@ func TestSyncLikeProduct(t *testing.T)  {
 	}else{
 		t.Log("test success")
 	}
-
 }
 
+func TestAllTypeToInt64(t *testing.T)  {
+	data := "2019"
+	i64,err := MyPlugin.AllTypeToInt64(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(i64)
 
 
+	ui64,err2 := MyPlugin.AllTypeToUInt64(data)
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+
+	t.Log(ui64)
+}
