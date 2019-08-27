@@ -50,6 +50,18 @@ func newEventParser() (parser *eventParser) {
 	return
 }
 
+func (parser *eventParser) saveBinlog(event *EventReslut){
+	switch event.Header.EventType {
+	case WRITE_ROWS_EVENTv2,UPDATE_ROWS_EVENTv2,DELETE_ROWS_EVENTv2,WRITE_ROWS_EVENTv1,UPDATE_ROWS_EVENTv1,DELETE_ROWS_EVENTv1,WRITE_ROWS_EVENTv0,UPDATE_ROWS_EVENTv0,DELETE_ROWS_EVENTv0:
+		break
+	default:
+		if event.BinlogFileName != "" && event.Header.LogPos > 0{
+			parser.binlogFileName = event.BinlogFileName
+			parser.binlogPosition = event.Header.LogPos
+		}
+	}
+}
+
 func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename string, err error) {
 	var buf *bytes.Buffer
 	if parser.binlog_checksum {
@@ -460,20 +472,14 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			//only return replicateDoDb, any sql may be use db.table query
 			if len(parser.replicateDoDb) > 0 {
 				if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
-					if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0 {
-						parser.binlogFileName = event.BinlogFileName
-						parser.binlogPosition = event.Header.LogPos
-					}
+					parser.saveBinlog(event)
 					continue
 				}
 			}
 
 			//only return EventType by set
 			if parser.eventDo[int(event.Header.EventType)] == false {
-				if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0{
-					parser.binlogFileName = event.BinlogFileName
-					parser.binlogPosition = event.Header.LogPos
-				}
+				parser.saveBinlog(event)
 				continue
 			}
 
@@ -493,10 +499,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			}
 			//set binlog info
 			callbackFun(event)
-			if event.BinlogFileName != "" && event.Header.LogPos > 0{
-				parser.binlogFileName = event.BinlogFileName
-				parser.binlogPosition = event.Header.LogPos
-			}
+			parser.saveBinlog(event)
 
 		} else {
 			result <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
