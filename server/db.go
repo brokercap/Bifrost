@@ -216,6 +216,15 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 	return true
 }
 
+func (db *db) getRightBinlogPosition()  uint32 {
+	err := mysql.CheckBinlogIsRight(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition)
+	if err ==nil {
+		return db.binlogDumpPosition
+	}
+	newPosition := mysql.GetNearestRightBinlog(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition,db.serverId,db.replicateDoDb)
+	return newPosition
+}
+
 func (db *db) Start() (b bool) {
 	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
@@ -224,6 +233,15 @@ func (db *db) Start() (b bool) {
 	switch db.ConnStatus {
 	case "close":
 		db.ConnStatus = "starting"
+		newPosition := db.getRightBinlogPosition()
+		if newPosition == 0{
+			db.ConnStatus = "close"
+			db.ConnErr = "binlog position error"
+			break
+		}
+		log.Println("binlog position change,dbName:", db.Name ," old:",db.binlogDumpFileName," ",db.binlogDumpPosition," new:",db.binlogDumpFileName," ",newPosition)
+		db.binlogDumpPosition = newPosition
+
 		reslut := make(chan error, 1)
 		db.binlogDump.CallbackFun = db.Callback
 
