@@ -117,7 +117,7 @@ func (event *TableMapEvent) parseColumnMetadata(data []byte) error {
 			event.columnMetaData[i].max_length = 0
 
 		default:
-			return fmt.Errorf("Unknown FieldType %d", t)
+			return fmt.Errorf("Unknown FieldType %s", fmt.Sprint(t))
 		}
 	}
 	return nil
