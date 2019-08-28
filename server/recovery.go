@@ -209,15 +209,30 @@ func recoveryData(data map[string]dbSaveInfo){
 						if lastAllToServerNoraml == false{
 							//假如有一个同步不太正常的情况下，取小值
 							//这里用判断 BinlogFileNum == 0 是因为 绝对不会出现，因为绝对 第一次循环 lastAllToServerNoraml == true
-							BinlogFileNum,BinlogPosition  = CompareBinlogPositionAndReturnLess(
+							BinlogFileNum1,BinlogPosition1  := CompareBinlogPositionAndReturnLess(
 								BinlogFileNum,BinlogPosition,
 								toServer.BinlogFileNum,toServer.BinlogPosition)
+							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
+
+							}else{
+								log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+								BinlogFileNum = BinlogFileNum1
+								BinlogPosition = BinlogPosition1
+							}
 
 						}else{
 							//假如所有表都还是正常同步的情况下，取大值
-							BinlogFileNum, BinlogPosition = CompareBinlogPositionAndReturnGreater(
+							BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnGreater(
 								BinlogFileNum, BinlogPosition,
 								toServer.BinlogFileNum, toServer.BinlogPosition)
+
+							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
+
+							}else{
+								log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+								BinlogFileNum = BinlogFileNum1
+								BinlogPosition = BinlogPosition1
+							}
 						}
 						continue
 					}else{
@@ -229,9 +244,17 @@ func recoveryData(data map[string]dbSaveInfo){
 					}
 
 					//取大值
-					BinlogFileNum, BinlogPosition = CompareBinlogPositionAndReturnGreater(
+					BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnGreater(
 						BinlogFileNum, BinlogPosition,
 						toServer.BinlogFileNum, toServer.BinlogPosition)
+
+					if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
+
+					}else{
+						log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+						BinlogFileNum = BinlogFileNum1
+						BinlogPosition = BinlogPosition1
+					}
 				}
 			}
 		}
@@ -243,9 +266,16 @@ func recoveryData(data map[string]dbSaveInfo){
 		DBLastBinlogPosition,_ := getBinlogPosition(DBBinlogKey)
 		if DBLastBinlogPosition != nil{
 			//假如key val存储中DB 的位点值存在 取大值
-			LastDBBinlogFileNum, db.binlogDumpPosition = CompareBinlogPositionAndReturnGreater(
+			LastDBBinlogFileNum1, binlogDumpPosition1 := CompareBinlogPositionAndReturnGreater(
 				LastDBBinlogFileNum, db.binlogDumpPosition,
 				DBLastBinlogPosition.BinlogFileNum, DBLastBinlogPosition.BinlogPosition)
+			if LastDBBinlogFileNum == LastDBBinlogFileNum1 && db.binlogDumpPosition == binlogDumpPosition1{
+
+			}else{
+				log.Println("recovery binlog change:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
+				LastDBBinlogFileNum = LastDBBinlogFileNum1
+				db.binlogDumpPosition = binlogDumpPosition1
+			}
 		}
 		db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",LastDBBinlogFileNum)
 
@@ -257,11 +287,18 @@ func recoveryData(data map[string]dbSaveInfo){
 			db.binlogDumpPosition = BinlogPosition
 		}else{
 			//这里为什么要取大值,是因为位点是定时刷盘的,有可能在哪些特殊情况下,表位点成功了,db位点没保存成功
-			LastDBBinlogFileNum, db.binlogDumpPosition = CompareBinlogPositionAndReturnGreater(
+			LastDBBinlogFileNum1, binlogDumpPosition1 := CompareBinlogPositionAndReturnGreater(
 				LastDBBinlogFileNum, db.binlogDumpPosition,
 				BinlogFileNum, BinlogPosition)
 			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",LastDBBinlogFileNum)
-			db.binlogDumpPosition = dbInfo.BinlogDumpPosition
+
+			if LastDBBinlogFileNum == LastDBBinlogFileNum1 && db.binlogDumpPosition == binlogDumpPosition1{
+
+			}else{
+				log.Println("recovery binlog change:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
+				LastDBBinlogFileNum = LastDBBinlogFileNum1
+				db.binlogDumpPosition = binlogDumpPosition1
+			}
 		}
 
 		//如果是性能测试配置，强制修改位点
