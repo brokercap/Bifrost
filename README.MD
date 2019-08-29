@@ -237,7 +237,7 @@ https://127.0.0.1:21036
 - github.com/bradfitz/gomemcache/memcache
 - gopkg.in/mgo.v2
 - github.com/streadway/amqp
-- github.com/garyburd/redigo/redis
+- github.com/go-redis/redis
 - github.com/syndtr/goleveldb/leveldb
 - github.com/kshvakov/clickhouse
 
