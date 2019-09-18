@@ -213,6 +213,7 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 	if _,ok:=db.replicateDoDb[dbName];!ok{
 		db.replicateDoDb[dbName] = 1
 	}
+	db.binlogDump.SetReplicateDoDb(dbName)
 	return true
 }
 
