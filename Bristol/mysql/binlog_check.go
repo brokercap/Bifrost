@@ -27,11 +27,10 @@ func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
 			break
 		}
 
-
 		Event_type :=string(dest[2].([]byte))
 
 		switch Event_type {
-		case "Update_rows","Delete_rows","Insert_rows":
+		case "Update_rows","Delete_rows","Insert_rows","Update_rows_v1","Delete_rows_v1","Insert_rows_v1","Update_rows_v0","Delete_rows_v0","Insert_rows_v0","Update_rows_v2","Delete_rows_v2","Insert_rows_v2":
 			returnErr = fmt.Errorf("binlog position cant'be "+Event_type)
 			break
 		default:
@@ -52,7 +51,7 @@ func GetNearestRightBinlog(dbUri string,filename string, position uint32,serverI
 		},
 	}
 
-	var nearestPosition uint32
+	var nearestPosition uint32 = 4
 
 	var Callback = func (data *EventReslut) {
 		nearestPosition = data.Header.LogPos
