@@ -35,7 +35,7 @@ type ToServer struct {
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
-	key := schemaName + "-" + tableName
+	key := GetSchemaAndTableJoin(schemaName,tableName)
 	if _, ok := db.tableMap[key]; !ok {
 		return false,0
 	} else {
@@ -69,7 +69,7 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 }
 
 func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID int) bool {
-	key := schemaName + "-" + tableName
+	key := GetSchemaAndTableJoin(schemaName,tableName)
 	if _, ok := db.tableMap[key]; !ok {
 		return false
 	} else {

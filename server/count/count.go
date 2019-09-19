@@ -159,7 +159,7 @@ func DelChannel(db string,channelId string){
 	if _,ok := dbCountChanMap[db];!ok{
 		return
 	}
-	delChannelChan(db+"-"+channelId)
+	delChannelChan(db+" # "+channelId)
 	l.Lock()
 	delete(dbCountChanMap[db].ChannelMap,channelId)
 	l.Unlock()

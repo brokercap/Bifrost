@@ -27,7 +27,7 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if len(data.Rows) == 0 && data.Query == ""{
 		return
 	}
-	key := data.SchemaName + "-" + data.TableName
+	key := GetSchemaAndTableJoin(data.SchemaName,data.TableName)
 	if _, ok := db.tableMap[key]; !ok {
 		return
 	}

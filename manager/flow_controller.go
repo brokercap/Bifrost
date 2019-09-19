@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"html/template"
+	"github.com/brokercap/Bifrost/server"
 )
 
 func init(){
@@ -64,7 +65,7 @@ func get_flow_controller(w http.ResponseWriter,req *http.Request){
 	if FlowType == ""{
 		FlowType = "minute"
 	}
-	dbANdTableName := schema+"-"+tablename
+	dbANdTableName := server.GetSchemaAndTableJoin(schema,tablename)
 	var data []count.CountContent
 	switch FlowType {
 	case "minute":
@@ -94,7 +95,7 @@ func getFlowCount(dbname *string,dbANdTableName *string,channelId *string,FlowTy
 	if *dbname == ""{
 		return count.GetFlowAll(FlowType),nil
 	}
-	if *dbANdTableName != "-"{
+	if *dbANdTableName != server.GetSchemaAndTableJoin("",""){
 		if *dbname == ""{
 			return make([]count.CountContent,0),fmt.Errorf("param error")
 		}

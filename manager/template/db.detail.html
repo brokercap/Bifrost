@@ -444,9 +444,9 @@
                             return false;
                         }
                         if(data.status){
-                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button>';
-                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
-                            $("#" + schema_name + "-" + table_name + " .right .input input").prop("checked",false);
+                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button>';
+                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
+                            $("#" + schema_name + "_-" + table_name + " .right .input input").prop("checked",false);
                         }
                         batchDelOrAddTableResultFun(table_name +" ADD Result:"+data.msg,1);
                     }
@@ -486,7 +486,7 @@
                         }
                         if (data.status) {
                             html = '<button data-toggle="button" class="btn-warning btn-sm" type="button" onClick="showAddTable(\'' + table_name + '\')">ADD</button>';
-                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
+                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
                         }
                         batchDelOrAddTableResultFun(table_name +" DEL Result:"+data.msg,1);
                     }
@@ -511,7 +511,7 @@
         }
 
         function GetTableToServerList(schema_name,table_name){
-            var key = schema_name+"-"+table_name;
+            var key = schema_name+"_-"+table_name;
             if ($("#"+key+" .right button").text() == "ADD"){
                 table_check_input(key);
                 return  false;
@@ -605,7 +605,7 @@
         }
         var TableMap = new Map();
         function GetTableFields(schema_name,table_name){
-            var key = schema_name+"-"+table_name;
+            var key = schema_name+"_-"+table_name;
             if (!TableMap.has(key) || TableMap.get(key) == undefined){
                 var url = '/db/tablefields';
                 $.post(url,
@@ -654,7 +654,7 @@
                     if (v.ChannelName != ""){
                         title = " title='Bind Channel : "+v.ChannelName+"' ";
                     }
-                    html += '<a class="list-group-item"><div class="tableDiv" title="'+v.TableName+'" id="'+schema_name+'-'+v.TableName+'">';
+                    html += '<a class="list-group-item"><div class="tableDiv" title="'+v.TableName+'" id="'+schema_name+'_-'+v.TableName+'">';
                     html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
                     html += '<div class="right">';
                     if (v.AddStatus == false){
