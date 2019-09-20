@@ -15,6 +15,7 @@ import (
 )
 
 type eventParser struct {
+	sync.RWMutex
 	format           *FormatDescriptionEvent
 	tableMap         map[uint64]*TableMapEvent
 	tableNameMap     map[string]uint64
@@ -34,6 +35,7 @@ type eventParser struct {
 	connectionId	 string
 	connLock 		 sync.Mutex
 	binlog_checksum  bool
+	filterNextRowEvent bool
 }
 
 func newEventParser() (parser *eventParser) {
@@ -47,7 +49,20 @@ func newEventParser() (parser *eventParser) {
 	parser.maxBinlogFileName = ""
 	parser.maxBinlogPosition = 0
 	parser.binlog_checksum = false
+	parser.filterNextRowEvent = false
 	return
+}
+
+func (parser *eventParser) saveBinlog(event *EventReslut){
+	switch event.Header.EventType {
+	case WRITE_ROWS_EVENTv2,UPDATE_ROWS_EVENTv2,DELETE_ROWS_EVENTv2,WRITE_ROWS_EVENTv1,UPDATE_ROWS_EVENTv1,DELETE_ROWS_EVENTv1,WRITE_ROWS_EVENTv0,UPDATE_ROWS_EVENTv0,DELETE_ROWS_EVENTv0:
+		break
+	default:
+		if event.BinlogFileName != "" && event.Header.LogPos > 0{
+			parser.binlogFileName = event.BinlogFileName
+			parser.binlogPosition = event.Header.LogPos
+		}
+	}
 }
 
 func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename string, err error) {
@@ -118,6 +133,16 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		table_map_event, err = parser.parseTableMapEvent(buf)
 		parser.tableMap[table_map_event.tableId] = table_map_event
 		//log.Println("table_map_event:",*table_map_event,"tableId:",table_map_event.tableId," schemaName:",table_map_event.schemaName," tableName:",table_map_event.tableName)
+		parser.RLock()
+		if len(parser.replicateDoDb) > 0 {
+			if _, ok := parser.replicateDoDb[table_map_event.schemaName]; !ok {
+				parser.filterNextRowEvent = true
+				parser.RUnlock()
+				return
+			}
+		}
+		parser.RUnlock()
+		parser.filterNextRowEvent = false
 		if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok {
 			parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 		}
@@ -199,7 +224,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		errs = err
 		return
 	}
-	parser.tableSchemaMap[tableId] = make([]*column_schema_type,0)
+	columeArr := make([]*column_schema_type,0)
 	for {
 		dest := make([]driver.Value, 9, 9)
 		err := rows.Next(dest)
@@ -280,7 +305,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		} else {
 			set_values = make([]string, 0)
 		}
-		parser.tableSchemaMap[tableId] = append(parser.tableSchemaMap[tableId], &column_schema_type{
+		columeArr = append(columeArr, &column_schema_type{
 			COLUMN_NAME: COLUMN_NAME,
 			COLUMN_KEY:  COLUMN_KEY,
 			COLUMN_TYPE: COLUMN_TYPE,
@@ -297,7 +322,12 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			DATA_TYPE:DATA_TYPE,
 		})
 	}
+	//log.Println(database ," ",tablename ,"tableSchemaMap:",tableId , " ",columeArr)
 	rows.Close()
+	if len(columeArr) == 0{
+		return fmt.Errorf("column len is 0 ","db:",database," table:",tablename," tableId:",tableId)
+	}
+	parser.tableSchemaMap[tableId] = columeArr
 	errs = nil
 	return
 }
@@ -403,6 +433,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			return
 		}
 	}()
+	//log.Println("start DumpBinlog:",filename," ",position)
 	parser.binlogFileName = filename
 	parser.binlogPosition = position
 	ServerId := uint32(parser.ServerId) // Must be non-zero to avoid getting EOF packet
@@ -452,28 +483,47 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 						event.SchemaName = SchemaName
 					}
 					event.TableName = tableName
+					parser.RLock()
+					if len(parser.replicateDoDb) > 0 {
+						if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
+							parser.RUnlock()
+							continue
+						}
+					}
+					parser.RUnlock()
 					if tableId := parser.GetTableId(event.SchemaName, tableName); tableId > 0 {
 						parser.GetTableSchema(tableId, event.SchemaName, tableName)
 					}
 				}
 			}
 			//only return replicateDoDb, any sql may be use db.table query
-			if len(parser.replicateDoDb) > 0 {
-				if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
-					if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0 {
-						parser.binlogFileName = event.BinlogFileName
-						parser.binlogPosition = event.Header.LogPos
-					}
+
+			//这里要判断一下如果是row事件
+			//在map event的时候已经判断过了是否要过滤，所以判断一下 parser.filterNextRowEvent 是否为true
+			switch event.Header.EventType {
+			case WRITE_ROWS_EVENTv0,WRITE_ROWS_EVENTv1,WRITE_ROWS_EVENTv2, UPDATE_ROWS_EVENTv0,UPDATE_ROWS_EVENTv1,UPDATE_ROWS_EVENTv2, DELETE_ROWS_EVENTv0,DELETE_ROWS_EVENTv1,DELETE_ROWS_EVENTv2:
+				if parser.filterNextRowEvent == true{
 					continue
 				}
+				break
+			default:
+				if len(parser.replicateDoDb) > 0 {
+					parser.RLock()
+					if len(parser.replicateDoDb) > 0 {
+						if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
+							parser.RUnlock()
+							parser.saveBinlog(event)
+							continue
+						}
+					}
+					parser.RUnlock()
+				}
+				break
 			}
 
 			//only return EventType by set
 			if parser.eventDo[int(event.Header.EventType)] == false {
-				if event.Header.EventType != TABLE_MAP_EVENT && event.BinlogFileName != "" && event.Header.LogPos > 0{
-					parser.binlogFileName = event.BinlogFileName
-					parser.binlogPosition = event.Header.LogPos
-				}
+				parser.saveBinlog(event)
 				continue
 			}
 
@@ -493,10 +543,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			}
 			//set binlog info
 			callbackFun(event)
-			if event.BinlogFileName != "" && event.Header.LogPos > 0{
-				parser.binlogFileName = event.BinlogFileName
-				parser.binlogPosition = event.Header.LogPos
-			}
+			parser.saveBinlog(event)
 
 		} else {
 			result <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
@@ -527,6 +574,29 @@ func (This *BinlogDump) GetBinlog()(string,uint32){
 	return This.parser.binlogFileName,This.parser.binlogPosition
 }
 
+func (This *BinlogDump) SetReplicateDoDb(db string)  {
+	if This.parser != nil{
+		This.parser.Lock()
+		This.parser.replicateDoDb[db] = 1
+		This.parser.Unlock()
+	}
+	if This.ReplicateDoDb == nil{
+		delete(This.ReplicateDoDb,db)
+	}
+	This.ReplicateDoDb[db] = 1
+}
+
+func (This *BinlogDump) DelReplicateDoDb(db string)  {
+	if This.parser != nil{
+		This.parser.Lock()
+		delete(This.parser.replicateDoDb,db)
+		This.parser.Unlock()
+	}
+	if This.ReplicateDoDb != nil{
+		delete(This.ReplicateDoDb,db)
+	}
+}
+
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error,maxFileName string,maxPosition uint32) {
 	This.parser = newEventParser()
 	This.parser.dataSource = &This.DataSource
@@ -539,7 +609,7 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 	for _, val := range This.OnlyEvent {
 		This.parser.eventDo[int(val)] = true
 	}
-	log.Println(This.DataSource+ " start DumpBinlog...")
+	log.Println(This.DataSource+ " start DumpBinlog... filename:",filename, " position:",position)
 	defer func() {
 		This.parser.connLock.Lock()
 		if This.parser.connStatus == 1 {

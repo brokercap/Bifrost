@@ -1,8 +1,6 @@
 language: go
 
 go:
-    - "1.9"
-    - "1.10"
     - "1.11"
     - "1.12"
 
@@ -13,7 +11,7 @@ before_install:
     - go get github.com/bradfitz/gomemcache/memcache
     - go get gopkg.in/mgo.v2
     - go get github.com/streadway/amqp
-    - go get github.com/garyburd/redigo/redis
+    - go get github.com/go-redis/redis
     - go get github.com/syndtr/goleveldb/leveldb
     - go get github.com/kshvakov/clickhouse
 

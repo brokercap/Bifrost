@@ -1,13 +1,14 @@
 package src
 
 import (
-	"log"
 	"github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/garyburd/redigo/redis"
+	//"github.com/garyburd/redigo/redis"
+	"github.com/go-redis/redis"
 	"fmt"
 	"encoding/json"
 	"strings"
 	"strconv"
+	"time"
 )
 
 const VERSION  = "v1.1.0"
@@ -73,7 +74,7 @@ type Conn struct {
 	database 	int
 	network 	string
 	status 		string
-	conn   		redis.Conn
+	conn   		*redis.Client
 	err    		error
 	p 			*PluginParam
 }
@@ -136,28 +137,29 @@ func (This *Conn) SetConnStatus(status string) {
 }
 
 func (This *Conn) Connect() bool {
-	var err error
 	if This.database < 0 || This.database >16{
 		This.err = fmt.Errorf("database must be in 0 and 16")
 		return false
 	}
-	if This.network != "tcp" && This.network != "udp"{
-		This.err = fmt.Errorf("network must be tcp or udp")
+	if This.network != "tcp" {
+		This.err = fmt.Errorf("network must be tcp")
 		return false
 	}
-	if This.pwd != ""{
-		This.conn, err = redis.Dial(This.network, This.Uri,redis.DialPassword(This.pwd))
+
+	This.conn = redis.NewClient(&redis.Options{
+		Addr:     	This.Uri,
+		Password: 	This.pwd, // no password set
+		DB:			This.database,
+		})
+
+	if This.conn == nil{
+		This.err = fmt.Errorf("redis connect error")
+		This.status = ""
+		return false
 	}else{
-		This.conn, err = redis.Dial(This.network, This.Uri)
+		This.err = nil
+		return true
 	}
-	if err != nil {
-		log.Println("Connect to redis error", err)
-		This.err = err
-		return false
-	}
-	This.err = nil
-	This.status = "running"
-	return true
 }
 
 func (This *Conn) ReConnect() bool {
@@ -203,18 +205,10 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 	switch This.p.Type {
 	case "set":
 		if This.p.ValConfig != ""{
-			if This.p.Expir > 0{
-				_, err = This.conn.Do("SET", Key,This.getVal(data,index),"ex",This.p.Expir)
-			}else{
-				_, err = This.conn.Do("SET", Key,This.getVal(data,index))
-			}
+			err =This.conn.Set(Key, This.getVal(data,index), time.Duration(This.p.Expir) * time.Second).Err()
 		}else{
 			vbyte, _ := json.Marshal(data.Rows[index])
-			if This.p.Expir > 0{
-				_, err = This.conn.Do("SET", Key,string(vbyte),"ex",This.p.Expir)
-			}else{
-				_, err = This.conn.Do("SET", Key,string(vbyte))
-			}
+			err =This.conn.Set(Key, string(vbyte), time.Duration(This.p.Expir) * time.Second).Err()
 		}
 		break
 	case "list":
@@ -240,7 +234,7 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) 
 	var err error
 	switch This.p.Type {
 	case "set":
-		_, err = This.conn.Do("DEL", Key)
+		err = This.conn.Del(Key).Err()
 		break
 	case "list":
 		_,err = This.SendToList(Key,data)
@@ -271,7 +265,8 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.P
 			Val = string(c)
 		}
 	}
-	_, err = This.conn.Do("LPUSH", Key,Val)
+	err =This.conn.LPush(Key, Val).Err()
+
 	if err != nil {
 		return nil,err
 	}

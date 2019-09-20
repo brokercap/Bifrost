@@ -140,7 +140,7 @@ func (This *consume_channel_obj) consume_channel() {
 				return
 			}
 			timer.Reset(5  * time.Second)
-			key = data.SchemaName + "-" + data.TableName
+			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
 			This.checkChannleStatus()
 			toServerList := This.db.tableMap[key].ToServerList
 			pluginData := This.transferToPluginData(&data)

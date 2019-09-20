@@ -32,7 +32,7 @@ func TestChekcDataType(t *testing.T)  {
 	Uri:= "root:@tcp(127.0.0.1:3306)/test"
 	db := history.DBConnect(Uri)
 	Fields := history.GetSchemaTableFieldList(db,SchemaName,TableName)
-	sql := "select * from " + SchemaName + "." + TableName + " LIMIT 1"
+	sql := "select * from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
 	stmt, err := db.Prepare(sql)
 	if err != nil{
 		log.Fatal("Prepare err:",err)
@@ -41,6 +41,9 @@ func TestChekcDataType(t *testing.T)  {
 	}
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
+	if err!=nil{
+		t.Fatal(err)
+	}
 	n := len(Fields)
 	m := make(map[string]interface{}, n)
 	for {

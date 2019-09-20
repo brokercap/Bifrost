@@ -55,6 +55,9 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	case UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2:
 		event.columnsPresentBitmap2 = Bitfield(buf.Next(int((columnCount + 7) / 8)))
 	}
+	if parser.filterNextRowEvent == true{
+		return
+	}
 	event.tableMap = parser.tableMap[event.tableId]
 	for buf.Len() > 0 {
 		var row map[string]interface{}
@@ -65,7 +68,6 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		}
 		event.rows = append(event.rows, row)
 	}
-
 	return
 }
 
@@ -469,19 +471,8 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				year := (timeInt & (((1 << 15) - 1) << 9)) >> 9
 				month := (timeInt & (((1 << 4) - 1) << 5)) >> 5
 				day := (timeInt & ((1 << 5) - 1))
-				var monthStr, dayStr string
-				if month >= 10 {
-					monthStr = strconv.Itoa(month)
-				} else {
-					monthStr = "0" + strconv.Itoa(month)
-				}
-				if day >= 10 {
-					dayStr = strconv.Itoa(day)
-				} else {
-					dayStr = "0" + strconv.Itoa(day)
-				}
-				t := strconv.Itoa(year) + "-" + monthStr + "-" + dayStr
 				///tm, _ := time.Parse("2006-01-02", t)
+				t := fmt.Sprintf("%4d-%02d-%02d", year,month,day)
 				row[column_name] = t
 			}
 			break
@@ -500,20 +491,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				hour := int(timeInt / 10000)
 				minute := int((timeInt % 10000) / 100)
 				second := int(timeInt % 100)
-				var minuteStr, secondStr string
-				if minute >= 10 {
-					minuteStr = strconv.Itoa(minute)
-				} else {
-					minuteStr = "0" + strconv.Itoa(minute)
-				}
-				if second >= 10 {
-					secondStr = strconv.Itoa(second)
-				} else {
-					secondStr = "0" + strconv.Itoa(second)
-				}
-				t := strconv.Itoa(hour) + ":" + minuteStr + ":" + secondStr
-				//tm, _ := time.Parse("15:04:05", t)
-				//row[column_name] = tm.Format("15:04:05")
+				t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
 				row[column_name] = t
 			}
 			break
@@ -533,18 +511,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			minute := read_binary_slice(timeInt,12,6,24)
 			second := read_binary_slice(timeInt,18,6,24)
 
-			var minuteStr, secondStr string
-			if minute >= 10 {
-				minuteStr = strconv.Itoa(int(minute))
-			} else {
-				minuteStr = "0" + strconv.Itoa(int(minute))
-			}
-			if second >= 10 {
-				secondStr = strconv.Itoa(int(second))
-			} else {
-				secondStr = "0" + strconv.Itoa(int(second))
-			}
-			t := strconv.Itoa(int(hour)) + ":" + minuteStr + ":" + secondStr
+			t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
 			row[column_name] = t
 			break
 

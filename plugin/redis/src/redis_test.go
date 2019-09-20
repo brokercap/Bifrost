@@ -6,14 +6,15 @@ import (
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/redis/src"
 	"github.com/brokercap/Bifrost/test/pluginTest"
-	"github.com/garyburd/redigo/redis"
+	//"github.com/garyburd/redigo/redis"
+	"github.com/go-redis/redis"
 	"fmt"
 	"strings"
 )
 
 var url string = "10.40.2.41:6379"
 
-var redisConn redis.Conn
+var redisConn *redis.Client
 func getParam() map[string]interface{}{
 	p := make(map[string]interface{},0)
 	p["KeyConfig"] = "{$SchemaName}-{$TableName}-{$id}"
@@ -24,10 +25,13 @@ func getParam() map[string]interface{}{
 }
 
 func initRedisConn() error{
-	var err error
-	redisConn, err = redis.Dial("tcp", url)
-	if err != nil{
-		return err
+	redisConn =  redis.NewClient(&redis.Options{
+		Addr:     	url,
+		Password: 	"", // no password set
+		DB:			0,
+	})
+	if redisConn == nil{
+		return fmt.Errorf("connect error")
 	}
 	return nil
 }
@@ -116,15 +120,14 @@ func TestCheckData(t *testing.T){
 	var key string
 	key = insertData.SchemaName+"-"+insertData.TableName+"-"+fmt.Sprint(insertData.Rows[0]["id"])
 	var c string
-	c,err = redis.String(redisConn.Do("GET", key))
-	if err != nil{
+	c,err = redisConn.Get( key).Result()
+	if err!=nil{
 		t.Fatal(err)
 	}
 
-	log.Println("insertDataJsonString:",c)
-
 	checkResult,err = e.CheckData(insertData.Rows[0],c)
 	if err != nil{
+		log.Fatal(err)
 		t.Fatal(err)
 	}
 
@@ -148,8 +151,8 @@ func TestCheckData(t *testing.T){
 	}
 
 	key = updateData.SchemaName+"-"+updateData.TableName+"-"+fmt.Sprint(updateData.Rows[1]["id"])
-	c,err = redis.String(redisConn.Do("GET", key))
-	if err != nil{
+	c,err = redisConn.Get( key).Result()
+	if err!=nil{
 		t.Fatal(err)
 	}
 
@@ -178,13 +181,11 @@ func TestCheckData(t *testing.T){
 	}
 
 	key = deleteData.SchemaName+"-"+deleteData.TableName+"-"+fmt.Sprint(deleteData.Rows[0]["id"])
-	c,err = redis.String(redisConn.Do("GET", key))
-	if err != nil {
-		if strings.Contains(fmt.Sprint(err),"nil returned") {
-			t.Log("key:",key, " delete success")
-		}else{
-			t.Error("key:",key, " delete error,",err)
-		}
+	c,err = redisConn.Get( key).Result()
+	if strings.Contains(fmt.Sprint(err),"redis: nil") {
+		t.Log("key:",key, " delete success")
+	}else{
+		t.Error("key:",key, " delete error,",err)
 	}
 
 	log.Println("test over")

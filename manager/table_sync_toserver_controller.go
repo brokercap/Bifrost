@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
-	"strings"
 	"html/template"
 	"log"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
@@ -119,8 +118,8 @@ func get_syncList_all(ChannelID int) []syncListStruct{
 			if ChannelID > 0 && ChannelID != table.ChannelKey{
 				continue
 			}
-			tmpArr := strings.Split(key,"-")
-			syncList = append(syncList,syncListStruct{db.Name,tmpArr[0],tmpArr[1],table.ToServerList})
+			schemaName , tableName := server.GetSchemaAndTableBySplit(key)
+			syncList = append(syncList,syncListStruct{db.Name,schemaName,tableName,table.ToServerList})
 		}
 	}
 	return syncList
@@ -135,8 +134,8 @@ func get_syncList_by_dbname(dbname string,ChannelID int) []syncListStruct{
 			if ChannelID > 0 && ChannelID != table.ChannelKey{
 				continue
 			}
-			tmpArr := strings.Split(key,"-")
-			syncList = append(syncList,syncListStruct{dbname,tmpArr[0],tmpArr[1],table.ToServerList})
+			schemaName , tableName := server.GetSchemaAndTableBySplit(key)
+			syncList = append(syncList,syncListStruct{dbname,schemaName,tableName,table.ToServerList})
 		}
 	}
 	return syncList
@@ -151,9 +150,9 @@ func get_syncList_by_schema_name(dbname,schema_name string,ChannelID int) []sync
 			if ChannelID > 0 && ChannelID != table.ChannelKey{
 				continue
 			}
-			tmpArr := strings.Split(key,"-")
-			if tmpArr[0] == schema_name {
-				syncList = append(syncList, syncListStruct{dbname, tmpArr[0], tmpArr[1], table.ToServerList})
+			schemaName , tableName := server.GetSchemaAndTableBySplit(key)
+			if schemaName == schema_name {
+				syncList = append(syncList, syncListStruct{dbname, schemaName, tableName, table.ToServerList})
 			}
 		}
 	}

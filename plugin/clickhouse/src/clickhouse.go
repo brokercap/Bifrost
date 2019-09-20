@@ -420,7 +420,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 func AllTypeToInt64(s interface{}) (int64,error) {
 	i64,err := strconv.ParseInt(fmt.Sprint(s),10,64)
 	if err != nil {
-		return 0,err
+		return 0,nil
 	}
 	return i64,nil
 }
@@ -428,7 +428,7 @@ func AllTypeToInt64(s interface{}) (int64,error) {
 func AllTypeToUInt64(s interface{}) (uint64,error) {
 	ui64,err := strconv.ParseUint(fmt.Sprint(s),10,64)
 	if err != nil {
-		return 0,err
+		return 0,nil
 	}
 	return ui64,nil
 }
@@ -674,9 +674,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		default:
 			s1,err := strconv.ParseFloat(fmt.Sprint(data), 64)
 			if err != nil{
-				e = err
+				v = float64(0.00)
+				//e = err
+			}else{
+				v = s1
 			}
-			v = s1
 			break
 		}
 		break
@@ -696,9 +698,10 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		default:
 			s1,err := strconv.ParseFloat(fmt.Sprint(data), 32)
 			if err != nil{
-				e = err
+				v = float32(0.00)
+			}else{
+				v = s1
 			}
-			v = s1
 			break
 		}
 		break

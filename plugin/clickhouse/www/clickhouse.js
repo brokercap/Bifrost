@@ -78,12 +78,21 @@ function getClickHouseTableCreateSQL(tableName) {
 	var index = "";
     $.each($("#TableFieldsContair .fieldsname input"),
 		function () {
-			var jsonString = $(this).attr("data");
             var data = getTableFieldType($(this).val());
             var getDDL = function (Type) {
-                if(data.COLUMN_TYPE.indexOf("unsigned") >0){
-                    Type = "U"+Type;
+                switch (Type){
+                    case "Int8":
+                    case "Int16":
+                    case "Int32":
+                    case "Int64":
+                        if(data.COLUMN_TYPE.indexOf("unsigned") >0){
+                            Type = "U"+Type;
+                        }
+                        break;
+                    default:
+                        break;
                 }
+
                 if(ddlSql == ""){
                     ddlSql = data.COLUMN_NAME+" "+Type;
                 }else{
@@ -223,17 +232,20 @@ function GetCkTableDesc(schemaName,tableName) {
 
             var fieldsMap = {};
             $.each($("#TableFieldsContair input"),function(){
-                fieldsMap[$(this).val()] = getTableFieldType($(this).val().toLowerCase());
+                fieldsMap[$(this).val().toLowerCase()] = getTableFieldType($(this).val().toLowerCase());
             });
 
             var html = "";
+            if (d.length == 0){
+                $("#CKTableFieldsTable").html(html);
+                return;
+            }
             for(i in d){
-
                 var toField = "";
                 var isPri = false;
                 if(fieldsMap.hasOwnProperty(d[i].Name.toLowerCase())){
                     toField = d[i].Name;
-                    if(fieldsMap[d[i].Name].COLUMN_KEY == "PRI"){
+                    if(fieldsMap[d[i].Name.toLowerCase()].COLUMN_KEY == "PRI"){
                         isPri = true;
                     }
                 }

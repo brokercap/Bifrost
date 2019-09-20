@@ -43,7 +43,7 @@ func AddTableToServer(db string,schemaName string,tableName string,ToServerInfo 
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+"not exsit")
 	}
-	key := schemaName + "-" + tableName
+	key := GetSchemaAndTableJoin(schemaName,tableName)
 	if _, ok := DbList[db].tableMap[key]; !ok {
 		return fmt.Errorf(key+" not exsit")
 	} else {

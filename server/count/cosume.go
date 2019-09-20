@@ -76,6 +76,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 			}
 			dbCountChanMap[db].Lock()
 			if _, ok := dbCountChanMap[db].TableMap[data.TableId]; !ok {
+				dbCountChanMap[db].Unlock()
 				continue
 			}
 			if DoMinuteSlice == true {
