@@ -1,7 +1,7 @@
 package http_manager
 
 import (
-	"github.com/jc3wish/Bifrost/manager/xgo"
+	"github.com/brokercap/Bifrost/manager/xgo"
 	"os"
 	"net/http"
 	"strings"
