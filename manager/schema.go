@@ -63,10 +63,15 @@ func GetSchemaList(db mysql.MysqlConnection) []string{
 	return databaseList
 }
 
-func GetSchemaTableList(db mysql.MysqlConnection,schema string) []string{
+type TableListStruct struct {
+	TableName string
+	TableType string
+}
 
-	tableList := make([]string,0)
-	sql := "SELECT TABLE_NAME FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'"
+func GetSchemaTableList(db mysql.MysqlConnection,schema string) []TableListStruct{
+
+	tableList := make([]TableListStruct,0)
+	sql := "SELECT TABLE_NAME,TABLE_TYPE FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA = ?"
 
 	stmt,err := db.Prepare(sql)
 	if err !=nil{
@@ -84,14 +89,16 @@ func GetSchemaTableList(db mysql.MysqlConnection,schema string) []string{
 	}
 
 	for {
-		dest := make([]driver.Value, 1, 1)
+		dest := make([]driver.Value, 2, 2)
 		err := rows.Next(dest)
 		if err != nil {
 			break
 		}
 		var tableName string
+		var tableType string
 		tableName = string(dest[0].([]byte))
-		tableList = append(tableList,tableName)
+		tableType = string(dest[1].([]byte))
+		tableList = append(tableList,TableListStruct{TableName:tableName,TableType:tableType})
 	}
 	//log.Println(tableList)
 	return tableList

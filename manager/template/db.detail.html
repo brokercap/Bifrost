@@ -33,8 +33,10 @@
                     .tableDiv{display:block; width:100%; height: 25px; position: relative}
                     .tableDiv .left{ display:block; float:left; width:79%; line-height:100%;word-wrap: break-word;  }
                     .tableDiv .right{ display:block; position: absolute; right: -10px ;top: 0px; width:78px; line-height: 25px;}
+                    .tableDiv .right1{ display:block; position: absolute; right: 48px ;top: 0px; width:78px; line-height: 25px;}
                     .tableDiv .right .button{ float: left;}
                     .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
+                    .tableDiv .right1 .button{ float: left;}
                 </style>
                 <div class="ibox-content">
                     <div class="list-group" id="TableListContair">
@@ -648,14 +650,19 @@
             var url = "/db/tablelist";
             var showTableList = function(data){
                 $("#TableListContair").html("");
-                $.each(data,function(index,v){
+                $.each(data,function(index,v) {
                     var html = "";
                     var title = "";
-                    if (v.ChannelName != ""){
-                        title = " title='Bind Channel : "+v.ChannelName+"' ";
+                    if (v.ChannelName != "") {
+                        title = " title='Bind Channel : " + v.ChannelName + "' ";
                     }
-                    html += '<a class="list-group-item"><div class="tableDiv" title="'+v.TableName+'" id="'+schema_name+'_-'+v.TableName+'">';
-                    html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
+                    html += '<a class="list-group-item"><div class="tableDiv" title="' + v.TableName + '" id="' + schema_name + '_-' + v.TableName + '">';
+                    html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + v.TableName + '\')">' + v.TableName + '</h5>';
+                    if (v.TableType == "SYSTEM VIEW") {
+                        html += '<div class="right1">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">视图</button></div>';
+                        html += '</div>';
+                    }
                     html += '<div class="right">';
                     if (v.AddStatus == false){
                         html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onClick="showAddTable(\''+v.TableName+'\')">ADD</button></div>';
