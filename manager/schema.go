@@ -66,7 +66,7 @@ func GetSchemaList(db mysql.MysqlConnection) []string{
 func GetSchemaTableList(db mysql.MysqlConnection,schema string) []string{
 
 	tableList := make([]string,0)
-	sql := "SELECT TABLE_NAME FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA = ?"
+	sql := "SELECT TABLE_NAME FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'"
 
 	stmt,err := db.Prepare(sql)
 	if err !=nil{
