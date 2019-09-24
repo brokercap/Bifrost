@@ -83,7 +83,10 @@ func addDB_Action(w http.ResponseWriter,req *http.Request){
 	}else{
 		defer server.SaveDBConfigInfo()
 		server.AddNewDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position,time.Now().Unix())
-		server.GetDBObj(dbname).AddChannel("default",1)
+		c,_:=server.GetDBObj(dbname).AddChannel("default",1)
+		if c != nil{
+			c.Start()
+		}
 		data,_:=json.Marshal(resultStruct{Status:true,Msg:"success"})
 		w.Write(data)
 	}
@@ -207,7 +210,7 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 			dbInfo.BinlogPosition = MasterBinlogInfo.Position
 			dbInfo.ServerId = GetServerId(dbconn)
 			variablesMap := GetVariables(dbconn,"binlog_format")
-			if _,ok := variablesMap["binlog_format"];!ok{
+			if _,ok := variablesMap["binlog_format"];ok{
 				dbInfo.BinlogFormat = variablesMap["binlog_format"]
 			}
 		}else{
