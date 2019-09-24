@@ -292,6 +292,8 @@ func (db *db) getRightBinlogPosition() (newPosition uint32) {
 }
 
 func (db *db) Start() (b bool) {
+	db.Lock()
+	defer db.Unlock()
 	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
 		return
@@ -340,6 +342,8 @@ func (db *db) Start() (b bool) {
 }
 
 func (db *db) Stop() bool {
+	db.Lock()
+	defer db.Unlock()
 	if db.ConnStatus == "running" {
 		db.binlogDump.Stop()
 		db.ConnStatus = "stop"
@@ -348,6 +352,8 @@ func (db *db) Stop() bool {
 }
 
 func (db *db) Close() bool {
+	db.Lock()
+	defer db.Unlock()
 	db.ConnStatus = "closing"
 	db.binlogDump.Close()
 	return true
