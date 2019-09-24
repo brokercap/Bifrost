@@ -249,30 +249,39 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 }
 
 func GetServerId(db mysql.MysqlConnection) int{
-	sql := "show variables like 'server_id'"
+	variablesMap := GetVariables(db,"server_id")
+	if _,ok := variablesMap["server_id"];!ok{
+		return 0
+	}
+	ServerId,_ := strconv.Atoi(variablesMap["server_id"])
+	return ServerId
+}
+
+func GetVariables(db mysql.MysqlConnection,variablesValue string) (data map[string]string){
+	data = make(map[string]string,0)
+	sql := "show variables like '"+variablesValue+"'"
 	stmt,err := db.Prepare(sql)
 	if err !=nil{
 		log.Println(err)
-		return 0
+		return
 	}
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
 		log.Printf("%v\n", err)
-		return 0
+		return
 	}
 	defer rows.Close()
-	var ServerId int
 	for{
 		dest := make([]driver.Value, 2, 2)
-		errs := rows.Next(dest)
-		if errs != nil{
-			return 0
+		err := rows.Next(dest)
+		if err != nil{
+			break
 		}
-		ServerIdString := string(dest[1].([]byte))
-		ServerId,_ = strconv.Atoi(ServerIdString)
-		break
+		variableName := string(dest[0].([]byte))
+		value := string(dest[1].([]byte))
+		data[variableName] = value
 	}
-	return ServerId
+	return
 }

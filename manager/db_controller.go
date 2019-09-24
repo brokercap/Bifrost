@@ -29,6 +29,7 @@ import (
 
 func init(){
 	addRoute("/db/add",addDB_Action)
+	addRoute("/db/update",updateDB_Action)
 	addRoute("/db/stop",stopDB_Action)
 	addRoute("/db/start",startDB_Action)
 	addRoute("/db/close",closeDB_Action)
@@ -88,6 +89,43 @@ func addDB_Action(w http.ResponseWriter,req *http.Request){
 	}
 }
 
+func updateDB_Action(w http.ResponseWriter,req *http.Request){
+	var result resultStruct
+	result.Status = false
+	req.ParseForm()
+	dbname := strings.Trim(req.Form.Get("dbname"),"")
+	connuri := strings.Trim(req.Form.Get("uri"),"")
+	filename := strings.Trim(req.Form.Get("filename"),"")
+	positionString := strings.Trim(req.Form.Get("position"),"")
+	serverIdString := strings.Trim(req.Form.Get("serverid"),"")
+	max_filename := strings.Trim(req.Form.Get("max_filename"),"")
+	max_position := uint32(GetFormInt(req,"max_position"))
+
+	position,err:=strconv.Atoi(positionString)
+	if err != nil {
+		result.Msg = "position is err"
+	}
+	serverId,err:=strconv.Atoi(serverIdString)
+	if err != nil {
+		result.Msg += "serverid is err"
+	}
+	if result.Msg != ""{
+		data,_:=json.Marshal(result)
+		w.Write(data)
+	}else{
+		defer server.SaveDBConfigInfo()
+		err := server.UpdateDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position,time.Now().Unix())
+		var data []byte
+		if err == nil{
+			data,_ =json.Marshal(resultStruct{Status:true,Msg:"success"})
+		}else{
+			data,_ =json.Marshal(resultStruct{Status:false,Msg:err.Error()})
+		}
+		w.Write(data)
+	}
+}
+
+
 func delDB_Action(w http.ResponseWriter,req *http.Request){
 	var result resultStruct
 	result.Status = false
@@ -144,6 +182,7 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		BinlogFile string
 		BinlogPosition int
 		ServerId int
+		BinlogFormat string
 	}
 	dbInfo := &dbInfoStruct{}
 	err := func(dbUri string) (e error){
@@ -167,6 +206,10 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 			dbInfo.BinlogFile = MasterBinlogInfo.File
 			dbInfo.BinlogPosition = MasterBinlogInfo.Position
 			dbInfo.ServerId = GetServerId(dbconn)
+			variablesMap := GetVariables(dbconn,"binlog_format")
+			if _,ok := variablesMap["binlog_format"];!ok{
+				dbInfo.BinlogFormat = variablesMap["binlog_format"]
+			}
 		}else{
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
