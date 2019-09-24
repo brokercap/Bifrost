@@ -107,7 +107,7 @@
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
                                                         </a>
                                                     </td>
-                                                    <td>{{$v.TableCount}} &nbsp;
+                                                    <td><span>{{$v.TableCount}}</span> &nbsp;
                                                         <a href="/synclist?dbname={{$v.Name}}">
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button" >同步列表</button>
                                                         </a>
@@ -426,6 +426,18 @@ function DoChangeDbStatus(obj,status){
 	var url = "/db/"+status;
 	var trObj = $(obj).parent().parent();
 	var dbname = trObj.children().eq(0).html();
+
+    if (status=="start"){
+        if( trObj.children().eq(9).find("span").text() == "0"){
+            if(!confirm(dbname +" 设置了数据同步的表个数为 0，不允许开启同步成功！是否跳转到同步配置页面？")){
+                return;
+            }else{
+                location.href = "/db/detail?dbname="+dbname;
+                return
+            }
+        }
+    }
+
 	$.post(
 		url,
 		{dbname: dbname},

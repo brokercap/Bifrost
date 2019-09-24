@@ -296,6 +296,9 @@ func (db *db) Start() (b bool) {
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
 		return
 	}
+	if len(db.tableMap) == 0{
+		return
+	}
 	switch db.ConnStatus {
 	case "close":
 		db.ConnStatus = "starting"
