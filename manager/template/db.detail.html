@@ -927,15 +927,31 @@
         function init(){
             var querySchemaName = getQueryString("schema");
             var queryTableName = getQueryString("table_name");
-            if(querySchemaName == null || queryTableName == null) {
-                return false;
+            if(querySchemaName == null) {
+                //默认选择第一个非 mysql 自带的库作为选中
+                $.each($("#DatabaseListContair a"),function(){
+                    var id = $(this).attr("id");
+                    if(querySchemaName != null){
+                        return;
+                    }
+                    // 过滤系统级别的库
+                    if(id == "Schema-information_schema" || id == "Schema-mysql" || id == "Schema-performance_schema"){
+                        return
+                    }
+                    querySchemaName = id;
+                });
+                if(querySchemaName != null){
+                    showSchemaTableList(querySchemaName);
+                }
+            }else{
+                if( $("#Schema-"+querySchemaName).length <= 0){
+                    return false;
+                }
+                showSchemaTableList("Schema-"+querySchemaName);
+                if(queryTableName!=null){
+                    GetTableToServerList(querySchemaName,queryTableName);
+                }
             }
-            if( $("#Schema-"+querySchemaName).length <= 0){
-                return false;
-            }
-            showSchemaTableList("Schema-"+querySchemaName);
-            //$("#Schema-"+querySchemaName).onclick();
-            GetTableToServerList(querySchemaName,queryTableName);
         }
 
         init();
