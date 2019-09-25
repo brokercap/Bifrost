@@ -5,6 +5,8 @@
 
 *Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
 
+##### [为什么选择用Bifrost?](https://github.com/brokercap/Bifrost/wiki/%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E9%80%89%E6%8B%A9%E7%94%A8Bifrost)
+
 ##### *实时同步数据只要在界面上用 鼠标 点 点 点 .....*
 
 
@@ -89,17 +91,7 @@ http://test.use.xbifrost.com:11522
 
 用户名 : Bifrost
 
- 密码 :  Bifrost123
-
-
-##### 在线体验Docker镜像
-
-```
-docker pull jc3wish/bifrostdemo:1.1.0-xxxx
-
-docker run -it -d -p21036:21036 -p11522:11521 jc3wish/bifrostdemo:1.1.0-xxxx
-
-```
+密码 :   Bifrost123
 
 
 ### 安装
@@ -111,16 +103,16 @@ docker run -it -d -p21036:21036 -p11522:11521 jc3wish/bifrostdemo:1.1.0-xxxx
 go get github.com/brokercap/Bifrost
 
 # windows
-./build.sh windows v1.1.x
+./build.sh windows
 
 # linux
-./build.sh linux v1.1.x
+./build.sh linux
 
 #mac
-./build.sh darwin v1.1.x
+./build.sh darwin
 
 #freebsd
-./build.sh freebsd v1.1.x
+./build.sh freebsd
 
 ```
 
@@ -217,9 +209,9 @@ tls_crt_file=./etc/server.crt
 
 ##### Docker启动
 `````shell
-docker pull jc3wish/bifrost:1.1.x
+docker pull jc3wish/bifrost
 
-docker run -d -p21036:21036 jc3wish/bifrost:1.1.x
+docker run -d -p21036:21036 jc3wish/bifrost
 `````
 
 ##### 管理
