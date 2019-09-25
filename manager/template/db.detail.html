@@ -658,7 +658,7 @@
                     }
                     html += '<a class="list-group-item"><div class="tableDiv" title="' + v.TableName + '" id="' + schema_name + '_-' + v.TableName + '">';
                     html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + v.TableName + '\')">' + v.TableName + '</h5>';
-                    if (v.TableType == "SYSTEM VIEW") {
+                    if (v.TableType.toUpperCase().indexOf("VIEW") != -1) {
                         html += '<div class="right1">';
                         html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">视图</button></div>';
                         html += '</div>';
