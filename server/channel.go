@@ -81,6 +81,9 @@ func (Channel *Channel) GetCountChan() chan *count.FlowCount {
 
 func (Channel *Channel) Start() chan mysql.EventReslut {
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
+	if Channel.Status == "running"{
+		return Channel.chanName
+	}
 	Channel.Status = "running"
 	for i := 0; i < Channel.MaxThreadNum; i++ {
 		go Channel.channelConsume()

@@ -29,7 +29,7 @@
                                         <table class="table table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th>name</th>
+                                                    <th>Name</th>
                                                     <th>ConnectUri</th>
                                                     <th>ConnStatus</th>
                                                     <th>Position</th>
@@ -43,7 +43,7 @@
                                                     <th>OP</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="dbListContair">
                                             	{{range $i, $v := .DBList}}
                                                 <tr>
                                                     <td>{{$v.Name}}</td>
@@ -78,6 +78,14 @@
                                                     <td>
                                                         <p>{{$v.BinlogDumpFileName}}</p>
                                                         <p>{{$v.BinlogDumpPosition}}</p>
+
+                                                    {{if eq $v.ConnStatus "close"}}
+                                                    {{if  eq $v.ConnErr ""}}
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
+                                                    {{else if eq $v.ConnErr "close"}}
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
+                                                    {{end}}
+                                                    {{end}}
                                                     </td>
 
                                                     <td>
@@ -99,7 +107,7 @@
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
                                                         </a>
                                                     </td>
-                                                    <td>{{$v.TableCount}} &nbsp;
+                                                    <td><span>{{$v.TableCount}}</span> &nbsp;
                                                         <a href="/synclist?dbname={{$v.Name}}">
                                                             <button data-toggle="button" class="btn-sm btn-primary" type="button" >同步列表</button>
                                                         </a>
@@ -112,8 +120,8 @@
                                                         </a>
 
                                                         <a href="/db/detail?dbname={{$v.Name}}">
-                                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
-                                                    </a>
+                                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Setting</button>
+                                                        </a>
                                                     </td>
                                                 </tr>
                                                 {{end}}
@@ -133,7 +141,7 @@
             
             <div class="ibox float-e-margins" id="addAdminContair">
             <div class="ibox-title">
-                <h5>Add new DB</h5>
+                <h5 id="opContairTitle">Add new DB</h5>
                 <div class="ibox-tools">
                 
                     <a class="collapse-link">
@@ -144,6 +152,7 @@
                     </a>
                 </div>
             </div>
+            <a name="newOrUpdateDB"></a><!--新增或者修改数据源-->
             <div class="ibox-content">
                 <div class="row row-lg">
 
@@ -222,6 +231,7 @@
 
 <script type="text/javascript">
     var dbUriChecked = false;
+    var isNewDB = true;
     $("#uri").change(
         function(){
             dbUriChecked = false;
@@ -250,6 +260,14 @@
         return MyData;
     }
 
+    function updateOpContairTitle(dbname) {
+        if( dbname == "" ) {
+            $("#opContairTitle").text("Add new DB");
+        }else{
+            $("#opContairTitle").text("Update DB : "+dbname);
+        }
+    }
+
     $("#checkUriBtn").click(
         function(){
             var uri = $("#uri").val();
@@ -271,7 +289,11 @@
             if($("#serverid").val() == ""){
                 $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
             }
-            alert(data.msg);
+            if(data.data.BinlogFormat.toLowerCase() != "row"){
+                alert("binlog format 不是 ROW 格式, 依懒 ROW 格式数据同步将会无效，如果要修改成ROW格式，请修改 my.cnf 配置 binlog_format=ROW，再重启！");
+            }else{
+                alert(data.msg);
+            }
             dbUriChecked = true;
             $("#checkUriBtn").hide();
         }
@@ -318,8 +340,23 @@ $("#addNewDBBtn").click(
 			$("#serverid").focus();
 			return
 		}
-
-		var url = "/db/add";
+        if(isNewDB){
+            var url = "/db/add";
+            //判断 dbname 是否已经存在
+            var isHad = false;
+            $.each($("#dbListContair tr"),function(){
+                if($(this).find("td").eq(0).text() == dbname){
+                    isHad = true;
+                }
+            });
+            if(isHad){
+                alert(dbname+" is repeated");
+                $("#dbname").focus();
+                return;
+            }
+        }else{
+            var url = "/db/update";
+        }
 		$.post(
 			url,
 			{ dbname: dbname,uri:uri,filename:filename,position:position,serverid:serverid,max_filename:max_filename,max_position:max_position},
@@ -332,11 +369,47 @@ $("#addNewDBBtn").click(
 					alert(data.msg);
 					return false;
 				}
-				location.reload();
+                if (!confirm("添加成功! 是否跳转到设置数据表同步到目标库？")){
+                    location.reload();
+                }else{
+                    location.href = "/db/detail?dbname="+dbname;
+                }
+                return;
 			},
 			'json'
 		);
 	}
+);
+
+$(".updateDbBtn").click(
+    function () {
+        var trObj = $(this).parent().parent().parent();
+        var dbname =  trObj.children().eq(0).text();
+        var ConnUri =  trObj.children().eq(1).attr("title");
+        //var BinlogFileName =  trObj.children().eq(3).find("p").eq(0).text();
+        //var BinlogPosition =  trObj.children().eq(3).find("p").eq(1).text();
+        var MaxBinlogFileName =  trObj.children().eq(5).find("p").eq(0).text();
+        var MaxBinlogPosition =  trObj.children().eq(5).find("p").eq(1).text();
+        var ServerId =  trObj.children().eq(6).text();
+
+        updateOpContairTitle(dbname);
+        dbUriChecked = false
+        $("#dbname").attr("disabled","disabled");
+        $("#dbname").val(dbname);
+        $("#uri").val(ConnUri);
+        //$("#filename").val(BinlogFileName);
+        //$("#position").val(BinlogPosition);
+        $("#max_filename").val(MaxBinlogFileName);
+        if(MaxBinlogPosition==""){
+            $("#max_position").val(0);
+        }else{
+            $("#max_position").val(MaxBinlogPosition);
+        }
+        $("#serverid").val(ServerId);
+
+        isNewDB = false;
+        location.hash = "#newOrUpdateDB";
+    }
 );
 
 function DoChangeDbStatus(obj,status){
@@ -353,13 +426,24 @@ function DoChangeDbStatus(obj,status){
 	var url = "/db/"+status;
 	var trObj = $(obj).parent().parent();
 	var dbname = trObj.children().eq(0).html();
-	var conn_status = trObj.children().eq(2).find(".conn_status").text();
+
+    if (status=="start"){
+        if( trObj.children().eq(9).find("span").text() == "0"){
+            if(!confirm(dbname +" 设置了数据同步的表个数为 0，不允许开启同步成功！是否跳转到同步配置页面？")){
+                return;
+            }else{
+                location.href = "/db/detail?dbname="+dbname;
+                return
+            }
+        }
+    }
+
 	$.post(
 		url,
 		{dbname: dbname},
-		function(data,status){
-			if( status != 'success' ){
-				alert("reqeust error, reqeust status : "+status);
+		function(data,requstStatus){
+			if( requstStatus != 'success' ){
+				alert("reqeust error, reqeust status : "+requstStatus);
 				return false;
 			}
 			if(!data.status){

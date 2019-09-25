@@ -25,6 +25,7 @@ import (
 	"time"
 	"strings"
 	"strconv"
+	"fmt"
 )
 
 var dbAndTableSplitChars = "_-"
@@ -77,6 +78,39 @@ func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 		return nil
 	}
 }
+
+func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64) error {
+	DbLock.Lock()
+	defer DbLock.Unlock()
+	if _, ok := DbList[Name]; !ok {
+		return fmt.Errorf(Name + " not exsit")
+	}
+	if binlogFileName == ""{
+		return fmt.Errorf("binlogFileName can't be empty")
+	}
+	if binlogPostion < 4{
+		return fmt.Errorf("binlogPostion can't < 4")
+	}
+	if serverId == 0 {
+		return fmt.Errorf("serverId can't be 0")
+	}
+	dbObj := DbList[Name]
+	dbObj.Lock()
+	defer dbObj.Unlock()
+	if dbObj.ConnStatus != "close"{
+		return fmt.Errorf("db status must be close")
+	}
+	dbObj.ConnectUri = ConnectUri
+	dbObj.binlogDumpFileName = binlogFileName
+	dbObj.binlogDumpPosition = binlogPostion
+	dbObj.serverId = serverId
+	dbObj.maxBinlogDumpFileName = maxFileName
+	dbObj.maxBinlogDumpPosition = maxPosition
+	dbObj.AddTime = UpdateTime
+	log.Println("Update db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition)
+	return nil
+}
+
 
 func GetDBObj(Name string) *db{
 	if _,ok := DbList[Name];!ok{
@@ -258,8 +292,13 @@ func (db *db) getRightBinlogPosition() (newPosition uint32) {
 }
 
 func (db *db) Start() (b bool) {
+	db.Lock()
+	defer db.Unlock()
 	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
+		return
+	}
+	if len(db.tableMap) == 0{
 		return
 	}
 	switch db.ConnStatus {
@@ -303,6 +342,8 @@ func (db *db) Start() (b bool) {
 }
 
 func (db *db) Stop() bool {
+	db.Lock()
+	defer db.Unlock()
 	if db.ConnStatus == "running" {
 		db.binlogDump.Stop()
 		db.ConnStatus = "stop"
@@ -311,6 +352,8 @@ func (db *db) Stop() bool {
 }
 
 func (db *db) Close() bool {
+	db.Lock()
+	defer db.Unlock()
 	db.ConnStatus = "closing"
 	db.binlogDump.Close()
 	return true

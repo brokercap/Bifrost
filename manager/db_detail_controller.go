@@ -65,23 +65,26 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	}
 	defer dbConn.Close()
 	type ResultType struct{
-		TableName string
+		TableName 	string
 		ChannelName string
-		AddStatus bool
+		AddStatus 	bool
+		TableType	string
 	}
 	var data []ResultType
 	data = make([]ResultType,0)
 	TableList := GetSchemaTableList(dbConn,schema_name)
-	for _,tableName := range TableList{
+	for _,tableInfo := range TableList{
+		tableName := tableInfo.TableName
+		tableType := tableInfo.TableType
 		t := DBObj.GetTable(schema_name,tableName)
 		if t == nil{
-			data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false})
+			data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
 		}else{
 			t2 := DBObj.GetChannel(t.ChannelKey)
 			if t2 == nil{
-				data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false})
+				data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
 			}else{
-				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true})
+				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true,TableType:tableType})
 			}
 		}
 	}
