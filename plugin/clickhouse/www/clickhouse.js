@@ -138,13 +138,11 @@ function getClickHouseTableCreateSQL(tableName) {
                 case "tinytext":
                 case "enum":
                 case "set":
+                case "decimal":
                     return getDDL("String");
                     break;
                 case "float":
                 case "double":
-                    return getDDL("Float64");
-                    break;
-                case "decimal":
                     return getDDL("Float64");
                     break;
                 case "time":
