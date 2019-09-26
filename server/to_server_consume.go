@@ -132,6 +132,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		CheckStatusFun()
 		select {
 		case data = <- c:
+			This.Lock()
+			This.QueueMsgCount--
+			This.Unlock()
 			noData = false
 			CheckStatusFun()
 			fordo = 0
@@ -223,6 +226,15 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			if noData == false{
 				noData = true
 				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+			}
+			if PluginBinlog == nil && errs == nil{
+				This.Lock()
+				if This.QueueMsgCount == 0{
+					This.ToServerChan = nil
+					This.Unlock()
+					runtime.Goexit()
+				}
+				This.Unlock()
 			}
 			timer.Reset(5 * time.Second)
 			SaveBinlog()

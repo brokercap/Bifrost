@@ -84,17 +84,18 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	}
 	//修改toserver 对应最后接收的 位点信息
 	ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition = pluginData.BinlogFileNum,pluginData.BinlogPosition
-	ToServerInfo.Unlock()
-	if ToServerInfo.LastBinlogKey == nil{
-		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
-	}
-	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
+	ToServerInfo.QueueMsgCount++
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
 		}
 		go ToServerInfo.consume_to_server(This.db,pluginData.SchemaName,pluginData.TableName)
 	}
+	ToServerInfo.Unlock()
+	if ToServerInfo.LastBinlogKey == nil{
+		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
+	}
+	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
 	ToServerInfo.ToServerChan.To <- pluginData
 }
 
