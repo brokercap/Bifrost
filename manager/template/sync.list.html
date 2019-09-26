@@ -100,6 +100,8 @@
                                     <p>Pisition : {{$v.BinlogPosition}}</p>
                                     <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
                                     <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
+                                    <p title="已解析出来的数据,有多少条消息堆积在队列中待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
+
                                 </td>
                                 <td>
                                     {{$v.Status}}
