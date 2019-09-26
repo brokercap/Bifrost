@@ -66,8 +66,15 @@ ___         ___                   _
 
                                        `
 func printLogo(IpAndPort string){
+	var IpAndPort2 string
+	//IpAndPort2 = strings.Replace(IpAndPort,"0.0.0.0","127.0.0.1",-1)
+	if config.GetConfigVal("Bifrostd","tls") == "true"{
+		IpAndPort2 = "https://"+IpAndPort
+	}else{
+		IpAndPort2 = "http://"+IpAndPort
+	}
 	logo = strings.Replace(logo,"{$version}",config.VERSION,-1)
-	logo = strings.Replace(logo,"{$Port}",IpAndPort,-1)
+	logo = strings.Replace(logo,"{$Port}",IpAndPort2,-1)
 	logo = strings.Replace(logo,"{$Pid}",fmt.Sprint(os.Getpid()),-1)
 	logo = strings.Replace(logo,"{$system}",fmt.Sprint(runtime.GOARCH),-1)
 	fmt.Println(logo)
@@ -114,7 +121,6 @@ func main() {
 	if IpAndPort == ""{
 		IpAndPort = "0.0.0.0:21036"
 	}
-
 
 	if *BifrostDaemon == "true"{
 		if os.Getppid() != 1{
