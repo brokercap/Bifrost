@@ -219,16 +219,16 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 		binlogDumpPosition: 	binlogPostion,
 		maxBinlogDumpFileName:	maxFileName,
 		maxBinlogDumpPosition:	maxPosition,
-		binlogDump: 			&mysql.BinlogDump{
-					DataSource:    	ConnectUri,
-					ReplicateDoDb: 	make(map[string]uint8, 0),
-					OnlyEvent:     	[]mysql.EventType{
+		binlogDump: 			mysql.NewBinlogDump(
+									ConnectUri,
+									nil,
+									[]mysql.EventType{
 										mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
 										mysql.QUERY_EVENT,
 										mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
 										mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
 									},
-				},
+									nil,nil),
 		replicateDoDb: 			make(map[string]uint8, 0),
 		serverId:      			serverId,
 		killStatus:				0,
@@ -261,7 +261,6 @@ func (db *db) SetReplicateDoDb(dbArr []string) bool {
 		for i := 0; i < len(dbArr); i++ {
 			db.replicateDoDb[dbArr[i]] = 1
 		}
-		db.binlogDump.ReplicateDoDb = db.replicateDoDb
 		return true
 	}
 	return false
@@ -273,7 +272,6 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 	if _,ok:=db.replicateDoDb[dbName];!ok{
 		db.replicateDoDb[dbName] = 1
 	}
-	db.binlogDump.SetReplicateDoDb(dbName)
 	return true
 }
 
@@ -287,8 +285,21 @@ func (db *db) getRightBinlogPosition() (newPosition uint32) {
 	if err ==nil {
 		return db.binlogDumpPosition
 	}
-	newPosition = mysql.GetNearestRightBinlog(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition,db.serverId,db.replicateDoDb)
+
+	newPosition = mysql.GetNearestRightBinlog(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition,db.serverId,db.getReplicateDoDbMap(),nil)
 	return newPosition
+}
+
+func (db *db) getReplicateDoDbMap() map[string]map[string]uint8 {
+	replicateDoDb:=make(map[string]map[string]uint8,0)
+	for k,_ := range db.tableMap{
+		schemaName,TableName := GetSchemaAndTableBySplit(k)
+		if _,ok := replicateDoDb[schemaName];!ok{
+			replicateDoDb[schemaName] = make(map[string]uint8,0)
+		}
+		replicateDoDb[schemaName][TableName] = 1
+	}
+	return replicateDoDb
 }
 
 func (db *db) Start() (b bool) {
@@ -325,7 +336,10 @@ func (db *db) Start() (b bool) {
 		}
 		reslut := make(chan error, 1)
 		db.binlogDump.CallbackFun = db.Callback
-
+		for key,_ := range db.tableMap{
+			schemaName,TableName := GetSchemaAndTableBySplit(key)
+			db.binlogDump.AddReplicateDoDb(schemaName,TableName)
+		}
 		go	db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
 
 		go db.monitorDump(reslut)
@@ -446,6 +460,9 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 		db.tableMap[key].ChannelKey = ChannelKey
 		db.Unlock()
 	}
+	if db.binlogDump != nil{
+		db.binlogDump.AddReplicateDoDb(schemaName,tableName)
+	}
 	return true
 }
 
@@ -489,6 +506,9 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 		db.Unlock()
 		count.DelTable(db.Name,key)
 		log.Println("DelTable",db.Name,schemaName,tableName)
+	}
+	if db.binlogDump != nil{
+		db.binlogDump.DelReplicateDoDb(schemaName,tableName)
 	}
 	return true
 }
