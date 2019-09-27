@@ -377,43 +377,56 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 	var lastStatus string = ""
 	timer := time.NewTimer( 3 * time.Second)
 	defer timer.Stop()
+	var i uint8 = 0
 	for {
 		select {
 		case v := <-reslut:
 			timer.Reset(3 * time.Second)
 			switch v.Error() {
 			case "stop":
+				i = 0
 				db.ConnStatus = "stop"
 				break
 			case "running":
+				i = 0
 				db.ConnStatus = "running"
 				db.ConnErr = "running"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGNORMAL,
 					DbName: db.Name,
-					Body:   " connect status:running; last status:" + lastStatus,
+					Body:   " running; last status:" + lastStatus,
 				})
 				break
-			default:
+			case "starting":
+				db.ConnStatus = "starting"
+				break
+			case "close":
+				i = 0
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGERROR,
 					DbName: db.Name,
-					Body:   " connect status:" + v.Error() + "; last status:" + lastStatus,
+					Body:   " closed",
 				})
+				return
+			default:
+				i++
+				if i % 3 == 0 || strings.Index(v.Error(),"parseEvent err") != -1{
+					i = 0
+					warning.AppendWarning(warning.WarningContent{
+						Type:   warning.WARNINGERROR,
+						DbName: db.Name,
+						Body:   " "+v.Error() + "; last status:" + lastStatus,
+					})
+				}
 				db.ConnErr = v.Error()
 				break
 			}
 
-			if v.Error() != lastStatus {
-				log.Println(db.Name+" monitor:", v.Error())
-			} else {
+			log.Println(db.Name+" monitor:", v.Error())
+			if v.Error() != "starting"{
 				lastStatus = v.Error()
 			}
 
-			if v.Error() == "close" {
-				db.ConnStatus = "close"
-				return
-			}
 			break
 		case <- timer.C:
 			timer.Reset(3 * time.Second)
