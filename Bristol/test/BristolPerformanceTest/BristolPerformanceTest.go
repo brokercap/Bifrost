@@ -146,8 +146,14 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		if EXTRA == "auto_increment" {
 			continue
 		} else {
+			var defaultVal string
 			fieldType := string(dest[2].([]byte))
-			defaultVal := string(dest[1].([]byte))
+			if dest[1] == nil{
+				defaultVal = ""
+			}else{
+				defaultVal = string(dest[1].([]byte))
+			}
+
 			COLUMN_TYPE := string(dest[4].([]byte))
 			switch fieldType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":
@@ -357,7 +363,7 @@ func main() {
 
 		BinlogInfo := DbConn.GetBinLogInfo()
 		if BinlogInfo.File == ""{
-			log.Println("not support binlod")
+			log.Println("not support binlog")
 			os.Exit(1)
 		}
 		filename = BinlogInfo.File
@@ -377,25 +383,29 @@ func main() {
 	MyServerID := uint32(MastSeverId+249)
 
 	reslut := make(chan error, 1)
-	m := make(map[string]uint8, 0)
-	m[Schema] = 1
-	BinlogDump := &mysql.BinlogDump{
-		DataSource:    DataSource,
-		CallbackFun:   callback,
-		ReplicateDoDb: m,
-		OnlyEvent:     []mysql.EventType{
-			mysql.WRITE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2,mysql.WRITE_ROWS_EVENTv0,
-			mysql.UPDATE_ROWS_EVENTv0,mysql.UPDATE_ROWS_EVENTv1,mysql.UPDATE_ROWS_EVENTv2,
-			mysql.DELETE_ROWS_EVENTv0,mysql.DELETE_ROWS_EVENTv1,mysql.DELETE_ROWS_EVENTv2,
-			},
-	}
+	BinlogDump := mysql.NewBinlogDump(
+		DataSource,
+		callback,
+		[]mysql.EventType{
+			//mysql.QUERY_EVENT,
+			mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
+			mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
+			mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
+		},
+		nil,
+		nil)
+	BinlogDump.AddReplicateDoDb(Schema,TableName)
+	log.Println("Schema:",Schema)
+	log.Println("TableName:",TableName)
 	log.Println("analysis binlog start")
 	log.Println("start binlog info:",filename,position)
 	StartTime = time.Now().Unix()
 	go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)
 	go func() {
-		v := <-reslut
-		log.Printf("monitor reslut:%s \r\n", v)
+		for {
+			v := <-reslut
+			log.Printf("monitor reslut:%s \r\n", v)
+		}
 	}()
 	for {
 		time.Sleep(10 * time.Second)
