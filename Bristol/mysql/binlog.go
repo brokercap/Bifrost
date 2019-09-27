@@ -461,11 +461,22 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			//continue
 		}
 		if pkt[0] == 0 {
-			event, _, e := parser.parseEvent(pkt[1:])
+			var event *EventReslut
+			func(){
+				defer func() {
+					if err := recover(); err != nil {
+						e = fmt.Errorf(fmt.Sprint(err))
+						log.Println(string(debug.Stack()))
+					}
+				}()
+				event, _, e = parser.parseEvent(pkt[1:])
+			}()
 			if e != nil {
-				fmt.Println("parseEvent err:",e)
+				//假如解析异常 ,就直接close掉
+				e = fmt.Errorf("parseEvent err:"+ e.Error())
+				fmt.Println(e)
 				result <- e
-				return nil, e
+				return nil,e
 			}
 			if event == nil{
 				continue
