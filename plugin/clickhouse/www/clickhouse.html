@@ -5,6 +5,16 @@
 
 </style>
 <div class="form-group" id="ClickHouse_Contair">
+    <div class="form-group">
+        <label class="col-sm-3 control-label">同步方式：</label>
+        <div class="col-sm-9">
+            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type">
+                <option value="Normal" selected="selected">标准同步</option>
+                <option value="insertAll">全部转成Insert</option>
+            </select>
+        </div>
+    </div>
+    <div>&nbsp;</div>
 
     <div class="form-group">
         <div class="col-sm-3">

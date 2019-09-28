@@ -4,6 +4,7 @@ function doGetPluginParam(){
 	var CkTable = $("#clickohuse_table").val();
     var CkSchema = $("#clickhouse_schema").val();
     var BatchSize = $("#CK_BatchSize").val();
+    var SyncType = $("#clickhouse_sync_type").val();
 
     if (CkSchema == ""){
         result.msg = "请选择 ClickHouse 数据库!";
@@ -56,6 +57,7 @@ function doGetPluginParam(){
     result.data["CkSchema"] = CkSchema;
     result.data["CkTable"]  = CkTable;
     result.data["BatchSize"] = parseInt(BatchSize);
+    result.data["SyncType"] = SyncType;
 
 	return result;
 }

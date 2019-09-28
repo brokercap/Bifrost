@@ -24,6 +24,30 @@
 
 <p>eg  : tcp://127.0.0.1:9000?Database=test&username=&compress=true</p>
 
+<p><strong>同步方式</strong></p>
+        
+<p>
+    <strong>Normal : </strong>
+</p>
+
+<p>普通同步,MySQL新增一条,删除一条, ClickHouse 里也对应删除一条</p>
+
+<p>
+    <strong>InsertAll : </strong>
+</p>
+
+<p>将DELETE ,UPDATE 转成 INSERT 语句往 ClickHouse 新增一条记录</p>
+<p>这个操作,在ClickHouse 表里新增一个叫 EventType(String) 的字段, 在配置同步的时候, EventType 字段 在input 框中 填写 {$EventType} 标签 </p>
+
+<p>这个操作是将 数据源里的操作记录,全打到 ClickHouse 里进行存储</p>
+
+<p><strong>标签</strong></p>
+
+<p>只支持 {$Timestamp} , {$EventType} 两个标签</p>
+
+<p>普通模式下同步,只支持 {$Timestamp} 标签</p>
+
+<p>{$Timestamp} 是同步的时间戳,并不是 Binlog 发生的时间</p>
 
 <p><strong>自动过滤规则</strong></p>
 
