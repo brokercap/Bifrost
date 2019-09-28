@@ -310,7 +310,7 @@ func recoveryData(data map[string]dbSaveInfo){
 		}
 		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop"{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
-				db.Start()
+				go db.Start()
 			}
 		}
 	}
