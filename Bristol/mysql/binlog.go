@@ -366,6 +366,9 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 
 
 func (parser *eventParser) KillConnect(connectionId string) (b bool){
+	if connectionId == ""{
+		return true
+	}
 	b = false
 	parser.connLock.Lock()
 	defer func() {
@@ -898,8 +901,9 @@ func (This *BinlogDump) Close() {
 	This.connLock.Lock()
 	defer This.connLock.Unlock()
 	This.parser.dumpBinLogStatus = 2
-	This.mysqlConn.Close()
-	This.mysqlConn = nil
+	if This.mysqlConn != nil{
+		This.mysqlConn.Close()
+	}
 }
 
 func (This *BinlogDump) KillDump() {
@@ -912,6 +916,7 @@ func (This *BinlogDump) KillDump() {
 	defer This.connLock.Unlock()
 	This.parser.dumpBinLogStatus = 3
 	This.parser.KillConnect(This.parser.connectionId)
-	This.mysqlConn.Close()
-	This.mysqlConn = nil
+	if This.mysqlConn != nil{
+		This.mysqlConn.Close()
+	}
 }
