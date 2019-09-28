@@ -322,7 +322,11 @@ func (db *db) getReplicateDoDbMap() map[string]map[string]uint8 {
 
 func (db *db) Start() (b bool) {
 	db.Lock()
-	defer db.Unlock()
+	if db.ConnStatus != "close" && db.ConnStatus != "stop"{
+		db.Unlock()
+		return false
+	}
+	db.Unlock()
 	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition{
 		return
@@ -395,6 +399,9 @@ func (db *db) Stop() bool {
 func (db *db) Close() bool {
 	db.Lock()
 	defer db.Unlock()
+	if db.ConnStatus != "stop" && db.ConnStatus != "starting"{
+		return true
+	}
 	db.ConnStatus = "closing"
 	db.binlogDump.Close()
 	return true
