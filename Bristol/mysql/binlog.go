@@ -773,6 +773,13 @@ func (This *BinlogDump) checksum_enabled() {
 }
 
 func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
+	defer func() {
+		if err := recover();err!=nil{
+			log.Println("startConnAndDumpBinlog err:",err)
+			result <- fmt.Errorf(fmt.Sprint(err))
+			log.Println(string(debug.Stack()))
+		}
+	}()
 	dbopen := &mysqlDriver{}
 	conn, err := dbopen.Open(This.DataSource)
 	if err != nil {
