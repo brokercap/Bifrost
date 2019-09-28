@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"database/sql/driver"
 	"fmt"
+	"log"
 )
 
 func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
@@ -31,8 +32,8 @@ func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
 		Event_type :=string(dest[2].([]byte))
 
 		switch Event_type {
-		case "Update_rows","Delete_rows","Insert_rows","Update_rows_v1","Delete_rows_v1","Insert_rows_v1","Update_rows_v0","Delete_rows_v0","Insert_rows_v0","Update_rows_v2","Delete_rows_v2","Insert_rows_v2":
-			returnErr = fmt.Errorf("binlog position cant'be "+Event_type)
+		case "Update_rows","Delete_rows","Insert_rows","Write_rows","Update_rows_v1","Delete_rows_v1","Insert_rows_v1","Write_rows_v1","Update_rows_v0","Delete_rows_v0","Insert_rows_v0","Write_rows_v0","Update_rows_v2","Delete_rows_v2","Insert_rows_v2","Write_rows_v2":
+			returnErr = fmt.Errorf("binlog position can't be "+Event_type)
 			break
 		default:
 			break
@@ -47,12 +48,13 @@ func GetNearestRightBinlog(dbUri string,filename string, position uint32,serverI
 	var nearestPosition uint32 = 4
 	var Callback = func (data *EventReslut) {
 		nearestPosition = data.Header.LogPos
+		log.Println(data.Header.EventType," postion:",data.Header.LogPos)
 	}
 	binlogDump := NewBinlogDump(
 		dbUri,
 		Callback,
 		[]EventType{
-			QUERY_EVENT,TABLE_MAP_EVENT,
+			QUERY_EVENT,
 		},
 		ReplicateDoDb,
 		ReplicateIgnoreDb)
