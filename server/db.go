@@ -79,7 +79,7 @@ func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 }
 
-func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64) error {
+func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64,updateToServer int8) error {
 	DbLock.Lock()
 	defer DbLock.Unlock()
 	if _, ok := DbList[Name]; !ok {
@@ -93,6 +93,10 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 	if serverId == 0 {
 		return fmt.Errorf("serverId can't be 0")
+	}
+	index := strings.IndexAny(binlogFileName,".")
+	if index == -1{
+		return fmt.Errorf("binlogFileName:",binlogFileName," error")
 	}
 	dbObj := DbList[Name]
 	dbObj.Lock()
@@ -108,6 +112,16 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	dbObj.maxBinlogDumpPosition = maxPosition
 	dbObj.AddTime = UpdateTime
 	log.Println("Update db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition)
+	if updateToServer == 0{
+		return nil
+	}
+	BinlogFileNum,_ := strconv.Atoi(binlogFileName[index+1:])
+	for key,t := range dbObj.tableMap{
+		for _,toServer:=range t.ToServerList{
+			log.Println("UpdateToServerBinlogPosition:",key," QueueMsgCount:",toServer.QueueMsgCount," old:",toServer.BinlogFileNum,toServer.BinlogPosition," new:",BinlogFileNum,binlogPostion)
+			toServer.UpdateBinlogPosition(BinlogFileNum,binlogPostion)
+		}
+	}
 	return nil
 }
 
@@ -278,6 +292,7 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 func (db *db) getRightBinlogPosition() (newPosition uint32) {
 	defer func() {
 		if err := recover();err != nil{
+			log.Println(db.Name," getRightBinlogPosition recover err:",err)
 			newPosition = 0
 		}
 	}()
@@ -285,7 +300,10 @@ func (db *db) getRightBinlogPosition() (newPosition uint32) {
 	if err ==nil {
 		return db.binlogDumpPosition
 	}
-
+	log.Println(db.Name," getRightBinlogPosition err:",err)
+	if strings.Index(err.Error(),"connect: operation timed out") != -1 {
+		return newPosition
+	}
 	newPosition = mysql.GetNearestRightBinlog(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition,db.serverId,db.getReplicateDoDbMap(),nil)
 	return newPosition
 }
@@ -316,12 +334,21 @@ func (db *db) Start() (b bool) {
 	case "close":
 		db.ConnStatus = "starting"
 		var newPosition uint32 = 0
+		log.Println(db.Name," starting "," getRightBinlogPosition")
 		for i:=0;i<3;i++{
+			if db.ConnStatus == "closing"{
+				break
+			}
 			newPosition = db.getRightBinlogPosition()
 			if newPosition > 0{
 				break
 			}
 			time.Sleep(time.Duration(1) * time.Second)
+		}
+		if db.ConnStatus == "closing"{
+			db.ConnStatus = "close"
+			db.ConnErr = "close"
+			break
 		}
 		if newPosition == 0{
 			/*
@@ -401,7 +428,9 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 				db.ConnStatus = "starting"
 				break
 			case "close":
-				i = 0
+				log.Println(db.Name+" monitor:", v.Error())
+				db.ConnStatus = "close"
+				db.ConnErr = "close"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGERROR,
 					DbName: db.Name,

@@ -104,6 +104,15 @@ func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID in
 	return true
 }
 
+func (This *ToServer) UpdateBinlogPosition(BinlogFileNum int,BinlogPosition uint32) bool {
+	This.Lock()
+	This.BinlogFileNum = BinlogFileNum
+	This.BinlogPosition = BinlogPosition
+	This.Unlock()
+	return true
+}
+
+
 func (This *ToServer) AddWaitError(WaitErr error,WaitData interface{}) bool {
 	This.Lock()
 	This.Error = WaitErr.Error()

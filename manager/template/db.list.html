@@ -214,6 +214,16 @@
                             </div>
                         </div>
 
+                        <div class="form-group" style="display: none" id="update_toserver_contair">
+                            <label class="col-sm-3 control-label">同时更新ToServer：</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" name="update_toserver" id="update_toserver">
+                                    <option value="0">False</option>
+                                    <option value="1">True</option>
+                                </select><span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="col-sm-3 control-label">&nbsp;</label>
                             <div class="col-sm-9">
@@ -334,6 +344,7 @@ $("#addNewDBBtn").click(
 		}
         var max_filename = $("#max_filename").val();
         var max_position = $("#max_position").val();
+        var update_toserver = 0;
 
 		if(isNaN(serverid) || serverid<1 ){
 			alert("serverId must be int");
@@ -356,10 +367,11 @@ $("#addNewDBBtn").click(
             }
         }else{
             var url = "/db/update";
+            var update_toserver = $("#update_toserver").val();
         }
 		$.post(
 			url,
-			{ dbname: dbname,uri:uri,filename:filename,position:position,serverid:serverid,max_filename:max_filename,max_position:max_position},
+			{ dbname: dbname,uri:uri,filename:filename,position:position,serverid:serverid,max_filename:max_filename,max_position:max_position,update_toserver:update_toserver},
 			function(data,status){
 				if( status != 'success' ){
 					alert("reqeust error, reqeust status : "+status);
@@ -409,6 +421,7 @@ $(".updateDbBtn").click(
 
         isNewDB = false;
         location.hash = "#newOrUpdateDB";
+        $("#update_toserver_contair").show();
     }
 );
 
@@ -438,26 +451,33 @@ function DoChangeDbStatus(obj,status){
         }
     }
 
-	$.post(
-		url,
-		{dbname: dbname},
-		function(data,requstStatus){
-			if( requstStatus != 'success' ){
-				alert("reqeust error, reqeust status : "+requstStatus);
-				return false;
-			}
-			if(!data.status){
-				alert(data.msg);
-				return false;
-			}
-			if (status == "del"){
-				trObj.remove();
-			}else{
+    $.ajax({
+        url:url,  //请求的URL
+        timeout : 5000, //超时时间设置，单位毫秒
+        type : 'post',  //请求方式，get或post
+        data :{dbname: dbname},  //请求所传参数，json格式
+        dataType:'json',//返回的数据格式
+        success:function(data){ //请求成功的回调函数
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            if (status == "del"){
+                trObj.remove();
+            }else{
                 location.reload();
-			}
-		},
-		'json'
-	);
+            }
+        },
+        complete : function(XMLHttpRequest,status){ //请求完成后最终执行参数
+            if(status=='timeout'){//超时,status还有success,error等值的情况
+                window.location.reload();
+            }
+            if( requstStatus != 'success' ){
+                alert("reqeust error, reqeust status : "+requstStatus);
+                return false;
+            }
+        }
+    });
 }
 
 

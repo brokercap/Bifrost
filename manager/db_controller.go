@@ -103,6 +103,7 @@ func updateDB_Action(w http.ResponseWriter,req *http.Request){
 	serverIdString := strings.Trim(req.Form.Get("serverid"),"")
 	max_filename := strings.Trim(req.Form.Get("max_filename"),"")
 	max_position := uint32(GetFormInt(req,"max_position"))
+	updateToServer := int8(GetFormInt(req,"update_toserver"))
 
 	position,err:=strconv.Atoi(positionString)
 	if err != nil {
@@ -117,7 +118,7 @@ func updateDB_Action(w http.ResponseWriter,req *http.Request){
 		w.Write(data)
 	}else{
 		defer server.SaveDBConfigInfo()
-		err := server.UpdateDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position,time.Now().Unix())
+		err := server.UpdateDB(dbname,connuri,filename,uint32(position),uint32(serverId),max_filename,max_position,time.Now().Unix(),updateToServer)
 		var data []byte
 		if err == nil{
 			data,_ =json.Marshal(resultStruct{Status:true,Msg:"success"})
