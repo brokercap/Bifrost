@@ -147,6 +147,9 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 		case "Timestamp":
 			val = strings.Replace(val, "{$Timestamp}", fmt.Sprint(time.Now().Unix()), -1)
 			break
+		case "BinlogTimestamp":
+			val = strings.Replace(val, "{$BinlogTimestamp}", fmt.Sprint(data.Timestamp), -1)
+			break
 		default:
 			if rowIndex <= n && rowIndex >= 0 {
 				val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)
