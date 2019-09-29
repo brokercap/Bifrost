@@ -185,19 +185,14 @@ func (This *Conn) getCktFieldType() {
 }
 
 func (This *Conn) Connect() bool {
-	This.conn = NewClickHouseDBConn(This.uri)
+	if This.conn == nil {
+		This.conn = NewClickHouseDBConn(This.uri)
+	}
 	return true
 }
 
 func (This *Conn) ReConnect() bool {
-	if This.conn != nil{
-		defer func() {
-			if err := recover();err !=nil{
-				This.conn.err = fmt.Errorf(fmt.Sprint(err))
-			}
-		}()
-		This.conn.Close()
-	}
+	This.Close()
 	This.Connect()
 	if This.conn.err == nil{
 		This.getCktFieldType()
@@ -210,6 +205,18 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
+	if This.conn != nil{
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					return
+				}
+			}()
+			This.conn.Close()
+		}()
+	}
+	This.conn = nil
+	This.status = "close"
 	return true
 }
 

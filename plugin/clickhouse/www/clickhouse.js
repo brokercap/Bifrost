@@ -232,7 +232,7 @@ function GetCkTableDesc(schemaName,tableName) {
 
             var fieldsMap = {};
             $.each($("#TableFieldsContair input"),function(){
-                fieldsMap[$(this).val().toLowerCase()] = getTableFieldType($(this).val().toLowerCase());
+                fieldsMap[$(this).val().toLowerCase()] = getTableFieldType($(this).val());
             });
 
             var html = "";
@@ -240,13 +240,32 @@ function GetCkTableDesc(schemaName,tableName) {
                 $("#CKTableFieldsTable").html(html);
                 return;
             }
-            for(i in d){
+            for(var i in d){
                 var toField = "";
                 var isPri = false;
-                if(fieldsMap.hasOwnProperty(d[i].Name.toLowerCase())){
-                    toField = d[i].Name;
-                    if(fieldsMap[d[i].Name.toLowerCase()].COLUMN_KEY == "PRI"){
+                var tmpKey = d[i].Name.toLowerCase();
+                if(fieldsMap.hasOwnProperty(tmpKey)){
+                    toField = fieldsMap[tmpKey].COLUMN_NAME;
+                    if(fieldsMap[tmpKey].COLUMN_KEY == "PRI"){
                         isPri = true;
+                    }
+                }
+
+                if(toField == ""){
+                    switch (tmpKey){
+                        case "eventtype":
+                        case "event_type":
+                            toField = "{$EventType}";
+                            break;
+                        case "timestamp":
+                            toField = "{$Timestamp}";
+                            break;
+                        case "binlogtimestamp":
+                        case "binlog_timestamp":
+                            toField = "{$BinlogTimestamp}";
+                            break;
+                        default:
+                            break;
                     }
                 }
 
@@ -264,6 +283,15 @@ function GetCkTableDesc(schemaName,tableName) {
             $("#CKTableFieldsTable").html(html);
         }, 'json');
 }
+
+function ClickHouse_Sync_Type_Change() {
+    if( $("#clickhouse_sync_type").val()  == "Normal" ){
+        $("#CK_BatchSize").val(1000);
+    }else{
+        $("#CK_BatchSize").val(5000);
+    }
+}
+
 
 GetCkSchameList();
 

@@ -8,7 +8,7 @@
     <div class="form-group">
         <label class="col-sm-3 control-label">同步方式：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type">
+            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type" onchange="ClickHouse_Sync_Type_Change();">
                 <option value="Normal" selected="selected">标准同步</option>
                 <option value="insertAll">全部转成Insert</option>
             </select>
@@ -58,7 +58,7 @@
     <div class="form-group">
         <label class="col-sm-3 control-label">BatchSize：</label>
         <div class="col-sm-9">
-            <input type="text" name="BatchSize" id="CK_BatchSize" value="500" class="form-control" placeholder="">
+            <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control" placeholder="">
             <span class="help-block m-b-none">* 多少条刷一次数据</span>
         </div>
     </div>
