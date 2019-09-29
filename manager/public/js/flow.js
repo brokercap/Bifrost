@@ -77,7 +77,63 @@ var FlowClass  = {
         //return y + '-' + this.add0(m) + '-' + this.add0(d) + ' ' + this.add0(h) + ':' + this.add0(mm) + ':' + this.add0(s);
     },
 
+    init_data: function (ByteLable,CountLable) {
+        return {
+            color:["#1ab394","#5CACEE"],
+            tooltip: {
+                trigger: "axis"
+            },
+            legend: {
+                data: [CountLable,ByteLable]
+            },
+            calculable: !0,
+            xAxis: [{
+                type: "category",
+                boundaryGap: !1,
+                data: []
+            }],
+            yAxis: [{
+                type: "value"
+            }],
+            series: [
+                {
+                    name: CountLable,
+                    type: "line",
+                    data: [],
+                    markPoint: {
+                        data: [{
+                            type: "max",
+                            name: "最大值"
+                        },
+                            {
+                                type: "min",
+                                name: "最小值"
+                            }]
+                    }
+
+                },
+                {
+                name: ByteLable,
+                type: "line",
+                data: [],
+                markPoint: {
+                    data: [{
+                        type: "max",
+                        name: "最大值"
+                    },
+                        {
+                            type: "min",
+                            name: "最小值"
+                        }]
+                }
+            }]
+        };
+    },
+
     rewrite_data: function (d) {
+        if ($("#" + this.CanvasId).length <= 0) {
+            return
+        }
         if (d.length == 0) {
             this.Data = [];
             return false
@@ -107,41 +163,20 @@ var FlowClass  = {
             ByteSizeDivideNumber = 1024 * 1024 * 1024;
         }
 
-        var ChartData = {};
-        ChartData.options = {};
-        ChartData.labels = [];
-        ChartData.datasets = [];
+        var ByteLable = "ByteSize(" + ByteSizeType + ")";
+        var CountLable = "Count(" + CountType + ")";
+        var e = echarts.init(document.getElementById(this.CanvasId));
+        var a = this.init_data(ByteLable,CountLable);
 
-        var ByteSizeData = {};
-        ByteSizeData.data = [];
-        ByteSizeData.fillColor = "#1ab394";
-        ByteSizeData.strokeColor = "#1ab394";
-        ByteSizeData.highlightFill = "#1ab394";
-        ByteSizeData.highlightStroke = "#1ab394";
-
-        ByteSizeData.borderColor = "#1ab394";
-        ByteSizeData.label = "ByteSize(" + ByteSizeType + ")";
-
-        var CountData = {};
-        CountData.data = [];
-        CountData.fillColor = "#5CACEE";
-        CountData.strokeColor = "#5CACEE";
-        CountData.highlightFill = "#5CACEE";
-        CountData.highlightStroke = "#5CACEE";
-
-        CountData.borderColor = "#5CACEE";
-        CountData.label = "Count(" + CountType + ")";
-        for (i in d) {
-            ChartData.labels.push(d[i].time);
-            ByteSizeData.data.push((d[i].ByteSize / ByteSizeDivideNumber).toFixed(2));
-            CountData.data.push(d[i].Count/CountDivideNumber);
+        for( var i in d){
+            a.xAxis[0].data.push(d[i].time);
+            a.series[0].data.push(d[i].Count/CountDivideNumber);
+            a.series[1].data.push((d[i].ByteSize / ByteSizeDivideNumber).toFixed(2));
         }
-        ChartData.datasets.push(ByteSizeData);
-        ChartData.datasets.push(CountData);
-        if ($("#" + this.CanvasId).length > 0) {
-            var ctx = document.getElementById(this.CanvasId).getContext("2d");
-            var chart = new Chart(ctx, {type: this.ChartType, data: ChartData});
-        }
+        e.setOption(a);
+        $(window).resize(e.resize);
+        d = null;
+
     },
 
     incrementData: function (d) {
