@@ -118,7 +118,18 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
-	This.conn.Close()
+	if This.conn != nil {
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					return
+				}
+			}()
+			This.conn.Close()
+		}()
+	}
+	This.conn = nil
+	This.status = "close"
 	return true
 }
 
