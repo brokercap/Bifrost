@@ -896,10 +896,11 @@
 
         function DealWaitErr(obj,ToServerID){
             var thisButton = $(obj);
-            var index = $(obj).parent().parent().parent("tr").children().eq(0).html();
+            var index0 = $(obj).parent().parent().parent("tr").children().eq(0).html();
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
+            var index = index0.split("/")[0];
             var url = "/table/toserver/deal";
             $.post(
                     url,
