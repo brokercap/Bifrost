@@ -264,6 +264,12 @@ function GetCkTableDesc(schemaName,tableName) {
                         case "binlog_timestamp":
                             toField = "{$BinlogTimestamp}";
                             break;
+                        case "binlogfilenum":
+                            toField = "{$BinlogFileNum}";
+                            break;
+                        case "binlogposition":
+                            toField = "{$BinlogPosition}";
+                            break;
                         default:
                             break;
                     }

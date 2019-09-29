@@ -43,13 +43,17 @@
 
 <p><strong>标签</strong></p>
 
-<p>只支持 {$Timestamp} , {$EventType} 两个标签</p>
+<p>{$Timestamp} : 同步的时间戳,并不是 Binlog 发生的时间</p>
+<p>{$EventType} : 事件类型,insert delete update 三个字符串</p>
 
-<p>普通模式下同步,只支持 {$Timestamp} 标签</p>
+<p>{$BinlogTimestamp} : Binlog记录的时间戳</p>
+<p>{$BinlogFileNum} : Binlog文件编号,并不是 整个Binlog文件名,比如 binlog 文件是 mysql-bin.000001 那这个 BinlogFileNum 的值 是1</p>
+<p>{$BinlogPosition} : Binlog position 位点</p>
 
-<p>{$Timestamp} 是同步的时间戳,并不是 Binlog 发生的时间</p>
+<p>备注: 标准模式下同步,只支持 {$Timestamp} 标签,其他标签暂不支持</p>
 
-<p><strong>自动过滤规则</strong></p>
+
+<p><strong>自动过滤规则(标准同步方式)</strong></p>
 
 <p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作</p>
 

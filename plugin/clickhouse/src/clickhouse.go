@@ -293,13 +293,27 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key s
 	if _,ok := data.Rows[index][key];ok {
 		return data.Rows[index][key]
 	}
-	if key == "{$EventType}"{
+	switch key {
+	case "{$EventType}":
 		return data.EventType
-	}
-	if key == "{$Timestamp}"{
+		break
+	case "{$Timestamp}":
 		return time.Now().Unix()
+		break
+	case "{$BinlogTimestamp}":
+		return data.Timestamp
+		break
+	case "{$BinlogFileNum}":
+		return data.BinlogFileNum
+		break
+	case "{$BinlogPosition}":
+		return data.BinlogPosition
+		break
+	default:
+		return  pluginDriver.TransfeResult(key,data,index)
+		break
 	}
-	return  pluginDriver.TransfeResult(key,data,index)
+	return ""
 }
 
 func (This *Conn) getMySQLData2(data map[string]interface{},key string) interface{} {
