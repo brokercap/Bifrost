@@ -46,7 +46,11 @@
                     <p><strong>{$SchemaName} : </strong>  数据库名字</p>
                     <p><strong>{$TableName} : </strong>  表的名字</p>
                     <p><strong>{$EventType} : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete); SQL(sql)</p>
+                    <p><strong>{$Timestamp} : </strong>  当前Bifrost同机器的时间戳</p>
+                    <p><strong>{$BinlogTimestamp} : </strong>  Binlog 发生的时间戳</p>
                     <p><strong>{$字段名} : </strong>  表的字段数据</p>
+                    <p>&nbsp;</p>
+                    <p>备注： 标签支持程度，取决于各个插件的实现,请参考各插件的文档</p>
                     <p>&nbsp;</p>
                     <h2><strong>其他配置</strong></h2>
                     <p>&nbsp;</p>
@@ -70,11 +74,17 @@
                     <p>默认为全选, 选中的字段才会进行解析推送</p>
 
                     <p>&nbsp;</p>
+
+                    <h3><strong>位点修改</strong></h3>
+                    <p>只有数据源是 close 状态，位点修改按钮才会显示出来</p>
+                    <p>修改位点的时候，数据源必须是可连接的</p>
+                    <p>修改位点的时候走，并不会验证位点正确性，会在 启动 数据源的时进行验证，假如位点有异常，启动 数据源的时候，会找到一个最近的正确位点进行开始</p>
+                    <p>同时更新ToServer 选项 （ 默认为False ）</p>
+                    <p>True: 将会所有设置的表同步保存的位点强制更新,这个操作不可逆. 假如是更换边接的机器，或者位点有问题的情况下，建议选择为 True，因为表同步的时候，会判断当前数据的位点，是不是小于当前表保存的位点，小于则错过这条数据</p>
+                    <p>False: 只修改数据当前的连接位点，假如只是修改了，没有点击 开启 数据源，保存开启的过程有问题。又再一次重启 Bifrost 这个位点修改无效</p>
+                    <p>&nbsp;</p>
+
                     <h2><strong>不支持说明</strong></h2>
-
-                    <p>全量和增量数据同步，对 null 的处理不一样，增量是null，全量 null 当作 "" 处理</p>
-
-                    <p>全量 数据同步的时候，不支持带 - 符号的数据库名和表名，例如： *my-db*</p>
 
                     <p>支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka</p>
 
