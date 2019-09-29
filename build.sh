@@ -207,6 +207,9 @@ build()
     echo "copy ./etc ==> " ./$tagDir/etc
     cp -r ./etc ./$tagDir/
 
+    #拷贝./plugin/import_toserver.go 中加载了的默认插件到编译之后的tags目录下
+    import_toserver_content=`cat ./plugin/import_toserver.go`
+    echo $import_toserver_content
     for element in `ls ./plugin`
     do
         localPluginDir="./plugin/"$element
@@ -214,7 +217,11 @@ build()
         then
             if [ -d $localPluginDir/www ]
             then
-                pluginName0=$(dirname ${localPluginDir}/www)
+                #只有在./plugin/import_toserver.go 加载了插件,才可以被拷贝 www 等信息到编译目录
+                if [[ ! "${import_toserver_content}" =~ "${element}" ]];then
+                    echo  "${element}"
+                    continue
+                fi
                 config_file=$localPluginDir/www/config.json
                 if [ -f "$config_file" ]
                 then
@@ -223,13 +230,15 @@ build()
                     pluginNameStringL=${#pluginNameString}
                     pluginName=${pluginNameString:1:pluginNameStringL-2}
                 else
-                    pluginName=$pluginName0
+                    pluginName=$element
                 fi
+
                 mkdir -p $tagDir/plugin/$pluginName
                 echo $tagDir/plugin/$pluginName
 
                 echo "copy "  $localPluginDir/www " ==> " $tagDir/plugin/$pluginName/
                 cp -rf $localPluginDir/www $tagDir/plugin/$pluginName/
+
             fi
         fi
     done
@@ -255,7 +264,6 @@ build()
         then
             if [ -d $localPluginDir/www ]
             then
-                pluginName0=$(dirname ${localPluginDir}/www)
                 config_file=$localPluginDir/www/config.json
                 if [ -f "$config_file" ]
                 then
@@ -264,7 +272,7 @@ build()
                     pluginNameStringL=${#pluginNameString}
                     pluginName=${pluginNameString:1:pluginNameStringL-2}
                 else
-                    pluginName=$pluginName0
+                    pluginName=$element
                 fi
                 mkdir -p $tagDir/plugin/$pluginName
                 echo $tagDir/plugin/$pluginName
