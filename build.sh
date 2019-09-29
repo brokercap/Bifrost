@@ -207,6 +207,32 @@ build()
     echo "copy ./etc ==> " ./$tagDir/etc
     cp -r ./etc ./$tagDir/
 
+    for element in `ls ./plugin`
+    do
+        localPluginDir="./plugin/"$element
+        if [ -d $dir_or_file ]
+        then
+            if [ -d $localPluginDir/www ]
+            then
+                pluginName0=$(dirname ${localPluginDir}/www)
+                config_file=$localPluginDir/www/config.json
+                if [ -f "$config_file" ]
+                then
+                    json=`cat $config_file`
+                    pluginNameString=( $( getJsonValuesByAwk "$json" "name" "$pluginName0" ) )
+                    pluginNameStringL=${#pluginNameString}
+                    pluginName=${pluginNameString:1:pluginNameStringL-2}
+                else
+                    pluginName=$pluginName0
+                fi
+                mkdir -p $tagDir/plugin/$pluginName
+                echo $tagDir/plugin/$pluginName
+
+                echo "copy "  $localPluginDir/www " ==> " $tagDir/plugin/$pluginName/
+                cp -rf $localPluginDir/www $tagDir/plugin/$pluginName/
+            fi
+        fi
+    done
 
     for element in ${PLUGINS[@]}
     do
@@ -231,7 +257,7 @@ build()
             then
                 pluginName0=$(dirname ${localPluginDir}/www)
                 config_file=$localPluginDir/www/config.json
-                if ! test -z "$config_file"
+                if [ -f "$config_file" ]
                 then
                     json=`cat $config_file`
                     pluginNameString=( $( getJsonValuesByAwk "$json" "name" "$pluginName0" ) )
