@@ -150,6 +150,12 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 		case "BinlogTimestamp":
 			val = strings.Replace(val, "{$BinlogTimestamp}", fmt.Sprint(data.Timestamp), -1)
 			break
+		case "BinlogFileNum":
+			val = strings.Replace(val, "{$BinlogFileNum}", fmt.Sprint(data.BinlogFileNum), -1)
+			break
+		case "BinlogPosition":
+			val = strings.Replace(val, "{$BinlogPosition}", fmt.Sprint(data.BinlogPosition), -1)
+			break
 		default:
 			if rowIndex <= n && rowIndex >= 0 {
 				val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)

@@ -48,6 +48,8 @@
                     <p><strong>{$EventType} : </strong>  当前记录的增删改事件,新增(insert); 修改(update) ; 删除(delete); SQL(sql)</p>
                     <p><strong>{$Timestamp} : </strong>  当前Bifrost同机器的时间戳</p>
                     <p><strong>{$BinlogTimestamp} : </strong>  Binlog 发生的时间戳</p>
+                    <p><strong>{$BinlogFileNum} : </strong> Binlog文件编号,并不是 整个Binlog文件名,比如 binlog 文件是 mysql-bin.000001 那这个 BinlogFileNum 的值 是1</p>
+                    <p><strong>{$BinlogPosition} : </strong> Binlog position 位点</p>
                     <p><strong>{$字段名} : </strong>  表的字段数据</p>
                     <p>&nbsp;</p>
                     <p>备注： 标签支持程度，取决于各个插件的实现,请参考各插件的文档</p>
