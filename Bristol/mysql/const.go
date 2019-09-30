@@ -180,3 +180,12 @@ const (
 	LOG_EVENT_NO_FILTER_F
 	LOG_EVENT_MTS_ISOLATE_F
 )
+
+type BinlogDumpStatus int8
+
+const (
+	BINLOG_DUMP_CLOSE  BinlogDumpStatus = 0
+	BINLOG_DUMP_STARTING BinlogDumpStatus = 1
+	BINLOG_DUMP_STOP BinlogDumpStatus = 2
+	BINLOG_DUMP_RUNNING BinlogDumpStatus = 3
+)

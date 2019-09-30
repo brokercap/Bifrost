@@ -103,14 +103,16 @@
                         <div class="col-md-7">
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">ToServerKey：</label>
-                                <div class="col-sm-9">
+                                <div class="col-sm-9" style="position: relative">
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
                                     {{range $k,$v := .ToServerList}}
                                         <option value="{{$k}}" pluginName="{{$v.PluginName}}" pluginVersion="{{$v.PluginVersion}}">{{$v.PluginName}} -- {{$k}}</option>
                                     {{end}}
                                     </select>
                                     <span class="help-block m-b-none"></span>
-
+                                    <div style="position: absolute; top: 0px; right: -30px;">
+                                        <a href="#" target="_blank" id="addToServerKeyDoc"><button class="btn-sm btn-primary" type="button" style="padding: 5px">DOC</button></a>
+                                    </div>
                                 </div>
                             </div>
 
@@ -559,6 +561,9 @@
                             others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
                             others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+                            if ("QueueMsgCount" in v) {
+                                others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
+                            }
                             e.push({
                                 sliceid:index+"/"+v.ToServerID,
                                 PluginName:v.PluginName,
@@ -719,6 +724,7 @@
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
                 $.getScript("/plugin/"+pluginName+"/www/"+pluginName+".js?v="+pluginVersion,function(){});
+                $("#addToServerKeyDoc").attr("href","/docs?plugin="+pluginName+"#pluginDocName");
             }
             //type change, rule change
             $("#addToServerKey").change(function(){
@@ -893,10 +899,11 @@
 
         function DealWaitErr(obj,ToServerID){
             var thisButton = $(obj);
-            var index = $(obj).parent().parent().parent("tr").children().eq(0).html();
+            var index0 = $(obj).parent().parent().parent("tr").children().eq(0).html();
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
+            var index = index0.split("/")[0];
             var url = "/table/toserver/deal";
             $.post(
                     url,

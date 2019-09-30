@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"encoding/json"
 	"strings"
+	"runtime/debug"
+	"log"
 )
 
 const VERSION  = "v1.1.0"
@@ -127,7 +129,7 @@ func (This *Conn) ReConnect() bool {
 			This.err = fmt.Errorf(fmt.Sprint(err))
 		}
 	}()
-	This.conn.Close()
+	This.Close()
 	This.Connect()
 	return  true
 }
@@ -137,7 +139,18 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
-	This.conn.Close()
+	func() {
+		defer func() {
+			if err :=recover(); err != nil{
+				return
+			}
+		}()
+		if This.conn != nil{
+			This.conn.Close()
+		}
+	}()
+	This.conn = nil
+	This.err = fmt.Errorf("close")
 	return true
 }
 
@@ -161,7 +174,7 @@ func (This *Conn) createIndex(c *mgo.Collection) {
 	}
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType) (postion *pluginDriver.PluginBinlog,e error) {
 	n := len(data.Rows)-1
 	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, n)
 	TableName := pluginDriver.TransfeResult(This.p.TableName, data, n)
@@ -171,6 +184,15 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 	if _,ok := data.Rows[n][This.p.PrimaryKey];!ok{
 		return nil,fmt.Errorf("PrimaryKey "+ This.p.PrimaryKey +" is not exsit")
 	}
+	defer func() {
+		if err := recover();err != nil{
+			postion = nil
+			e = fmt.Errorf(string(debug.Stack()))
+			This.err = e
+			log.Println(e)
+			return
+		}
+	}()
 	c := This.conn.DB(SchemaName).C(TableName)
 	This.createIndex(c)
 	k := make(bson.M,1)
@@ -192,10 +214,19 @@ func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 	return This.Insert(data)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType) (postion *pluginDriver.PluginBinlog,e error) {
 	if This.p.PrimaryKey == ""{
 		return nil,fmt.Errorf("PrimaryKey is empty")
 	}
+	defer func() {
+		if err := recover();err != nil{
+			postion = nil
+			e = fmt.Errorf(string(debug.Stack()))
+			This.err = e
+			log.Println(string(debug.Stack()))
+			return
+		}
+	}()
 	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, 0)
 	TableName := pluginDriver.TransfeResult(This.p.TableName, data, 0)
 	c := This.conn.DB(SchemaName).C(TableName)

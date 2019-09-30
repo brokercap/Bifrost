@@ -104,7 +104,7 @@ func recoveryData(data map[string]dbSaveInfo){
 		db.SetReplicateDoDb(m)
 		for oldChannelId,cInfo := range dbInfo.ChannelMap{
 			ch,ChannelID := db.AddChannel(cInfo.Name,cInfo.MaxThreadNum)
-			ch.Status = cInfo.Status
+			ch.Status = "close"
 			channelIDMap[oldChannelId] = ChannelID
 			if cInfo.Status != "stop" && cInfo.Status != "close" {
 				if dbInfo.ConnStatus != "close" || dbInfo.ConnStatus != "stop" {
@@ -310,7 +310,7 @@ func recoveryData(data map[string]dbSaveInfo){
 		}
 		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop"{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
-				db.Start()
+				go db.Start()
 			}
 		}
 	}

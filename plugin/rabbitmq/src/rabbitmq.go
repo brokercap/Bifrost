@@ -116,6 +116,23 @@ func (This *Conn) getChannel(confirm bool) *amqp.Channel {
 	}
 }
 func (This *Conn) ReConnect() bool {
+	This.Close()
+	r := This.Connect()
+	if r == true{
+		return  true
+	}else{
+		return  false
+	}
+}
+
+func (This *Conn) HeartCheck() {
+	return
+}
+
+func (This *Conn) Close() bool {
+	if This.conn == nil{
+		return true
+	}
 	func(){
 		defer func(){
 			if err := recover();err != nil{
@@ -133,20 +150,9 @@ func (This *Conn) ReConnect() bool {
 		}
 		This.conn.Close()
 	}()
-	r := This.Connect()
-	if r == true{
-		return  true
-	}else{
-		return  false
-	}
-}
-
-func (This *Conn) HeartCheck() {
-	return
-}
-
-func (This *Conn) Close() bool {
-	This.conn.Close()
+	This.conn = nil
+	This.status = "close"
+	This.err = fmt.Errorf("closed")
 	return true
 }
 

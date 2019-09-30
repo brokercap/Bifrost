@@ -32,6 +32,7 @@ type ToServer struct {
 	LastBinlogFileNum   int                       // 由 channel 提交到 ToServerChan 的最后一个位点
 	LastBinlogPosition  uint32                    // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
 	LastBinlogKey 		[]byte `json:"-"`         // 将数据保存到 level 的key
+	QueueMsgCount			uint32 					  // 队列里的堆积的数量
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
@@ -61,6 +62,7 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 				log.Println("AddTableToServer GetDBBinlogPostion:",err)
 			}
 		}
+		toserver.QueueMsgCount = 0
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
 		db.Unlock()
 		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
@@ -101,6 +103,15 @@ func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID in
 	}
 	return true
 }
+
+func (This *ToServer) UpdateBinlogPosition(BinlogFileNum int,BinlogPosition uint32) bool {
+	This.Lock()
+	This.BinlogFileNum = BinlogFileNum
+	This.BinlogPosition = BinlogPosition
+	This.Unlock()
+	return true
+}
+
 
 func (This *ToServer) AddWaitError(WaitErr error,WaitData interface{}) bool {
 	This.Lock()

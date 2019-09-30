@@ -122,14 +122,7 @@ func getUriParam(uri string)(string,string,string){
 }
 
 func (This *Conn) ReConnect() bool {
-	func(){
-		defer func(){
-			if err := recover();err != nil{
-				return
-			}
-		}()
-		This.conn.Disconnect(This.header)
-	}()
+	This.Close()
 	r := This.Connect()
 	if r == true{
 		return  true
@@ -143,7 +136,16 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
-	This.conn.Disconnect(This.header)
+	if This.conn != nil {
+		func(){
+			defer func() {
+				if err:=recover();err!=nil{
+					return
+				}
+			}()
+			This.conn.Disconnect(This.header)
+		}()
+	}
 	return true
 }
 

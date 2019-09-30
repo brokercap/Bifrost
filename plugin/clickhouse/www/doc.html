@@ -6,7 +6,8 @@
 <p>括号里的代表是ClickHouse里的存储类型</p>
 <p>TINYINT ( Int8 | UInt8 ) , SMALLINT ( Int16 | UInt16 ) , MEDIUMINT ( Int32 | UInt32 ), INT ( Int32 | UInt32 ) , BIGINT ( Int64 | UInt64 )<p>
 <p>FLOAT ( Float64 ) , DOUBLE ( Float64 ) ,REAL ( Float64 )</p>
-<p>DECIMAL , NUMERIC( Float64 )</p>
+<p>NUMERIC( Float64 )</p>
+<p>DECIMAL( String )</p>
 <p>DATE ( Date )</p>
 <p>TIME ( String ) </p>
 <p>YEAR ( Int16 ) </p>
@@ -23,8 +24,36 @@
 
 <p>eg  : tcp://127.0.0.1:9000?Database=test&username=&compress=true</p>
 
+<p><strong>同步方式</strong></p>
+        
+<p>
+    <strong>Normal : </strong>
+</p>
 
-<p><strong>自动过滤规则</strong></p>
+<p>普通同步,MySQL新增一条,删除一条, ClickHouse 里也对应删除一条</p>
+
+<p>
+    <strong>InsertAll : </strong>
+</p>
+
+<p>将DELETE ,UPDATE 转成 INSERT 语句往 ClickHouse 新增一条记录</p>
+<p>这个操作,在ClickHouse 表里新增一个叫 EventType(String) 的字段, 在配置同步的时候, EventType 字段 在input 框中 填写 {$EventType} 标签 </p>
+
+<p>这个操作是将 数据源里的操作记录,全打到 ClickHouse 里进行存储</p>
+
+<p><strong>标签</strong></p>
+
+<p>{$Timestamp} : 同步的时间戳,并不是 Binlog 发生的时间</p>
+<p>{$EventType} : 事件类型,insert delete update 三个字符串</p>
+
+<p>{$BinlogTimestamp} : Binlog记录的时间戳</p>
+<p>{$BinlogFileNum} : Binlog文件编号,并不是 整个Binlog文件名,比如 binlog 文件是 mysql-bin.000001 那这个 BinlogFileNum 的值 是1</p>
+<p>{$BinlogPosition} : Binlog position 位点</p>
+
+<p>备注: 标准模式下同步,只支持 {$Timestamp} 标签,其他标签暂不支持</p>
+
+
+<p><strong>自动过滤规则(标准同步方式)</strong></p>
 
 <p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作</p>
 

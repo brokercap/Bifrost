@@ -7,6 +7,7 @@ import (
 	"strings"
 	"log"
 	"encoding/json"
+	"time"
 )
 
 const API_VERSION  = "v1.0"
@@ -142,6 +143,18 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 			break
 		case "EventType":
 			val = strings.Replace(val, "{$EventType}", data.EventType, -1)
+			break
+		case "Timestamp":
+			val = strings.Replace(val, "{$Timestamp}", fmt.Sprint(time.Now().Unix()), -1)
+			break
+		case "BinlogTimestamp":
+			val = strings.Replace(val, "{$BinlogTimestamp}", fmt.Sprint(data.Timestamp), -1)
+			break
+		case "BinlogFileNum":
+			val = strings.Replace(val, "{$BinlogFileNum}", fmt.Sprint(data.BinlogFileNum), -1)
+			break
+		case "BinlogPosition":
+			val = strings.Replace(val, "{$BinlogPosition}", fmt.Sprint(data.BinlogPosition), -1)
 			break
 		default:
 			if rowIndex <= n && rowIndex >= 0 {

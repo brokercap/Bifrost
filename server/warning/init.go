@@ -86,6 +86,7 @@ func consumeWarning(){
 	for{
 		select {
 		case data := <- WarningChan:
+			InitWarningConfigCache()
 			timer.Reset( 30 * time.Minute)
 			body := getWarningBody(data)
 			var title string

@@ -60,7 +60,7 @@
                 </div>
                     
                     <div class="ibox-content">
-                        <canvas id="morris-line-chart" ></canvas>
+                        <div class="echarts" id="morris-line-chart"></div>
                     </div>
                 </div>
             </div>
@@ -73,7 +73,7 @@
 
 {{template "footer" .}}
 
-<script src="/js/chart.js"></script>
+<script src="/js/echarts.min.js"></script>
 <script src="/js/flow.js"></script>
 <script type="text/javascript">
 	var dbName = "{{.DbName}}";

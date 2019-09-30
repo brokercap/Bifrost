@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 )
 
-const VERSION  = "0.1.1"
+const VERSION  = "0.1.2"
 
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
@@ -743,20 +743,20 @@ func main() {
 	ColumnData = tableInfo
 
 	reslut := make(chan error, 1)
-	m := make(map[string]uint8, 0)
-	m[*database] = 1
-	log.Println("m:",m)
-	BinlogDump := &mysql.BinlogDump{
-		DataSource:    dataSource,
-		CallbackFun:   callback3,
-		ReplicateDoDb: m,
-		OnlyEvent:     []mysql.EventType{
+	BinlogDump := mysql.NewBinlogDump(
+		dataSource,
+		callback3,
+		[]mysql.EventType{
 			mysql.QUERY_EVENT,
 			mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
 			mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
 			mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
 		},
-	}
+		nil,
+		nil)
+	BinlogDump.AddReplicateDoDb(*database,"binlog_field_test")
+	log.Println("Version:",VERSION)
+	log.Println("Bristol version:",mysql.VERSION)
 	log.Println("filename:",filename,"position:",position)
 	go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)
 	go func() {

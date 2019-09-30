@@ -28,17 +28,16 @@ type eventParser struct {
 	binlogPosition   uint32
 	maxBinlogFileName   string
 	maxBinlogPosition   uint32
-	binlogIgnoreDb   *string
-	replicateDoDb    map[string]uint8
 	eventDo          []bool
 	ServerId         uint32
 	connectionId	 string
 	connLock 		 sync.Mutex
 	binlog_checksum  bool
 	filterNextRowEvent bool
+	binlogDump		*BinlogDump
 }
 
-func newEventParser() (parser *eventParser) {
+func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
 	parser = new(eventParser)
 	parser.tableMap = make(map[uint64]*TableMapEvent)
 	parser.tableNameMap = make(map[string]uint64)
@@ -50,18 +49,18 @@ func newEventParser() (parser *eventParser) {
 	parser.maxBinlogPosition = 0
 	parser.binlog_checksum = false
 	parser.filterNextRowEvent = false
+	parser.binlogDump = binlogDump
 	return
 }
 
 func (parser *eventParser) saveBinlog(event *EventReslut){
 	switch event.Header.EventType {
-	case WRITE_ROWS_EVENTv2,UPDATE_ROWS_EVENTv2,DELETE_ROWS_EVENTv2,WRITE_ROWS_EVENTv1,UPDATE_ROWS_EVENTv1,DELETE_ROWS_EVENTv1,WRITE_ROWS_EVENTv0,UPDATE_ROWS_EVENTv0,DELETE_ROWS_EVENTv0:
+	case QUERY_EVENT:
+		parser.binlogFileName = event.BinlogFileName
+		parser.binlogPosition = event.Header.LogPos
 		break
 	default:
-		if event.BinlogFileName != "" && event.Header.LogPos > 0{
-			parser.binlogFileName = event.BinlogFileName
-			parser.binlogPosition = event.Header.LogPos
-		}
+		break
 	}
 }
 
@@ -133,18 +132,13 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		table_map_event, err = parser.parseTableMapEvent(buf)
 		parser.tableMap[table_map_event.tableId] = table_map_event
 		//log.Println("table_map_event:",*table_map_event,"tableId:",table_map_event.tableId," schemaName:",table_map_event.schemaName," tableName:",table_map_event.tableName)
-		parser.RLock()
-		if len(parser.replicateDoDb) > 0 {
-			if _, ok := parser.replicateDoDb[table_map_event.schemaName]; !ok {
-				parser.filterNextRowEvent = true
-				parser.RUnlock()
-				return
+		if parser.binlogDump.CheckReplicateDb(table_map_event.schemaName,table_map_event.tableName) == false{
+			parser.filterNextRowEvent = true
+		}else{
+			parser.filterNextRowEvent = false
+			if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok {
+				parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 			}
-		}
-		parser.RUnlock()
-		parser.filterNextRowEvent = false
-		if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok {
-			parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 		}
 		event = &EventReslut{
 			Header:         table_map_event.header,
@@ -325,7 +319,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	//log.Println(database ," ",tablename ,"tableSchemaMap:",tableId , " ",columeArr)
 	rows.Close()
 	if len(columeArr) == 0{
-		return fmt.Errorf("column len is 0 ","db:",database," table:",tablename," tableId:",tableId)
+		return fmt.Errorf("column len is 0 "+"db:"+database," table:"+tablename+" tableId:"+fmt.Sprint(tableId))
 	}
 	parser.tableSchemaMap[tableId] = columeArr
 	errs = nil
@@ -371,6 +365,9 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 
 
 func (parser *eventParser) KillConnect(connectionId string) (b bool){
+	if connectionId == ""{
+		return true
+	}
 	b = false
 	parser.connLock.Lock()
 	defer func() {
@@ -466,14 +463,31 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			//continue
 		}
 		if pkt[0] == 0 {
-			event, _, e := parser.parseEvent(pkt[1:])
+			var event *EventReslut
+			func(){
+				defer func() {
+					if err := recover(); err != nil {
+						e = fmt.Errorf(fmt.Sprint(err))
+						log.Println(string(debug.Stack()))
+					}
+				}()
+				event, _, e = parser.parseEvent(pkt[1:])
+			}()
 			if e != nil {
-				fmt.Println("parseEvent err:",e)
+				//假如解析异常 ,就直接close掉
+				e = fmt.Errorf("parseEvent err:"+ e.Error())
+				fmt.Println(e)
 				result <- e
-				return nil, e
+				return nil,e
 			}
 			if event == nil{
 				continue
+			}
+			if parser.maxBinlogFileName != "" {
+				if event.BinlogFileName == parser.maxBinlogFileName && event.Header.LogPos >= parser.maxBinlogPosition {
+					parser.dumpBinLogStatus = 2
+					break
+				}
 			}
 
 			//QUERY_EVENT ,must be read Schema again
@@ -483,14 +497,10 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 						event.SchemaName = SchemaName
 					}
 					event.TableName = tableName
-					parser.RLock()
-					if len(parser.replicateDoDb) > 0 {
-						if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
-							parser.RUnlock()
-							continue
-						}
+					if parser.binlogDump.CheckReplicateDb(event.SchemaName,tableName) == false{
+						parser.saveBinlog(event)
+						continue
 					}
-					parser.RUnlock()
 					if tableId := parser.GetTableId(event.SchemaName, tableName); tableId > 0 {
 						parser.GetTableSchema(tableId, event.SchemaName, tableName)
 					}
@@ -507,16 +517,9 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 				}
 				break
 			default:
-				if len(parser.replicateDoDb) > 0 {
-					parser.RLock()
-					if len(parser.replicateDoDb) > 0 {
-						if _, ok := parser.replicateDoDb[event.SchemaName]; !ok {
-							parser.RUnlock()
-							parser.saveBinlog(event)
-							continue
-						}
-					}
-					parser.RUnlock()
+				if parser.binlogDump.CheckReplicateDb(event.SchemaName,event.TableName) == false{
+					parser.saveBinlog(event)
+					continue
 				}
 				break
 			}
@@ -537,10 +540,6 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			log.Println("event TableName:",event.TableName)
 			log.Println("event EventType:",event.Header.EventType)
 			*/
-			if event.BinlogFileName == parser.maxBinlogFileName && event.Header.LogPos >= parser.maxBinlogPosition{
-				parser.dumpBinLogStatus = 2
-				break
-			}
 			//set binlog info
 			callbackFun(event)
 			parser.saveBinlog(event)
@@ -558,11 +557,15 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 }
 
 type BinlogDump struct {
+	sync.RWMutex
 	connLock 			sync.Mutex
 	DataSource 			string
-	Status     			string //stop,running,close,error,starting
+	Status     			BinlogDumpStatus //stop,running,close,error,starting
 	parser     			*eventParser
-	ReplicateDoDb 		map[string]uint8
+	ReplicateDoDb 		map[string]map[string]uint8
+	replicateDoDbTableCount uint32
+	ReplicateIgnoreDb 	map[string]map[string]uint8
+	replicateIgnoreDbTableCount uint32
 	OnlyEvent     		[]EventType
 	CallbackFun   		callback
 	mysqlConn  			MysqlConnection
@@ -570,39 +573,155 @@ type BinlogDump struct {
 	checkSlaveStatus    bool
 }
 
+func NewBinlogDump(DataSource string,CallbackFun callback, OnlyEvent []EventType,ReplicateDoDb,ReplicateIgnoreDb map[string]map[string]uint8) *BinlogDump{
+	var replicateDoDbTableCount,replicateIgnoreDbTableCount uint32 = 0,0
+	if ReplicateDoDb != nil{
+		for _,v := range ReplicateDoDb{
+			replicateDoDbTableCount += uint32(len(v))
+		}
+	}
+	if ReplicateIgnoreDb != nil{
+		for _,v := range ReplicateIgnoreDb{
+			replicateIgnoreDbTableCount += uint32(len(v))
+		}
+	}
+
+	return &BinlogDump{
+		DataSource:DataSource,
+		Status:BINLOG_DUMP_CLOSE,
+		ReplicateDoDb:ReplicateDoDb,
+		ReplicateIgnoreDb:ReplicateIgnoreDb,
+		OnlyEvent:OnlyEvent,
+		CallbackFun:CallbackFun,
+		checkSlaveStatus:false,
+		replicateDoDbTableCount:replicateDoDbTableCount,
+		replicateIgnoreDbTableCount:replicateIgnoreDbTableCount,
+	}
+}
+
 func (This *BinlogDump) GetBinlog()(string,uint32){
 	return This.parser.binlogFileName,This.parser.binlogPosition
 }
 
-func (This *BinlogDump) SetReplicateDoDb(db string)  {
-	if This.parser != nil{
-		This.parser.Lock()
-		This.parser.replicateDoDb[db] = 1
-		This.parser.Unlock()
-	}
+func (This *BinlogDump) AddReplicateDoDb(db string,table string)  {
+	This.Lock()
 	if This.ReplicateDoDb == nil{
-		delete(This.ReplicateDoDb,db)
+		This.ReplicateDoDb = make(map[string]map[string]uint8,0)
 	}
-	This.ReplicateDoDb[db] = 1
+	if _,ok:=This.ReplicateDoDb[db];!ok{
+		This.ReplicateDoDb[db] = make(map[string]uint8,0)
+	}
+	if table != ""{
+		if _,ok:=This.ReplicateDoDb[db][table];!ok{
+			This.ReplicateDoDb[db][table]=1
+			This.replicateDoDbTableCount++
+		}
+	}
+	This.Unlock()
 }
 
-func (This *BinlogDump) DelReplicateDoDb(db string)  {
-	if This.parser != nil{
-		This.parser.Lock()
-		delete(This.parser.replicateDoDb,db)
-		This.parser.Unlock()
-	}
+func (This *BinlogDump) DelReplicateDoDb(db string,table string)  {
+	This.Lock()
 	if This.ReplicateDoDb != nil{
-		delete(This.ReplicateDoDb,db)
+		if table == ""{
+			n := len(This.ReplicateDoDb[db])
+			delete(This.ReplicateDoDb,db)
+			This.replicateDoDbTableCount = This.replicateDoDbTableCount-uint32(n)
+		}else{
+			if _,ok:=This.ReplicateDoDb[db];ok{
+				delete(This.ReplicateDoDb[db],table)
+				if This.replicateDoDbTableCount > 0{
+					This.replicateDoDbTableCount--
+				}
+			}
+		}
 	}
+	This.Unlock()
 }
+
+func (This *BinlogDump) AddReplicateIgnoreDb(db string,table string)  {
+	This.Lock()
+	if This.ReplicateIgnoreDb == nil{
+		This.ReplicateIgnoreDb = make(map[string]map[string]uint8,0)
+	}
+	if _,ok:=This.ReplicateIgnoreDb[db];!ok{
+		This.ReplicateIgnoreDb[db] = make(map[string]uint8,0)
+	}
+	if table != "" {
+		if _, ok := This.ReplicateIgnoreDb[db][table]; !ok {
+			This.ReplicateIgnoreDb[db][table] = 1
+			This.replicateIgnoreDbTableCount++
+		}
+	}
+	This.Unlock()
+}
+
+func (This *BinlogDump) DelReplicateIgnoreDb(db string,table string)  {
+	This.Lock()
+	if This.ReplicateIgnoreDb != nil{
+		if table == ""{
+			 n := len(This.ReplicateIgnoreDb[db])
+			delete(This.ReplicateIgnoreDb,db)
+			This.replicateIgnoreDbTableCount = This.replicateIgnoreDbTableCount-uint32(n)
+		}else{
+			if _,ok:=This.ReplicateIgnoreDb[db];ok{
+				delete(This.ReplicateIgnoreDb[db],table)
+			}
+		}
+	}
+	if This.replicateIgnoreDbTableCount > 0{
+		This.replicateIgnoreDbTableCount--
+	}
+	This.Unlock()
+}
+
+func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
+	This.RLock()
+	if This.ReplicateDoDb == nil && This.ReplicateIgnoreDb == nil{
+		This.RUnlock()
+		return true
+	}
+	var ok bool
+	if This.replicateDoDbTableCount > 0{
+		if 	_,ok = This.ReplicateDoDb[db];ok{
+			if 	_,ok = This.ReplicateDoDb[db][table];ok{
+				This.RUnlock()
+				return true
+			}
+			if 	_,ok = This.ReplicateDoDb[db]["*"];ok{
+				This.RUnlock()
+				return true
+			}
+		}
+		This.RUnlock()
+		return false
+	}
+	if This.replicateIgnoreDbTableCount > 0{
+		if 	_,ok = This.ReplicateIgnoreDb[db];!ok{
+			This.RUnlock()
+			return true
+		}
+		if 	_,ok = This.ReplicateIgnoreDb[db][table];!ok{
+			This.RUnlock()
+			return true
+		}
+		if 	_,ok = This.ReplicateIgnoreDb[db]["*"];!ok{
+			This.RUnlock()
+			return true
+		}
+		This.RUnlock()
+		return false
+	}
+	This.RUnlock()
+	return true
+}
+
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error,maxFileName string,maxPosition uint32) {
-	This.parser = newEventParser()
+	This.parser = newEventParser(This)
 	This.parser.dataSource = &This.DataSource
 	This.parser.connStatus = 0
 	This.parser.dumpBinLogStatus = 1
-	This.parser.replicateDoDb = This.ReplicateDoDb
 	This.parser.ServerId = ServerId
 	This.parser.maxBinlogPosition = maxPosition
 	This.parser.maxBinlogFileName = maxFileName
@@ -665,6 +784,13 @@ func (This *BinlogDump) checksum_enabled() {
 }
 
 func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
+	defer func() {
+		if err := recover();err!=nil{
+			log.Println("startConnAndDumpBinlog err:",err)
+			result <- fmt.Errorf(fmt.Sprint(err))
+			log.Println(string(debug.Stack()))
+		}
+	}()
 	dbopen := &mysqlDriver{}
 	conn, err := dbopen.Open(This.DataSource)
 	if err != nil {
@@ -706,7 +832,15 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 	This.mysqlConn.DumpBinlog(This.parser.binlogFileName, This.parser.binlogPosition, This.parser, This.CallbackFun, result)
 	This.connLock.Lock()
 	if This.mysqlConn != nil {
-		This.mysqlConn.Close()
+		func(){
+			defer func() {
+				if err:=recover();err != nil{
+					return
+				}
+			}()
+			This.mysqlConn.Close()
+		}()
+
 		This.mysqlConn = nil
 	}
 	This.connLock.Unlock()
@@ -715,11 +849,11 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 		break
 	case 2:
 		result <- fmt.Errorf("close")
-		This.Status = "close"
+		This.Status = BINLOG_DUMP_CLOSE
 		break
 	default:
 		result <- fmt.Errorf("starting")
-		This.Status = "stop"
+		This.Status = BINLOG_DUMP_STOP
 	}
 	This.parser.KillConnect(connectionId)
 }
@@ -793,8 +927,9 @@ func (This *BinlogDump) Close() {
 	This.connLock.Lock()
 	defer This.connLock.Unlock()
 	This.parser.dumpBinLogStatus = 2
-	This.mysqlConn.Close()
-	This.mysqlConn = nil
+	if This.mysqlConn != nil{
+		This.mysqlConn.Close()
+	}
 }
 
 func (This *BinlogDump) KillDump() {
@@ -807,6 +942,7 @@ func (This *BinlogDump) KillDump() {
 	defer This.connLock.Unlock()
 	This.parser.dumpBinLogStatus = 3
 	This.parser.KillConnect(This.parser.connectionId)
-	This.mysqlConn.Close()
-	This.mysqlConn = nil
+	if This.mysqlConn != nil{
+		This.mysqlConn.Close()
+	}
 }
