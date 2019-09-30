@@ -21,10 +21,10 @@ mode=$1    # start or stop or restart
 
 basepath=$(cd `dirname $0`; pwd)
 
-function __readINI() {
- INIFILE=$1; SECTION=$2; ITEM=$3;
- _readIni=`cat $INIFILE | awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
- echo ${_readIni}
+__readINI () {
+    INIFILE=$1; SECTION=$2; ITEM=$3;
+    _readIni=`cat $INIFILE | awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
+    echo "${_readIni}"
 }
 
 if test -z "$bin_dir"
@@ -39,7 +39,7 @@ fi
 
 if test -z "$pid_file"
 then
-  pid_file=( $( __readINI $config_file Bifrostd pid ) ) 
+  pid_file=$(__readINI $config_file Bifrostd pid);
 fi
 
 if test -z "$pid_file"
@@ -72,7 +72,7 @@ case "$mode" in
       then
         echo "Shutting down Bifrost"
         kill $bifrost_pid
-        for((i=1;i<=3;i++));
+        for i in 1 2 3
         do
             sleep 1
             if !(kill -0 $bifrost_pid 2>/dev/null)
@@ -108,9 +108,9 @@ case "$mode" in
 
   'status')
     # First, check to see if pid file exists
-    if test -s "$pid_file" ; then 
+    if test -s "$pid_file" ; then
       bifrost_pid=`cat "$pid_file"`
-      if kill -0 $bifrost_pid 2>/dev/null ; then 
+      if kill -0 $bifrost_pid 2>/dev/null ; then
         echo "Bifrost running ($bifrost_pid)"
         exit 0
       else
