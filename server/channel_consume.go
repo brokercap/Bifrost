@@ -166,9 +166,13 @@ func (This *consume_channel_obj) consume_channel() {
 				count = int64(len(data.Rows)/2)
 				break
 			case mysql.QUERY_EVENT:
-				count = 1
+				count = 0
+				break
 			default:
 				count = int64(len(data.Rows))
+				break
+			}
+			if count == 0{
 				break
 			}
 			c.countChan <- &count.FlowCount{
