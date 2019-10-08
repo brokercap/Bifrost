@@ -109,7 +109,7 @@ init()
         fi
     done
 
-    go mod vendor
+    GO111MODULE=on go mod vendor
 
     #这里是将本地的包拷贝到vendor
     #也可以写成for element in ${array[*]}
@@ -296,7 +296,7 @@ fi
 
 BifrostVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
 
-if [[ "$1" == "" ]];then
+if [[ "$1" == "" || "$1" == "install" ]];then
    SYSTEM=`uname -s`
    if [ $SYSTEM = "Linux" ];then
        mode="linux"
@@ -308,12 +308,6 @@ if [[ "$1" == "" ]];then
        echo "cant't support $SYSTEM"
        exit 1
    fi
-fi
-
-if [ ! -n "$BifrostVersion" ] ;then
-    tagDir=tags/$mode
-else
-    tagDir=tags/$BifrostVersion/$mode
 fi
 
 case "$mode" in
@@ -330,6 +324,26 @@ case "$mode" in
         exit 1
         ;;
 esac
+
+if [ ! -n "$BifrostVersion" ] ;then
+    tagDir=tags/$mode
+else
+    tagDir=tags/$BifrostVersion/$mode
+fi
+
+if [[ "$1" == "install" ]];then
+    if [[ "$2" == "" ]];then
+        echo "prefix dir is empty"
+        exit 1
+    fi
+    mkdir -p $2
+    if [ ! -d "$tagDir" ];then
+        build $mode $2
+    else
+        cp -rf $tagDir/* $2
+    fi
+    exit 0
+fi
 
 rm -rf $tagDir
 build $mode $tagDir
