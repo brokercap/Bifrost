@@ -64,7 +64,7 @@ function getJsonValuesByAwk() {
 }
 
 GoVersionResult=`go version`
-if [[ $GoVersionResult == *go1.11*  || $GoVersionResult == *go1.12* ]];then
+if [[ $GoVersionResult == *go1.11*  || $GoVersionResult == *go1.12* || $GoVersionResult == *go1.13* ]];then
     echo $GoVersionResult
 else
     echo "go version must be go1.11+"
