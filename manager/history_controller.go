@@ -6,6 +6,7 @@ import (
 	"github.com/brokercap/Bifrost/server/history"
 	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
+	"log"
 )
 func init(){
 	addRoute("/history/list",history_list_controller)
@@ -20,7 +21,28 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
-	HistoryList := history.GetHistoryList(dbname,schema,tablename)
+	var status history.HisotryStatus
+	switch req.Form.Get("status") {
+	case "close":
+		status = history.HISTORY_STATUS_CLOSE
+		break
+	case "running":
+		status = history.HISTORY_STATUS_RUNNING
+		break
+	case "over":
+		status = history.HISTORY_STATUS_OVER
+		break
+	case "halfway":
+		status = history.HISTORY_STATUS_HALFWAY
+		break
+	case "killed":
+		status = history.HISTORY_STATUS_KILLED
+		break
+	default:
+		status = history.HISTORY_STATUS_ALL
+		break
+	}
+	HistoryList := history.GetHistoryList(dbname,schema,tablename,status)
 
 	if req.Form.Get("format") == "json"{
 		b, _:= json.Marshal(HistoryList)
@@ -35,6 +57,8 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		TableName string
 		HistoryList []history.History
 		DbList 			map[string]server.DbListStruct
+		StatusList []history.HisotryStatus
+		Status		history.HisotryStatus
 	}
 	var data HistoryListInfo
 	data = HistoryListInfo{
@@ -43,10 +67,21 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		SchemaName:schema,
 		HistoryList:HistoryList,
 		DbList:server.GetListDb(),
+		StatusList:[]history.HisotryStatus{
+			history.HISTORY_STATUS_ALL,
+			history.HISTORY_STATUS_CLOSE,
+			history.HISTORY_STATUS_RUNNING,
+			history.HISTORY_STATUS_HALFWAY,
+			history.HISTORY_STATUS_OVER,
+			history.HISTORY_STATUS_KILLED},
+		Status:status,
 	}
 
 	data.Title = "History List - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/history.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t, err := template.ParseFiles(TemplatePath("manager/template/history.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	if err != nil{
+		log.Println(err)
+	}
 	t.Execute(w, data)
 }
 
