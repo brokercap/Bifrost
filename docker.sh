@@ -24,7 +24,7 @@ function dockerStopDev(){
 }
 
 function dockerRunDev(){
-    dockerCleanDev
+    dockerStopDev
     mkdir ./BifrostDevTestData
     docker run --name BifrostDevTest -d -P -v BifrostDevTestData:/linux/data jc3wish/bifrost:$dockerDevVersion
     docker container port BifrostDevTest
@@ -38,6 +38,12 @@ function dockerBuildRelease(){
     docker build -t --file ./Dockerfile/$sys/Dockerfile jc3wish/bifrost:$dockerVersion ./Dockerfile/$sys
     rm -rf Dockerfile/$sys/linux
     echo "build jc3wish/bifrost:$dockerVersion over"
+}
+
+function dockerCleanRelease(){
+    dockerVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
+    docker rmi jc3wish/bifrost:$dockerDevVersion
+    echo "rmi jc3wish/bifrost:$dockerVersion over"
 }
 
 function dockerPushRelease(){
@@ -84,6 +90,9 @@ case "$1" in
             sys=$2
         fi
         dockerBuildRelease $sys
+        ;;
+     'release_clean')
+        dockerCleanRelease
         ;;
     'push')
         dockerPushRelease
