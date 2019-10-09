@@ -1,7 +1,7 @@
 # Example:
 #   make build
 #   make clean
-prefix=/usr/local/bifrost
+prefix=./target
 
 .PHONY: build-all
 build-all:
@@ -20,3 +20,4 @@ init:
 
 clean:
 	go clean
+	./build.sh clean

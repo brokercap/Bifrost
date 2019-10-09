@@ -99,6 +99,9 @@ nowTime=$(date "+%Y%m%d%H%M%S")
 #生成依懒文件,将依懒包下载到vendor
 init()
 {
+    if [[ ${#PLUGINS[*]} -eq 0 ]];then
+        return
+    fi
     importPluginFileName="./plugin/import_toserver2.go"
 
     echo "package plugin" > $importPluginFileName
