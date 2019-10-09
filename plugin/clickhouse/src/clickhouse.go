@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-rc.02"
+const VERSION  = "v1.1.0-rc.03"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
@@ -525,7 +525,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 }
 
 func AllTypeToInt64(s interface{}) (int64,error) {
-	i64,err := strconv.ParseInt(fmt.Sprint(s),10,64)
+	i64,err := strconv.ParseInt(strings.Trim(fmt.Sprint(s)," "),10,64)
 	if err != nil {
 		return 0,nil
 	}
@@ -533,7 +533,7 @@ func AllTypeToInt64(s interface{}) (int64,error) {
 }
 
 func AllTypeToUInt64(s interface{}) (uint64,error) {
-	ui64,err := strconv.ParseUint(fmt.Sprint(s),10,64)
+	ui64,err := strconv.ParseUint(strings.Trim(fmt.Sprint(s)," "),10,64)
 	if err != nil {
 		return 0,nil
 	}
@@ -779,7 +779,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float64(data.(float32))
 			break
 		default:
-			s1,err := strconv.ParseFloat(fmt.Sprint(data), 64)
+			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
 			if err != nil{
 				v = float64(0.00)
 				//e = err
@@ -803,7 +803,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float32(data.(float64))
 			break
 		default:
-			s1,err := strconv.ParseFloat(fmt.Sprint(data), 32)
+			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 32)
 			if err != nil{
 				v = float32(0.00)
 			}else{

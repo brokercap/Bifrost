@@ -14,6 +14,7 @@ import (
 	"math"
 	"database/sql/driver"
 	"math/rand"
+	"os"
 )
 
 var url string = "tcp://10.40.2.41:9000?Database=test&debug=true&compress=1"
@@ -321,8 +322,13 @@ func checkDataRight(m map[string]interface{},destMap map[string]driver.Value,res
 			break
 			*/
 		default:
-
 			switch v.(type) {
+			//这里需要去一次空格对比,因为有可能源是 带空格的字符串
+			case int,uint,int8,uint8,int16,uint16,int32,uint32,int64,uint64,float32,float64:
+				if strings.Trim(fmt.Sprint(v)," ") == strings.Trim(fmt.Sprint(m[columnName])," "){
+					result = true
+				}
+				break
 			case time.Time:
 				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
 				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
@@ -472,4 +478,123 @@ func TestAllTypeToInt64(t *testing.T)  {
 	}
 
 	t.Log(ui64)
+}
+
+func TestCkDataTypeTransfer(t *testing.T){
+	var data string = "132423 "
+	var fieldName string
+	var toDataType string
+	fieldName = "testField"
+	toDataType = "Int64"
+	t.Log("test start")
+	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "int64"{
+		if result.(int64) == int64(132423){
+			t.Log("result(int64):",result)
+			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "UInt32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "uint32"{
+		if result.(int64) == int64(132423){
+			t.Log("result(uint32):",result)
+			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+	data = "42342.224 "
+	toDataType = "Float32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "uint32"{
+		if result.(float32) == float32(42342.224){
+			t.Log("result(uint32):",result)
+			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "Float64"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "uint32"{
+		if result.(float64) == float64(42342.224){
+			t.Log("result(uint32):",result)
+			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+}
+
+
+func TestCommitAndCheckData2(t *testing.T){
+	testBefore()
+	initDBTable(true)
+	initSyncParam()
+	event := pluginTestData.NewEvent()
+	eventData := event.GetTestInsertData()
+	eventData.Rows[0]["testint"] = "1334 "
+	conn.Insert(eventData)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+
+	m := eventData.Rows[len(eventData.Rows)-1]
+	time.Sleep(1 * time.Second)
+	c := MyPlugin.NewClickHouseDBConn(url)
+	dataList := c.GetTableDataList(eventData.SchemaName,eventData.TableName,"id="+fmt.Sprint(m["id"]))
+
+	if len(dataList) == 0{
+		t.Fatal("select data len == 0")
+	}
+
+	resultData := make(map[string][]string,0)
+	resultData["ok"] = make([]string,0)
+	resultData["error"] = make([]string,0)
+
+	checkDataRight(m,dataList[0],resultData)
+
+	for _,v := range resultData["ok"] {
+		t.Log(v)
+	}
+
+	for _,v := range resultData["error"] {
+		t.Error(v)
+	}
+
+	if len(resultData["error"]) == 0{
+		t.Log("test over;", "data is all right")
+	}else{
+		t.Error("test over;"," some data is error")
+	}
+
 }
