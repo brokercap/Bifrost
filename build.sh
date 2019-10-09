@@ -1,6 +1,5 @@
 #/bin/bash
 
-
 # 插件包的地址,:之后是版本号,假如本地调试的话,写上local,将会成$GOPATH里查找
 PLUGINS=(
     #github.com/brokercap/bifrost_plugin_to_http:local
@@ -63,13 +62,29 @@ function getJsonValuesByAwk() {
     }'
 }
 
-GoVersionResult=`go version`
-if [[ $GoVersionResult == *go1.11*  || $GoVersionResult == *go1.12* || $GoVersionResult == *go1.13* ]];then
+function checkGoVersion(){
+    GoVersionResult=`go version`
     echo $GoVersionResult
-else
-    echo "go version must be go1.11+"
-    exit 1
-fi
+
+    if [[ $GoVersionResult != *version* ]];then
+        echo "go version error"
+        #echo go version must go1.11+
+        exit 1
+    fi
+
+    GoVersion0=${GoVersionResult:13}
+    GoVersion1=${GoVersion0%%.*}
+    GoVersion2=${GoVersion0#*.}
+    GoVersion2=${GoVersion2%%.*}
+
+    GoVersion3=$((GoVersion1*100+GoVersion2))
+    if [[ $GoVersion3 -lt 111 ]];then
+        echo "go version must be go1.11+"
+        exit 1
+    fi
+}
+
+checkGoVersion
 
 cd `dirname $0`
 
@@ -174,6 +189,7 @@ build()
 
     mode=$1
     tagDir=$2
+    bifrostVersion=$3
 
     mkdir -p $tagDir/manager
     mkdir -p $tagDir/plugin
@@ -197,6 +213,9 @@ build()
         cp -f ./Bifrost-server ./$tagDir
     fi
 
+    echo $bifrostVersion > $tagDir/VERSION
+    cp -rf ./README.MD ./$tagDir/README.MD
+    
     echo "copy ./manager/template ==> " ./$tagDir/manager/template
 
     cp -rf ./manager/template ./$tagDir/manager/template
@@ -209,7 +228,7 @@ build()
 
     #拷贝./plugin/import_toserver.go 中加载了的默认插件到编译之后的tags目录下
     import_toserver_content=`cat ./plugin/import_toserver.go`
-    echo $import_toserver_content
+    #echo $import_toserver_content
     for element in `ls ./plugin`
     do
         localPluginDir="./plugin/"$element
@@ -219,7 +238,7 @@ build()
             then
                 #只有在./plugin/import_toserver.go 加载了插件,才可以被拷贝 www 等信息到编译目录
                 if [[ ! "${import_toserver_content}" =~ "${element}" ]];then
-                    echo  "${element}"
+                    #echo  "${element}"
                     continue
                 fi
                 config_file=$localPluginDir/www/config.json
@@ -258,12 +277,12 @@ build()
                  localPluginDir=$GOPATH/src/$pluginDir
             fi
         fi
-
-        echo $localPluginDir
+        
         if [ -d $localPluginDir ]
         then
             if [ -d $localPluginDir/www ]
             then
+                echo $localPluginDir
                 config_file=$localPluginDir/www/config.json
                 if [ -f "$config_file" ]
                 then
@@ -286,9 +305,34 @@ build()
     echo "build over"
 }
 
-mode=$1
+function buildHelp(){
+    echo "./build.sh init"
+    echo "--- go mod vendor"
+    echo "./build.sh linux|windows|freebsd|darwin"
+    echo "--- build for linux|windows|freebsd|darwin"
+    echo "./build.sh install ./targetdir linux"
+    echo "--- build for linux ,and target is ./targetdir "
+    echo "./build clean"
+    echo "--- clean build cache "
+}
 
-if [[ "$1" == "init" ]];then
+
+#clean
+if [[ "$1" == "clean" ]];then
+    rm -rf tags/$BifrostVersion
+    exit 0
+fi
+
+#clean
+if [[ "$1" == "help" ]];then
+    buildHelp
+    exit 0
+fi
+
+
+mode=$(echo $1 | tr '[A-Z]' '[a-z]')
+
+if [[ "$mode" == "init" ]];then
     init
     echo "init over"
     exit 0
@@ -296,7 +340,13 @@ fi
 
 BifrostVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
 
-if [[ "$1" == "" || "$1" == "install" ]];then
+if [[ "$1" == "install" ]];then
+    if [[ "$3" != "" ]];then
+        mode=$3
+    fi
+fi
+
+if [[ "$1" == "" || (( "$1" == "install" && "$3" == "" )) ]];then
    SYSTEM=`uname -s`
    if [ $SYSTEM = "Linux" ];then
        mode="linux"
@@ -331,6 +381,7 @@ else
     tagDir=tags/$BifrostVersion/$mode
 fi
 
+#./build install ./targetdir linux
 if [[ "$1" == "install" ]];then
     if [[ "$2" == "" ]];then
         echo "prefix dir is empty"
@@ -338,15 +389,17 @@ if [[ "$1" == "install" ]];then
     fi
     mkdir -p $2
     if [ ! -d "$tagDir" ];then
-        build $mode $2
+        build $mode $2 $BifrostVersion
     else
         cp -rf $tagDir/* $2
     fi
     exit 0
 fi
 
+
+
 rm -rf $tagDir
-build $mode $tagDir
+build $mode $tagDir $BifrostVersion
 
 echo "target:" $tagDir
 
