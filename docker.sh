@@ -1,5 +1,6 @@
 #/bin/bash
 dockerDevVersion=devTest
+dockerGoVersionTest=bifrostGoVersionTest
 
 function dockerBuildDev(){
     sys=$1
@@ -27,6 +28,49 @@ function dockerRunDev(){
     dockerStopDev
     mkdir ./BifrostDevTestData
     docker run --name BifrostDevTest -d -P -v BifrostDevTestData:/linux/data jc3wish/bifrost:$dockerDevVersion
+    docker container port BifrostDevTest
+}
+
+function dockerBuildByGoVersion(){
+    if [[ "$1" == "" ]];then
+        version="latest"
+    else
+        version=$1
+    fi
+    mkdir -p Dockerfile/go{$version}
+    echo "FROM golang:$version
+    MAINTAINER jc3wish 'jc3wish@126.com'
+    RUN cd /bin && rm -f sh && ln -s /bin/bash sh
+    RUN mkdir -p ./Bifrost-server
+    COPY ./ ./Bifrost-server/
+    RUN cd ./Bifrost-server && chmod a+x ./build.sh && ./build.sh install /usr/local/Bifrost-server && rm -rf ./Bifrost-server && chmod a+x /usr/local/Bifrost-server/Bifrost* && make -p /usr/local/Bifrost-server/data
+    ENTRYPOINT ['/usr/local/Bifrost-server/Bifrost-server','start']
+    EXPOSE 21036
+    " > Dockerfile/go{$version}/Dockerfile
+    docker build -f Dockerfile/go{$version}/Dockerfile -t jc3wish/bifrost:$dockerGoVersionTest .
+}
+
+function dockerBuildTest(){
+    dockerBuildByGoVersion $1
+}
+
+function dockerCleanTest(){
+    dockerStopTest
+    docker rmi jc3wish/bifrost:$dockerGoVersionTest
+    echo "docker rmi jc3wish/bifrost:$dockerDevVersion success "
+}
+
+function dockerStopTest(){
+    docker stop  BifrostGoVersionTest
+    echo "stop BifrostGoVersionTest success"
+    docker rm  BifrostGoVersionTest
+    echo "rm BifrostGoVersionTest success"
+}
+
+function dockerRunTest(){
+    dockerStopTest
+    mkdir ./BifrostDevTestData
+    docker run --name BifrostGoVersionTest -d -P -v BifrostDevTestData:/usr/local/Bifrost-server/data jc3wish/bifrost:$dockerGoVersionTest
     docker container port BifrostDevTest
 }
 
@@ -59,6 +103,11 @@ function dockerHelp(){
     echo "dev_build"
     echo "dev_clean"
     echo "dev_run"
+    echo "dev_stop"
+    echo "test_build [1.12|1.13(golang version)]"
+    echo "test_clean"
+    echo "test_run"
+    echo "test_stop"
     echo "release_build"
     echo "push"
     echo "clean    -- clean all exit and none images"
@@ -82,6 +131,19 @@ case "$1" in
         ;;
     'dev_stop')
         dockerStopDev
+        ;;
+        
+    'test_build')
+        dockerBuildTest $2
+        ;;
+    'test_clean')
+        dockerCleanTest
+        ;;
+    'test_run')
+        dockerRunTest
+        ;;
+    'test_stop')
+        dockerStopTest
         ;;
     'release_build')
         if [[ "$2" == "" ]];then
