@@ -1,7 +1,6 @@
 package http_manager
 
 var IndexHtml = `
-
 <!DOCTYPE html>
 <html>
 
@@ -113,11 +112,21 @@ $(function(){
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
                     
-                    {{range $i, $v := .DataBaseList}}
-                        <a class="list-group-item" id="Schema-{{$v}}">
-                            <h3 class="list-group-item-heading">{{$v}}</h3>
+                        <a class="list-group-item" id="Schema-information_schema">
+                            <h3 class="list-group-item-heading">information_schema</h3>
                         </a>
-                    {{end}}
+                    
+                        <a class="list-group-item" id="Schema-bifrost_test">
+                            <h3 class="list-group-item-heading">bifrost_test</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-mysql">
+                            <h3 class="list-group-item-heading">mysql</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-performance_schema">
+                            <h3 class="list-group-item-heading">performance_schema</h3>
+                        </a>
                     
                     </div>
 
@@ -135,8 +144,10 @@ $(function(){
                     .tableDiv{display:block; width:100%; height: 25px; position: relative}
                     .tableDiv .left{ display:block; float:left; width:79%; line-height:100%;word-wrap: break-word;  }
                     .tableDiv .right{ display:block; position: absolute; right: -10px ;top: 0px; width:78px; line-height: 25px;}
+                    .tableDiv .right1{ display:block; position: absolute; right: 48px ;top: 0px; width:78px; line-height: 25px;}
                     .tableDiv .right .button{ float: left;}
                     .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
+                    .tableDiv .right1 .button{ float: left;}
                 </style>
                 <div class="ibox-content">
                     <div class="list-group" id="TableListContair">
@@ -203,16 +214,20 @@ $(function(){
                         <div class="col-md-7">
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">ToServerKey：</label>
-                                <div class="col-sm-9">
+                                <div class="col-sm-9" style="position: relative">
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
                                     
-                                    {{range $k,$v := .ToServerList}}
-                                        <option value="{{$k}}" pluginName="{{$v.PluginName}}" pluginVersion="{{$v.PluginVersion}}">{{$v.PluginName}} -- {{$k}}</option>
-                                    {{end}}
+                                        <option value="blackholeTest" pluginName="blackhole" pluginVersion="v1.1.0">blackhole -- blackholeTest</option>
+                                    
+                                        <option value="clickHouseTest" pluginName="clickhouse" pluginVersion="v1.1.0-rc.02">clickhouse -- clickHouseTest</option>
+                                    
+                                        <option value="redisTest" pluginName="redis" pluginVersion="v1.1.0">redis -- redisTest</option>
                                     
                                     </select>
                                     <span class="help-block m-b-none"></span>
-
+                                    <div style="position: absolute; top: 0px; right: -30px;">
+                                        <a href="#" target="_blank" id="addToServerKeyDoc"><button class="btn-sm btn-primary" type="button" style="padding: 5px">DOC</button></a>
+                                    </div>
                                 </div>
                             </div>
 
@@ -548,9 +563,9 @@ $(function(){
                             return false;
                         }
                         if(data.status){
-                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(this)">DEL</button>';
-                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
-                            $("#" + schema_name + "-" + table_name + " .right .input input").prop("checked",false);
+                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button>';
+                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
+                            $("#" + schema_name + "_-" + table_name + " .right .input input").prop("checked",false);
                         }
                         batchDelOrAddTableResultFun(table_name +" ADD Result:"+data.msg,1);
                     }
@@ -590,7 +605,7 @@ $(function(){
                         }
                         if (data.status) {
                             html = '<button data-toggle="button" class="btn-warning btn-sm" type="button" onClick="showAddTable(\'' + table_name + '\')">ADD</button>';
-                            $("#" + schema_name + "-" + table_name + " .right .button").html(html);
+                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
                         }
                         batchDelOrAddTableResultFun(table_name +" DEL Result:"+data.msg,1);
                     }
@@ -615,7 +630,7 @@ $(function(){
         }
 
         function GetTableToServerList(schema_name,table_name){
-            var key = schema_name+"-"+table_name;
+            var key = schema_name+"_-"+table_name;
             if ($("#"+key+" .right button").text() == "ADD"){
                 table_check_input(key);
                 return  false;
@@ -661,6 +676,9 @@ $(function(){
                             others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
                             others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+                            if ("QueueMsgCount" in v) {
+                                others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
+                            }
                             e.push({
                                 sliceid:index+"/"+v.ToServerID,
                                 PluginName:v.PluginName,
@@ -709,7 +727,7 @@ $(function(){
         }
         var TableMap = new Map();
         function GetTableFields(schema_name,table_name){
-            var key = schema_name+"-"+table_name;
+            var key = schema_name+"_-"+table_name;
             if (!TableMap.has(key) || TableMap.get(key) == undefined){
                 var url = '/db/tablefields';
                 $.post(url,
@@ -752,14 +770,19 @@ $(function(){
             var url = "/db/tablelist";
             var showTableList = function(data){
                 $("#TableListContair").html("");
-                $.each(data,function(index,v){
+                $.each(data,function(index,v) {
                     var html = "";
                     var title = "";
-                    if (v.ChannelName != ""){
-                        title = " title='Bind Channel : "+v.ChannelName+"' ";
+                    if (v.ChannelName != "") {
+                        title = " title='Bind Channel : " + v.ChannelName + "' ";
                     }
-                    html += '<a class="list-group-item"><div class="tableDiv" title="'+v.TableName+'" id="'+schema_name+'-'+v.TableName+'">';
-                    html +=	'<h5 class="left" '+title+' onClick="GetTableToServerList(\''+schema_name+'\',\''+v.TableName+'\')">'+v.TableName+'</h5>';
+                    html += '<a class="list-group-item"><div class="tableDiv" title="' + v.TableName + '" id="' + schema_name + '_-' + v.TableName + '">';
+                    html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + v.TableName + '\')">' + v.TableName + '</h5>';
+                    if (v.TableType.toUpperCase().indexOf("VIEW") != -1) {
+                        html += '<div class="right1">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">视图</button></div>';
+                        html += '</div>';
+                    }
                     html += '<div class="right">';
                     if (v.AddStatus == false){
                         html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onClick="showAddTable(\''+v.TableName+'\')">ADD</button></div>';
@@ -816,6 +839,7 @@ $(function(){
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
                 $.getScript("/plugin/"+pluginName+"/www/"+pluginName+".js?v="+pluginVersion,function(){});
+                $("#addToServerKeyDoc").attr("href","/docs?plugin="+pluginName+"#pluginDocName");
             }
             
             $("#addToServerKey").change(function(){
@@ -990,10 +1014,11 @@ $(function(){
 
         function DealWaitErr(obj,ToServerID){
             var thisButton = $(obj);
-            var index = $(obj).parent().parent().parent("tr").children().eq(0).html();
+            var index0 = $(obj).parent().parent().parent("tr").children().eq(0).html();
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
+            var index = index0.split("/")[0];
             var url = "/table/toserver/deal";
             $.post(
                     url,
@@ -1024,15 +1049,31 @@ $(function(){
         function init(){
             var querySchemaName = getQueryString("schema");
             var queryTableName = getQueryString("table_name");
-            if(querySchemaName == null || queryTableName == null) {
-                return false;
+            if(querySchemaName == null) {
+                
+                $.each($("#DatabaseListContair a"),function(){
+                    var id = $(this).attr("id");
+                    if(querySchemaName != null){
+                        return;
+                    }
+                    
+                    if(id == "Schema-information_schema" || id == "Schema-mysql" || id == "Schema-performance_schema"){
+                        return
+                    }
+                    querySchemaName = id;
+                });
+                if(querySchemaName != null){
+                    showSchemaTableList(querySchemaName);
+                }
+            }else{
+                if( $("#Schema-"+querySchemaName).length <= 0){
+                    return false;
+                }
+                showSchemaTableList("Schema-"+querySchemaName);
+                if(queryTableName!=null){
+                    GetTableToServerList(querySchemaName,queryTableName);
+                }
             }
-            if( $("#Schema-"+querySchemaName).length <= 0){
-                return false;
-            }
-            showSchemaTableList("Schema-"+querySchemaName);
-            
-            GetTableToServerList(querySchemaName,queryTableName);
         }
 
         init();
