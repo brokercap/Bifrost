@@ -3,6 +3,7 @@ language: go
 go:
     - "1.11"
     - "1.12"
+    - "1.13"
 
 before_install:
     - go get github.com/gmallard/stompngo
@@ -20,7 +21,7 @@ install:
 
 script:
     - go test -v -covermode=count -coverprofile=coverage.out
-    - go build Bifrost.go
+    - ./build.sh
 
 
 after_success:

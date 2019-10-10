@@ -133,7 +133,7 @@ func (This *consume_channel_obj) consume_channel() {
 		timer.Stop()
 	}()
 	var key string
-
+	var countNum int64 = 0
 	for {
 		select {
 		case data = <-This.c.chanName:
@@ -161,16 +161,30 @@ func (This *consume_channel_obj) consume_channel() {
 			if This.db.killStatus == 1{
 				return
 			}
+			switch data.Header.EventType {
+			case mysql.UPDATE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv0:
+				countNum = int64(len(data.Rows)/2)
+				break
+			case mysql.QUERY_EVENT:
+				countNum = 0
+				break
+			default:
+				countNum = int64(len(data.Rows))
+				break
+			}
+			if countNum == 0{
+				break
+			}
 			c.countChan <- &count.FlowCount{
 				//Time:"",
-				Count:1,
+				Count:countNum,
 				TableId:key,
 				ByteSize:int64(data.Header.EventSize)*int64(len(toServerList)),
 			}
 		case <-timer.C:
 			timer.Reset(5 * time.Second)
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-			//log.Println("count:",count)
+			//log.Println("count:",countNum)
 		}
 		for {
 			if c.Status == "stop" {

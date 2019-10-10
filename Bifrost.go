@@ -84,9 +84,20 @@ var BifrostConfigFile *string
 var BifrostDaemon *string
 var BifrostPid *string
 var BifrostDataDir *string
+var Version bool
+var Help bool
 
 //接收指令进行将配置信息刷盘到disk
 var doSaveInfoToDiskChan chan int8
+
+func usage() {
+	fmt.Fprintf(os.Stderr, `Bifrost version: `+config.VERSION+`
+Usage: Bifrost [-hv] [-config ./etc/Bifrost.ini] [-pid Bifrost.pid] [-data_dir dir]
+
+Options:
+`)
+	flag.PrintDefaults()
+}
 
 func main() {
 	doSaveInfoToDiskChan = make(chan int8,100)
@@ -110,7 +121,20 @@ func main() {
 	BifrostPid = flag.String("pid", "", "pid file path")
 	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
 	BifrostDataDir = flag.String("data_dir", "", "db.Bifrost data dir")
+	flag.BoolVar(&Version, "v", false, "this version")
+	flag.BoolVar(&Help, "h", false, "this help")
+	flag.Usage = usage
 	flag.Parse()
+
+	if Help{
+		flag.Usage()
+		os.Exit(0)
+	}
+	if Version {
+		fmt.Println(config.VERSION)
+		os.Exit(0)
+	}
+
 	if *BifrostConfigFile == ""{
 		*BifrostConfigFile = execDir+"/etc/Bifrost.ini"
 		log.Println("*BifrostConfigFile:",*BifrostConfigFile)

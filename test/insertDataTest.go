@@ -58,13 +58,21 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			break
 		}
 		var fieldNAme, EXTRA string
-		EXTRA = string(dest[3].([]byte))
-
+		if dest[3] == nil{
+			EXTRA = ""
+		}else{
+			EXTRA = string(dest[3].([]byte))
+		}
 		if EXTRA == "auto_increment" {
 			continue
 		} else {
+			var defaultVal string
 			fieldType := string(dest[2].([]byte))
-			defaultVal := string(dest[1].([]byte))
+			if dest[1] == nil{
+				defaultVal = ""
+			}else{
+				defaultVal = string(dest[1].([]byte))
+			}
 			COLUMN_TYPE := string(dest[4].([]byte))
 			switch fieldType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":

@@ -30,6 +30,18 @@ func init()  {
 	historyMap = make(map[string]map[int]*History,0)
 }
 
+type HisotryStatus string
+
+const (
+	HISTORY_STATUS_ALL 		HisotryStatus = "All"
+	HISTORY_STATUS_CLOSE 	HisotryStatus = "close"
+	HISTORY_STATUS_RUNNING	HisotryStatus = "running"
+	HISTORY_STATUS_OVER		HisotryStatus = "over"
+	HISTORY_STATUS_HALFWAY	HisotryStatus = "halfway"
+	HISTORY_STATUS_KILLED	HisotryStatus = "killed"
+)
+
+
 func AddHistory(dbName string,SchemaName string,TableName string,Property HistoryProperty,ToServerIDList []int) (int,error){
 	l.Lock()
 	defer l.Unlock()
@@ -46,7 +58,7 @@ func AddHistory(dbName string,SchemaName string,TableName string,Property Histor
 		DbName:dbName,
 		SchemaName:SchemaName,
 		TableName:TableName,
-		Status:CLOSE,
+		Status:HISTORY_STATUS_CLOSE,
 		NowStartI:0,
 		Property:Property,
 		ToServerIDList:ToServerIDList,
@@ -79,11 +91,11 @@ func KillHistory(dbName string,ID int) error {
 	if _,ok:=historyMap[dbName][ID];!ok{
 		return fmt.Errorf("%s %d not exist",dbName,ID)
 	}
-	historyMap[dbName][ID].Status = KILLED
+	historyMap[dbName][ID].Status = HISTORY_STATUS_KILLED
 	return nil
 }
 
-func GetHistoryList(dbName,SchemaName,TableName string) []History {
+func GetHistoryList(dbName,SchemaName,TableName string,status HisotryStatus) []History {
 	l.RLock()
 	defer l.RUnlock()
 	data := make([]History,0)
@@ -105,6 +117,11 @@ func GetHistoryList(dbName,SchemaName,TableName string) []History {
 					}
 				}
 			}
+			if status != HISTORY_STATUS_ALL{
+				if historyInfo.Status != status{
+					continue
+				}
+			}
 			data = append(data,*historyInfo)
 		}
 	}
@@ -115,16 +132,6 @@ type HistoryProperty struct {
 	ThreadNum			int      // 协程数量,每个协程一个连接
 	ThreadCountPer		int		   // 协程每次最多处理多少条数据
 }
-
-type HisotryStatus string
-
-const (
-	CLOSE 		HisotryStatus = "close"
-	RUNNING					  = "running"
-	OVER					  = "over"
-	HALFWAY					  = "halfway"
-	KILLED					  = "killed"
-)
 
 type ThreadStatus struct {
 	Num					int
@@ -163,12 +170,12 @@ func Start(dbName string,ID int) error {
 func (This *History) Start() error {
 	log.Println("history start",This.DbName,This.SchemaName,This.TableName)
 	This.Lock()
-	if This.Status == RUNNING{
+	if This.Status == HISTORY_STATUS_RUNNING{
 		This.Unlock()
 		return fmt.Errorf("running had")
 	}
 	This.StartTime = time.Now().Format("2006-01-02 15:04:05")
-	This.Status = RUNNING
+	This.Status = HISTORY_STATUS_RUNNING
 	This.NowStartI = 0
 	This.Unlock()
 	This.Fields = make([]TableStruct,0)
@@ -190,11 +197,11 @@ func (This *History) Start() error {
 		This.OverTime = time.Now().Format("2006-01-02 15:04:05")
 		for _,v := range This.ThreadPool{
 			if v.Error != nil{
-				This.Status = HALFWAY
+				This.Status = HISTORY_STATUS_HALFWAY
 			}
 		}
-		if This.Status != HALFWAY{
-			This.Status = OVER
+		if This.Status != HISTORY_STATUS_HALFWAY{
+			This.Status = HISTORY_STATUS_OVER
 		}
 	}()
 	return nil
@@ -320,7 +327,7 @@ func (This *History) threadStart(i int)  {
 		}
 		rowCount := 0
 		for {
-			if This.Status == KILLED{
+			if This.Status == HISTORY_STATUS_KILLED{
 				return
 			}
 			dest := make([]driver.Value, n, n)
