@@ -79,7 +79,7 @@ function dockerBuildRelease(){
     sys=$1
     ./build.sh install Dockerfile/$sys/linux linux
     dockerVersion=`cat Dockerfile/$sys/linux/VERSION`
-    docker build -t --file ./Dockerfile/$sys/Dockerfile jc3wish/bifrost:$dockerVersion ./Dockerfile/$sys
+    docker build --file ./Dockerfile/$sys/Dockerfile -t jc3wish/bifrost:$dockerVersion ./Dockerfile/$sys
     rm -rf Dockerfile/$sys/linux
     echo "build jc3wish/bifrost:$dockerVersion over"
 }
