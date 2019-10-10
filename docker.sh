@@ -84,6 +84,15 @@ function dockerBuildRelease(){
     echo "build jc3wish/bifrost:$dockerVersion over"
 }
 
+function dockerOnlineTestAdmin(){
+    docker stop BifrostOnlineTest
+    docker rm BifrostOnlineTest
+    mkdir -p /data/BifrostOnlineTestData
+    echo $1
+    #docker run --name BifrostDevTest -d -P -v BifrostDevTestData:/linux/data jc3wish/bifrost:$dockerDevVersion
+    docker run --name BifrostOnlineTest -d -p21037:21036 -v /data/BifrostOnlineTestData:/linux/data $1
+}
+
 function dockerCleanRelease(){
     dockerVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
     docker rmi jc3wish/bifrost:$dockerDevVersion
@@ -111,6 +120,7 @@ function dockerHelp(){
     echo "release_build"
     echo "push"
     echo "clean    -- clean all exit and none images"
+    echo "online_test_run jc3wish/bifrost:1.1.0   -- clean all exit and none images"
 }
 
 
@@ -159,6 +169,9 @@ case "$1" in
     'push')
         dockerPushRelease
         ;;
+     'online_test_run')
+	dockerOnlineTestAdmin $2
+	;;
      'clean')
         dockerClean
         ;;
