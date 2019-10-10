@@ -26,6 +26,15 @@
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
+
+#### 在线Bifrost界面体验
+
+http://test.use.xbifrost.com:21037
+
+用户名： Bifrost
+
+密码  :  Bifrost123
+
 ![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/bifrost.png)
 
 
@@ -78,45 +87,18 @@
 * 8.0.11 (用户密码验证需要采用 mysql_native_password 方式)
 
 
-### 在线体验
-
-##### 在线Bifrost界面体验
-
-http://test.use.xbifrost.com:21037
-
-##### 在线执行指定的SQL,及查看同步到Redis的情况
-
-http://test.use.xbifrost.com:11522
-
-
-用户名 : Bifrost
-
-密码 :   Bifrost123
-
-
 ### 安装
 
 ##### 编译
 
 ```sh
 
-go get github.com/brokercap/Bifrost
+git clone https://github.com/brokercap/Bifrost.git
 
-# windows
-./build.sh windows
-
-# linux
-./build.sh linux
-
-#mac
-./build.sh darwin
-
-#freebsd
-./build.sh freebsd
-
+make install prefix=./target
 ```
 
-##### 二进制文件下载
+##### 二进制文件安装
 `````sh
 
 wget https://github.com/brokercap/Bifrost/releases/download/v1.1.x-release/linux.zip
@@ -126,6 +108,46 @@ unzip linux.zip
 cd linux
 
 `````
+
+##### 启动
+
+`````shell
+./Bifrost-server start
+
+`````
+
+##### 停止
+
+`````shell
+./Bifrost-server stop
+
+`````
+
+
+##### 界面管理
+
+https://127.0.0.1:21036
+
+用户名和密码是在 etc/Bifrost.ini 配置文件中配置的
+
+默认用户名和密码
+
+用户名：Bifrost
+
+密码：Bifrost123
+
+
+##### Docker启动
+
+`````shell
+docker pull jc3wish/bifrost
+
+mkdir -p /data/BifrostData
+
+docker run -d -p21036:21036 -v /data/BifrostData:/linux/data jc3wish/bifrost
+
+`````
+
 
 ##### 配置
 `````sh
@@ -177,48 +199,10 @@ tls_crt_file=./etc/server.crt
 
 [参考证书生成](https://github.com/brokercap/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
 
-##### 启动
-`````shell
-./Bifrost-server start
-
-`````
-
-##### 停止
-`````shell
-./Bifrost-server stop
-
-`````
-
-### Docker
-
-##### Dockerfile
-`````shell
- FROM centos:centos6.8
- MAINTAINER jc3wish "jc3wish@126.com"
- RUN yum install -y wget unzip
- RUN wget https://github.com/brokercap/Bifrost/releases/download/v1.1.x-release/linux.zip
- RUN unzip linux && cd linux && chmod a+x ./Bifrost-server
- ENTRYPOINT ["linux/Bifrost-server","start"]
- EXPOSE 21036
-
-`````
-
-`````shell
- docker build -t bifrost:1.1.x .
-`````
-
-##### Docker启动
-`````shell
-docker pull jc3wish/bifrost
-
-docker run -d -p21036:21036 jc3wish/bifrost
-`````
-
-##### 管理
-https://127.0.0.1:21036
 
 
 ### 界面操作文档
+
 [Bifrost官网](http://www.xbifrost.com/)
 
 ### 感谢相关依懒包提供者
