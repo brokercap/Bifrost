@@ -26,6 +26,7 @@ type eventParser struct {
 	dumpBinLogStatus uint8 //0 stop ,1 running
 	binlogFileName   string
 	binlogPosition   uint32
+	binlogTimestamp  uint32
 	maxBinlogFileName   string
 	maxBinlogPosition   uint32
 	eventDo          []bool
@@ -58,6 +59,7 @@ func (parser *eventParser) saveBinlog(event *EventReslut){
 	case QUERY_EVENT:
 		parser.binlogFileName = event.BinlogFileName
 		parser.binlogPosition = event.Header.LogPos
+		parser.binlogTimestamp = event.Header.Timestamp
 		break
 	default:
 		break
@@ -599,8 +601,8 @@ func NewBinlogDump(DataSource string,CallbackFun callback, OnlyEvent []EventType
 	}
 }
 
-func (This *BinlogDump) GetBinlog()(string,uint32){
-	return This.parser.binlogFileName,This.parser.binlogPosition
+func (This *BinlogDump) GetBinlog()(string,uint32,uint32){
+	return This.parser.binlogFileName,This.parser.binlogPosition,This.parser.binlogTimestamp
 }
 
 func (This *BinlogDump) AddReplicateDoDb(db string,table string)  {
