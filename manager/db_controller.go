@@ -233,7 +233,7 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	type dbInfoStruct struct{
 		BinlogFile 			string
-		BinlogPosition 		uint32
+		BinlogPosition 		int
 		BinlogTimestamp 	uint32
 		LastBinlogFile 		string
 		LastBinlogPosition 	int
@@ -249,7 +249,7 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 	dbInfo := &dbInfoStruct{}
 
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
-	dbInfo.BinlogPosition = dbObj.BinlogDumpPosition
+	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
 	dbInfo.BinlogTimestamp = uint32(dbObj.BinlogDumpTimestamp)
 	err := func(dbUri string) (e error){
 		e = nil
@@ -277,7 +277,7 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 		return
 	}(dbUri)
 	dbInfo.NowTimestamp = uint32(time.Now().Unix())
-	if dbInfo.BinlogTimestamp > 0 {
+	if dbInfo.BinlogTimestamp > 0 && dbInfo.LastBinlogFile != dbInfo.BinlogFile && dbInfo.BinlogPosition != dbInfo.LastBinlogPosition{
 		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 	}
 	if err != nil{

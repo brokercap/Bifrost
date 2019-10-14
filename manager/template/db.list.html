@@ -2,10 +2,11 @@
 {{template "header" .}}
 		
 <script type="text/javascript">
-function formatDate(timeStamp) {
-    if (timeStamp == 0){
+function formatDate(timestamp) {
+    if (timestamp == 0){
         return "";
     }
+    var now = new Date(timestamp*1000);
     var year=now.getFullYear();
     var month=now.getMonth()+1;
     var date=now.getDate();
@@ -91,7 +92,7 @@ function formatDate(timeStamp) {
                                                     <td>
                                                         <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
                                                         <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
-                                                        <p class="db_last_time"><script type="text/javascript">document.write(formatDate("{{$v.BinlogDumpTimestamp}}"));</script> </p>
+                                                        <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
 
                                                     {{if eq $v.ConnStatus "close"}}
                                                     {{if  eq $v.ConnErr ""}}
