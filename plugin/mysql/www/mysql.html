@@ -16,6 +16,7 @@
             <select class="form-control" name="to_mysql_table" id="to_mysql_table" onchange="GetToTableDesc($('#to_mysql_schema').val(),$(this).val());" >
                 <option value="true" selected="selected">请选择表</option>
             </select>
+            如果目标库还没建表,<a href="javasripts:return false;" onclick="showMySQLCreateSQL();"> 点击获取 参考建表 SQL</a>
         </div>
     </div>
 
@@ -52,3 +53,25 @@
         </div>
     </div>
 </div>
+
+
+
+<!--show mysql create sql start-->
+<div class="modal inmodal fade" id="showMySQLCreateSQL" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+            </div>
+            <div class="modal-body">
+
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--show mysql create sql over-->
