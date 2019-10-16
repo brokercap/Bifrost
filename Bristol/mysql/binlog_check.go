@@ -65,6 +65,7 @@ func GetNearestRightBinlog(dbUri string,filename string, position uint32,serverI
 	for{
 		r := <- reslut
 		if r.Error() != "running" && r.Error() != "starting" {
+			go binlogDump.Close()
 			break
 		}
 	}
