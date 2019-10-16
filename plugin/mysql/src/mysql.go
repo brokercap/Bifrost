@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"strings"
 	"runtime/debug"
+	"time"
 )
 
 
-const VERSION  = "v1.1.0-apha.01"
+const VERSION  = "v1.1.0-rc.01"
 const BIFROST_VERION = "v1.1.0"
 
 type dataTableStruct struct {
@@ -251,6 +252,33 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 	return nil,nil
 }
 
+func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key string) interface{} {
+	if _,ok := data.Rows[index][key];ok {
+		return data.Rows[index][key]
+	}
+	switch key {
+	case "{$EventType}":
+		return data.EventType
+		break
+	case "{$Timestamp}":
+		return time.Now().Unix()
+		break
+	case "{$BinlogTimestamp}":
+		return data.Timestamp
+		break
+	case "{$BinlogFileNum}":
+		return data.BinlogFileNum
+		break
+	case "{$BinlogPosition}":
+		return data.BinlogPosition
+		break
+	default:
+		return  pluginDriver.TransfeResult(key,data,index)
+		break
+	}
+	return ""
+}
+
 func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
@@ -308,7 +336,10 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+				//toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+
+				toV,This.err = dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
+
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -330,7 +361,8 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
-				toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV,This.err = dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
+				//toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
@@ -349,7 +381,8 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV,This.err = dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
+				//toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}

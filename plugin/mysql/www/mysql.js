@@ -111,12 +111,8 @@ function GetToTableDesc(schemaName,tableName) {
             }
 
             var fieldsMap = {};
-            console.log(tableDataTypeMap);
-            console.log(d)
             $.each($("#TableFieldsContair input"),function(){
-                var field = $(this).val();
-                console.log(field)
-                fieldsMap[$(this).val()] = getTableFieldType(field.toLowerCase());
+                fieldsMap[$(this).val().toLowerCase()] = getTableFieldType($(this).val());
             });
 
             var html = "";
@@ -124,17 +120,42 @@ function GetToTableDesc(schemaName,tableName) {
 
                 var toField = "";
                 var isPri = false;
-                if(fieldsMap.hasOwnProperty(d[i].COLUMN_NAME.toLowerCase())){
-                    toField = d[i].COLUMN_NAME;
-                    if(fieldsMap[d[i].COLUMN_NAME].COLUMN_KEY == "PRI"){
+                var tmpKey = d[i].COLUMN_NAME.toLowerCase();
+                if(fieldsMap.hasOwnProperty(tmpKey)){
+                    toField = fieldsMap[tmpKey].COLUMN_NAME;
+                    if(fieldsMap[tmpKey].COLUMN_KEY == "PRI"){
                         isPri = true;
+                    }
+                }
+
+                if(toField == ""){
+                    switch (tmpKey){
+                        case "eventtype":
+                        case "event_type":
+                            toField = "{$EventType}";
+                            break;
+                        case "timestamp":
+                            toField = "{$Timestamp}";
+                            break;
+                        case "binlogtimestamp":
+                        case "binlog_timestamp":
+                            toField = "{$BinlogTimestamp}";
+                            break;
+                        case "binlogfilenum":
+                            toField = "{$BinlogFileNum}";
+                            break;
+                        case "binlogposition":
+                            toField = "{$BinlogPosition}";
+                            break;
+                        default:
+                            break;
                     }
                 }
 
                 var htmlTr = "<tr id='to_field_name_"+d[i].COLUMN_NAME+"'>";
                 htmlTr += "<td> <input type=\"text\"  value=\""+d[i].COLUMN_NAME+"\" type='"+d[i].DATA_TYPE+"' name=\"to_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ToMySQL_Input_onFocus(this)' id='mysql_filed_from_"+d[i].COLUMN_NAME+"' name=\"from_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
-                htmlTr += "<td> <input type='radio'"
+                htmlTr += "<td> <input type='radio'";
                 if(isPri){
                     htmlTr += " checked='checked' ";
                 }
@@ -171,3 +192,18 @@ $("#TableFieldsContair p.fieldsname input:checkbox").click(
         var fieldName = $(this).val();
         $("#"+MySQL_OnFoucsInputId).val($.trim(fieldName));
 });
+
+function showMySQLCreateSQL() {
+    var schemaName = $("#tableToServerListContair").attr("schema");
+    var tableName = $("#tableToServerListContair").attr("table_name");
+    $.get(
+        "/bifrost/mysql/createsql?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
+        function (d, status) {
+            if (status != "success") {
+                return false;
+            }
+            $("#showMySQLCreateSQL .modal-title").html("MySQL CreateSQL For Table </br>"+tableName);
+            $("#showMySQLCreateSQL .modal-body").text(d);
+            $("#showMySQLCreateSQL").modal('show');
+        });
+}

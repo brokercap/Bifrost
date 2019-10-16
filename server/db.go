@@ -167,6 +167,7 @@ type db struct {
 	binlogDump         		*mysql.BinlogDump
 	binlogDumpFileName 		string `json:"BinlogDumpFileName"`
 	binlogDumpPosition 		uint32 `json:"BinlogDumpPosition"`
+	binlogDumpTimestamp 	uint32 `json:"BinlogDumpTimestamp"`
 	replicateDoDb      		map[string]uint8 `json:"ReplicateDoDb"`
 	serverId           		uint32 `json:"ServerId"`
 	killStatus 				int
@@ -186,6 +187,7 @@ type DbListStruct struct {
 	TableCount         		int
 	BinlogDumpFileName 		string
 	BinlogDumpPosition 		uint32
+	BinlogDumpTimestamp		uint32
 	MaxBinlogDumpFileName 	string
 	MaxBinlogDumpPosition 	uint32
 	ReplicateDoDb      		map[string]uint8
@@ -209,6 +211,7 @@ func GetListDb() map[string]DbListStruct {
 			TableCount:				len(v.tableMap),
 			BinlogDumpFileName:		v.binlogDumpFileName,
 			BinlogDumpPosition:		v.binlogDumpPosition,
+			BinlogDumpTimestamp:	v.binlogDumpTimestamp,
 			MaxBinlogDumpFileName:	v.maxBinlogDumpFileName,
 			MaxBinlogDumpPosition:	v.maxBinlogDumpPosition,
 			ReplicateDoDb:			v.replicateDoDb,
@@ -217,6 +220,33 @@ func GetListDb() map[string]DbListStruct {
 		}
 	}
 	return dbListMap
+}
+
+
+func GetDbInfo(dbname string) *DbListStruct {
+	DbLock.Lock()
+	defer DbLock.Unlock()
+	v := DbList[dbname]
+	if v == nil{
+		return &DbListStruct{}
+	}
+	return &DbListStruct{
+			Name:					v.Name,
+			ConnectUri:				v.ConnectUri,
+			ConnStatus:				v.ConnStatus,
+			ConnErr:				v.ConnErr,
+			ChannelCount:			len(v.channelMap),
+			LastChannelID:			v.LastChannelID,
+			TableCount:				len(v.tableMap),
+			BinlogDumpFileName:		v.binlogDumpFileName,
+			BinlogDumpPosition:		v.binlogDumpPosition,
+			BinlogDumpTimestamp:	v.binlogDumpTimestamp,
+			MaxBinlogDumpFileName:	v.maxBinlogDumpFileName,
+			MaxBinlogDumpPosition:	v.maxBinlogDumpPosition,
+			ReplicateDoDb:			v.replicateDoDb,
+			ServerId:				v.serverId,
+			AddTime:				v.AddTime,
+		}
 }
 
 
@@ -474,14 +504,14 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 }
 
 func (db *db) saveBinlog(){
-	FileName,Position := db.binlogDump.GetBinlog()
+	FileName,Position,Timestamp := db.binlogDump.GetBinlog()
 	if FileName == ""{
 		return
 	}
 	//db.Lock()
 	//保存位点,这个位点在重启 配置文件恢复的时候
 	//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
-	db.binlogDumpFileName,db.binlogDumpPosition = FileName,Position
+	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp = FileName,Position,Timestamp
 	if db.DBBinlogKey == nil{
 		db.DBBinlogKey = getDBBinlogkey(db)
 	}

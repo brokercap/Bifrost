@@ -15,6 +15,7 @@ func init()  {
 	xgo.AddRoute("/bifrost/mysql/tableinfo",getmysqlTableFields)
 	xgo.AddRoute("/bifrost/mysql/schemalist",getmysqlSchemaList)
 	xgo.AddRoute("/bifrost/mysql/tablelist",getmysqlSchemaTableList)
+	xgo.AddRoute("/bifrost/mysql/createsql",getmysqlCreateSQL)
 }
 
 func getmysqlSchemaList(w http.ResponseWriter,req *http.Request)  {
@@ -66,6 +67,23 @@ func getmysqlTableFields(w http.ResponseWriter,req *http.Request)  {
 	m := c.GetTableFields(schema,TableName)
 	b,_:=json.Marshal(m)
 	w.Write(b)
+	return
+}
+
+func getmysqlCreateSQL(w http.ResponseWriter,req *http.Request)  {
+	req.ParseForm()
+	ToServerKey := req.Form.Get("toserverkey")
+	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
+	if toServerInfo == nil{
+		w.Write([]byte(ToServerKey+" no found"))
+		return
+	}
+	schema := req.Form.Get("schema")
+	TableName := req.Form.Get("table_name")
+	c := NewMysqlDBConn(toServerInfo.ConnUri)
+	defer c.Close()
+	showCreateSQL := c.ShowTableCreate(schema,TableName)
+	w.Write([]byte(showCreateSQL))
 	return
 }
 
@@ -278,4 +296,34 @@ func (This *mysqlDB) Commit() error {
 func (This *mysqlDB) Rollback() error {
 	_,err := This.conn.Exec("ROLLBACK",make([]driver.Value,0))
 	return err
+}
+
+func (This *mysqlDB) ShowTableCreate(schema,table string) string {
+	sql := "SHOW CREATE TABLE `"+schema+"`.`"+table+"`"
+	stmt,err := This.conn.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return ""
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return ""
+	}
+
+	var createSQL string
+
+	for {
+		dest := make([]driver.Value, 2, 2)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		createSQL = string(dest[1].([]byte))
+		break
+	}
+	return createSQL
 }

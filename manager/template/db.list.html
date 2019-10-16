@@ -1,7 +1,21 @@
 
 {{template "header" .}}
 		
-
+<script type="text/javascript">
+function formatDate(timestamp) {
+    if (timestamp == 0){
+        return "";
+    }
+    var now = new Date(timestamp*1000);
+    var year=now.getFullYear();
+    var month=now.getMonth()+1;
+    var date=now.getDate();
+    var hour=now.getHours();
+    var minute=now.getMinutes();
+    var second=now.getSeconds();
+    return year+"-"+month+"-"+date+" "+hour+":"+minute+":"+second;
+}
+</script>
                 <div class="ibox float-e-margins" >
                   <div class="row">
                   <div class="col-lg-8"></div>
@@ -76,8 +90,9 @@
 
                                                     </td>
                                                     <td>
-                                                        <p>{{$v.BinlogDumpFileName}}</p>
-                                                        <p>{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
+                                                        <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
 
                                                     {{if eq $v.ConnStatus "close"}}
                                                     {{if  eq $v.ConnErr ""}}
@@ -91,6 +106,7 @@
                                                     <td>
                                                         <p class="db_current_binlog"></p>
                                                         <p class="db_current_postion"></p>
+                                                        <p class="db_postion_time_delay"></p>
                                                         <p><button data-toggle="button" class="btn-sm btn-primary NewestPostionBtn" type="button">最新位点</button></p>
                                                     </td>
                                                     <td>
@@ -311,15 +327,35 @@
 
     $(".NewestPostionBtn").click(
         function(){
-            var uri = $(this).parent().parent().parent().children().eq(1).attr("title");
+            var trObj = $(this).parent().parent().parent();
+            var url = "/db/checkposition";
+            var dbname = trObj.children().eq(0).text();
+            $.ajax({
+                url:url,  //请求的URL
+                timeout : 5000, //超时时间设置，单位毫秒
+                type : 'post',  //请求方式，get或post
+                data :{dbname: dbname},  //请求所传参数，json格式
+                dataType:'json',//返回的数据格式
+                success:function(data){ //请求成功的回调函数
+                    if (data.status==false){
+                        alert(data.msg);
+                        return;
+                    }
+                    trObj.children().eq(3).find(".db_last_binlog").text(data.data.BinlogFile);
+                    trObj.children().eq(3).find(".db_last_position").text(data.data.BinlogPosition);
+                    trObj.children().eq(3).find(".db_last_time").text(formatDate(data.data.BinlogTimestamp));
 
-            var data = getDBPostion(uri);
-            if(!data.status){
-                alert(data.msg);
-                return false;
-            }
-            $(this).parent().parent().find(".db_current_binlog").text(data.data.BinlogFile);
-            $(this).parent().parent().find(".db_current_postion").text(data.data.BinlogPosition);
+                    trObj.children().eq(4).find(".db_current_binlog").text(data.data.BinlogFile);
+                    trObj.children().eq(4).find(".db_current_postion").text(data.data.BinlogPosition);
+                    trObj.children().eq(4).find(".db_postion_time_delay").text("delay: "+data.data.DelayedTime+ " s");
+                },
+                complete : function(XMLHttpRequest,requstStatus){ //请求完成后最终执行参数
+                    if( requstStatus != 'success' ){
+                        alert("reqeust error, reqeust status : "+requstStatus);
+                        return false;
+                    }
+                }
+            });
         }
 
     );

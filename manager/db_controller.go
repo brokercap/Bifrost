@@ -36,6 +36,7 @@ func init(){
 	addRoute("/db/del",delDB_Action)
 	addRoute("/db/list",listDB_Action)
 	addRoute("/db/check_uri",check_db_connect_Action)
+	addRoute("/db/checkposition",check_db_last_position_Action)
 }
 
 type dbListStruct struct{
@@ -219,6 +220,66 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		}
 		return
 	}(dbUri)
+	if err != nil{
+		w.Write(returnDataResult(false,err.Error(),*dbInfo))
+	}else{
+		w.Write(returnDataResult(true,"success",*dbInfo))
+	}
+}
+
+
+func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	type dbInfoStruct struct{
+		BinlogFile 			string
+		BinlogPosition 		int
+		BinlogTimestamp 	uint32
+		LastBinlogFile 		string
+		LastBinlogPosition 	int
+		NowTimestamp 		uint32
+		DelayedTime  		uint32
+	}
+	dbObj := server.GetDbInfo(dbname)
+	if dbObj == nil{
+		w.Write(returnDataResult(false,dbname+" not esxit",nil))
+		return
+	}
+	var dbUri string = dbObj.ConnectUri
+	dbInfo := &dbInfoStruct{}
+
+	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
+	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
+	dbInfo.BinlogTimestamp = uint32(dbObj.BinlogDumpTimestamp)
+	err := func(dbUri string) (e error){
+		e = nil
+		defer func() {
+			if err := recover();err != nil{
+				log.Println(string(debug.Stack()))
+				e = fmt.Errorf(fmt.Sprint(err))
+				return
+			}
+		}()
+		dbconn := DBConnect(dbUri)
+		if dbconn != nil{
+			e = nil
+		}else{
+			e = fmt.Errorf("db conn ,uknow error")
+		}
+		defer dbconn.Close()
+		MasterBinlogInfo := GetBinLogInfo(dbconn)
+		if MasterBinlogInfo.File != ""{
+			dbInfo.LastBinlogFile = MasterBinlogInfo.File
+			dbInfo.LastBinlogPosition = MasterBinlogInfo.Position
+		}else{
+			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
+		}
+		return
+	}(dbUri)
+	dbInfo.NowTimestamp = uint32(time.Now().Unix())
+	if dbInfo.BinlogTimestamp > 0 && dbInfo.LastBinlogFile != dbInfo.BinlogFile && dbInfo.BinlogPosition != dbInfo.LastBinlogPosition{
+		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
+	}
 	if err != nil{
 		w.Write(returnDataResult(false,err.Error(),*dbInfo))
 	}else{
