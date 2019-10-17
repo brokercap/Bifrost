@@ -9,21 +9,24 @@ import (
 	"github.com/brokercap/Bifrost/config"
 	"sync"
 	"io"
+	"github.com/brokercap/Bifrost/server/user"
 )
 
 
 var l sync.RWMutex
 
 type recovery struct {
-	Version string
-	ToServer *json.RawMessage
-	DbInfo *json.RawMessage
+	Version 	string
+	ToServer 	*json.RawMessage
+	DbInfo 		*json.RawMessage
+	User 		*json.RawMessage
 }
 
 type recoveryDataSturct struct {
-	Version string
-	ToServer interface{}
-	DbInfo interface{}
+	Version 	string
+	ToServer 	interface{}
+	DbInfo 		interface{}
+	User   		interface{}
 }
 
 func DoRecoverySnapshotData(){
@@ -56,6 +59,8 @@ func DoRecoverySnapshotData(){
 	if string(*data.DbInfo) != "{}"{
 		Recovery(data.DbInfo,false)
 	}
+
+	user.RecoveryUser(data.User)
 }
 
 func GetSnapshotData() []byte{
@@ -70,6 +75,7 @@ func GetSnapshotData() []byte{
 		Version:config.VERSION,
 		ToServer:plugin.SaveToServerData(),
 		DbInfo:SaveDBInfoToFileData(),
+		User:user.GetUserList(),
 	}
 	b,_:= json.Marshal(data)
 	return b

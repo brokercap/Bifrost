@@ -18,20 +18,31 @@ package manager
 import (
 	"net/http"
 	"html/template"
-	"github.com/brokercap/Bifrost/config"
 
+	"github.com/brokercap/Bifrost/server/user"
+	"encoding/json"
 )
 
 func init()  {
 	addRoute("/login",user_login)
 	addRoute("/dologin",user_do_login)
 	addRoute("/logout",user_logout)
+
+	addRoute("/user/update",update_user_controller)
+	addRoute("/user/del",del_user_controller)
+	addRoute("/user/list",list_user_controller)
 }
 
 func user_login(w http.ResponseWriter,req *http.Request){
 	data := TemplateHeader{Title:"Login - Bifrost"}
 	t, _ := template.ParseFiles(TemplatePath("manager/template/login.html"))
 	t.Execute(w, data)
+}
+
+
+func user_logout(w http.ResponseWriter,req *http.Request){
+	sessionMgr.EndSession(w, req) //用户退出时删除对应session
+	http.Redirect(w, req, "/login", http.StatusFound)
 }
 
 func user_do_login(w http.ResponseWriter,req *http.Request){
@@ -44,9 +55,10 @@ func user_do_login(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false," user no exsit"))
 		return
 	}
-	pwd := config.GetConfigVal("user",UserName)
-	if pwd == UserPwd{
-		GroupName := config.GetConfigVal("groups",UserName)
+
+	UserInfo := user.GetUserInfo(UserName)
+	if UserInfo.Password == UserPwd{
+		GroupName := UserInfo.Group
 		if GroupName == ""{
 			GroupName = "monitor"
 		}
@@ -59,7 +71,78 @@ func user_do_login(w http.ResponseWriter,req *http.Request){
 	return
 }
 
-func user_logout(w http.ResponseWriter,req *http.Request){
-	sessionMgr.EndSession(w, req) //用户退出时删除对应session
-	http.Redirect(w, req, "/login", http.StatusFound)
+
+func user_update(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	UserName := req.Form.Get("user_name")
+	UserPwd := req.Form.Get("password")
+	UserGroup := req.Form.Get("group")
+	if UserName == "" || UserPwd == ""{
+		w.Write(returnResult(false," user_name and password not empty!"))
+		return
+	}
+	err := user.UpdateUser(UserName,UserPwd,UserGroup)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+	}else{
+		w.Write(returnResult(true,"success"))
+	}
+	return
+}
+
+func update_user_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	UserName := req.Form.Get("user_name")
+	UserPwd := req.Form.Get("password")
+	UserGroup := req.Form.Get("group")
+	if UserName == "" || UserPwd == ""{
+		w.Write(returnResult(false," user_name and password not empty!"))
+		return
+	}
+	err := user.UpdateUser(UserName,UserPwd,UserGroup)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+	}else{
+		w.Write(returnResult(true,"success"))
+	}
+	return
+}
+
+func del_user_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	UserName := req.Form.Get("user_name")
+	if UserName == ""{
+		w.Write(returnResult(false," user_name not empty!"))
+		return
+	}
+	err := user.DelUser(UserName)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+	}else{
+		w.Write(returnResult(true,"success"))
+	}
+	return
+}
+
+func list_user_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	UserList := user.GetUserList()
+
+	if req.Form.Get("format") == "json"{
+		data,_:=json.Marshal(UserList)
+		w.Write(data)
+		return
+	}
+
+	type UserListStruct struct{
+		TemplateHeader
+		UserList []user.UserInfo
+	}
+
+
+	UserListInfo := UserListStruct{UserList:UserList}
+	UserListInfo.Title = "UserList-Bifrost"
+	t, _ := template.ParseFiles(TemplatePath("manager/template/user.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t.Execute(w, UserListInfo)
+	return
 }
