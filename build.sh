@@ -218,6 +218,7 @@ build()
 
     echo $bifrostVersion > $tagDir/VERSION
     cp -rf ./README.MD ./$tagDir/README.MD
+    cp -rf ./LICENSE ./$tagDir/LICENSE
     
     echo "copy ./manager/template ==> " ./$tagDir/manager/template
 

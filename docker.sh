@@ -88,19 +88,33 @@ function dockerOnlineTestAdmin(){
     docker stop BifrostOnlineTest
     docker rm BifrostOnlineTest
     mkdir -p /data/BifrostOnlineTestData
-    echo $1
-    #docker run --name BifrostDevTest -d -P -v BifrostDevTestData:/linux/data jc3wish/bifrost:$dockerDevVersion
-    docker run --name BifrostOnlineTest -d -p21037:21036 -v /data/BifrostOnlineTestData:/linux/data $1
+    if [[ "$1" == "" ]];then
+        dockerVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
+        v=jc3wish/bifrost:$dockerVersion
+    else
+        v=$1
+    fi
+    docker run --name BifrostOnlineTest -d -p21037:21036 -v /data/BifrostOnlineTestData:/linux/data $v
 }
 
 function dockerCleanRelease(){
     dockerVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
-    docker rmi jc3wish/bifrost:$dockerDevVersion
+    docker rmi jc3wish/bifrost:$dockerVersion
     echo "rmi jc3wish/bifrost:$dockerVersion over"
 }
 
 function dockerPushRelease(){
-    docker push $1
+    if [[ "$1" == "" ]];then
+        dockerVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
+        v=jc3wish/bifrost:$dockerVersion
+    else
+        v=$1
+    fi
+    docker push $v
+    
+    docker tag $v jc3wish/bifrost:latest
+    
+    docker push jc3wish/bifrost:latest
 }
 
 function dockerClean(){
