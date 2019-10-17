@@ -77,7 +77,7 @@ func CompareBinlogPositionAndReturnLess(BinlogFileNum1 int, BinlogPosition1 uint
 	}
 }
 
-func Recovery(content *json.RawMessage){
+func Recovery(content *json.RawMessage,isStop bool){
 	var data map[string]dbSaveInfo
 
 	errors := json.Unmarshal(*content,&data)
@@ -86,10 +86,10 @@ func Recovery(content *json.RawMessage){
 		os.Exit(1)
 		return
 	}
-	recoveryData(data)
+	recoveryData(data,isStop)
 }
 
-func recoveryData(data map[string]dbSaveInfo){
+func recoveryData(data map[string]dbSaveInfo,isStop bool){
 	for name,dbInfo :=range data{
 		channelIDMap := make(map[int]int,0)
 		db := AddNewDB(name, dbInfo.ConnectUri, dbInfo.BinlogDumpFileName, dbInfo.BinlogDumpPosition, dbInfo.ServerId,dbInfo.MaxBinlogDumpFileName,dbInfo.MaxinlogDumpPosition,dbInfo.AddTime)
@@ -308,7 +308,7 @@ func recoveryData(data map[string]dbSaveInfo){
 		if dbInfo.ConnStatus == "closing"{
 			dbInfo.ConnStatus = "close"
 		}
-		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop"{
+		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop" && !isStop{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 				go db.Start()
 			}

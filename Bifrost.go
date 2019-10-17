@@ -25,7 +25,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"encoding/json"
 	"io"
 	"sync"
 	"io/ioutil"
@@ -39,22 +38,7 @@ import (
 	"strconv"
 )
 
-type recovery struct {
-	Version string
-	ToServer *json.RawMessage
-	DbInfo *json.RawMessage
-}
-
-type recoveryData struct {
-	Version string
-	ToServer interface{}
-	DbInfo interface{}
-}
-
 var l sync.Mutex
-
-var DataFile string
-var DataTmpFile string
 
 var logo = `
 ___         ___                   _   
@@ -114,9 +98,6 @@ func main() {
 	}()
 	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
-	DataFile  = ""
-	DataTmpFile = ""
-
 	BifrostConfigFile = flag.String("config", "", "Bifrost config file path")
 	BifrostPid = flag.String("pid", "", "pid file path")
 	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
@@ -173,6 +154,8 @@ func main() {
 
 	os.MkdirAll(dataDir, 0700)
 
+	config.DataDir = dataDir
+
 	if runtime.GOOS != "windows"{
 		if *BifrostPid == ""{
 			if config.GetConfigVal("Bifrostd","pid") == ""{
@@ -192,10 +175,6 @@ func main() {
 	server.InitStorage()
 
 	log.Println("Server started, Bifrost version",config.VERSION)
-
-
-	DataFile = dataDir+"/db.Bifrost"
-	DataTmpFile = dataDir+"/db.Bifrost.tmp"
 
 	doRecovery()
 
@@ -307,62 +286,12 @@ func doSaveDbInfo(){
 	if os.Getppid() != 1 && *BifrostDaemon == "true"{
 		return
 	}
-	l.Lock()
-	defer func(){
-		l.Unlock()
-		if err :=recover();err!=nil{
-			log.Println(err)
-		}
-	}()
-	data := recoveryData{
-		Version:config.VERSION,
-		ToServer:plugin.SaveToServerData(),
-		DbInfo:server.SaveDBInfoToFileData(),
-	}
-	b,_:= json.Marshal(data)
-	f, err2 := os.OpenFile(DataTmpFile, os.O_CREATE|os.O_RDWR, 0700) //打开文件
-	if err2 !=nil{
-		log.Println("open file error:",err2)
-		return
-	}
-	_, err1 := io.WriteString(f, string(b)) //写入文件(字符串)
-	if err1 != nil {
-		f.Close()
-		log.Printf("save data to file error:%s, data:%s \r\n",err1,string(b))
-		return
-	}
-	f.Close()
-	err := os.Rename(DataTmpFile,DataFile)
-	if err != nil{
-		log.Println("doSaveDbInfo os.Rename err:",err)
-	}
+	server.DoSaveSnapshotData()
 }
 
 
 func doRecovery(){
-	fi, err := os.Open(DataFile)
-	if err != nil {
-		return
-	}
-	defer fi.Close()
-	fd, err := ioutil.ReadAll(fi)
-	if err != nil {
-		return
-	}
-	if string(fd) == ""{
-		return
-	}
-	var data recovery
-	errors := json.Unmarshal(fd,&data)
-	if errors != nil{
-		log.Printf("recovery error:%s, data:%s \r\n",errors,string(fd))
-	}
-	if string(*data.ToServer) != "{}"{
-		plugin.Recovery(data.ToServer)
-	}
-	if string(*data.DbInfo) != "{}"{
-		server.Recovery(data.DbInfo)
-	}
+	server.DoRecoverySnapshotData()
 }
 
 func ListenSignal(){

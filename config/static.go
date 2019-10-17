@@ -9,3 +9,5 @@ var TLS bool = false
 
 var TLSServerKeyFile string = ""
 var TLSServerCrtFile string = ""
+
+var DataDir = ""
