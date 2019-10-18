@@ -47,7 +47,7 @@ func InitWarningConfigCache(){
 	firstStartUp = false
 	data := storage.GetListByPrefix([]byte(WARNING_KEY_PREFIX))
 	for _,v := range data{
-		key := string(v[0])
+		key := v.Key
 		t := strings.Split(key,"_")
 		idString := t[len(t)-1]
 		intA, err := strconv.Atoi(idString)
@@ -59,7 +59,7 @@ func InitWarningConfigCache(){
 		}
 
 		var tmpWarningConfig WaringConfig
-		err2 := json.Unmarshal(v[1],&tmpWarningConfig)
+		err2 := json.Unmarshal([]byte(v.Value),&tmpWarningConfig)
 		if err2 != nil{
 			continue
 		}

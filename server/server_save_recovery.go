@@ -36,15 +36,18 @@ func DoRecoverySnapshotData(){
 
 	fi, err := os.Open(DataFile)
 	if err != nil {
+		user.RecoveryUser(nil)
 		return
 	}
 	defer fi.Close()
 	fd, err := ioutil.ReadAll(fi)
 
 	if err != nil {
+		user.RecoveryUser(nil)
 		return
 	}
 	if string(fd) == ""{
+		user.RecoveryUser(nil)
 		return
 	}
 	var data recovery

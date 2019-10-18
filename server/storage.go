@@ -137,3 +137,7 @@ func getBinlogPosition(key []byte) (*positionStruct,error) {
 func delBinlogPosition(key []byte) error {
 	return storage.DelKeyVal(key)
 }
+
+func Close()  {
+	storage.Close()
+}

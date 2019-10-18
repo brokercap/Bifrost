@@ -106,7 +106,14 @@ function formatDate(timestamp) {
                         <div class="form-group" >
                             <label class="col-sm-3 control-label">Password：</label>
                             <div class="col-sm-9" style=" position: relative">
-                                <input type="text" name="user_password" id="user_password" class="form-control" placeholder="password"> <span class="help-block m-b-none">*</span>
+                                <input type="password" name="user_password" id="user_password" class="form-control" placeholder="password"> <span class="help-block m-b-none">*</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group" >
+                            <label class="col-sm-3 control-label">再次输入Password：</label>
+                            <div class="col-sm-9" style=" position: relative">
+                                <input type="password" name="user_password2" id="user_password2" class="form-control" placeholder="password"> <span class="help-block m-b-none">*</span>
                             </div>
                         </div>
 
@@ -145,10 +152,16 @@ $("#addNewUserBtn").click(
 			 return false;
 		}
 		var user_password = $("#user_password").val();
+        var user_password2 = $("#user_password2").val();
 		var user_group = $("#user_group").val();
-		if( user_password == "" || user_group=="" ){
+		if( user_password == "" || user_password2 == "" || user_group=="" ){
 			return
 		}
+		if( user_password != user_password2 ){
+            alert("二次输入密码不匹配，请重新输入！");
+            return;
+        }
+
 		var url = "/user/update";
 		$.post(
 			url,
@@ -162,6 +175,7 @@ $("#addNewUserBtn").click(
 					alert(data.msg);
 					return false;
 				}
+				alert(data.msg);
 				window.location.reload();
                 return;
 			},
@@ -197,8 +211,10 @@ $(".DelUserBtn").click(
         function () {
             var trObj = $(this).parent().parent();
             var user_name =  trObj.children().eq(0).text();
-
-            var user = "/user/del";
+            if(!confirm("确定删除用户 "+user_name+ " ? 删除后不能恢复")){
+                return false;
+            }
+            var url = "/user/del";
             $.post(
                     url,
                     { user_name: user_name},

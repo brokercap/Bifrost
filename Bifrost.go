@@ -88,6 +88,7 @@ func main() {
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
+		server.Close()
 		if os.Getppid() == 1 && *BifrostPid != ""{
 			os.Remove(*BifrostPid)
 		}
@@ -304,6 +305,7 @@ func ListenSignal(){
 		server.StopAllChannel()
 		doSaveDbInfo()
 		os.Remove(*BifrostPid)
+		server.Close()
 		os.Exit(0)
 	}
 }

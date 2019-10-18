@@ -24,7 +24,7 @@ func InitStorage(){
 	}
 	levelDbPath := dataDir+"/leveldb"
 	os.MkdirAll(levelDbPath, 0700)
-	levelDB, err = leveldb.OpenFile(levelDbPath, nil)
+	levelDB, err = leveldb.OpenFile(levelDbPath,nil)
 	if err != nil{
 		log.Println("init leveldb err:",err)
 		os.Exit(0)
@@ -45,17 +45,24 @@ func DelKeyVal(key []byte) error{
 	return levelDB.Delete(key,nil)
 }
 
-func GetListByPrefix(key []byte) [][][]byte{
-	data := make([][][]byte,0)
+type ListStruct struct {
+	Key 	string
+	Value 	string
+}
+
+func GetListByPrefix(key []byte) (data []ListStruct){
 	iter := levelDB.NewIterator(util.BytesPrefix(key), nil)
 	for iter.Next() {
-		tmp := make([][]byte,2)
-		tmp[0] = iter.Key()
-		tmp[1] = iter.Value()
-		data = append(data,tmp)
+		data = append(data,ListStruct{Key:string(iter.Key()),Value:string(iter.Value())})
 	}
 	iter.Release()
 	return data
+}
+
+func Close(){
+	if levelDB != nil{
+		levelDB.Close()
+	}
 }
 
 

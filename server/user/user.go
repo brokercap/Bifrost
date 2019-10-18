@@ -13,11 +13,6 @@ const USER_PREFIX  string = "Birost_UserList_"
 
 type UserGroupType string
 
-const (
-	Administrator UserGroupType = "administrator"
-	Monitor UserGroupType = "monitor"
-)
-
 type UserInfo struct {
 	Name string
 	Password string
@@ -43,17 +38,26 @@ func InitUser()  {
 	if len(userList) != 0{
 		return
 	}
-
-	for Name,Password := range config.GetConf("user"){
-		UserGroup := getUserGroup(config.GetConfigVal("groups",Name))
-		User := UserInfo{
-			Name:Name,
-			Password:Password,
-			Group:UserGroup,
+	go func() {
+		// 不要问我这里为什么要异步 ，并定时5秒，
+		// 因为如果不这样的话，在删除了leveldb存储目录的情况下，再启动 GetListByPrefix 的时候，是没有数据的，这样就会 Put数据进去，但是leveldb 这里过一会会把老数据加载进来，覆盖这些数据
+		time.Sleep( time.Duration(5) * time.Second)
+		for Name,Password := range config.GetConf("user"){
+			UserGroup := getUserGroup(config.GetConfigVal("groups",Name))
+			User := UserInfo{
+				Name:Name,
+				Password:Password,
+				Group:UserGroup,
+				AddTime:time.Now().Unix(),
+				UpdateTime:time.Now().Unix(),
+			}
+			b,_:=json.Marshal(User)
+			err := storage.PutKeyVal([]byte(USER_PREFIX+Name),b)
+			if err != nil{
+				log.Println("InitUser error:",err," user:",User)
+			}
 		}
-		b,_:=json.Marshal(User)
-		storage.PutKeyVal([]byte(USER_PREFIX+Name),b)
-	}
+	}()
 }
 
 
@@ -77,15 +81,14 @@ func RecoveryUser(content *json.RawMessage)  {
 
 
 func GetUserList() []UserInfo {
-	userListBytes:= storage.GetListByPrefix([]byte(USER_PREFIX))
-	if len(userListBytes) == 0 {
+	userListString:= storage.GetListByPrefix([]byte(USER_PREFIX))
+	if len(userListString) == 0 {
 		return []UserInfo{}
 	}
 	UserList := make([]UserInfo,0)
-	for _,v := range userListBytes{
+	for _,v := range userListString{
 		var User UserInfo
-		dd := v[1]
-		err := json.Unmarshal(dd,&User)
+		err := json.Unmarshal([]byte(v.Value),&User)
 		if err == nil{
 			UserList = append(UserList,User)
 		}
@@ -117,6 +120,7 @@ func UpdateUser(Name,Password,GroupName string ) error {
 		User.AddTime = time.Now().Unix()
 		User.UpdateTime = time.Now().Unix()
 	}else{
+		User.AddTime = OldUserInfo.AddTime
 		User.UpdateTime = time.Now().Unix()
 	}
 	key := USER_PREFIX+Name
