@@ -128,6 +128,11 @@ func list_user_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	UserList := user.GetUserList()
 
+	//过滤密码,防止其他 monitor 用户查看到
+	for k,_:= range UserList{
+		UserList[k].Password = ""
+	}
+
 	if req.Form.Get("format") == "json"{
 		data,_:=json.Marshal(UserList)
 		w.Write(data)
@@ -138,6 +143,7 @@ func list_user_controller(w http.ResponseWriter,req *http.Request){
 		TemplateHeader
 		UserList []user.UserInfo
 	}
+
 
 
 	UserListInfo := UserListStruct{UserList:UserList}
