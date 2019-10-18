@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"strconv"
+	"log"
 )
 
 const WARNING_KEY_PREFIX  = "bifrost_warning_config_"
@@ -98,3 +99,19 @@ func DelWarningConfig(ID int) error {
 	return storage.DelKeyVal([]byte(key))
 }
 
+func RecoveryWarning(content *json.RawMessage)  {
+	if content == nil{
+		return
+	}
+	var data map[string]WaringConfig
+	errors := json.Unmarshal(*content,&data)
+	if errors != nil{
+		log.Println( "recorery warning content errors;",errors," content:",content)
+		return
+	}
+	for key,v := range data{
+		b,_ := json.Marshal(v)
+		storage.PutKeyVal([]byte(key),b)
+	}
+	firstStartUp = false
+}

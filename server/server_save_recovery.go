@@ -10,6 +10,7 @@ import (
 	"sync"
 	"io"
 	"github.com/brokercap/Bifrost/server/user"
+	"github.com/brokercap/Bifrost/server/warning"
 )
 
 
@@ -20,6 +21,7 @@ type recovery struct {
 	ToServer 	*json.RawMessage
 	DbInfo 		*json.RawMessage
 	User 		*json.RawMessage
+	Warning		*json.RawMessage
 }
 
 type recoveryDataSturct struct {
@@ -27,27 +29,28 @@ type recoveryDataSturct struct {
 	ToServer 	interface{}
 	DbInfo 		interface{}
 	User   		interface{}
+	Warning   	interface{}
 }
 
 func DoRecoverySnapshotData(){
+
+	//这里初始化用户,第一次启动的情况下,配置文件中的用户需要初始化
+	user.InitUser()
 
 	var DataFile string = config.DataDir+"/db.Bifrost"
 	//DataTmpFile = dataDir+"/db.Bifrost.tmp"
 
 	fi, err := os.Open(DataFile)
 	if err != nil {
-		user.RecoveryUser(nil)
 		return
 	}
 	defer fi.Close()
 	fd, err := ioutil.ReadAll(fi)
 
 	if err != nil {
-		user.RecoveryUser(nil)
 		return
 	}
 	if string(fd) == ""{
-		user.RecoveryUser(nil)
 		return
 	}
 	var data recovery
@@ -56,14 +59,20 @@ func DoRecoverySnapshotData(){
 		log.Printf("recovery error:%s, data:%s \r\n",errors,string(fd))
 		return
 	}
-	if string(*data.ToServer) != "{}"{
+	if data.ToServer != nil && string(*data.ToServer) != "{}"{
 		plugin.Recovery(data.ToServer)
 	}
-	if string(*data.DbInfo) != "{}"{
+	if data.DbInfo != nil && string(*data.DbInfo) != "{}"{
 		Recovery(data.DbInfo,false)
 	}
+	if data.User != nil && string(*data.User) != "[]" {
+		user.RecoveryUser(data.User)
+	}
 
-	user.RecoveryUser(data.User)
+	if data.DbInfo != nil && string(*data.DbInfo) != "{}"{
+		warning.RecoveryWarning(data.Warning)
+	}
+
 }
 
 func GetSnapshotData() []byte{
@@ -79,6 +88,25 @@ func GetSnapshotData() []byte{
 		ToServer:plugin.SaveToServerData(),
 		DbInfo:SaveDBInfoToFileData(),
 		User:user.GetUserList(),
+		Warning:warning.GetWarningConfigList(),
+	}
+	b,_:= json.Marshal(data)
+	return b
+}
+
+//只获取 数据源 和 目标库的镜像数据
+func GetSnapshotData2() []byte{
+	l.Lock()
+	defer func(){
+		l.Unlock()
+		if err :=recover();err!=nil{
+			log.Println(err)
+		}
+	}()
+	data := recoveryDataSturct{
+		Version:config.VERSION,
+		ToServer:plugin.SaveToServerData(),
+		DbInfo:SaveDBInfoToFileData(),
 	}
 	b,_:= json.Marshal(data)
 	return b
@@ -89,7 +117,7 @@ func DoSaveSnapshotData(){
 	var DataFile string = config.DataDir+"/db.Bifrost"
 	var DataTmpFile string = config.DataDir+"/db.Bifrost.tmp"
 
-	b := GetSnapshotData()
+	b := GetSnapshotData2()
 
 	f, err2 := os.OpenFile(DataTmpFile, os.O_CREATE|os.O_RDWR, 0700) //打开文件
 	if err2 !=nil{
