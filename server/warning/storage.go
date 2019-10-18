@@ -113,5 +113,5 @@ func RecoveryWarning(content *json.RawMessage)  {
 		b,_ := json.Marshal(v)
 		storage.PutKeyVal([]byte(key),b)
 	}
-	firstStartUp = false
+	firstStartUp = true
 }
