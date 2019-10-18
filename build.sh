@@ -78,7 +78,7 @@ function checkGoVersion(){
     GoVersion2=${GoVersion2%%.*}
 
     GoVersion3=$((GoVersion1*100+GoVersion2))
-    if [[ $GoVersion3 -lt 111 ]];then
+    if [[ $GoVersion3 -lt 112 ]];then
         echo "go version must be go1.11+"
         exit 1
     fi
@@ -310,6 +310,8 @@ build()
 }
 
 function buildHelp(){
+    echo " golang version 1.12+ need "
+    echo ""
     echo "./build.sh init"
     echo "--- go mod vendor"
     echo "./build.sh linux|windows|freebsd|darwin"
