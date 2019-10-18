@@ -14,6 +14,7 @@ func init(){
 	addRoute("/history/stop",history_kill_controller)
 	addRoute("/history/del",history_del_controller)
 	addRoute("/history/start",history_start_controller)
+	addRoute("/history/checkwhere",history_check_where_controller)
 }
 
 func history_list_controller(w http.ResponseWriter,req *http.Request){
@@ -88,7 +89,6 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 
 func history_add_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
-	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
@@ -109,6 +109,11 @@ func history_add_controller(w http.ResponseWriter,req *http.Request){
 	}
 	if len(ToserverIds) == 0 {
 		w.Write(returnDataResult(false, "ToserverIds error", 0))
+		return
+	}
+	err = history.CheckWhere(dbname,schema,tablename,Property.Where)
+	if err != nil{
+		w.Write(returnDataResult(false,err.Error(),0))
 		return
 	}
 
@@ -142,7 +147,6 @@ func history_del_controller(w http.ResponseWriter,req *http.Request){
 
 func history_start_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
-	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	id := GetFormInt(req,"id")
 	if id == 0{
@@ -159,7 +163,6 @@ func history_start_controller(w http.ResponseWriter,req *http.Request){
 
 func history_kill_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
-	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	id := GetFormInt(req,"id")
 	if id == 0{
@@ -171,4 +174,29 @@ func history_kill_controller(w http.ResponseWriter,req *http.Request){
 	}else{
 		w.Write(returnResult(true,"success"))
 	}
+}
+
+func history_check_where_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+	property := req.Form.Get("property")
+	var err error
+	var Property history.HistoryProperty
+	err = json.Unmarshal([]byte(property),&Property)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+		return
+	}
+	if Property.Where == ""{
+		w.Write(returnResult(true,"success"))
+		return
+	}
+	err = history.CheckWhere(dbname,schema,tablename,Property.Where)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+		return
+	}
+	w.Write(returnResult(true,"success"))
 }

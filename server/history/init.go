@@ -130,7 +130,8 @@ func GetHistoryList(dbName,SchemaName,TableName string,status HisotryStatus) []H
 
 type HistoryProperty struct {
 	ThreadNum			int      // 协程数量,每个协程一个连接
-	ThreadCountPer		int		   // 协程每次最多处理多少条数据
+	ThreadCountPer		int		 // 协程每次最多处理多少条数据
+	Where				string   // where 条件
 }
 
 type ThreadStatus struct {
@@ -303,7 +304,11 @@ func (This *History) threadStart(i int)  {
 		start = This.NowStartI
 		This.NowStartI += This.Property.ThreadCountPer
 		This.Unlock()
-		sql := "select * from `"+This.SchemaName+"`.`"+This.TableName +"` LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
+		sql := "select * from `"+This.SchemaName+"`.`"+This.TableName +"`"
+		if This.Property.Where != ""{
+			sql += " WHERE " +	This.Property.Where
+		}
+		sql += " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
 		//sql := "select * from ? LIMIT ?,?"
 
 		stmt, err := db.Prepare(sql)
