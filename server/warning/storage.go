@@ -109,9 +109,17 @@ func RecoveryWarning(content *json.RawMessage)  {
 		log.Println( "recorery warning content errors;",errors," content:",content)
 		return
 	}
+	var i int
+	var Id string
 	for key,v := range data{
+		//这里为什么取 最后一个 _ 之后的数据,是因为 WARNING_KEY_PREFIX 后面有可能不同版本,前缀值不一样,考滤兼容性问题
+		i = strings.LastIndexAny(key, "_")
+		if i<1{
+			continue
+		}
+		Id = key[i+1:]
 		b,_ := json.Marshal(v)
-		storage.PutKeyVal([]byte(key),b)
+		storage.PutKeyVal([]byte(WARNING_KEY_PREFIX+Id),b)
 	}
 	firstStartUp = true
 }
