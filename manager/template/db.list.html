@@ -345,8 +345,8 @@ function formatDate(timestamp) {
                     trObj.children().eq(3).find(".db_last_position").text(data.data.BinlogPosition);
                     trObj.children().eq(3).find(".db_last_time").text(formatDate(data.data.BinlogTimestamp));
 
-                    trObj.children().eq(4).find(".db_current_binlog").text(data.data.BinlogFile);
-                    trObj.children().eq(4).find(".db_current_postion").text(data.data.BinlogPosition);
+                    trObj.children().eq(4).find(".db_current_binlog").text(data.data.CurrentBinlogFile);
+                    trObj.children().eq(4).find(".db_current_postion").text(data.data.CurrentBinlogPosition);
                     trObj.children().eq(4).find(".db_postion_time_delay").text("delay: "+data.data.DelayedTime+ " s");
                 },
                 complete : function(XMLHttpRequest,requstStatus){ //请求完成后最终执行参数

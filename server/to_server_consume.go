@@ -231,6 +231,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				This.Lock()
 				if This.QueueMsgCount == 0{
 					This.ToServerChan = nil
+					This.Status = ""
 					This.Unlock()
 					runtime.Goexit()
 				}

@@ -235,8 +235,8 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 		BinlogFile 			string
 		BinlogPosition 		int
 		BinlogTimestamp 	uint32
-		LastBinlogFile 		string
-		LastBinlogPosition 	int
+		CurrentBinlogFile 	string
+		CurrentBinlogPosition int
 		NowTimestamp 		uint32
 		DelayedTime  		uint32
 	}
@@ -269,15 +269,15 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 		defer dbconn.Close()
 		MasterBinlogInfo := GetBinLogInfo(dbconn)
 		if MasterBinlogInfo.File != ""{
-			dbInfo.LastBinlogFile = MasterBinlogInfo.File
-			dbInfo.LastBinlogPosition = MasterBinlogInfo.Position
+			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
+			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
 		}else{
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
 		return
 	}(dbUri)
 	dbInfo.NowTimestamp = uint32(time.Now().Unix())
-	if dbInfo.BinlogTimestamp > 0 && dbInfo.LastBinlogFile != dbInfo.BinlogFile && dbInfo.BinlogPosition != dbInfo.LastBinlogPosition{
+	if dbInfo.BinlogTimestamp > 0 && (dbInfo.CurrentBinlogFile != dbInfo.BinlogFile || dbInfo.BinlogPosition != dbInfo.CurrentBinlogPosition){
 		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 	}
 	if err != nil{

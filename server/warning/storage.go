@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"strconv"
+	"log"
 )
 
 const WARNING_KEY_PREFIX  = "bifrost_warning_config_"
@@ -47,7 +48,7 @@ func InitWarningConfigCache(){
 	firstStartUp = false
 	data := storage.GetListByPrefix([]byte(WARNING_KEY_PREFIX))
 	for _,v := range data{
-		key := string(v[0])
+		key := v.Key
 		t := strings.Split(key,"_")
 		idString := t[len(t)-1]
 		intA, err := strconv.Atoi(idString)
@@ -59,7 +60,7 @@ func InitWarningConfigCache(){
 		}
 
 		var tmpWarningConfig WaringConfig
-		err2 := json.Unmarshal(v[1],&tmpWarningConfig)
+		err2 := json.Unmarshal([]byte(v.Value),&tmpWarningConfig)
 		if err2 != nil{
 			continue
 		}
@@ -98,3 +99,27 @@ func DelWarningConfig(ID int) error {
 	return storage.DelKeyVal([]byte(key))
 }
 
+func RecoveryWarning(content *json.RawMessage)  {
+	if content == nil{
+		return
+	}
+	var data map[string]WaringConfig
+	errors := json.Unmarshal(*content,&data)
+	if errors != nil{
+		log.Println( "recorery warning content errors;",errors," content:",content)
+		return
+	}
+	var i int
+	var Id string
+	for key,v := range data{
+		//这里为什么取 最后一个 _ 之后的数据,是因为 WARNING_KEY_PREFIX 后面有可能不同版本,前缀值不一样,考滤兼容性问题
+		i = strings.LastIndexAny(key, "_")
+		if i<1{
+			continue
+		}
+		Id = key[i+1:]
+		b,_ := json.Marshal(v)
+		storage.PutKeyVal([]byte(WARNING_KEY_PREFIX+Id),b)
+	}
+	firstStartUp = true
+}

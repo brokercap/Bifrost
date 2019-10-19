@@ -15,7 +15,7 @@ func TestGetDataList(t *testing.T)  {
 		DbName:"test",
 		SchemaName:"bifrost_test",
 		TableName:"bristol_performance_test",
-		Status:history.CLOSE,
+		Status:history.HISTORY_STATUS_CLOSE,
 		NowStartI:0,
 		Property:history.HistoryProperty{
 			ThreadNum:1,

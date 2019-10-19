@@ -45,7 +45,7 @@
                 <div class="col-md-12">
                     <div class="ibox float-e-margins" id="flow_count">
                         <div class="ibox-title">
-                            <span class="label label-success pull-right unit">条</span>
+                            <span class="label label-info pull-right unit">条</span>
                             <h5>条数</h5>
                         </div>
                         <div class="ibox-content">
@@ -56,7 +56,7 @@
                 <div class="col-md-12">
                     <div class="ibox float-e-margins" id="flow_bytesize">
                         <div class="ibox-title">
-                            <span class="label label-info pull-right unit">Byte</span>
+                            <span class="label label-success pull-right unit">Byte</span>
                             <h5>数据大小</h5>
                         </div>
                         <div class="ibox-content">
@@ -188,11 +188,43 @@
                 </div>
             </div>
 
-
         </div>
 
     </div>
 
+
+
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="col-md-2">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit"></span>
+                        <h5><a href="#">数据备份</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                        <a href="/backup/export"><button data-toggle="button" class="btn-sm btn-primary" type="button" >点击备份</button></a>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit"></span>
+                        <h5><a href="#">数据恢复</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                            <input class="style_file_content" accept=".json" type="file" id="backup_file" name="backup_file"/>
+                            <br/>
+                            <button data-toggle="button" class="btn-sm btn-primary" type="button" id="backupRecoveryBtn" >上传恢复</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 
@@ -242,6 +274,45 @@
                     flowObj.setAgetLength($(this).val());
                     flowObj.getFlowData();
                 }
+        );
+        
+        $("#backupRecoveryBtn").click(
+                function () {
+                    var backup_file = $('#backup_file')[0].files[0];
+                    if (backup_file == undefined || backup_file == "undefined"){
+                        alert("请选择要上传的恢复文件!");
+                        return;
+                    }
+
+                    if(!confirm("假如已经存在了的数据源,请先删除,再进行恢复,要不然可能存在数据异常!并且进行恢复的数据,全部都默认为 close 状态!")){
+                       return false;
+                    }
+
+                    var formData = new FormData();
+                    formData.append("backup_file",$('#backup_file')[0].files[0]);
+
+                    $.ajax({
+                        url:'/backup/import',
+                        dataType:'json',
+                        type:'POST',
+                        async: false,
+                        data: formData,
+                        processData : false, // 使数据不做处理
+                        contentType : false, // 不要设置Content-Type请求头
+                        success: function(data){
+                            if (data.status == true) {
+                                alert('恢复成功！');
+                            }else{
+                                alert(data.msg);
+                            }
+
+                        },
+                        error:function(response){
+                            alert(response)
+                        }
+                    });
+                }
+            
         );
     });
 
