@@ -260,7 +260,7 @@ func (This *History) threadStart(i int)  {
 		}
 	}
 	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
-	CountKey := This.SchemaName + "-" + This.TableName
+	CountKey := This.SchemaName + "_-" + This.TableName
 	var sendToServerResult = func(ToServerInfo *server.ToServer,pluginData *pluginDriver.PluginDataType)  {
 		ToServerInfo.Lock()
 		status := ToServerInfo.Status
@@ -271,6 +271,7 @@ func (This *History) threadStart(i int)  {
 		if status == ""{
 			ToServerInfo.Status = "running"
 		}
+		ToServerInfo.QueueMsgCount++
 		if ToServerInfo.ToServerChan == nil{
 			ToServerInfo.ToServerChan = &server.ToServerChan{
 				To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
