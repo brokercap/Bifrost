@@ -9,13 +9,11 @@ import (
 	dbDriver "database/sql/driver"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"strings"
-	"github.com/brokercap/Bifrost/util/dataType"
 	"github.com/brokercap/Bifrost/server/history"
 	"reflect"
 	"fmt"
 	"math/rand"
 	"time"
-	"strconv"
 )
 
 var url string = "root:root@tcp(10.40.2.41:3306)/bifrost_test"
@@ -54,7 +52,7 @@ func TestGetSchemaList(t *testing.T)  {
 func TestGetSchemaTableList(t *testing.T)  {
 	c := MyPlugin.NewMysqlDBConn(url)
 	defer c.Close()
-	list := c.GetSchemaTableList("mysql")
+	list := c.GetSchemaTableList(SchemaName)
 	if len(list) > 0{
 		t.Log(list)
 		t.Log("TestGetSchemaTableList success")
@@ -65,7 +63,7 @@ func TestGetSchemaTableList(t *testing.T)  {
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewMysqlDBConn(url)
-	c.Close()
+	defer c.Close()
 	list := c.GetTableFields(SchemaName,TableName)
 	if len(list) > 0{
 		t.Log(list)
@@ -330,9 +328,9 @@ func getMysqlData(id string)  (map[string]interface{},error){
 	sql := ""
 	for index,Field := range Fields{
 		if index == 0 {
-			sql = Field.COLUMN_NAME
+			sql = *Field.COLUMN_NAME
 		}else{
-			sql += ","+Field.COLUMN_NAME
+			sql += ","+ *Field.COLUMN_NAME
 		}
 	}
 	sql = "select "+sql +" from `"+schema+"`.`"+table +"` where id = "+id
@@ -359,16 +357,28 @@ func getMysqlData(id string)  (map[string]interface{},error){
 		}
 		for i, v := range Fields {
 			if dest[i] == nil {
-				m[v.COLUMN_NAME] = nil
+				m[*v.COLUMN_NAME] = nil
 				continue
 			}
-			switch v.DATA_TYPE {
+			switch *v.DATA_TYPE {
 			case "set":
-				s := string(dest[i].([]byte))
-				m[v.COLUMN_NAME] = strings.Split(s, ",")
+				m[*v.COLUMN_NAME] = strings.Split(dest[i].(string), ",")
+				break
+			case "tinyint(1)":
+				switch fmt.Sprint(dest[i]) {
+				case "1":
+					m[*v.COLUMN_NAME] = true
+					break
+				case "0":
+					m[*v.COLUMN_NAME] = false
+					break
+				default:
+					m[*v.COLUMN_NAME] = dest[i]
+					break
+				}
 				break
 			default:
-				m[v.COLUMN_NAME], _ = dataType.TransferDataType(dest[i].([]byte), v.ToDataType)
+				m[*v.COLUMN_NAME] = dest[i]
 				break
 			}
 		}
@@ -393,7 +403,7 @@ func getTableCount() (uint64,error){
 	defer rows.Close()
 	dest := make([]dbDriver.Value, 1, 1)
 	rows.Next(dest)
-	uint64, err := strconv.ParseUint(string(dest[0].([]byte)), 10, 64)
+	uint64 := uint64(dest[0].(int64))
 	return uint64,err
 
 }

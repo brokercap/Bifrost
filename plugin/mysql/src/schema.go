@@ -145,7 +145,7 @@ func (This *mysqlDB) GetSchemaList() (data []string) {
 			break
 		}
 		var DataBase string
-		DataBase 		= string(dest[0].([]byte))
+		DataBase 		= dest[0].(string)
 		if _,ok := filterMap[DataBase];ok{
 			continue
 		}
@@ -177,7 +177,7 @@ func (This *mysqlDB) GetSchemaTableList(schema string) (data []string) {
 		if err != nil {
 			break
 		}
-		data = append(data,string(dest[0].([]byte)))
+		data = append(data,dest[0].(string))
 	}
 	return
 }
@@ -192,8 +192,8 @@ type TableStruct struct {
 	EXTRA 				string
 	COLUMN_COMMENT 		string
 	DATA_TYPE			string
-	NUMERIC_PRECISION	*string
-	NUMERIC_SCALE		*string
+	NUMERIC_PRECISION	*uint64
+	NUMERIC_SCALE		*uint64
 }
 
 
@@ -231,34 +231,34 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 		var EXTRA string
 		var COLUMN_COMMENT string
 		var DATA_TYPE string
-		var NUMERIC_PRECISION *string
-		var NUMERIC_SCALE *string
+		var NUMERIC_PRECISION *uint64
+		var NUMERIC_SCALE *uint64
 
-		COLUMN_NAME 		= string(dest[0].([]byte))
+		COLUMN_NAME 		= dest[0].(string)
 		if dest[1] == nil{
 			COLUMN_DEFAULT 	= nil
 		}else{
-			t := string(dest[1].([]byte))
+			t := dest[1].(string)
 			COLUMN_DEFAULT 	= &t
 		}
 
-		IS_NULLABLE 		= string(dest[2].([]byte))
-		COLUMN_TYPE 		= string(dest[3].([]byte))
-		COLUMN_KEY 			= string(dest[4].([]byte))
-		EXTRA 				= string(dest[5].([]byte))
-		COLUMN_COMMENT 		= string(dest[6].([]byte))
-		DATA_TYPE 			= string(dest[7].([]byte))
+		IS_NULLABLE 		= dest[2].(string)
+		COLUMN_TYPE 		= dest[3].(string)
+		COLUMN_KEY 			= dest[4].(string)
+		EXTRA 				= dest[5].(string)
+		COLUMN_COMMENT 		= dest[6].(string)
+		DATA_TYPE 			= dest[7].(string)
 
 		if dest[8] == nil{
 			NUMERIC_PRECISION 	= nil
 		}else{
-			t := string(dest[8].([]byte))
+			t := dest[8].(uint64)
 			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
 			NUMERIC_SCALE 	= nil
 		}else{
-			t := string(dest[9].([]byte))
+			t := dest[9].(uint64)
 			NUMERIC_SCALE 	= &t
 		}
 
@@ -322,7 +322,7 @@ func (This *mysqlDB) ShowTableCreate(schema,table string) string {
 		if err != nil {
 			break
 		}
-		createSQL = string(dest[1].([]byte))
+		createSQL = dest[1].(string)
 		break
 	}
 	return createSQL

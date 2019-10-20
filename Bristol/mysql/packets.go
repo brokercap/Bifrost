@@ -536,7 +536,7 @@ func (mc *mysqlConn) readColumns(n int) (columns []mysqlField, e error) {
 		pos += 2
 
 		// Length [32 bit uint]
-		//length := bytesToUint32(data[pos : pos+4])
+		length := bytesToUint32(data[pos : pos+4])
 		pos += 4
 
 		// Field type [byte]
@@ -556,7 +556,7 @@ func (mc *mysqlConn) readColumns(n int) (columns []mysqlField, e error) {
 		//	defaultVal, _, e = bytesToLengthCodedBinary(data[pos:])
 		//}
 
-		columns = append(columns, mysqlField{name: string(name), fieldType: fieldType, flags: flags})
+		columns = append(columns, mysqlField{name: string(name), fieldType: fieldType, flags: flags, length:length})
 	}
 
 	return
@@ -855,7 +855,8 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 		pos++
 
 		// BinaryRowSet Packet
-		row := make([][]byte, columnsCount)
+		//row := make([][]byte, columnsCount)
+		row := make([]driver.Value, columnsCount)
 
 		nullBitMap = data[pos : pos+(columnsCount+7+2)/8]
 		pos += (columnsCount + 7 + 2) / 8
@@ -878,58 +879,94 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			// Numeric Typs
 			case FIELD_TYPE_TINY:
 				if unsigned {
-					row[i] = uintToByteStr(uint64(byteToUint8(data[pos])))
+					//row[i] = uintToByteStr(uint64(byteToUint8(data[pos])))
+					row[i] = byteToUint8(data[pos])
 				} else {
-					row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
+					//row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
+					 b := int8(byteToUint8(data[pos]))
+					 //length == 1 是 tinyint(1)  bool值
+					if rc.columns[i].length == 1{
+						if b == 1{
+							row[i] = true
+						}else{
+							row[i] = false
+						}
+					}else{
+						row[i] = b
+					}
 				}
 				pos++
 				break
 
-			case FIELD_TYPE_SHORT, FIELD_TYPE_YEAR:
+			case FIELD_TYPE_SHORT:
 				if unsigned {
-					row[i] = uintToByteStr(uint64(bytesToUint16(data[pos : pos+2])))
+					//row[i] = uintToByteStr(uint64(bytesToUint16(data[pos : pos+2])))
+					row[i] = bytesToUint16(data[pos : pos+2])
 				} else {
-					row[i] = intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2]))))
+					//row[i] = intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2]))))
+					row[i] = int16(bytesToUint16(data[pos : pos+2]))
 				}
+				pos += 2
+				break
+
+			case  FIELD_TYPE_YEAR:
+				row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
+				/*
+				if unsigned {
+					//row[i] = string(uintToByteStr(uint64(bytesToUint16(data[pos : pos+2]))))
+					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
+				} else {
+					//row[i] = string(intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2])))))
+					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
+				}
+				*/
 				pos += 2
 				break
 
 			case FIELD_TYPE_INT24, FIELD_TYPE_LONG:
 				if unsigned {
-					row[i] = uintToByteStr(uint64(bytesToUint32(data[pos : pos+4])))
+					//row[i] = uintToByteStr(uint64(bytesToUint32(data[pos : pos+4])))
+					row[i] =bytesToUint32(data[pos : pos+4])
 				} else {
-					row[i] = intToByteStr(int64(int32(bytesToUint32(data[pos : pos+4]))))
+					//row[i] = intToByteStr(int64(int32(bytesToUint32(data[pos : pos+4]))))
+					row[i] = int32(bytesToUint32(data[pos : pos+4]))
 				}
 				pos += 4
 				break
 
 			case FIELD_TYPE_LONGLONG:
 				if unsigned {
-					row[i] = uintToByteStr(bytesToUint64(data[pos : pos+8]))
+					//row[i] = uintToByteStr(bytesToUint64(data[pos : pos+8]))
+					row[i] = bytesToUint64(data[pos : pos+8])
 				} else {
-					row[i] = intToByteStr(int64(bytesToUint64(data[pos : pos+8])))
+					//row[i] = intToByteStr(int64(bytesToUint64(data[pos : pos+8])))
+					row[i] = int64(bytesToUint64(data[pos : pos+8]))
 				}
 				pos += 8
 				break
 
 			case FIELD_TYPE_FLOAT:
-				row[i] = float32ToByteStr(bytesToFloat32(data[pos : pos+4]))
+				//row[i] = float32ToByteStr(bytesToFloat32(data[pos : pos+4]))
+				row[i] = bytesToFloat32(data[pos : pos+4])
 				pos += 4
 				break
 
 			case FIELD_TYPE_DOUBLE:
-				row[i] = float64ToByteStr(bytesToFloat64(data[pos : pos+8]))
+				//row[i] = float64ToByteStr(bytesToFloat64(data[pos : pos+8]))
+				row[i] = bytesToFloat64(data[pos : pos+8])
 				pos += 8
 				break
 
 			case FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL:
-				row[i], n, isNull, e = readLengthCodedBinary(data[pos:])
+				var b []byte
+				b, n, isNull, e = readLengthCodedBinary(data[pos:])
 				if e != nil {
 					return
 				}
-
 				if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
 					row[i] = nil
+				}else{
+					row[i] = string(b)
 				}
 				pos += n
 				break
@@ -939,13 +976,16 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				FIELD_TYPE_SET, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
 				FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING,
 				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY:
-				row[i], n, isNull, e = readLengthCodedBinary(data[pos:])
+				var b []byte
+				b, n, isNull, e = readLengthCodedBinary(data[pos:])
 				if e != nil {
 					return
 				}
 
 				if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
 					row[i] = nil
+				}else{
+					row[i] = string(b)
 				}
 				pos += n
 				break
@@ -979,8 +1019,8 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 						resp += current_byte[k-1]
 					}
 				}
-				bitInt, _ := strconv.ParseInt(resp, 2, 64)
-				row[i] = []byte(strconv.FormatInt(bitInt,10))
+				row[i], _ = strconv.ParseInt(resp, 2, 64)
+				//row[i] = []byte(strconv.FormatInt(bitInt,10))
 				pos += n
 				break
 
@@ -994,12 +1034,12 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				pos += n
 
 				if num == 0 {
-					row[i] = []byte("0000-00-00")
+					row[i] = "0000-00-00"
 				} else {
-					row[i] = []byte(fmt.Sprintf("%04d-%02d-%02d",
+					row[i] = fmt.Sprintf("%04d-%02d-%02d",
 						bytesToUint16(data[pos:pos+2]),
 						data[pos+2],
-						data[pos+3]))
+						data[pos+3])
 				}
 				pos += int(num)
 
@@ -1012,12 +1052,12 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				}
 
 				if num == 0 {
-					row[i] = []byte("00:00:00")
+					row[i] = "00:00:00"
 				} else {
-					row[i] = []byte(fmt.Sprintf("%02d:%02d:%02d",
+					row[i] = fmt.Sprintf("%02d:%02d:%02d",
 						data[pos+6],
 						data[pos+7],
-						data[pos+8]))
+						data[pos+8])
 				}
 				pos += n + int(num)
 				break
@@ -1033,23 +1073,23 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 
 				switch num {
 				case 0:
-					row[i] = []byte("0000-00-00 00:00:00")
+					row[i] = "0000-00-00 00:00:00"
 				case 4:
-					row[i] = []byte(fmt.Sprintf("%04d-%02d-%02d 00:00:00",
+					row[i] = fmt.Sprintf("%04d-%02d-%02d 00:00:00",
 						bytesToUint16(data[pos:pos+2]),
 						data[pos+2],
-						data[pos+3]))
+						data[pos+3])
 				default:
 					if num < 7 {
 						return fmt.Errorf("Invalid datetime-packet length %d", num)
 					}
-					row[i] = []byte(fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+					row[i] = fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d",
 						bytesToUint16(data[pos:pos+2]),
 						data[pos+2],
 						data[pos+3],
 						data[pos+4],
 						data[pos+5],
-						data[pos+6]))
+						data[pos+6])
 				}
 				pos += int(num)
 				break
@@ -1059,7 +1099,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				return fmt.Errorf("Unknown FieldType %d", rc.columns[i].fieldType)
 			}
 		}
-		rc.rows = append(rc.rows, &row)
+		rc.rows = append(rc.rows, row)
 	}
 
 	mc.affectedRows = uint64(len(rc.rows))

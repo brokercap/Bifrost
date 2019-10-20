@@ -5,9 +5,9 @@ import (
 	"github.com/brokercap/Bifrost/server/history"
 	"log"
 	"strings"
-	"github.com/brokercap/Bifrost/util/dataType"
 	"database/sql/driver"
 	"reflect"
+	"fmt"
 )
 
 func TestGetDataList(t *testing.T)  {
@@ -21,7 +21,7 @@ func TestGetDataList(t *testing.T)  {
 			ThreadNum:1,
 			ThreadCountPer:10,
 		},
-		Uri:"root:@tcp(127.0.0.1:3306)/test",
+		Uri:"root:@tcp(127.0.0.1:3306)/bifrost_test",
 	}
 	historyObj.Start();
 }
@@ -35,7 +35,7 @@ func TestChekcDataType(t *testing.T)  {
 	sql := "select * from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
 	stmt, err := db.Prepare(sql)
 	if err != nil{
-		log.Fatal("Prepare err:",err)
+		t.Fatal("Prepare err:",err)
 		stmt.Close()
 		return
 	}
@@ -55,16 +55,28 @@ func TestChekcDataType(t *testing.T)  {
 		}
 		for i, v := range Fields {
 			if dest[i] == nil{
-				m[v.COLUMN_NAME] = nil
+				m[*v.COLUMN_NAME] = nil
 				continue
 			}
-			switch v.DATA_TYPE {
+			switch *v.DATA_TYPE {
 			case "set":
-				s :=  string(dest[i].([]byte))
-				m[v.COLUMN_NAME] = strings.Split(s, ",")
+				m[*v.COLUMN_NAME] = strings.Split(dest[i].(string), ",")
+				break
+			case "tinyint(1)":
+				switch fmt.Sprint(dest[i]) {
+				case "1":
+					m[*v.COLUMN_NAME] = true
+					break
+				case "0":
+					m[*v.COLUMN_NAME] = false
+					break
+				default:
+					m[*v.COLUMN_NAME] = dest[i]
+					break
+				}
 				break
 			default:
-				m[v.COLUMN_NAME], _ = dataType.TransferDataType(dest[i].([]byte), v.ToDataType)
+				m[*v.COLUMN_NAME] = dest[i]
 				break
 			}
 		}
@@ -78,14 +90,14 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint32:
 				if v.(uint32) != 1{
-					log.Println(k,1,"!=",v)
+					t.Log(k,1,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,1,"==",v,"filed-Type:","uint","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,1,"==",v,"filed-Type:","uint","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,1,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,1,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
@@ -313,42 +325,42 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case bool:
 				if v.(bool) != true{
-					log.Println(k,"true","!=",v)
+					t.Error(k,"true","!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"true","==",v,"filed-Type:","bool","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"true","==",v,"filed-Type:","bool","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,"true","!=",v, " type:",reflect.TypeOf(v))
+				t.Log(k,"true","!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
 
 		case "testmediumblob":
 			if v.(string) != "testmediumblob"{
-				log.Println(k,"testmediumblob","!=",v)
+				t.Error(k,"testmediumblob","!=",v)
 				noError  = false
 			}else{
-				log.Println(k,"testmediumblob","==",v,"filed-Type:","mediumblob","golang-type:",reflect.TypeOf(v)," is right")
+				t.Log(k,"testmediumblob","==",v,"filed-Type:","mediumblob","golang-type:",reflect.TypeOf(v)," is right")
 			}
 			break
 
 		case "testlongblob":
 			if v.(string) != "testlongblob"{
-				log.Println(k,"testlongblob","!=",v)
+				t.Error(k,"testlongblob","!=",v)
 				noError  = false
 			}else{
-				log.Println(k,"testlongblob","==",v,"filed-Type:","longblob","golang-type:",reflect.TypeOf(v)," is right")
+				t.Log(k,"testlongblob","==",v,"filed-Type:","longblob","golang-type:",reflect.TypeOf(v)," is right")
 			}
 			break
 
 		case "testtinyblob":
 			if v.(string) != "testtinyblob"{
-				log.Println(k,"testtinyblob","!=",v)
+				t.Error(k,"testtinyblob","!=",v)
 				noError  = false
 			}else{
-				log.Println(k,"testtinyblob","==",v,"filed-Type:","tinyblob","golang-type:",reflect.TypeOf(v)," is right")
+				t.Log(k,"testtinyblob","==",v,"filed-Type:","tinyblob","golang-type:",reflect.TypeOf(v)," is right")
 			}
 			break
 
@@ -356,14 +368,14 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint8:
 				if v.(uint8) != 1{
-					log.Println(k,1,"!=",v)
+					t.Error(k,1,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"1","==",v,"filed-Type:","unsinged_tinyint","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"1","==",v,"filed-Type:","unsinged_tinyint","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,1,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,1,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 
@@ -373,14 +385,14 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint16:
 				if v.(uint16) != 2{
-					log.Println(k,2,"!=",v)
+					t.Error(k,2,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"2","==",v,"filed-Type:","unsinged_smallint","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"2","==",v,"filed-Type:","unsinged_smallint","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,2,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,2,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
@@ -389,14 +401,14 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint32:
 				if v.(uint32) != 3{
-					log.Println(k,3,"!=",v)
+					t.Error(k,3,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"3","==",v,"filed-Type:","unsinged_mediumint","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"3","==",v,"filed-Type:","unsinged_mediumint","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,3,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,3,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
@@ -405,14 +417,14 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint32:
 				if v.(uint32) != 4{
-					log.Println(k,4,"!=",v)
+					t.Error(k,4,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"4","==",v,"filed-Type:","unsinged_int","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"4","==",v,"filed-Type:","unsinged_int","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,4,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,4,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
@@ -421,24 +433,26 @@ func TestChekcDataType(t *testing.T)  {
 			switch v.(type) {
 			case uint64:
 				if v.(uint64) != 5{
-					log.Println(k,5,"!=",v)
+					t.Error(k,5,"!=",v)
 					noError  = false
 				}else{
-					log.Println(k,"5","==",v,"filed-Type:","unsinged_bigint","golang-type:",reflect.TypeOf(v)," is right")
+					t.Log(k,"5","==",v,"filed-Type:","unsinged_bigint","golang-type:",reflect.TypeOf(v)," is right")
 				}
 				break
 			default:
-				log.Println(k,5,"!=",v, " type:",reflect.TypeOf(v))
+				t.Error(k,5,"!=",v, " type:",reflect.TypeOf(v))
 				noError  = false
 			}
 			break
 		default:
-			log.Println(k,":",v," error type")
+			t.Error(k,":",v," error type")
 			noError  = false
 		}
 	}
 
 	if noError  == true{
-		log.Println(" type and value is all right ")
+		t.Log(" type and value is all right ")
+	}else{
+		t.Fatal(" test failed")
 	}
 }

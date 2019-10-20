@@ -6,17 +6,15 @@ import (
 	"strconv"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
-	"github.com/brokercap/Bifrost/util/dataType"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/server"
 	"github.com/brokercap/Bifrost/server/count"
 	"github.com/brokercap/Bifrost/config"
-
-	"strings"
 	"log"
 	"time"
 	"runtime/debug"
 	"unsafe"
+	"strings"
 )
 
 var historyMap map[string]map[int]*History
@@ -347,19 +345,31 @@ func (This *History) threadStart(i int)  {
 			sizeCount := int64(0)
 			for i, v := range This.Fields {
 				if dest[i] == nil{
-					m[v.COLUMN_NAME] = nil
+					m[*v.COLUMN_NAME] = dest[i]
 					continue
 				}
-				switch v.DATA_TYPE {
+				switch *v.DATA_TYPE {
 				case "set":
-					s :=  string(dest[i].([]byte))
-					m[v.COLUMN_NAME] = strings.Split(s, ",")
+					m[*v.COLUMN_NAME] = strings.Split(dest[i].(string), ",")
+					break
+				case "tinyint(1)":
+					switch fmt.Sprint(dest[i]) {
+					case "1":
+						m[*v.COLUMN_NAME] = true
+						break
+					case "0":
+						m[*v.COLUMN_NAME] = false
+						break
+					default:
+						m[*v.COLUMN_NAME] = dest[i]
+						break
+					}
 					break
 				default:
-					m[v.COLUMN_NAME], _ = dataType.TransferDataType(dest[i].([]byte), v.ToDataType)
+					m[*v.COLUMN_NAME] = dest[i]
 					break
 				}
-				sizeCount += int64(unsafe.Sizeof(m[v.COLUMN_NAME]))
+				sizeCount += int64(unsafe.Sizeof(m[*v.COLUMN_NAME]))
 			}
 			if len(m) == 0{
 				return

@@ -17,15 +17,14 @@ func TestCheckBinlogIsRight(t *testing.T)  {
 
 
 func TestGetNearestRightBinlog(t *testing.T)  {
-	uri:="root:root@tcp(10.40.2.41:3306)/test"
-	filename:="mysql-bin.000072"
-	position:=uint32(12056175)
+	uri:="root:root@tcp(127.0.0.1:3306)/test"
+	filename:="mysql-bin.000068"
+	position:=uint32(484)
 
 	ReplicateDoDb := make(map[string]map[string]uint8,0)
 
 	ReplicateDoDb["bifrost_test"] = make(map[string]uint8,0)
 	ReplicateDoDb["bifrost_test"]["binlog_field_test"] = 1
-
 	newPosition := GetNearestRightBinlog(uri,filename,position,101,ReplicateDoDb,nil)
 
 	if newPosition == 0{

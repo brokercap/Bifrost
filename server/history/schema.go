@@ -5,8 +5,6 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"log"
-	"github.com/brokercap/Bifrost/util/dataType"
-	"strings"
 )
 
 func DBConnect(uri string) mysql.MysqlConnection{
@@ -15,17 +13,16 @@ func DBConnect(uri string) mysql.MysqlConnection{
 }
 
 type TableStruct struct {
-	COLUMN_NAME 		string
-	COLUMN_DEFAULT 		string
-	IS_NULLABLE 		string
-	COLUMN_TYPE			string
-	COLUMN_KEY 			string
-	EXTRA 				string
-	COLUMN_COMMENT 		string
-	DATA_TYPE			string
-	NUMERIC_PRECISION	string
-	NUMERIC_SCALE		string
-	ToDataType			dataType.Type
+	COLUMN_NAME 		*string
+	COLUMN_DEFAULT 		*string
+	IS_NULLABLE 		*string
+	COLUMN_TYPE			*string
+	COLUMN_KEY 			*string
+	EXTRA 				*string
+	COLUMN_COMMENT 		*string
+	DATA_TYPE			*string
+	NUMERIC_PRECISION	*uint64
+	NUMERIC_SCALE		*uint64
 }
 
 func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string) []TableStruct{
@@ -54,115 +51,56 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		if err != nil {
 			break
 		}
-		var COLUMN_NAME string
-		var COLUMN_DEFAULT string
-		var IS_NULLABLE string
-		var COLUMN_TYPE string
-		var COLUMN_KEY string
-		var EXTRA string
-		var COLUMN_COMMENT string
-		var DATA_TYPE string
-		var NUMERIC_PRECISION string
-		var NUMERIC_SCALE string
+		var COLUMN_NAME 		string
+		var COLUMN_DEFAULT 		*string
+		var IS_NULLABLE 		string
+		var COLUMN_TYPE 		string
+		var COLUMN_KEY 			string
+		var EXTRA 				string
+		var COLUMN_COMMENT 		string
+		var DATA_TYPE 			string
+		var NUMERIC_PRECISION 	*uint64
+		var NUMERIC_SCALE 		*uint64
 
-		COLUMN_NAME 		= string(dest[0].([]byte))
+		COLUMN_NAME 		= dest[0].(string)
 		if dest[1] == nil{
-			COLUMN_DEFAULT 	= "NULL"
+			COLUMN_DEFAULT 	= nil
 		}else{
-			COLUMN_DEFAULT 	= string(dest[1].([]byte))
+			var t string =  dest[1].(string)
+			COLUMN_DEFAULT = &t
 		}
 
-		IS_NULLABLE 		= string(dest[2].([]byte))
-		COLUMN_TYPE 		= string(dest[3].([]byte))
-		COLUMN_KEY 			= string(dest[4].([]byte))
-		EXTRA 				= string(dest[5].([]byte))
-		COLUMN_COMMENT 		= string(dest[6].([]byte))
-		DATA_TYPE 			= string(dest[7].([]byte))
+		IS_NULLABLE 		= dest[2].(string)
+		COLUMN_TYPE 		= dest[3].(string)
+		COLUMN_KEY 			= dest[4].(string)
+		EXTRA 				= dest[5].(string)
+		COLUMN_COMMENT 		= dest[6].(string)
+		DATA_TYPE 			= dest[7].(string)
 
 		if dest[8] == nil{
-			NUMERIC_PRECISION 	= "NULL"
+			NUMERIC_PRECISION 	= nil
 		}else{
-			NUMERIC_PRECISION 	= string(dest[8].([]byte))
+			var t uint64 = dest[8].(uint64)
+			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
-			NUMERIC_SCALE 	= "NULL"
+			NUMERIC_SCALE 	= nil
 		}else{
-			NUMERIC_SCALE 	= string(dest[9].([]byte))
-		}
-
-		var ToDataType dataType.Type
-		switch DATA_TYPE {
-		case "char","varchar","set","enum","text","blob","mediumblob","longblob","tinyblob","mediumtext","longtext","tinytext","time","date","datetime","timestamp":
-			ToDataType = dataType.STRING_TYPE
-			break
-		case "tinyint":
-			if COLUMN_TYPE == "tinyint(1)"{
-				ToDataType = dataType.BOOL_TYPE
-			}else {
-				if strings.Index(COLUMN_TYPE, "unsigned") >= 0 {
-					ToDataType = dataType.UINT8_TYPE
-				} else {
-					ToDataType = dataType.INT8_TYPE
-				}
-			}
-			break
-		case "smallint":
-			if strings.Index(COLUMN_TYPE,"unsigned") >= 0{
-				ToDataType = dataType.UINT16_TYPE
-			}else{
-				ToDataType = dataType.INT16_TYPE
-			}
-			break
-		case  "mediumint","int":
-			if strings.Index(COLUMN_TYPE,"unsigned") >= 0{
-				ToDataType = dataType.UINT32_TYPE
-			}else{
-				ToDataType = dataType.INT32_TYPE
-			}
-			break
-		case "bigint":
-			if strings.Index(COLUMN_TYPE,"unsigned") >= 0{
-				ToDataType = dataType.UINT64_TYPE
-			}else{
-				ToDataType = dataType.INT64_TYPE
-			}
-			break
-
-		case "float":
-			ToDataType = dataType.FLOAT32_TYPE
-			break
-		case "double":
-			ToDataType = dataType.FLOAT64_TYPE
-			break
-		case "decimal":
-			ToDataType = dataType.STRING_TYPE
-			break
-		case "year":
-			ToDataType = dataType.STRING_TYPE
-			break
-		case "bit":
-			ToDataType = dataType.BIT_TYPE
-			break
-		case "bool":
-			ToDataType = dataType.BOOL_TYPE
-			break
-		default:
-			ToDataType = dataType.STRING_TYPE
-			break
+			var t uint64 = dest[9].(uint64)
+			NUMERIC_SCALE 	= &t
 		}
 
 		FieldList = append(FieldList,TableStruct{
-			COLUMN_NAME:	COLUMN_NAME,
+			COLUMN_NAME:	&COLUMN_NAME,
 			COLUMN_DEFAULT:	COLUMN_DEFAULT,
-			IS_NULLABLE:	IS_NULLABLE,
-			COLUMN_TYPE:	COLUMN_TYPE,
-			COLUMN_KEY:		COLUMN_KEY,
-			EXTRA:			EXTRA,
-			COLUMN_COMMENT:	COLUMN_COMMENT,
-			DATA_TYPE:		DATA_TYPE,
+			IS_NULLABLE:	&IS_NULLABLE,
+			COLUMN_TYPE:	&COLUMN_TYPE,
+			COLUMN_KEY:		&COLUMN_KEY,
+			EXTRA:			&EXTRA,
+			COLUMN_COMMENT:	&COLUMN_COMMENT,
+			DATA_TYPE:		&DATA_TYPE,
 			NUMERIC_PRECISION:NUMERIC_PRECISION,
 			NUMERIC_SCALE:	NUMERIC_SCALE,
-			ToDataType:		ToDataType,
 		})
 	}
 	return FieldList
