@@ -298,6 +298,13 @@ func (This *History) threadStart(i int)  {
 	}
 	*/
 	n := len(This.Fields)
+	Pri := make([]*string,0)
+
+	for _,v := range This.Fields{
+		if strings.ToUpper(*v.COLUMN_KEY) == "PRI"{
+			Pri = append(Pri,v.COLUMN_NAME)
+		}
+	}
 	for {
 		This.Lock()
 		start = This.NowStartI
@@ -385,6 +392,7 @@ func (This *History) threadStart(i int)  {
 				TableName:		This.TableName,
 				BinlogFileNum:	0,
 				BinlogPosition:	0,
+				Pri:			Pri,
 			}
 
 			for _,toServerInfo := range toServerList{

@@ -23,6 +23,7 @@ type PluginDataType struct {
 	TableName      	string
 	BinlogFileNum 	int
 	BinlogPosition 	uint32
+	Pri				[]*string
 }
 
 func GetApiVersion() string{

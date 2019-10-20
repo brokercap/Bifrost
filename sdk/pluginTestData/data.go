@@ -482,6 +482,13 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column,eventType Even
 	return data,columnData
 }
 
+func (This *Event) GetPri() []*string {
+	var id  string = "id"
+	Pri := make([]*string,1)
+	Pri[0] = &id
+	return Pri
+}
+
 func (This *Event) GetTestInsertData() *pluginDriver.PluginDataType{
 	Rows := make([]map[string]interface{},1)
 
@@ -497,6 +504,7 @@ func (This *Event) GetTestInsertData() *pluginDriver.PluginDataType{
 		TableName      	: This.Talbe,
 		BinlogFileNum 	: 10,
 		BinlogPosition 	: This.position,
+		Pri				: This.GetPri(),
 	}
 }
 
@@ -538,6 +546,7 @@ func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType{
 		TableName      	: This.Talbe,
 		BinlogFileNum 	: 10,
 		BinlogPosition 	: This.position,
+		Pri				: This.GetPri(),
 	}
 }
 
@@ -569,6 +578,7 @@ func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType{
 		TableName      	: This.Talbe,
 		BinlogFileNum 	: 10,
 		BinlogPosition 	: This.position,
+		Pri				: This.GetPri(),
 	}
 }
 
