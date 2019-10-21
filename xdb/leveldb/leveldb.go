@@ -5,8 +5,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/brokercap/Bifrost/xdb/driver"
 	"os"
-	"log"
 	"fmt"
+	"strings"
 )
 
 const VERSION  = "v1.1.0"
@@ -40,9 +40,6 @@ type Conn struct {
 func (This *Conn) connect() error{
 	os.MkdirAll(This.path, 0700)
 	This.levelDB, This.err = leveldb.OpenFile(This.path, nil)
-	if This.err != nil{
-		log.Println("sdfsdfsd",This.err)
-	}
 	return This.err
 }
 
@@ -53,6 +50,9 @@ func (This *Conn) Close() (error){
 
 func (This *Conn) GetKeyVal(key []byte) ([]byte,error){
 	s, err := This.levelDB.Get(key, nil)
+	if err != nil && strings.Contains(err.Error(),"not found"){
+		return []byte(""),err
+	}
 	return s,err
 }
 
@@ -65,15 +65,15 @@ func (This *Conn) DelKeyVal(key []byte) error{
 	return This.levelDB.Delete(key,nil)
 }
 
-func (This *Conn) GetListByKeyPrefix(key []byte) ([]string,error){
-	data := make([]string,0)
+func (This *Conn) GetListByKeyPrefix(key []byte) ([]driver.ListValue,error){
+	data := make([]driver.ListValue,0)
 	iter := This.levelDB.NewIterator(util.BytesPrefix(key), nil)
 	for iter.Next() {
-		//tmp := make([][]byte,1)
-		//tmp[0] = iter.Key()
-		//tmp[1] = iter.Value()
-		//log.Println("tmp1:",string(iter.Value()))
-		data = append(data,string(iter.Value()))
+		data = append(data,
+			driver.ListValue{
+				Key:string(iter.Key()),
+				Value:string(iter.Value()),
+			})
 	}
 	iter.Release()
 	return data,nil

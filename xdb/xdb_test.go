@@ -14,6 +14,7 @@ func TestClient(t *testing.T)  {
 		os.Exit(1)
 	}
 	defer client.Close()
+	client.SetPrefix("xdbtest")
 
 	type DataSource struct {
 		Name string
@@ -27,19 +28,29 @@ func TestClient(t *testing.T)  {
 
 	key1 = "tstst1"
 	val1 = DataSource{Name:"sss",Uri:"URI1"}
-	client.PutKeyVal(table,key1,val1)
+	err0 := client.PutKeyVal(table,key1,val1)
+	if err0 != nil{
+		t.Fatal(key1, " put error:",err0)
+	}else{
+		t.Log(key1," put success")
+	}
 
 	key2 = "tstst2"
 	val2 = DataSource{Name:"sss22",Uri:"URI1222"}
-	client.PutKeyVal(table,key2,val2)
+	err0 = client.PutKeyVal(table,key2,val2)
+
+	if err0 != nil{
+		t.Fatal(key2, " put error:",err0)
+	}else{
+		t.Log(key2," put success")
+	}
 
 	var data1 DataSource
 	c1,err1:=client.GetKeyVal(table,key1,&data1)
 	t.Log("data1:",data1,"   c1:",string(c1))
 	if err1 != nil{
-		log.Fatal(err1)
+		t.Fatal(err1)
 	}
-
 
 	var data3 []DataSource
 	c2,err2:=client.GetListByKeyPrefix(table,"",&data3)
@@ -48,8 +59,8 @@ func TestClient(t *testing.T)  {
 		t.Fatal(err2)
 	}
 
-	for k,v := range c2{
-		log.Println(k,"val:",string(v))
+	for _,v := range c2{
+		log.Println(v.Key,"val:",v.Value)
 	}
 
 }
