@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-rc.03"
+const VERSION  = "v1.1.0-rc.04"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
@@ -789,7 +789,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Float32":
+	case "Float32","Float":
 		if data == nil{
 			v = float32(0.00)
 			break
@@ -803,17 +803,29 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float32(data.(float64))
 			break
 		default:
-			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 32)
+			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
 			if err != nil{
 				v = float32(0.00)
 			}else{
-				v = s1
+				v = float32(s1)
 			}
 			break
 		}
 		break
 	default:
-		v = fmt.Sprint(data)
+		//Decimal
+		if toDataType[0:3] == "Dec"{
+			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
+			if err != nil{
+				v = float64(0.00)
+				//e = err
+			}else{
+				v = s1
+			}
+			break
+		}else{
+			v = fmt.Sprint(data)
+		}
 		break
 	}
 	return

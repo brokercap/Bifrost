@@ -494,7 +494,6 @@ func TestCkDataTypeTransfer(t *testing.T){
 	if reflect.TypeOf(result).String() == "int64"{
 		if result.(int64) == int64(132423){
 			t.Log("result(int64):",result)
-			os.Exit(0)
 		}else{
 			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 		}
@@ -508,9 +507,8 @@ func TestCkDataTypeTransfer(t *testing.T){
 		t.Fatal(err)
 	}
 	if reflect.TypeOf(result).String() == "uint32"{
-		if result.(int64) == int64(132423){
+		if result.(uint32) == uint32(132423){
 			t.Log("result(uint32):",result)
-			os.Exit(0)
 		}else{
 			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 		}
@@ -525,10 +523,9 @@ func TestCkDataTypeTransfer(t *testing.T){
 	if err != nil{
 		t.Fatal(err)
 	}
-	if reflect.TypeOf(result).String() == "uint32"{
+	if reflect.TypeOf(result).String() == "float32"{
 		if result.(float32) == float32(42342.224){
-			t.Log("result(uint32):",result)
-			os.Exit(0)
+			t.Log("result(float32):",result)
 		}else{
 			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 		}
@@ -541,10 +538,25 @@ func TestCkDataTypeTransfer(t *testing.T){
 	if err != nil{
 		t.Fatal(err)
 	}
-	if reflect.TypeOf(result).String() == "uint32"{
+	if reflect.TypeOf(result).String() == "float64"{
 		if result.(float64) == float64(42342.224){
-			t.Log("result(uint32):",result)
+			t.Log("result(float32):",result)
 			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "Decimal(18, 2)"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "float64"{
+		if result.(float64) == float64(42342.224){
+			t.Log("result(float64):",result)
 		}else{
 			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 		}
