@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-rc.04"
+const VERSION  = "v1.1.0-rc.05"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
@@ -547,7 +547,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		}
 	}()
 	switch toDataType {
-	case "Date":
+	case "Date","Nullable(Date)":
 		if data == nil{
 			v = int16(0)
 			break
@@ -572,7 +572,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "DateTime":
+	case "DateTime","Nullable(DateTime)":
 		if data == nil{
 			v = int32(0)
 			break
@@ -599,7 +599,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "String","Enum8","Enum16","Enum","UUID":
+	case "String","Enum8","Enum16","Enum","UUID","Nullable(String)","Nullable(Enum8)","Nullable(Enum16)","Nullable(Enum)","Nullable(UUID)":
 		if data == nil{
 			v = ""
 			break
@@ -613,7 +613,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Int8":
+	case "Int8","Nullable(Int8)":
 		if data == nil{
 			v = int8(0)
 			break
@@ -638,7 +638,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "UInt8":
+	case "UInt8","Nullable(UInt8)":
 		if data == nil{
 			v = uint8(0)
 			break
@@ -656,7 +656,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Int16":
+	case "Int16","Nullable(Int16)":
 		if data == nil{
 			v = int16(0)
 			break
@@ -675,7 +675,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "UInt16":
+	case "UInt16","Nullable(UInt16)":
 		if data == nil{
 			v = uint16(0)
 			break
@@ -693,7 +693,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Int32":
+	case "Int32","Nullable(Int32)":
 		if data == nil{
 			v = int32(0)
 			break
@@ -711,7 +711,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "UInt32":
+	case "UInt32","Nullable(UInt32)":
 		if data == nil{
 			v = uint32(0)
 			break
@@ -729,7 +729,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Int64":
+	case "Int64","Nullable(Int64)":
 		if data == nil{
 			v = int64(0)
 			break
@@ -747,7 +747,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "UInt64":
+	case "UInt64","Nullable(UInt64)":
 		if data == nil{
 			v = uint64(0)
 			break
@@ -765,7 +765,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		break
-	case "Float64":
+	case "Float64","Nullable(Float64)":
 		if data == nil{
 			v = float64(0.00)
 			break
@@ -779,17 +779,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float64(data.(float32))
 			break
 		default:
-			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
-			if err != nil{
-				v = float64(0.00)
-				//e = err
-			}else{
-				v = s1
-			}
+			v = interfaceToFloat64(data)
 			break
 		}
 		break
-	case "Float32","Float":
+	case "Float32","Float","Nullable(Float32)","Nullable(Float)":
 		if data == nil{
 			v = float32(0.00)
 			break
@@ -803,30 +797,26 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = float32(data.(float64))
 			break
 		default:
-			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
-			if err != nil{
-				v = float32(0.00)
-			}else{
-				v = float32(s1)
-			}
+			v = float32(interfaceToFloat64(data))
 			break
 		}
 		break
 	default:
 		//Decimal
-		if toDataType[0:3] == "Dec"{
-			s1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
-			if err != nil{
-				v = float64(0.00)
-				//e = err
-			}else{
-				v = s1
-			}
-			break
+		if toDataType[0:3] == "Dec" || ( toDataType[0:3] == "Nul" && strings.Contains(toDataType,"Decimal") ) {
+			v = interfaceToFloat64(data)
 		}else{
 			v = fmt.Sprint(data)
 		}
 		break
 	}
 	return
+}
+
+func interfaceToFloat64(data interface{}) float64  {
+	f1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
+	if err != nil{
+		return float64(0.00)
+	}
+	return f1
 }
