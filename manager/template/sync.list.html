@@ -58,6 +58,17 @@
                     </div>
                     <script type="text/javascript">$("#ToServerKey").val("{{.ToServerKey}}")</script>
 
+                    <!--toserverkey list-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                        <select class="form-control" name="ToServerKey" id="sync_status">
+                            <option value="" > 状态 </option>
+                            <option value="nodata" > No Data </option>
+                            <option value="running" > Running </option>
+                            <option value="error" > Error </option>
+                        </select>
+                    </div>
+                    <script type="text/javascript">$("#sync_status").val("{{.SyncStatus}}")</script>
+
                     <div class="ibox-tools">
                         <a class="collapse-link">
                             <i class="fa fa-chevron-up"></i>
@@ -130,12 +141,13 @@
 <script type="text/javascript">
     var TableName  = "{{.TableName}}";
     var SchemaName = "{{.SchemaName}}";
-    $("#dbname,#channelid,#ToServerKey").change(
+    $("#dbname,#channelid,#ToServerKey,#sync_status").change(
         function () {
             var dbname      = $("#dbname").val();
             var channelid   = $("#channelid").val();
             var ToServerKey = $("#ToServerKey").val();
-            location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid;
+            var sync_status = $("#sync_status").val();
+            location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid+"&sync_status="+sync_status;
         }
     );
 
