@@ -80,19 +80,20 @@ func (This *Client) GetListByKeyPrefix(table,key string,data interface{}) ([]dri
 	if err != nil{
 		return s,err
 	}
-	val := ""
-	for _,v := range s{
-		if val == ""{
-			val = v.Value
-		}else{
-			val += ","+v.Value
+	if data != nil {
+		val := ""
+		for _, v := range s {
+			if val == "" {
+				val = v.Value
+			} else {
+				val += "," + v.Value
+			}
 		}
+		val = "[" + val + "]"
+		err = json.Unmarshal([]byte(val), &data)
 	}
-	val = "["+val+"]"
-	err2 := json.Unmarshal([]byte(val),&data)
-	return s,err2
+	return s,err
 }
-
 
 func (This *Client) Close() error{
 	return This.client.Close()
