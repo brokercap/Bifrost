@@ -45,8 +45,9 @@ http://test.use.xbifrost.com:21037
 
 ### Bifrost 特点
 
+* 支持 MySQL 所有存储类型
 
-* 界面化灵活配置不同的数据表
+* 界面化动态灵活配置不同的数据表及目标库
 
 * 多数据源,多种目标库支持
 
@@ -192,6 +193,15 @@ tls=true
 #server.key 及 server.crt 相对于 Bifrost 的路径，也可以填绝对路径
 tls_key_file=./etc/server.key
 tls_crt_file=./etc/server.crt
+
+#采用什么方式存储,默认文件方式
+meta_storage_type=redis
+
+#存储介质的连接地址
+meta_storage_path=127.0.0.1:6379
+
+#用于区别实例的名字
+cluster_name=bifrostTestClusterName
 
 `````
 
