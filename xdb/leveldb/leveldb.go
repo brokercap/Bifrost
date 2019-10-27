@@ -51,7 +51,7 @@ func (This *Conn) Close() (error){
 func (This *Conn) GetKeyVal(key []byte) ([]byte,error){
 	s, err := This.levelDB.Get(key, nil)
 	if err != nil && strings.Contains(err.Error(),"not found"){
-		return []byte(""),err
+		return nil,nil
 	}
 	return s,err
 }

@@ -117,7 +117,7 @@ func (This *Conn) GetKeyVal(key []byte) ([]byte,error){
 	s,err := f.Bytes()
 	if err != nil{
 		if err.Error() == "redis: nil"{
-			return []byte(""),nil
+			return nil,nil
 		}
 		This.Close()
 		return nil,err
