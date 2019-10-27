@@ -237,6 +237,7 @@ func (This *History) threadStart(i int)  {
 		NowStartI:0,
 	}
 	db := DBConnect(This.Uri)
+	db.Exec("SET NAMES UTF8",[]driver.Value{})
 	This.getMetaInfo(db)
 	if len(This.Fields) == 0{
 		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName)
