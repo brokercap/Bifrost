@@ -198,6 +198,9 @@ func (This *Conn) Connect() bool {
 		}
 	}
 	This.conn = NewMysqlDBConn(This.uri)
+	if This.conn.err != nil{
+		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
+	}
 	return true
 }
 

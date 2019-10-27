@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bristol/mysql"
 	"time"
 	"os"
 	"fmt"
@@ -56,11 +56,11 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 		if errs != nil {
 			return MasterBinlogInfoStruct{}
 		}
-		File = string(dest[0].([]byte))
-		Binlog_Do_DB = string(dest[2].([]byte))
-		Binlog_Ignore_DB = string(dest[3].([]byte))
+		File = dest[0].(string)
+		Binlog_Do_DB = dest[2].(string)
+		Binlog_Ignore_DB = dest[3].(string)
 		Executed_Gtid_Set = ""
-		PositonString := string(dest[1].([]byte))
+		PositonString := fmt.Sprint(dest[1])
 		Position,_ = strconv.Atoi(PositonString)
 		break
 	}
@@ -96,7 +96,7 @@ func GetServerId(db mysql.MysqlConnection) int{
 		if errs != nil{
 			return 0
 		}
-		ServerIdString := string(dest[1].([]byte))
+		ServerIdString :=fmt.Sprint(dest[1])
 		ServerId,_ = strconv.Atoi(ServerIdString)
 		break
 	}
@@ -204,37 +204,37 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		var CHARACTER_MAXIMUM_LENGTH int
 		var NUMERIC_PRECISION int
 
-		COLUMN_NAME = string(dest[0].([]byte))
-		COLUMN_KEY = string(dest[1].([]byte))
-		COLUMN_TYPE = string(dest[2].([]byte))
+		COLUMN_NAME = fmt.Sprint(dest[0])
+		COLUMN_KEY = fmt.Sprint(dest[1])
+		COLUMN_TYPE = fmt.Sprint(dest[2])
 		if dest[3] == nil{
 			CHARACTER_SET_NAME = "NULL"
 		}else{
-			CHARACTER_SET_NAME = string(dest[3].([]byte))
+			CHARACTER_SET_NAME = fmt.Sprint(dest[3])
 		}
 
 		if dest[4] == nil{
 			COLLATION_NAME = "NULL"
 		}else{
-			COLLATION_NAME = string(dest[4].([]byte))
+			COLLATION_NAME = fmt.Sprint(dest[4])
 		}
 
 		if dest[5] == nil{
 			NUMERIC_SCALE = int(0)
 		}else{
-			NUMERIC_SCALE,_ = strconv.Atoi(string(dest[5].([]byte)))
+			NUMERIC_SCALE,_ = strconv.Atoi(fmt.Sprint(dest[5]))
 		}
 
-		EXTRA = string(dest[6].([]byte))
+		EXTRA = fmt.Sprint(dest[6])
 
-		DATA_TYPE = string(dest[8].([]byte))
+		DATA_TYPE = fmt.Sprint(dest[8])
 
 		//bit类型这个地方比较特殊，不能直接转成string，并且当前只有 time,datetime 类型转换的时候会用到 默认值，这里不进行其他细节处理
 		if DATA_TYPE != "bit"{
 			if dest[7] == nil{
 				COLUMN_DEFAULT = "NULL"
 			}else{
-				COLUMN_DEFAULT = string(dest[7].([]byte))
+				COLUMN_DEFAULT = fmt.Sprint(dest[7])
 			}
 		}
 
@@ -272,13 +272,13 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		if dest[9] == nil{
 			CHARACTER_MAXIMUM_LENGTH = int(0)
 		}else{
-			CHARACTER_MAXIMUM_LENGTH,_ = strconv.Atoi(string(dest[9].([]byte)))
+			CHARACTER_MAXIMUM_LENGTH,_ = strconv.Atoi(fmt.Sprint(dest[9]))
 		}
 
 		if dest[10] == nil{
 			NUMERIC_PRECISION = int(0)
 		}else{
-			NUMERIC_PRECISION,_ = strconv.Atoi(string(dest[10].([]byte)))
+			NUMERIC_PRECISION,_ = strconv.Atoi(fmt.Sprint(dest[10]))
 		}
 
 		columnType := &Column{
@@ -613,7 +613,7 @@ func main() {
 	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
 	port := flag.String("P", "3306", "-P 3306")
 	database = flag.String("database", "test", "-database test")
-	table = flag.String("table", "binlog_field_test", "-table bifrost_test")
+	table = flag.String("table", "binlog_field_test", "-table jc3wish_test")
 	longstring = flag.String("longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
 	flag.Parse()
 
@@ -650,7 +650,7 @@ func main() {
 		if err != nil {
 			break
 		}
-		MysqlVersion = string(dest[0].([]byte))
+		MysqlVersion = fmt.Sprint(dest[0])
 		break
 	}
 
@@ -662,7 +662,7 @@ func main() {
 	log.Println("load data start")
 	if *table == "" {
 		var sqlList = []string{
-			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `bifrost_test`",
+			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `jc3wish_test`",
 			"DROP TABLE IF EXISTS `"+*database+"`.`binlog_field_test`",
 			"CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
 				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+

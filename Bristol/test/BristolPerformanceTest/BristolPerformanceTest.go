@@ -3,12 +3,13 @@ package main
 import (
 	"time"
 	"log"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bristol/mysql"
 	"database/sql/driver"
 	"strings"
 	"strconv"
 	"os"
 	"flag"
+	"fmt"
 )
 
 
@@ -57,11 +58,11 @@ func(This *MySQLConn) GetBinLogInfo() MasterBinlogInfoStruct{
 		if errs != nil {
 			return MasterBinlogInfoStruct{}
 		}
-		File = string(dest[0].([]byte))
-		Binlog_Do_DB = string(dest[2].([]byte))
-		Binlog_Ignore_DB = string(dest[3].([]byte))
+		File = dest[0].(string)
+		Binlog_Do_DB = dest[2].(string)
+		Binlog_Ignore_DB = dest[3].(string)
 		Executed_Gtid_Set = ""
-		PositonString := string(dest[1].([]byte))
+		PositonString := fmt.Sprint(dest[1])
 		Position,_ = strconv.Atoi(PositonString)
 		break
 	}
@@ -98,7 +99,7 @@ func(This *MySQLConn) GetServerId() int{
 		if errs != nil{
 			return 0
 		}
-		ServerIdString := string(dest[1].([]byte))
+		ServerIdString := fmt.Sprint(dest[1])
 		ServerId,_ = strconv.Atoi(ServerIdString)
 		break
 	}
@@ -141,20 +142,19 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			break
 		}
 		var fieldNAme, EXTRA string
-		EXTRA = string(dest[3].([]byte))
+		var defaultVal string
+		EXTRA = fmt.Sprint(dest[3])
 
 		if EXTRA == "auto_increment" {
 			continue
 		} else {
-			var defaultVal string
-			fieldType := string(dest[2].([]byte))
+			fieldType := fmt.Sprint(dest[2])
 			if dest[1] == nil{
 				defaultVal = ""
 			}else{
-				defaultVal = string(dest[1].([]byte))
+				defaultVal = fmt.Sprint(dest[1])
 			}
-
-			COLUMN_TYPE := string(dest[4].([]byte))
+			COLUMN_TYPE := fmt.Sprint(dest[4])
 			switch fieldType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":
 				var unsigned bool = false
@@ -247,7 +247,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				break
 			}
 
-			fieldNAme = string(dest[0].([]byte))
+			fieldNAme = fmt.Sprint(dest[0])
 			if sqlk == "" {
 				sqlk = "`" + fieldNAme + "`"
 				sqlv = "?"
@@ -338,7 +338,7 @@ func main() {
 	port := flag.String("P", "3306", "-P")
 	conndb := flag.String("conndb", "test", "-conndb")
 	table := flag.String("table", "bristol_performance_test", "-table")
-	schema := flag.String("schema", "bifrost_test", "-schema")
+	schema := flag.String("schema", "jc3wish_test", "-schema")
 	count = flag.Int("count", 100000, "-count")
 	onlydata := flag.String("onlydata", "false", "-onlydata")
 	master_log_file := flag.String("master_log_file", "", "-master_log_file")
@@ -363,7 +363,7 @@ func main() {
 
 		BinlogInfo := DbConn.GetBinLogInfo()
 		if BinlogInfo.File == ""{
-			log.Println("not support binlog")
+			log.Println("not support binlod")
 			os.Exit(1)
 		}
 		filename = BinlogInfo.File

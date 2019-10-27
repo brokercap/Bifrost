@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+type tableStruct struct {
+	Pri 					[]*string
+	ColumnSchemaTypeList 	[]*column_schema_type
+}
+
 type column_schema_type struct {
 	COLUMN_NAME        string
 	COLLATION_NAME     string
@@ -39,6 +44,7 @@ type EventReslut struct {
 	TableName      string
 	BinlogFileName string
 	BinlogPosition uint32
+	Pri			   []*string
 }
 
 type callback func(data *EventReslut)

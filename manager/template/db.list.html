@@ -86,7 +86,12 @@ function formatDate(timestamp) {
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "starting"}}
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
                                                         {{end}}
+
+                                                    {{if eq $v.ConnStatus "closing"}}
+                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                    {{end}}
 
                                                     </td>
                                                     <td>

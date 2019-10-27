@@ -63,6 +63,10 @@ function doGetPluginParam(){
 }
 
 function showClickHouseCreateSQL() {
+    if($("#TableFieldsContair .fieldsname input").length == 0){
+        alert("请先选择 MYSQL 表");
+        return;
+    }
     var tableName = $("#tableToServerListContair").attr("table_name");
     var sql = getClickHouseTableCreateSQL(tableName);
 
@@ -72,10 +76,6 @@ function showClickHouseCreateSQL() {
 }
 
 function getClickHouseTableCreateSQL(tableName) {
-	if($("#TableFieldsContair .fieldsname input").length == 0){
-		alert("请先选择 MYSQL 表");
-		return;
-	}
 	var ddlSql = "";
 	var index = "";
     $.each($("#TableFieldsContair .fieldsname input"),

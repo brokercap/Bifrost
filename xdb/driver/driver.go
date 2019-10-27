@@ -26,8 +26,13 @@ type XdbDriver interface {
 	GetKeyVal(key []byte) ([]byte,error)
 	PutKeyVal(key []byte,val []byte) error
 	DelKeyVal(key []byte) error
-	GetListByKeyPrefix(key []byte) ([]string,error)
+	GetListByKeyPrefix(key []byte) ([]ListValue,error)
 	Close() error
+}
+
+type ListValue struct {
+	Key 	string
+	Value 	string
 }
 
 func Register(name string, driver Driver,version string) {

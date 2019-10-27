@@ -1,16 +1,14 @@
 package server
 
 import (
-	"os"
-	"io/ioutil"
 	"encoding/json"
 	"log"
 	"github.com/brokercap/Bifrost/plugin"
 	"github.com/brokercap/Bifrost/config"
 	"sync"
-	"io"
 	"github.com/brokercap/Bifrost/server/user"
 	"github.com/brokercap/Bifrost/server/warning"
+	"github.com/brokercap/Bifrost/server/storage"
 )
 
 
@@ -37,16 +35,7 @@ func DoRecoverySnapshotData(){
 	//这里初始化用户,第一次启动的情况下,配置文件中的用户需要初始化
 	user.InitUser()
 
-	var DataFile string = config.DataDir+"/db.Bifrost"
-	//DataTmpFile = dataDir+"/db.Bifrost.tmp"
-
-	fi, err := os.Open(DataFile)
-	if err != nil {
-		return
-	}
-	defer fi.Close()
-	fd, err := ioutil.ReadAll(fi)
-
+	fd,err := storage.GetDBInfo()
 	if err != nil {
 		return
 	}
@@ -114,6 +103,7 @@ func GetSnapshotData2() []byte{
 
 
 func DoSaveSnapshotData(){
+	/*
 	var DataFile string = config.DataDir+"/db.Bifrost"
 	var DataTmpFile string = config.DataDir+"/db.Bifrost.tmp"
 
@@ -135,6 +125,9 @@ func DoSaveSnapshotData(){
 	if err != nil{
 		log.Println("doSaveDbInfo os.Rename err:",err)
 	}
+	*/
+	data := GetSnapshotData2()
+	storage.SaveDBInfo(data)
 }
 
 

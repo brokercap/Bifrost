@@ -20,6 +20,7 @@ import (
 	"database/sql/driver"
 	"log"
 	"strconv"
+	"fmt"
 )
 
 func init(){
@@ -56,7 +57,7 @@ func GetSchemaList(db mysql.MysqlConnection) []string{
 			break
 		}
 		var DatabaseName string
-		DatabaseName = string(dest[0].([]byte))
+		DatabaseName = dest[0].(string)
 		databaseList = append(databaseList,DatabaseName)
 	}
 	//log.Println(databaseList)
@@ -96,8 +97,8 @@ func GetSchemaTableList(db mysql.MysqlConnection,schema string) []TableListStruc
 		}
 		var tableName string
 		var tableType string
-		tableName = string(dest[0].([]byte))
-		tableType = string(dest[1].([]byte))
+		tableName = dest[0].(string)
+		tableType = dest[1].(string)
 		tableList = append(tableList,TableListStruct{TableName:tableName,TableType:tableType})
 	}
 	//log.Println(tableList)
@@ -105,16 +106,16 @@ func GetSchemaTableList(db mysql.MysqlConnection,schema string) []TableListStruc
 }
 
 type TableStruct struct {
-	COLUMN_NAME 		string
-	COLUMN_DEFAULT 		string
-	IS_NULLABLE 		string
-	COLUMN_TYPE			string
-	COLUMN_KEY 			string
-	EXTRA 				string
-	COLUMN_COMMENT 		string
-	DATA_TYPE			string
-	NUMERIC_PRECISION	string
-	NUMERIC_SCALE		string
+	COLUMN_NAME 		*string
+	COLUMN_DEFAULT 		*string
+	IS_NULLABLE 		*string
+	COLUMN_TYPE			*string
+	COLUMN_KEY 			*string
+	EXTRA 				*string
+	COLUMN_COMMENT 		*string
+	DATA_TYPE			*string
+	NUMERIC_PRECISION	*uint64
+	NUMERIC_SCALE		*uint64
 }
 
 func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string) []TableStruct{
@@ -144,52 +145,55 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		if err != nil {
 			break
 		}
-		var COLUMN_NAME string
-		var COLUMN_DEFAULT string
-		var IS_NULLABLE string
-		var COLUMN_TYPE string
-		var COLUMN_KEY string
-		var EXTRA string
-		var COLUMN_COMMENT string
-		var DATA_TYPE string
-		var NUMERIC_PRECISION string
-		var NUMERIC_SCALE string
+		var COLUMN_NAME 		string
+		var COLUMN_DEFAULT 		*string
+		var IS_NULLABLE 		string
+		var COLUMN_TYPE 		string
+		var COLUMN_KEY 			string
+		var EXTRA 				string
+		var COLUMN_COMMENT 		string
+		var DATA_TYPE 			string
+		var NUMERIC_PRECISION 	*uint64
+		var NUMERIC_SCALE 		*uint64
 
-		COLUMN_NAME 		= string(dest[0].([]byte))
+		COLUMN_NAME 		= dest[0].(string)
 		if dest[1] == nil{
-			COLUMN_DEFAULT 	= "NULL"
+			COLUMN_DEFAULT 	= nil
 		}else{
-			COLUMN_DEFAULT 	= string(dest[1].([]byte))
+			t := dest[1].(string)
+			COLUMN_DEFAULT 	= &t
 		}
 
-		IS_NULLABLE 		= string(dest[2].([]byte))
-		COLUMN_TYPE 		= string(dest[3].([]byte))
-		COLUMN_KEY 			= string(dest[4].([]byte))
-		EXTRA 				= string(dest[5].([]byte))
-		COLUMN_COMMENT 		= string(dest[6].([]byte))
-		DATA_TYPE 			= string(dest[7].([]byte))
+		IS_NULLABLE 		= dest[2].(string)
+		COLUMN_TYPE 		= dest[3].(string)
+		COLUMN_KEY 			= dest[4].(string)
+		EXTRA 				= dest[5].(string)
+		COLUMN_COMMENT 		= dest[6].(string)
+		DATA_TYPE 			= dest[7].(string)
 
 		if dest[8] == nil{
-			NUMERIC_PRECISION 	= "NULL"
+			NUMERIC_PRECISION 	= nil
 		}else{
-			NUMERIC_PRECISION 	= string(dest[8].([]byte))
+			t := dest[8].(uint64)
+			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
-			NUMERIC_SCALE 	= "NULL"
+			NUMERIC_SCALE 	= nil
 		}else{
-			NUMERIC_SCALE 	= string(dest[9].([]byte))
+			t := dest[9].(uint64)
+			NUMERIC_SCALE 	= &t
 		}
 
 		FieldList = append(FieldList,TableStruct{
-			COLUMN_NAME:	COLUMN_NAME,
+			COLUMN_NAME:	&COLUMN_NAME,
 			COLUMN_DEFAULT:	COLUMN_DEFAULT,
-			IS_NULLABLE:	IS_NULLABLE,
-			COLUMN_TYPE:	COLUMN_TYPE,
-			COLUMN_KEY:		COLUMN_KEY,
-			EXTRA:			EXTRA,
-			COLUMN_COMMENT:	COLUMN_COMMENT,
-			DATA_TYPE:		DATA_TYPE,
-			NUMERIC_PRECISION:NUMERIC_PRECISION,
+			IS_NULLABLE:	&IS_NULLABLE,
+			COLUMN_TYPE:	&COLUMN_TYPE,
+			COLUMN_KEY:		&COLUMN_KEY,
+			EXTRA:			&EXTRA,
+			COLUMN_COMMENT:	&COLUMN_COMMENT,
+			DATA_TYPE:		&DATA_TYPE,
+			NUMERIC_PRECISION: NUMERIC_PRECISION,
 			NUMERIC_SCALE:	NUMERIC_SCALE,
 		})
 	}
@@ -230,11 +234,11 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 		if errs != nil {
 			return MasterBinlogInfoStruct{}
 		}
-		File = string(dest[0].([]byte))
-		Binlog_Do_DB = string(dest[2].([]byte))
-		Binlog_Ignore_DB = string(dest[3].([]byte))
+		File = dest[0].(string)
+		Binlog_Do_DB = dest[2].(string)
+		Binlog_Ignore_DB = dest[3].(string)
 		Executed_Gtid_Set = ""
-		PositonString := string(dest[1].([]byte))
+		PositonString := fmt.Sprint(dest[1])
 		Position,_ = strconv.Atoi(PositonString)
 		break
 	}
@@ -279,8 +283,8 @@ func GetVariables(db mysql.MysqlConnection,variablesValue string) (data map[stri
 		if err != nil{
 			break
 		}
-		variableName := string(dest[0].([]byte))
-		value := string(dest[1].([]byte))
+		variableName := dest[0].(string)
+		value := dest[1].(string)
 		data[variableName] = value
 	}
 	return

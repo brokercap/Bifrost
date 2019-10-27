@@ -55,19 +55,21 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	case UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2:
 		event.columnsPresentBitmap2 = Bitfield(buf.Next(int((columnCount + 7) / 8)))
 	}
+	//假如 map event 已经过滤了当前库，则直接不再解析
 	if parser.filterNextRowEvent == true{
 		return
 	}
 	event.tableMap = parser.tableMap[event.tableId]
 	for buf.Len() > 0 {
 		var row map[string]interface{}
-		row, err = parser.parseEventRow(buf, event.tableMap, parser.tableSchemaMap[event.tableId])
+		row, err = parser.parseEventRow(buf, event.tableMap, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
 		if err != nil {
 			log.Println("event row parser err:",err)
 			return
 		}
 		event.rows = append(event.rows, row)
 	}
+
 	return
 }
 
@@ -474,7 +476,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				year := (timeInt & (((1 << 15) - 1) << 9)) >> 9
 				month := (timeInt & (((1 << 4) - 1) << 5)) >> 5
 				day := (timeInt & ((1 << 5) - 1))
-				///tm, _ := time.Parse("2006-01-02", t)
 				t := fmt.Sprintf("%4d-%02d-%02d", year,month,day)
 				row[column_name] = t
 			}
@@ -495,6 +496,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				minute := int((timeInt % 10000) / 100)
 				second := int(timeInt % 100)
 				t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
+				//row[column_name] = tm.Format("15:04:05")
 				row[column_name] = t
 			}
 			break
@@ -513,14 +515,12 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			hour := read_binary_slice(timeInt,2,10,24)
 			minute := read_binary_slice(timeInt,12,6,24)
 			second := read_binary_slice(timeInt,18,6,24)
-
 			t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
 			row[column_name] = t
 			break
 
 		case FIELD_TYPE_TIMESTAMP:
 			timestamp := int64(bytesToUint32(buf.Next(4)))
-			//log.Println("int64(timestamp)0:",int64(timestamp))
 			tm := time.Unix(timestamp, 0)
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break
@@ -528,7 +528,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_TIMESTAMP2:
 			var timestamp int32
 			binary.Read(buf,binary.BigEndian,&timestamp)
-			//log.Println("int64(timestamp):",int64(timestamp))
 			tm := time.Unix(int64(timestamp), 0)
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break

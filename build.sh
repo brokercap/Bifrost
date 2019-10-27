@@ -68,7 +68,7 @@ function checkGoVersion(){
 
     if [[ $GoVersionResult != *version* ]];then
         echo "go version error"
-        #echo go version must go1.11+
+        #echo go version must go1.12+
         exit 1
     fi
 
@@ -77,9 +77,9 @@ function checkGoVersion(){
     GoVersion2=${GoVersion0#*.}
     GoVersion2=${GoVersion2%%.*}
 
-    GoVersion3=$((GoVersion1*100+GoVersion2))
+    GoVersion3=$(( $GoVersion1*100+$GoVersion2 ))
     if [[ $GoVersion3 -lt 112 ]];then
-        echo "go version must be go1.11+"
+        echo "go version must be go1.12+"
         exit 1
     fi
 }

@@ -26,6 +26,7 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
 	ChannelID := GetFormInt(req,"channelid")
+	SyncStatus := req.Form.Get("sync_status")
 	var syncList []syncListStruct
 	if tablename != "" {
 		syncList = get_syncList_by_table_name(dbname,schema,tablename)
@@ -66,6 +67,47 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 		syncList = filterToServerKeySyncList
 	}
 
+	//假如传了 toserverkey 参数，则将 非 toserverkey 的列表给过滤掉
+	if SyncStatus != ""{
+		var filterToServerKeySyncList []syncListStruct
+		filterToServerKeySyncList = make([]syncListStruct,0)
+		for _,v := range syncList{
+			var tmp syncListStruct
+			tmp = syncListStruct{
+				DbName:v.DbName,
+				SchemaName:v.SchemaName,
+				TableName:v.TableName,
+				ToServerList:make([]*server.ToServer,0),
+			}
+			for _,val := range v.ToServerList{
+				switch SyncStatus {
+				case "nodata":
+					if val.Status == ""{
+						tmp.ToServerList = append(tmp.ToServerList,val)
+					}
+					break
+				case "running":
+					if val.Status == "running"{
+						tmp.ToServerList = append(tmp.ToServerList,val)
+					}
+					break
+				case "error":
+					if val.Error != ""{
+						tmp.ToServerList = append(tmp.ToServerList,val)
+					}
+					break
+				default:
+					SyncStatus = ""
+					break
+				}
+			}
+			if len(tmp.ToServerList) > 0 {
+				filterToServerKeySyncList = append(filterToServerKeySyncList,tmp)
+			}
+		}
+		syncList = filterToServerKeySyncList
+	}
+
 	switch req.Form.Get("format") {
 	case "json":
 		b,_:=json.Marshal(syncList)
@@ -78,6 +120,7 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 			SchemaName 		string
 			TableName 		string
 			ToServerKey 	string
+			SyncStatus		string
 			SyncList 		[]syncListStruct
 			ToServerKeyList map[string]*pluginStorage.ToServer
 			DbList 			map[string]server.DbListStruct
@@ -93,6 +136,7 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 			SchemaName:schema,
 			TableName:tablename,
 			ToServerKey:toserverkey,
+			SyncStatus:SyncStatus,
 			SyncList:syncList,
 			ChannelID:ChannelID,
 			DbList:server.GetListDb(),

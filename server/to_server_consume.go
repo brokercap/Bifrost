@@ -160,6 +160,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							BinlogFileNum:0,
 							BinlogPosition:0,
 							Rows:make([]map[string]interface{},1),
+							Pri: data.Pri,
 						}
 						if n0 == n1{
 							d.BinlogFileNum = data.BinlogFileNum
@@ -185,6 +186,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							BinlogFileNum:0,
 							BinlogPosition:0,
 							Rows:make([]map[string]interface{},2),
+							Pri: data.Pri,
 						}
 						if n0 == n1-2{
 							d.BinlogFileNum = data.BinlogFileNum

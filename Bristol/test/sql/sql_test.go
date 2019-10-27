@@ -3,9 +3,10 @@ package sql
 import (
 	"testing"
 	"log"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/jc3wish/Bristol/mysql"
 	"database/sql/driver"
 	"fmt"
+	"database/sql"
 )
 /*
 CREATE TABLE `binlog_field_test3` (
@@ -44,8 +45,8 @@ CREATE TABLE `binlog_field_test3` (
 */
 
 func TestChekcDataTypeByNull(t *testing.T)  {
-	SchemaName := "tsd-db"
-	TableName := "binlog_field_test3"
+	SchemaName := "bifrost_test"
+	TableName := "binlog_field_test"
 	Uri:= "root:root@tcp(10.40.2.41:3306)/test"
 	db := mysql.NewConnect(Uri)
 	sql := "select * from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
@@ -73,9 +74,80 @@ func TestChekcDataTypeByNull(t *testing.T)  {
 				m[string(v)] = nil
 				continue
 			}else{
-				m[string(v)] = string(dest[i].([]byte))
+				m[string(v)] = dest[i]
 			}
 		}
+		break
+	}
+	var noError bool = true
+
+	for k,v := range m{
+		if v == nil{
+			log.Println(k,":","nil")
+			continue
+		}else{
+			log.Println(k,":",fmt.Sprint(v))
+		}
+		switch k {
+		case "id","testtimestamp":
+			continue
+			break
+		default:
+			if v != nil{
+				log.Println(k,"is not null")
+				noError  = false
+			}else{
+
+			}
+			break
+		}
+	}
+
+	if noError  == true{
+		log.Println(" type and value is all right ")
+	}
+}
+
+
+
+func TestChekcDataTypeByNull2(t *testing.T)  {
+	SchemaName := "bifrost_test"
+	TableName := "binlog_field_test"
+	Uri:= "root:root@tcp(10.40.2.41:3306)/test"
+	db,err := sql.Open("mysql",Uri)
+	if err != nil{
+		t.Fatal(err)
+	}
+	sql := "select id from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
+	log.Println(sql)
+	stmt, err := db.Prepare(sql)
+	if err != nil{
+		log.Fatal("Prepare err:",err)
+		stmt.Close()
+		return
+	}
+	//p := make([]driver.Value, 0)
+	rows, err := stmt.Query()
+
+	if err != nil{
+		t.Fatal(err)
+	}
+	columns,err := rows.Columns()
+	if err != nil{
+		t.Fatal(err)
+	}
+	n := len(columns)
+	m := make(map[string]interface{}, n)
+	for {
+		//dest := make([]driver.Value, n, n)
+		var id [][]byte
+		rows.Scan(&id)
+		bool := rows.Next()
+		if bool == false{
+			break
+		}
+		log.Println("id:",id)
+
 		break
 	}
 	var noError bool = true
