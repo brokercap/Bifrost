@@ -1,5 +1,5 @@
 package storage
-
+/*
 import (
 "github.com/syndtr/goleveldb/leveldb"
 "github.com/syndtr/goleveldb/leveldb/util"
@@ -66,3 +66,4 @@ func Close(){
 }
 
 
+*/
