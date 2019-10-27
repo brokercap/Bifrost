@@ -68,7 +68,7 @@ function checkGoVersion(){
 
     if [[ $GoVersionResult != *version* ]];then
         echo "go version error"
-        #echo go version must go1.11+
+        #echo go version must go1.12+
         exit 1
     fi
 
