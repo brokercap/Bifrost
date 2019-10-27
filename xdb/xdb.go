@@ -7,6 +7,7 @@ import (
 
 import (
 	_ "github.com/brokercap/Bifrost/xdb/leveldb"
+	_ "github.com/brokercap/Bifrost/xdb/redis"
 )
 
 const DEFAULT_PREFIX  = "xdb"
