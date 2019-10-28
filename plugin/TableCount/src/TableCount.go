@@ -1,7 +1,6 @@
 package src
 
 import (
-	"log"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	"fmt"
 	"encoding/json"
@@ -126,8 +125,6 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) 
 }
 
 func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	sql := strings.ToUpper(data.Query)
-	log.Println(sql)
 	if len(data.Query) >= 11 && strings.ToUpper(data.Query[0:11]) == "ALTER TABLE" {
 		AddCount(This.p.DbName, data.SchemaName, data.TableName, DDL, 0, true)
 	}

@@ -29,11 +29,21 @@ func fitlerFlow(data []CountContent,timeDiff int64,listCount int) []CountContent
 			lastTime = NowTime
 		}
 		everBlankTime := timeDiff/int64(listCount)
-		tmp := make([]CountContent,n0)
-		for i:=0;i < n0;i++{
-			tmp[0].Time = lastTime - everBlankTime * int64(n0-i)
+
+		n2 := int((NowTime - lastTime ) / everBlankTime)
+		n1 := listCount - n - n2
+
+		tmp := make([]CountContent,n1)
+		for i:=0;i < n1;i++{
+			tmp[i].Time = lastTime - everBlankTime * int64(n1-i)
+		}
+
+		tmp2 := make([]CountContent,n2)
+		for i:=0;i < n2;i++{
+			tmp2[i].Time = lastTime + everBlankTime * int64(i+1)
 		}
 		data = append(tmp,data...)
+		data = append(data,tmp2...)
 	}
 	return data
 }
