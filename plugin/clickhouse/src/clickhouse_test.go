@@ -481,7 +481,7 @@ func TestAllTypeToInt64(t *testing.T)  {
 }
 
 func TestCkDataTypeTransfer(t *testing.T){
-	var data string = "132423 "
+	var data string = "132423　"
 	var fieldName string
 	var toDataType string
 	fieldName = "testField"
@@ -573,7 +573,7 @@ func TestCommitAndCheckData2(t *testing.T){
 	initSyncParam()
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
-	eventData.Rows[0]["testint"] = "1334 "
+	eventData.Rows[0]["testint"] = "1334　"
 	conn.Insert(eventData)
 	_,err2 := conn.Commit()
 	if err2 != nil{
@@ -607,6 +607,117 @@ func TestCommitAndCheckData2(t *testing.T){
 		t.Log("test over;", "data is all right")
 	}else{
 		t.Error("test over;"," some data is error")
+	}
+
+}
+
+
+
+func TestCkDataTypeTransferToInt(t *testing.T){
+	var data int64 = 9223372036854775807
+	var fieldName string
+	var toDataType string
+	fieldName = "testField"
+	toDataType = "UInt8"
+	t.Log("test start")
+	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "uint8"{
+		if result.(uint8) == uint8(0){
+			t.Log("result(in8):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "UInt8"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if reflect.TypeOf(result).String() == "uint8"{
+		if result.(uint8) == uint8(0){
+			t.Log("result(uint8):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+	toDataType = "Int16"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if reflect.TypeOf(result).String() == "int16"{
+		if result.(int16) == int16(0){
+			t.Log("result(int16):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+
+	toDataType = "UInt16"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if reflect.TypeOf(result).String() == "uint16"{
+		if result.(uint16) == uint16(0){
+			t.Log("result(uint16):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+	toDataType = "Int32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if reflect.TypeOf(result).String() == "int32"{
+		if result.(int32) == int32(0){
+			t.Log("result(int32):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+
+	toDataType = "UInt32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	if reflect.TypeOf(result).String() == "uint32"{
+		if result.(uint32) == uint32(0){
+			t.Log("result(uint32):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 	}
 
 }
