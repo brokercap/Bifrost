@@ -1,11 +1,11 @@
-function doGetPluginParam() {
+function doGetPluginParam(p) {
     var result = {data:{},status:false,msg:"error",batchSupport:true}
     var data = {};
-    if (dbname == undefined || dbname == ""){
-        result.msg = "dbname error";
+    if (p.DbName == undefined || p.DbName == ""){
+        result.msg = "DbName error";
         return result
 	}
-    data["DbName"] = dbname;
+    data["DbName"] = p.DbName;
     result.data = data;
     result.msg = "success";
     result.status = true;
