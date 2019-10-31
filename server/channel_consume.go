@@ -124,8 +124,6 @@ func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
 }
 */
 
-var AllSchemaAndTablekey string = GetSchemaAndTableJoin("*","*")
-
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
 	var data mysql.EventReslut

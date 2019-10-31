@@ -65,7 +65,9 @@ func get_flow_controller(w http.ResponseWriter,req *http.Request){
 	if FlowType == ""{
 		FlowType = "minute"
 	}
-	dbANdTableName := server.GetSchemaAndTableJoin(schema,tablename)
+	schema0 := tansferSchemaName(schema)
+	tablename0 := tansferTableName(tablename)
+	dbANdTableName := server.GetSchemaAndTableJoin(schema0,tablename0)
 	var data []count.CountContent
 	switch FlowType {
 	case "minute":
