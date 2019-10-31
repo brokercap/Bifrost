@@ -67,7 +67,7 @@ type Conn struct {
 	database 	int
 	network 	string
 	status 		string
-	conn   		*redis.Client
+	conn   		redis.UniversalClient
 	err    		error
 }
 
@@ -80,12 +80,20 @@ func (This *Conn) Connect() error{
 		This.err = fmt.Errorf("network must be tcp")
 		return This.err
 	}
-
-	This.conn = redis.NewClient(&redis.Options{
-		Addr:     	This.Uri,
-		Password: 	This.pwd, // no password set
-		DB:			This.database,
+	universalClient := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:    strings.SplitN(This.Uri, ",", -1),
+		Password: This.pwd,
+		DB:       This.database,
+		PoolSize: 4096,
 	})
+
+	_, This.err = universalClient.Ping().Result()
+	if This.err != nil {
+		This.status = ""
+		return This.err
+	}
+
+	This.conn = universalClient
 
 	if This.conn == nil{
 		This.err = fmt.Errorf("redis connect error")
