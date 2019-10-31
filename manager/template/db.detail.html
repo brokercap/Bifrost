@@ -325,8 +325,29 @@
     <script type="text/javascript">
 
         var dbname = "{{.DbName}}";
+        var SchemaName = "";
+        var TableName = ""
         var OnFoucsInputId = "";
         var tableDataTypeMap = {};
+
+        function getDbName() {
+            return dbname;
+        }
+        function setSchemaName(name) {
+            SchemaName = name
+        }
+
+        function getSchemaName() {
+            return SchemaName;
+        }
+
+        function setTableName(name) {
+            TableName = name
+        }
+
+        function getTableName() {
+            return TableName
+        }
 
         function getTableFieldType(field) {
             return tableDataTypeMap[field];
@@ -528,6 +549,7 @@
                 table_check_input(key);
                 return  false;
             }
+            setTableName(table_name);
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
@@ -661,6 +683,7 @@
             var schema_name = $("#"+id).find("h3").text();
             var dbname = $("#dbname").val();
             var url = "/db/tablelist";
+            setSchemaName(schema_name);
             var showTableList = function(data){
                 $("#TableListContair").html("");
                 $.each(data,function(index,v) {
@@ -709,6 +732,16 @@
             }
             showBatchDelOrAddBtn();
         }
+
+        function getPluginFunctionParam() {
+            var param = {
+                DbName : getDbName(),
+                SchemaName: getSchemaName(),
+                TableName: getTableName(),
+            }
+            return param;
+        }
+
         $(function(){
             $("#plugin_param_div").on("click",":text,textarea",function(){
                 OnFoucsInputId = $(this).attr("id");
@@ -758,7 +791,13 @@
                                 return false;
                             }
                         }
-                        var p = doGetPluginParam();
+                        var p = doGetPluginParam(getPluginFunctionParam());;
+                        if (getTableName() == "AllTables"){
+                            if(  p.batchSupport != true){
+                                alert("当前插件配置不支持 批量 设置!")
+                                return false;
+                            }
+                        }
                         if (p.status == false){
                             alert(p.msg);
                             return false;
@@ -825,7 +864,11 @@
                         if ($(obj).text() == "正在提交"){
                             return false;
                         }
-                        var p = doGetPluginParam();
+                        var p = doGetPluginParam(getPluginFunctionParam());
+                        if(  p.batchSupport != true){
+                            alert("当前插件配置不支持 批量 设置!")
+                            return false;
+                        }
                         if (p.status == false){
                             alert(p.msg);
                             return false;
