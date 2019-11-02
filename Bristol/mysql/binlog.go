@@ -697,6 +697,10 @@ func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
 	}
 	var ok bool
 	if This.replicateDoDbTableCount > 0{
+		if 	_,ok = This.ReplicateDoDb["*"];ok{
+			This.RUnlock()
+			return true
+		}
 		if 	_,ok = This.ReplicateDoDb[db];ok{
 			if 	_,ok = This.ReplicateDoDb[db][table];ok{
 				This.RUnlock()

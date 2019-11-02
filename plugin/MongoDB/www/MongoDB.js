@@ -1,6 +1,6 @@
 
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error"}
+	var result = {data:{},status:false,msg:"error",batchSupport:true}
     var data = {};
 
 	var SchemaName = $("#MongoDB_SchemaName").val();

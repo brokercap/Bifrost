@@ -28,10 +28,14 @@ func table_synclist_controller(w http.ResponseWriter,req *http.Request) {
 	ChannelID := GetFormInt(req,"channelid")
 	SyncStatus := req.Form.Get("sync_status")
 	var syncList []syncListStruct
+
+	schema0 := tansferSchemaName(schema)
+	tablename0 := tansferTableName(tablename)
+
 	if tablename != "" {
-		syncList = get_syncList_by_table_name(dbname,schema,tablename)
+		syncList = get_syncList_by_table_name(dbname,schema0,tablename0)
 	}else if schema != ""{
-		syncList = get_syncList_by_schema_name(dbname,schema,ChannelID)
+		syncList = get_syncList_by_schema_name(dbname,schema0,ChannelID)
 	}else if dbname != ""{
 		syncList = get_syncList_by_dbname(dbname,ChannelID)
 	}else{

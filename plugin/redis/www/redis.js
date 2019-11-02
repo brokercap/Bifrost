@@ -1,7 +1,10 @@
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error"}
+	var result = {data:{},status:false,msg:"error",batchSupport:false}
     var data = {};
 	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
+	if (Type == "list"){
+		result.batchSupport = true;
+	}
 
     var DataType = $("#Redis_Plugin_Contair #Redis_DataType").val();
     var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();

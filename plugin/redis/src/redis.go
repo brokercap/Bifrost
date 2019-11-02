@@ -25,7 +25,7 @@ func (MyConn *MyConn) Open(uri string) driver.ConnFun{
 }
 
 func (MyConn *MyConn) GetUriExample() string{
-	return "pwd@tcp(127.0.0.1:6379)/0 or 127.0.0.1:6379"
+	return "pwd@tcp(127.0.0.1:6379)/0 or 127.0.0.1:6379 or pwd@tcp(127.0.0.1:6379,127.0.0.1:6380)/0 or 127.0.0.1:6379,127.0.0.1:6380"
 }
 
 func (MyConn *MyConn) CheckUri(uri string) error{
@@ -74,7 +74,7 @@ type Conn struct {
 	database 	int
 	network 	string
 	status 		string
-	conn   		*redis.Client
+	conn   		redis.UniversalClient
 	err    		error
 	p 			*PluginParam
 }
@@ -146,14 +146,20 @@ func (This *Conn) Connect() bool {
 		return false
 	}
 
-	This.conn = redis.NewClient(&redis.Options{
-		Addr:     	This.Uri,
-		Password: 	This.pwd, // no password set
-		DB:			This.database,
-		})
+	universalClient := redis.NewUniversalClient(&redis.UniversalOptions{
+		Addrs:    strings.SplitN(This.Uri, ",", -1),
+		Password: This.pwd,
+		DB:       This.database,
+		PoolSize: 4096,
+	})
 
+	_, This.err = universalClient.Ping().Result()
+	if This.err != nil {
+		This.status = ""
+		return false
+	}
+	This.conn = universalClient
 	if This.conn == nil{
-		This.err = fmt.Errorf("redis connect error")
 		This.status = ""
 		return false
 	}else{

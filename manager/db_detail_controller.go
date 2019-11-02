@@ -46,6 +46,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	}
 	defer dbConn.Close()
 	DataBaseList := GetSchemaList(dbConn)
+	DataBaseList = append(DataBaseList,"AllDataBases")
 	var Result dbDetail
 	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
@@ -73,10 +74,15 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	var data []ResultType
 	data = make([]ResultType,0)
 	TableList := GetSchemaTableList(dbConn,schema_name)
+	TableList = append(TableList,TableListStruct{TableName:"AllTables",TableType:""})
+	var schema_name0 ,tableName0 string
+	schema_name0 = tansferSchemaName(schema_name)
+
 	for _,tableInfo := range TableList{
 		tableName := tableInfo.TableName
 		tableType := tableInfo.TableType
-		t := DBObj.GetTable(schema_name,tableName)
+		tableName0 = tansferTableName(tableName)
+		t := DBObj.GetTable(schema_name0,tableName0)
 		if t == nil{
 			data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
 		}else{
@@ -98,6 +104,10 @@ func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
 	table_name := req.Form.Get("table_name")
+
+	schema_name = tansferSchemaName(schema_name)
+	table_name = tansferTableName(table_name)
+
 	DBObj := server.GetDBObj(dbname)
 	dbUri := DBObj.ConnectUri
 	dbConn := DBConnect(dbUri)

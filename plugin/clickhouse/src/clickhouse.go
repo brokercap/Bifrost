@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-rc.05"
+const VERSION  = "v1.1.0-rc.06"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
@@ -525,7 +525,9 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 }
 
 func AllTypeToInt64(s interface{}) (int64,error) {
-	i64,err := strconv.ParseInt(strings.Trim(fmt.Sprint(s)," "),10,64)
+	t := strings.Trim(fmt.Sprint(s)," ")
+	t = strings.Trim(t,"　")
+	i64,err := strconv.ParseInt(t,10,64)
 	if err != nil {
 		return 0,nil
 	}
@@ -533,7 +535,9 @@ func AllTypeToInt64(s interface{}) (int64,error) {
 }
 
 func AllTypeToUInt64(s interface{}) (uint64,error) {
-	ui64,err := strconv.ParseUint(strings.Trim(fmt.Sprint(s)," "),10,64)
+	t := strings.Trim(fmt.Sprint(s)," ")
+	t = strings.Trim(t,"　")
+	ui64,err := strconv.ParseUint(t,10,64)
 	if err != nil {
 		return 0,nil
 	}
@@ -568,7 +572,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = int16(i64)
+			if i64 <= 32767 && i64 >= -32768{
+				v = int16(i64)
+			}else{
+				v = int16(0)
+			}
 			break
 		}
 		break
@@ -595,7 +603,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = int32(i64)
+			if i64 <= 2147483647 && i64 >=  -2147483648{
+				v = int32(i64)
+			}else{
+				v = int32(0)
+			}
 			break
 		}
 		break
@@ -634,7 +646,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = int8(i64)
+			if i64 <= 127 && i64 >=  -128{
+				v = int8(i64)
+			}else{
+				v = int8(0)
+			}
 			break
 		}
 		break
@@ -652,7 +668,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = uint8(i64)
+			if i64 <= 255{
+				v = uint8(i64)
+			}else {
+				v = uint8(0)
+			}
 			break
 		}
 		break
@@ -671,7 +691,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = int16(i64)
+			if i64 <= 32767 && i64 >= -32768{
+				v = int16(i64)
+			}else{
+				v = int16(0)
+			}
 			break
 		}
 		break
@@ -689,7 +713,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = uint16(i64)
+			if i64 <= 65535{
+				v = uint16(i64)
+			}else {
+				v = uint16(0)
+			}
 			break
 		}
 		break
@@ -707,7 +735,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = int32(i64)
+			if i64 <= 2147483647 && i64 >=  -2147483648{
+				v = int32(i64)
+			}else{
+				v = int32(0)
+			}
 			break
 		}
 		break
@@ -725,7 +757,11 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			if err != nil{
 				return 0,err
 			}
-			v = uint32(i64)
+			if i64 <= 4294967295{
+				v = uint32(i64)
+			}else{
+				v = uint32(0)
+			}
 			break
 		}
 		break
@@ -814,7 +850,9 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 }
 
 func interfaceToFloat64(data interface{}) float64  {
-	f1,err := strconv.ParseFloat(strings.Trim(fmt.Sprint(data)," "), 64)
+	t := strings.Trim(fmt.Sprint(data)," ")
+	t = strings.Trim(t,"　")
+	f1,err := strconv.ParseFloat(t, 64)
 	if err != nil{
 		return float64(0.00)
 	}

@@ -1,5 +1,5 @@
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error"}
+	var result = {data:{},status:false,msg:"error",batchSupport:true}
     var data = {};
 
 	var Topic = $("#Kafka_Topic").val();

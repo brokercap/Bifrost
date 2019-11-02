@@ -29,8 +29,6 @@ import (
 	"strconv"
 	"sync"
 	"log"
-	"bytes"
-	"encoding/gob"
 )
 
 func evenTypeName(e mysql.EventType) string {
@@ -115,6 +113,8 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 	}
 }
 
+/*
+深度拷贝，性能不是很好，现在放弃了
 func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
@@ -122,6 +122,7 @@ func(This *consume_channel_obj) deepCopy(dst, src interface{}) error {
 	}
 	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
+*/
 
 func (This *consume_channel_obj) consume_channel() {
 	c := This.c
@@ -134,6 +135,10 @@ func (This *consume_channel_obj) consume_channel() {
 	}()
 	var key string
 	var countNum int64 = 0
+	var AllTableKey string
+	var AllTableToServerLen int
+	var AllSchemaAndTableToServerLen int
+	var TableToServerLen int
 	for {
 		select {
 		case data = <-This.c.chanName:
@@ -142,21 +147,12 @@ func (This *consume_channel_obj) consume_channel() {
 			}
 			timer.Reset(5  * time.Second)
 			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
+			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
 			This.checkChannleStatus()
-			toServerList := This.db.tableMap[key].ToServerList
 			pluginData := This.transferToPluginData(&data)
-			for _, toServerInfo := range toServerList {
-				if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
-					continue
-				}
-				if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
-					continue
-				}
-				if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
-					continue
-				}
-				This.sendToServerResult(toServerInfo,&pluginData)
-			}
+			TableToServerLen 				= This.sendToServerList(key,&pluginData)
+			AllTableToServerLen 			= This.sendToServerList(AllTableKey,&pluginData)
+			AllSchemaAndTableToServerLen	= This.sendToServerList(AllSchemaAndTablekey,&pluginData)
 
 			if This.db.killStatus == 1{
 				return
@@ -179,7 +175,23 @@ func (This *consume_channel_obj) consume_channel() {
 				//Time:"",
 				Count:countNum,
 				TableId:key,
-				ByteSize:int64(data.Header.EventSize)*int64(len(toServerList)),
+				ByteSize:int64(data.Header.EventSize)*int64(TableToServerLen),
+			}
+			if AllTableToServerLen > 0{
+				c.countChan <- &count.FlowCount{
+					//Time:"",
+					Count:countNum,
+					TableId:AllTableKey,
+					ByteSize:int64(data.Header.EventSize)*int64(AllTableToServerLen),
+				}
+			}
+			if AllSchemaAndTableToServerLen > 0{
+				c.countChan <- &count.FlowCount{
+					//Time:"",
+					Count:countNum,
+					TableId:AllSchemaAndTablekey,
+					ByteSize:int64(data.Header.EventSize)*int64(AllSchemaAndTableToServerLen),
+				}
 			}
 		case <-timer.C:
 			timer.Reset(5 * time.Second)
@@ -198,4 +210,24 @@ func (This *consume_channel_obj) consume_channel() {
 			break
 		}
 	}
+}
+
+func (This *consume_channel_obj) sendToServerList(key string,pluginData *pluginDriver.PluginDataType) int{
+	if _,ok:=This.db.tableMap[key];!ok{
+		return 0
+	}
+	toServerList := This.db.tableMap[key].ToServerList
+	for _, toServerInfo := range toServerList {
+		if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
+			continue
+		}
+		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
+			continue
+		}
+		if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
+			continue
+		}
+		This.sendToServerResult(toServerInfo,pluginData)
+	}
+	return len(toServerList)
 }
