@@ -94,6 +94,10 @@ func history_add_controller(w http.ResponseWriter,req *http.Request){
 	schema := req.Form.Get("schema_name")
 	property := req.Form.Get("property")
 	ToServerIDList := req.Form.Get("ToserverIds")
+	if tansferTableName(tablename) == "*"{
+		w.Write(returnDataResult(false,"不能给 AllTables 添加全量任务!",0))
+		return
+	}
 	var err error
 	var Property history.HistoryProperty
 	err = json.Unmarshal([]byte(property),&Property)

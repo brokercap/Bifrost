@@ -37,6 +37,8 @@ func table_add_controller(w http.ResponseWriter,req *http.Request){
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
 	channelId := GetFormInt(req,"channelid")
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
 	err := server.AddTable(dbname,schema,tablename,channelId)
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
@@ -51,6 +53,8 @@ func table_del_controller(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
 	err := server.DelTable(dbname,schema,tablename)
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
@@ -65,6 +69,9 @@ func table_addToServer_controller(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
 
 	toServerKey := req.Form.Get("toserver_key")
 	PluginName := req.Form.Get("plugin_name")
@@ -135,6 +142,10 @@ func table_delToServer_controller(w http.ResponseWriter,req *http.Request) {
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
 	ToServerID := GetFormInt(req,"to_server_id")
 	server.GetDBObj(dbname).DelTableToServer(schema,tablename,ToServerID)
 	defer server.SaveDBConfigInfo()
@@ -146,6 +157,10 @@ func table_toserverlist_controller(w http.ResponseWriter,req *http.Request) {
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
 	t1:=server.GetDBObj(dbname)
 	tableObj:=t1.GetTable(schema,tablename)
 	//tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
@@ -158,6 +173,10 @@ func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
 	ToServerID := GetFormInt(req,"to_server_id")
 	index :=  GetFormInt(req,"index")
 	ToServerInfo := server.GetDBObj(dbname).GetTable(schema,tablename).ToServerList[index]

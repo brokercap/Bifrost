@@ -6,7 +6,7 @@ function transferBool(b){
 	}
 }
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error"}
+	var result = {data:{},status:false,msg:"error",batchSupport:true}
     var data = {};
 	var Queue = {};
 	var Exhcange = {}

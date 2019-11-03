@@ -54,6 +54,8 @@ func GetSchemaAndTableBySplit(schemaAndTableName string) (schemaName,tableName s
 	return
 }
 
+var AllSchemaAndTablekey string = GetSchemaAndTableJoin("*","*")
+
 var DbLock sync.Mutex
 
 var DbList map[string]*db

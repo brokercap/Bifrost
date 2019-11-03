@@ -56,6 +56,9 @@ var IndexHtml = `
                             <a href="/warning/config/list" class="dropdown-toggle"> 报警 </a>
                         </li>
                         <li class="dropdown">
+                            <a href="/user/list" class="dropdown-toggle"> 用户管理 </a>
+                        </li>
+                        <li class="dropdown">
                             <a href="/docs" target="_blank" class="dropdown-toggle"> 文档 </a>
                         </li>
 
@@ -126,6 +129,10 @@ $(function(){
                     
                         <a class="list-group-item" id="Schema-performance_schema">
                             <h3 class="list-group-item-heading">performance_schema</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-AllDataBases">
+                            <h3 class="list-group-item-heading">AllDataBases</h3>
                         </a>
                     
                     </div>
@@ -218,8 +225,6 @@ $(function(){
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
                                     
                                         <option value="blackholeTest" pluginName="blackhole" pluginVersion="v1.1.0">blackhole -- blackholeTest</option>
-                                    
-                                        <option value="clickHouseTest" pluginName="clickhouse" pluginVersion="v1.1.0-rc.02">clickhouse -- clickHouseTest</option>
                                     
                                         <option value="redisTest" pluginName="redis" pluginVersion="v1.1.0">redis -- redisTest</option>
                                     
@@ -393,12 +398,20 @@ $(function(){
                             </td>
                         </tr>
 
+                        <tr>
+                            <td align="right" height="50" width="20%">Where : </td>
+                            <td style="text-indent:10px; padding-bottom: 5px;" >
+                                <textarea type="text" name="where" class="form-control" placeholder="例如: update_time >= '2019-10-10'" value="" id="addHisotryWhere"></textarea>
+                            </td>
+                            <span>where条件,例如:update_time >= '2019-10-10'</span>
+                        </tr>
 
                         <tr>
                             <td align="right" height="50" width="20%">ThreadNum : </td>
-                            <td style="text-indent:10px" >
+                            <td style="text-indent:10px;">
                                 <input type="text" name="ThreadCount" class="form-control" placeholder="ThreadNum" value="1" id="addHisotryThreadNum">
                                 <span>开启多少个连接并发查询</span>
+
                             </td>
                         </tr>
 
@@ -432,8 +445,29 @@ $(function(){
     <script type="text/javascript">
 
         var dbname = "mysqlTest";
+        var SchemaName = "";
+        var TableName = ""
         var OnFoucsInputId = "";
         var tableDataTypeMap = {};
+
+        function getDbName() {
+            return dbname;
+        }
+        function setSchemaName(name) {
+            SchemaName = name
+        }
+
+        function getSchemaName() {
+            return SchemaName;
+        }
+
+        function setTableName(name) {
+            TableName = name
+        }
+
+        function getTableName() {
+            return TableName
+        }
 
         function getTableFieldType(field) {
             return tableDataTypeMap[field];
@@ -635,6 +669,7 @@ $(function(){
                 table_check_input(key);
                 return  false;
             }
+            setTableName(table_name);
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
@@ -768,6 +803,7 @@ $(function(){
             var schema_name = $("#"+id).find("h3").text();
             var dbname = $("#dbname").val();
             var url = "/db/tablelist";
+            setSchemaName(schema_name);
             var showTableList = function(data){
                 $("#TableListContair").html("");
                 $.each(data,function(index,v) {
@@ -816,6 +852,16 @@ $(function(){
             }
             showBatchDelOrAddBtn();
         }
+
+        function getPluginFunctionParam() {
+            var param = {
+                DbName : getDbName(),
+                SchemaName: getSchemaName(),
+                TableName: getTableName(),
+            }
+            return param;
+        }
+
         $(function(){
             $("#plugin_param_div").on("click",":text,textarea",function(){
                 OnFoucsInputId = $(this).attr("id");
@@ -865,7 +911,13 @@ $(function(){
                                 return false;
                             }
                         }
-                        var p = doGetPluginParam();
+                        var p = doGetPluginParam(getPluginFunctionParam());;
+                        if (getTableName() == "AllTables"){
+                            if(  p.batchSupport != true){
+                                alert("当前插件配置不支持 批量 设置!")
+                                return false;
+                            }
+                        }
                         if (p.status == false){
                             alert(p.msg);
                             return false;
@@ -932,7 +984,11 @@ $(function(){
                         if ($(obj).text() == "正在提交"){
                             return false;
                         }
-                        var p = doGetPluginParam();
+                        var p = doGetPluginParam(getPluginFunctionParam());
+                        if(  p.batchSupport != true){
+                            alert("当前插件配置不支持 批量 设置!")
+                            return false;
+                        }
                         if (p.status == false){
                             alert(p.msg);
                             return false;
@@ -1114,6 +1170,7 @@ $(function(){
                 var dbname          = $("#addHisotryDbName").val();
                 var schema_name     = $("#addHisotrySchema").val();
                 var table_name      = $("#addHisotryTableName").val();
+                var where           = $("#addHisotryWhere").val();
 
                 var ToServerIds = [];
                 $.each($("#addHisotryToServer input:checkbox:checked"),function(){
@@ -1134,6 +1191,7 @@ $(function(){
                 var Property = {};
                 Property["ThreadNum"]       = parseInt(ThreadNum);
                 Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
+                Property["Where"]           = $.trim(where);
 
                 var url = "/history/add";
                 $.post(url,
