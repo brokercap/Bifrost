@@ -71,9 +71,6 @@ var BifrostDataDir *string
 var Version bool
 var Help bool
 
-//接收指令进行将配置信息刷盘到disk
-var doSaveInfoToDiskChan chan int8
-
 func usage() {
 	fmt.Fprintf(os.Stderr, `Bifrost version: `+config.VERSION+`
 Usage: Bifrost [-hv] [-config ./etc/Bifrost.ini] [-pid Bifrost.pid] [-data_dir dir]
@@ -84,7 +81,6 @@ Options:
 }
 
 func main() {
-	doSaveInfoToDiskChan = make(chan int8,100)
 	defer func() {
 		server.StopAllChannel()
 		doSaveDbInfo()
@@ -172,14 +168,12 @@ func main() {
 	initParam()
 
 	plugin.DoDynamicPlugin()
-	server.InitStrageChan(doSaveInfoToDiskChan)
 	server.InitStorage()
 
 	log.Println("Server started, Bifrost version",config.VERSION)
 
 	doRecovery()
 
-	go doSaveDBConfigToDisk()
 	go manager.Start(IpAndPort)
 	ListenSignal()
 }
@@ -271,16 +265,6 @@ func WritePid(){
 	}
 	defer f.Close()
 	io.WriteString(f, fmt.Sprint(os.Getpid()))
-}
-
-func doSaveDBConfigToDisk(){
-	for{
-		i := <-doSaveInfoToDiskChan
-		if i == 0{
-			return
-		}
-		doSaveDbInfo()
-	}
 }
 
 func doSaveDbInfo(){
