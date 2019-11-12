@@ -360,6 +360,41 @@
             tableDataTypeMap[field] = dataType;
         }
 
+        function setPluginParamDefault(key,value) {
+            if (key == undefined || key == null){
+                $("#MustBeSuccess").val("true");
+                $("#FilterQuery").val("true");
+                $("#MustBeSuccess").val("true");
+                return;
+            }
+            switch (key){
+                case "FilterUpdate":
+                    if (value != false && value != "false"){
+                        $("#FilterUpdate").val("true");
+                    }else{
+                        $("#FilterUpdate").val("false");
+                    }
+                    break;
+                case "FilterQuery":
+                    if (value != false && value != "false"){
+                        $("#FilterQuery").val("true");
+                    }else{
+                        $("#FilterQuery").val("false");
+                    }
+                    break;
+                case "MustBeSuccess":
+                    if (value != false && value != "false"){
+                        $("#MustBeSuccess").val("true");
+                    }else{
+                        $("#MustBeSuccess").val("false");
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return;
+        }
+
         function showOrHideMyWeb(){
             var status = $("#MyWebHideBtn").attr("status");
             if (status == "hide"){
@@ -761,6 +796,8 @@
                         return;
                     }
                 }
+                //初始化默认参数
+                setPluginParamDefault();
                 var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);
