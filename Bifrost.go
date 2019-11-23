@@ -34,7 +34,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"github.com/brokercap/Bifrost/server"
-	_ "net/http/pprof"
 	"strconv"
 )
 
