@@ -27,10 +27,15 @@ func init(){
 }
 
 func backup_export_controller(w http.ResponseWriter,req *http.Request){
+	b,err:=server.GetSnapshotData()
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+		return
+	}
 	fileName := "bifrost_"+time.Now().Format("2006-01-02 15:04:05")+".json"
 	w.Header().Add("Content-Type", "application/octet-stream")
 	w.Header().Add("content-disposition", "attachment; filename=\""+fileName+"\"")
-	w.Write(server.GetSnapshotData())
+	w.Write(b)
 }
 
 func backup_import_controller(w http.ResponseWriter,req *http.Request){

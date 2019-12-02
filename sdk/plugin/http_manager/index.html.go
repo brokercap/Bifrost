@@ -8,7 +8,7 @@ var IndexHtml = `
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mysqlTest - Detail - Bifrost</title>
+    <title>myTest - Detail - Bifrost</title>
     <link rel="shortcut icon" href="favicon.ico">
     <link href="/css/bootstrap.min14ed.css?v=3.3.6" rel="stylesheet">
     <link href="/css/style.min862f.css?v=4.1.0" rel="stylesheet">
@@ -104,13 +104,13 @@ $(function(){
 
 <link href="/css/plugins/bootstrap-table/bootstrap-table.min.css" rel="stylesheet" xmlns="http://www.w3.org/1999/html">
 <div >
-    <input type="hidden" value="mysqlTest" id="dbname" />
+    <input type="hidden" value="myTest" id="dbname" />
     <div class="row">
         <div class="col-sm-2" id="MyWebLeft_1">
 
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
-                    <h5>mysqlTest - Schema List</h5>
+                    <h5>myTest - Schema List</h5>
                 </div>
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
@@ -119,8 +119,16 @@ $(function(){
                             <h3 class="list-group-item-heading">information_schema</h3>
                         </a>
                     
+                        <a class="list-group-item" id="Schema-bank">
+                            <h3 class="list-group-item-heading">bank</h3>
+                        </a>
+                    
                         <a class="list-group-item" id="Schema-bifrost_test">
                             <h3 class="list-group-item-heading">bifrost_test</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-dbzz_stock_crm">
+                            <h3 class="list-group-item-heading">dbzz_stock_crm</h3>
                         </a>
                     
                         <a class="list-group-item" id="Schema-mysql">
@@ -129,6 +137,38 @@ $(function(){
                     
                         <a class="list-group-item" id="Schema-performance_schema">
                             <h3 class="list-group-item-heading">performance_schema</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-test">
+                            <h3 class="list-group-item-heading">test</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-test1">
+                            <h3 class="list-group-item-heading">test1</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-test2">
+                            <h3 class="list-group-item-heading">test2</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-transaction_test">
+                            <h3 class="list-group-item-heading">transaction_test</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-wx.weiyihao.com">
+                            <h3 class="list-group-item-heading">wx.weiyihao.com</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-ydd">
+                            <h3 class="list-group-item-heading">ydd</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-youdada">
+                            <h3 class="list-group-item-heading">youdada</h3>
+                        </a>
+                    
+                        <a class="list-group-item" id="Schema-zentao">
+                            <h3 class="list-group-item-heading">zentao</h3>
                         </a>
                     
                         <a class="list-group-item" id="Schema-AllDataBases">
@@ -224,9 +264,17 @@ $(function(){
                                 <div class="col-sm-9" style="position: relative">
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
                                     
+                                        <option value="TableCountTest" pluginName="TableCount" pluginVersion="v1.1.0-apha">TableCount -- TableCountTest</option>
+                                    
                                         <option value="blackholeTest" pluginName="blackhole" pluginVersion="v1.1.0">blackhole -- blackholeTest</option>
                                     
+                                        <option value="ckTest" pluginName="clickhouse" pluginVersion="v1.1.0-rc.06">clickhouse -- ckTest</option>
+                                    
+                                        <option value="ckTest41" pluginName="clickhouse" pluginVersion="v1.1.0-rc.06">clickhouse -- ckTest41</option>
+                                    
                                         <option value="redisTest" pluginName="redis" pluginVersion="v1.1.0">redis -- redisTest</option>
+                                    
+                                        <option value="toMysqlTest" pluginName="mysql" pluginVersion="v1.1.0-rc.01">mysql -- toMysqlTest</option>
                                     
                                     </select>
                                     <span class="help-block m-b-none"></span>
@@ -326,7 +374,7 @@ $(function(){
                         <tr>
                             <td align="right" height="50" width="20%">DB : </td>
                             <td style="text-indent:10px" >
-                                <input type="text" name="dbname" id="addTableDbName" class="form-control" placeholder="Database" value="mysqlTest" disabled>
+                                <input type="text" name="dbname" id="addTableDbName" class="form-control" placeholder="Database" value="myTest" disabled>
                             </td>
                         </tr>
 
@@ -380,7 +428,7 @@ $(function(){
                         <tr>
                             <td align="right" height="50" width="20%">DB : </td>
                             <td style="text-indent:10px" >
-                                <input type="text" name="dbname" id="addHisotryDbName" class="form-control" placeholder="Database" value="mysqlTest" disabled>
+                                <input type="text" name="dbname" id="addHisotryDbName" class="form-control" placeholder="Database" value="myTest" disabled>
                             </td>
                         </tr>
 
@@ -444,7 +492,7 @@ $(function(){
     <script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
     <script type="text/javascript">
 
-        var dbname = "mysqlTest";
+        var dbname = "myTest";
         var SchemaName = "";
         var TableName = ""
         var OnFoucsInputId = "";
@@ -478,6 +526,41 @@ $(function(){
         }
         function setTableFieldType(field,dataType) {
             tableDataTypeMap[field] = dataType;
+        }
+
+        function setPluginParamDefault(key,value) {
+            if (key == undefined || key == null){
+                $("#MustBeSuccess").val("true");
+                $("#FilterQuery").val("true");
+                $("#MustBeSuccess").val("true");
+                return;
+            }
+            switch (key){
+                case "FilterUpdate":
+                    if (value != false && value != "false"){
+                        $("#FilterUpdate").val("true");
+                    }else{
+                        $("#FilterUpdate").val("false");
+                    }
+                    break;
+                case "FilterQuery":
+                    if (value != false && value != "false"){
+                        $("#FilterQuery").val("true");
+                    }else{
+                        $("#FilterQuery").val("false");
+                    }
+                    break;
+                case "MustBeSuccess":
+                    if (value != false && value != "false"){
+                        $("#MustBeSuccess").val("true");
+                    }else{
+                        $("#MustBeSuccess").val("false");
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return;
         }
 
         function showOrHideMyWeb(){
@@ -881,6 +964,8 @@ $(function(){
                         return;
                     }
                 }
+                
+                setPluginParamDefault();
                 var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                 var pluginVersion = $("#addToServerKey").find("option:selected").attr("pluginversion");
                 $("#plugin_param_div").load("/plugin/"+pluginName+"/www/"+pluginName+".html?v="+pluginVersion);

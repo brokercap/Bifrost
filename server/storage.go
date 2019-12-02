@@ -26,7 +26,25 @@ var TmpPositioin []*TmpPositioinStruct
 
 var cachePoolCount uint32 = 0
 
-func init() {}
+func init() {
+	toSaveDbConfigChan = make(chan int8,100)
+	go func(){
+		timer := time.NewTimer(5 * time.Minute)
+		for{
+			select {
+			case i := <-toSaveDbConfigChan :
+				if i == 0{
+					return
+				}
+				break
+			case <-timer.C:
+					timer.Reset(5 * time.Minute)
+					break
+			}
+			DoSaveSnapshotData()
+		}
+	}()
+}
 
 func InitStorage(){
 	storage.InitStorage()
@@ -81,10 +99,6 @@ func getBinlogPositionByCache(key []byte) (positionStruct,error){
 	}else{
 		return positionStruct{},fmt.Errorf("no found")
 	}
-}
-
-func InitStrageChan(ch chan int8){
-	toSaveDbConfigChan = ch
 }
 
 func SaveDBConfigInfo(){

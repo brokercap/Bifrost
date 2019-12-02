@@ -77,3 +77,5 @@ function RabbitMQ_Declare_Onchange(){
 	}
 }
 RabbitMQ_Declare_Onchange();
+
+setPluginParamDefault("FilterQuery",false);

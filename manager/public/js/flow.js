@@ -188,7 +188,6 @@ var FlowClass  = {
         var lasttime = -1;
         for (s in d) {
             if (d[s].Time > 0) {
-
                 if (Count == -1) {
                     Count = d[s].Count;
                     ByteSize = d[s].ByteSize;
@@ -202,6 +201,7 @@ var FlowClass  = {
                         ByteSize: 0,
                     });
                 }
+                lasttime = d[s].Time;
                 var tSize = d[s].ByteSize - ByteSize;
                 if (tSize < 0) {
                     tSize = 0;

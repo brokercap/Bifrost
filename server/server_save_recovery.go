@@ -9,6 +9,7 @@ import (
 	"github.com/brokercap/Bifrost/server/user"
 	"github.com/brokercap/Bifrost/server/warning"
 	"github.com/brokercap/Bifrost/server/storage"
+	"time"
 )
 
 
@@ -64,7 +65,7 @@ func DoRecoverySnapshotData(){
 
 }
 
-func GetSnapshotData() []byte{
+func GetSnapshotData() ([]byte,error){
 	l.Lock()
 	defer func(){
 		l.Unlock()
@@ -79,12 +80,11 @@ func GetSnapshotData() []byte{
 		User:user.GetUserList(),
 		Warning:warning.GetWarningConfigList(),
 	}
-	b,_:= json.Marshal(data)
-	return b
+	return json.Marshal(data)
 }
 
 //只获取 数据源 和 目标库的镜像数据
-func GetSnapshotData2() []byte{
+func GetSnapshotData2() ([]byte,error){
 	l.Lock()
 	defer func(){
 		l.Unlock()
@@ -97,36 +97,24 @@ func GetSnapshotData2() []byte{
 		ToServer:plugin.SaveToServerData(),
 		DbInfo:SaveDBInfoToFileData(),
 	}
-	b,_:= json.Marshal(data)
-	return b
+	return json.Marshal(data)
 }
 
 
 func DoSaveSnapshotData(){
-	/*
-	var DataFile string = config.DataDir+"/db.Bifrost"
-	var DataTmpFile string = config.DataDir+"/db.Bifrost.tmp"
-
-	b := GetSnapshotData2()
-
-	f, err2 := os.OpenFile(DataTmpFile, os.O_CREATE|os.O_RDWR, 0700) //打开文件
-	if err2 !=nil{
-		log.Println("open file error:",err2)
-		return
+	var data []byte
+	var err error
+	for i:=0;i<3;i++{
+		data,err = GetSnapshotData2()
+		if err == nil{
+			break
+		}
+		time.Sleep(time.Duration(100) * time.Millisecond)
 	}
-	_, err1 := io.WriteString(f, string(b)) //写入文件(字符串)
-	if err1 != nil {
-		f.Close()
-		log.Printf("save data to file error:%s, data:%s \r\n",err1,string(b))
-		return
-	}
-	f.Close()
-	err := os.Rename(DataTmpFile,DataFile)
 	if err != nil{
-		log.Println("doSaveDbInfo os.Rename err:",err)
+		SaveDBConfigInfo()
+		return
 	}
-	*/
-	data := GetSnapshotData2()
 	storage.SaveDBInfo(data)
 }
 

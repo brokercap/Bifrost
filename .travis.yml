@@ -13,7 +13,7 @@ before_install:
     - go get github.com/streadway/amqp
     - go get github.com/go-redis/redis
     - go get github.com/syndtr/goleveldb/leveldb
-    - go get github.com/kshvakov/clickhouse
+    - go get github.com/ClickHouse/clickhouse-go
 
 install:
     - go get github.com/mattn/goveralls

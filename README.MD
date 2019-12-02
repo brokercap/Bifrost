@@ -73,7 +73,7 @@ http://test.use.xbifrost.com:21037
 
 ### WIKI
 
-[Bifrost WIKI](https://github.com/brokercap/Bifrost/wiki)
+[Bifrost WIKI](http://wiki.xbifrost.com)
 
 ### MySQL 版本（经过测试）
 
@@ -225,7 +225,7 @@ cluster_name=bifrostTestClusterName
 - github.com/streadway/amqp
 - github.com/go-redis/redis
 - github.com/syndtr/goleveldb/leveldb
-- github.com/kshvakov/clickhouse
+- github.com/ClickHouse/clickhouse-go
 
 ### QQ群号： 70331601
 <img src="https://github.com/brokercap/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>

@@ -2,7 +2,7 @@ package src
 
 import (
 	"database/sql/driver"
-	"github.com/kshvakov/clickhouse"
+	clickhouse "github.com/ClickHouse/clickhouse-go"
 	"github.com/brokercap/Bifrost/manager/xgo"
 	"net/http"
 	"encoding/json"
