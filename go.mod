@@ -1,28 +1,18 @@
 module github.com/brokercap/Bifrost
 
 require (
+	github.com/ClickHouse/clickhouse-go v1.3.12
 	github.com/Shopify/sarama v1.23.0
-	github.com/bkaradzic/go-lz4 v1.0.0 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
-	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/garyburd/redigo v1.6.0
 	github.com/gmallard/stompngo v1.0.11
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hprose/hprose-golang v2.0.4+incompatible
-	github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03
-	github.com/kshvakov/clickhouse v1.3.7
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
-	golang.org/x/crypto v0.0.0-20190404164418-38d8ce5564a5
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/text v0.3.2 // indirect
-	gopkg.in/jcmturner/aescts.v1 v1.0.1
-	gopkg.in/jcmturner/dnsutils.v1 v1.0.1
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
-	gopkg.in/jcmturner/gokrb5.v7 v7.2.3
-	gopkg.in/jcmturner/rpc.v1 v1.1.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )
 
@@ -45,3 +35,5 @@ replace (
 	gopkg.in/vmihailenco/msgpack.v2 => github.com/vmihailenco/msgpack v2.9.1+incompatible
 	gopkg.in/yaml.v2 => github.com/go-yaml/yaml v0.0.0-20181115110504-51d6538a90f8
 )
+
+go 1.13
