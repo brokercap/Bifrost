@@ -3,33 +3,53 @@
 [![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
-*Bifrost* 是一个可以通过界面配置,将 MySQL 数据库中的数据异构的方式同步到Redis,Mongodb,RabbitMQ等甚至自定义RPC服务里的 *简单 高效* 的 异构中间件 .
 
-##### [为什么选择用Bifrost?](https://github.com/brokercap/Bifrost/wiki/%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E9%80%89%E6%8B%A9%E7%94%A8Bifrost)
-
-##### *实时同步数据只要在界面上用 鼠标 点 点 点 .....*
+##### 漫威里的彩虹桥可以将 雷神 送到 阿拉斯加德 和 地球
 
 
-提供 [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)  平台二进制可执行文件下载.
-
-
-*Bifrsot* 支持同步到多种目标库, for example:
+#### 而这个 Bifrost 可以将 你 MySQL 里的数据,<font color="#F00">实时</font>的同步到 :
 
 * Redis
-* Memcache
+* MongoDB
+* ClickHouse
+* MySQL
+* Memcahe
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* Mongodb
-* ClickHouse
-* MySQL
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
+---
 
-#### 在线Bifrost界面体验
+#### **WIKI** : [http://wiki.xbifrost.com](http://wiki.xbifrost.com)
 
-http://test.use.xbifrost.com:21037
+----
+
+
+#### Bifrost 特点
+
+* 支持 MySQL 所有存储类型
+
+* **界面化**动态灵活配置不同的数据表及目标库
+
+* 多数据源,**多种目标库**支持
+
+* 同时支持 **增量** 及 **全量** 数据同步
+
+* 宕机后重启自动恢复配置
+
+* 支持自定义插件开发，动态加载
+
+* 支持 Email 及 微信企业号等**监控报警**功能
+
+* 提供第三方监控平台访问接口(Http Basic验证)
+
+* 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
+
+#### Bifrost在线界面体验
+
+http://www.xbifrost.com/demo/goto.html
 
 用户名： Bifrost
 
@@ -43,39 +63,16 @@ http://test.use.xbifrost.com:21037
 ![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/diagram.png)
 
 
-### Bifrost 特点
-
-* 支持 MySQL 所有存储类型
-
-* 界面化动态灵活配置不同的数据表及目标库
-
-* 多数据源,多种目标库支持
-
-* 同时支持 *增量* 及 *全量* 数据同步
-
-* 宕机后重启自动恢复配置
-
-* 支持自定义插件开发，动态加载
-
-* 支持 Email 及 微信企业号等报警功能
-
-* 提供第三方监控平台访问接口(Http Basic验证)
-
-* 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
 
 
-### Bifrost 还不足的地方
+#### Bifrost 还不足的地方
 
 * 支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka
 
 * datetime,timestamp 解析还不支持精确到毫秒,毫秒部分将会自动被丢弃
 
 
-### WIKI
-
-[Bifrost WIKI](http://wiki.xbifrost.com)
-
-### MySQL 版本（经过测试）
+#### MySQL 版本（经过测试）
 
 * 5.1.73
 
@@ -88,7 +85,7 @@ http://test.use.xbifrost.com:21037
 * 8.0.11 (用户密码验证需要采用 mysql_native_password 方式)
 
 
-### 安装
+#### 安装
 
 ##### 编译
 
@@ -177,7 +174,7 @@ listen=0.0.0.0:21036
 #通过界面配置的信息保存文件夹,默认为启动文件所在文件夹下的data目录
 data_dir=./
 
-#设置同步给第三方服务的队列大小，默认10000
+#设置同步给第三方服务的队列大小，默认5000
 toserver_queue_size=10000
 
 #通道队列的大小，默认1000
@@ -208,12 +205,6 @@ cluster_name=bifrostTestClusterName
 ##### 生成https证书
 
 [参考证书生成](https://github.com/brokercap/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
-
-
-
-### 界面操作文档
-
-[Bifrost官网](http://www.xbifrost.com/)
 
 ### 感谢相关依懒包提供者
 
