@@ -1,6 +1,6 @@
 package config
 
-var ToServerQueueSize int = 10000
+var ToServerQueueSize int = 5000
 var ChannelQueueSize int = 1000
 var CountQueueSize int = 3000
 var KeyCachePoolSize int = 50
