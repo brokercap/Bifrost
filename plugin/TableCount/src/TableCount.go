@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const VERSION  = "v1.1.0-apha"
+const VERSION  = "v1.1.0"
 const BIFROST_VERION = "v1.1.0"
 
 func init(){

@@ -50,7 +50,7 @@ func InitStorage(){
 	}
 	xdbClient.SetPrefix(config.GetConfigVal("Bifrostd","cluster_name"))
 
-	dbSourceKey = []byte("bifrost-dbSourceData")
+	dbSourceKey = []byte("dbSourceData")
 }
 
 
