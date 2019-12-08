@@ -14,7 +14,7 @@ import (
 )
 
 
-const VERSION  = "v1.1.0-rc.06"
+const VERSION  = "v1.1.0"
 const BIFROST_VERION = "v1.1.0"
 
 var l sync.RWMutex
