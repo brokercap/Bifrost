@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
-##### 漫威里的彩虹桥可以将 雷神 送到 阿拉斯加德 和 地球
+##### 漫威里的彩虹桥可以将 雷神 送到 阿斯加德 和 地球
 
 
 #### 而这个 Bifrost 可以将 你 MySQL 里的数据,<font color="#F00">实时</font>的同步到 :
@@ -204,7 +204,7 @@ cluster_name=bifrostTestClusterName
 
 ##### 生成https证书
 
-[参考证书生成](https://github.com/brokercap/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
+[参考证书生成](http://wiki.xbifrost.com/install/https_certificate/)
 
 ### 感谢相关依懒包提供者
 
