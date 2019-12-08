@@ -1,4 +1,4 @@
-## Bifrost ---- 将MySQL数据实时同步 到 Redis , MongoDB等的高性能异构中间件
+## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,MongoDB等服务的异构中间件
 
 [![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
