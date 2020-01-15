@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"reflect"
 	"fmt"
+	"strconv"
 )
 
 func TestGetDataList(t *testing.T)  {
@@ -455,4 +456,41 @@ func TestChekcDataType(t *testing.T)  {
 	}else{
 		t.Fatal(" test failed")
 	}
+}
+
+func TestCreateSQL(t *testing.T)  {
+	This := &history.History{
+		DbName:"test",
+		SchemaName:"bifrost_test",
+		TableName:"bristol_performance_test",
+		Status:history.HISTORY_STATUS_CLOSE,
+		NowStartI:0,
+		Property:history.HistoryProperty{
+			ThreadNum:1,
+			ThreadCountPer:10,
+			Where:" id > 0 ",
+		},
+		Uri:"root:@tcp(127.0.0.1:3306)/bifrost_test",
+	}
+	start := 0
+	TablePriKey := "id"
+	var sql = ""
+	var where string = ""
+	if This.Property.Where != "" {
+		where = " WHERE " + This.Property.Where
+	}
+	var limit string = ""
+	limit = " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer);
+	if TablePriKey == "" {
+		sql = "select * from `" + This.SchemaName + "`.`" + This.TableName + "`" + where + limit
+		//sql := "select * from ? LIMIT ?,?"
+	}else{
+		sql = "select a.* from `" + This.SchemaName + "`.`" + This.TableName + "` as a "
+		sql += " inner join ("
+		sql += " select "+ TablePriKey +" from `" + This.SchemaName + "`.`" + This.TableName + "`"+ where + limit
+		sql += " ) as b"
+		sql += " on a."+TablePriKey + " = b."+TablePriKey
+	}
+
+	t.Log(sql)
 }

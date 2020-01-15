@@ -300,24 +300,38 @@ func (This *History) threadStart(i int)  {
 	*/
 	n := len(This.Fields)
 	Pri := make([]*string,0)
+	TablePriKey := ""
 
 	for _,v := range This.Fields{
 		if strings.ToUpper(*v.COLUMN_KEY) == "PRI"{
 			Pri = append(Pri,v.COLUMN_NAME)
+			if TablePriKey == ""{
+				TablePriKey = *v.COLUMN_NAME
+			}
 		}
+	}
+	var where string = ""
+	if This.Property.Where != "" {
+		where = " WHERE " + This.Property.Where
 	}
 	for {
 		This.Lock()
 		start = This.NowStartI
 		This.NowStartI += This.Property.ThreadCountPer
 		This.Unlock()
-		sql := "select * from `"+This.SchemaName+"`.`"+This.TableName +"`"
-		if This.Property.Where != ""{
-			sql += " WHERE " +	This.Property.Where
+		var sql = ""
+		var limit string = ""
+		limit = " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer);
+		if TablePriKey == "" {
+			sql = "select * from `" + This.SchemaName + "`.`" + This.TableName + "`" + where + limit
+			//sql := "select * from ? LIMIT ?,?"
+		}else{
+			sql = "select a.* from `" + This.SchemaName + "`.`" + This.TableName + "` as a "
+			sql += " inner join ("
+			sql += " select "+ TablePriKey +" from `" + This.SchemaName + "`.`" + This.TableName + "`"+ where + limit
+			sql += " ) as b"
+			sql += " on a."+TablePriKey + " = b."+TablePriKey
 		}
-		sql += " LIMIT " + strconv.Itoa(start) + "," + strconv.Itoa(This.Property.ThreadCountPer)
-		//sql := "select * from ? LIMIT ?,?"
-
 		stmt, err := db.Prepare(sql)
 		if err != nil{
 			This.ThreadPool[i].Error = err
