@@ -36,7 +36,7 @@ func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
 		Event_type :=dest[2].(string)
 
 		switch Event_type {
-		case "Update_rows","Delete_rows","Insert_rows","Write_rows","Format_desc","Update_rows_v1","Delete_rows_v1","Insert_rows_v1","Write_rows_v1","Update_rows_v0","Delete_rows_v0","Insert_rows_v0","Write_rows_v0","Update_rows_v2","Delete_rows_v2","Insert_rows_v2","Write_rows_v2":
+		case "Update_rows","Delete_rows","Insert_rows","Write_rows","Update_rows_v1","Delete_rows_v1","Insert_rows_v1","Write_rows_v1","Update_rows_v0","Delete_rows_v0","Insert_rows_v0","Write_rows_v0","Update_rows_v2","Delete_rows_v2","Insert_rows_v2","Write_rows_v2":
 			returnErr = fmt.Errorf("binlog position can't be "+Event_type)
 			break
 		default:
