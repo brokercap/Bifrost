@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.1.1"
+const BIFROST_VERION = "v1.1.1"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
@@ -138,7 +138,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 		param.BatchSize = 500
 	}
 	param.Data = &dataTableStruct{Data:make([]*pluginDriver.PluginDataType,0)}
-	param.Datakey = param.Schema+"."+param.Table
+	param.Datakey = "`"+param.Schema+"`.`"+param.Table+"`"
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
 	param.fieldCount = len(param.Field)
