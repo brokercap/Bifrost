@@ -509,10 +509,10 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		values := ""
 		for _,v:= range This.p.Field{
 			if fields == ""{
-				fields = v.ToField
+				fields = "`"+v.ToField+"`"
 				values = "?"
 			}else{
-				fields += ","+v.ToField
+				fields += ",`"+v.ToField+"`"
 				values += ",?"
 			}
 		}
@@ -526,9 +526,9 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		where := ""
 		for _,v:= range This.p.PriKey{
 			if where == ""{
-				where = v.ToField+"=?"
+				where = "`"+v.ToField+"`=?"
 			}else{
-				where += " AND "+v.ToField+"=?"
+				where += " AND `"+v.ToField+"`=?"
 			}
 		}
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
@@ -542,13 +542,13 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		fields2 := ""
 		for _,v:= range This.p.Field{
 			if fields == ""{
-				fields = v.ToField
+				fields = "`"+v.ToField+"`"
 				values = "?"
-				fields2 = v.ToField+"=?"
+				fields2 = "`"+v.ToField+"`=?"
 			}else{
-				fields += ","+v.ToField
+				fields += ",`"+v.ToField+"`"
 				values += ",?"
-				fields2 += ","+v.ToField+"=?"
+				fields2 += ",`"+v.ToField+"`=?"
 			}
 		}
 		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
