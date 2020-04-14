@@ -34,12 +34,6 @@
 
 
             </tbody>
-            <!--
-            <tr>
-                <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
-                <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
-            </tr>
-            -->
         </table>
         <p>&nbsp;</p>
     </div>
@@ -52,6 +46,17 @@
             <span class="help-block m-b-none">* 多少条刷一次数据</span>
         </div>
     </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Null转成默认值：</label>
+        <div class="col-sm-9">
+            <select name="NullTransferDefault" id="MySQL_NullTransferDefault" >
+                <option value="true" selected>True</option>
+                <option value="false">False</option>
+            </select>
+            <span class="help-block m-b-none">True(NULL会强制转成对应类型的默认值)   False(不进行转换)   建议选择为True</span>
+        </div>
+    </div>
 </div>
 
 
@@ -62,7 +67,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+                <h3 class="modal-title">CreateSQL For Table</h3>
             </div>
             <div class="modal-body">
 

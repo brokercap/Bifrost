@@ -100,7 +100,50 @@
 
 <p><strong>NULL 值</strong></p>
 
-<p>所有数据类型都支持Null值,假如源表是 Null ,但是目标库有默认值,则同步的时候,目标表以默认值填充,否则为 Null</p>
+<p>所有数据类型都支持Null值,假如源表是 Null ,但是目标库有默认值,则同步的时候,目标表以默认值填充</p>
+<p>假如 NullTransferDefault参数配置成了True,即使目标库表中没有默认值,也会强制转成相对应类型的默认值</p>
+
+<div id="typeDesc">
+    <table>
+        <tr>
+            <th>类型</th>
+            <th>默认值</th>
+        </tr>
+
+        <tr>
+            <td>int,bigint,smallinit,mediumint,tinyint,bit</td>
+            <td>0/td>
+        </tr>
+        <tr>
+            <td>datetime,timestamp</td>
+            <td>0000-00-00 00:00:00</td>
+        </tr>
+
+        <tr>
+            <td>date</td>
+            <td>0000-00-00</td>
+        </tr>
+        <tr>
+            <td>time</td>
+            <td>00:00:00</td>
+        </tr>
+        <tr>
+            <td>year</td>
+            <td>0000</td>
+        </tr>
+
+        <tr>
+            <td>bool</td>
+            <td>false</td>
+        </tr>
+
+        <tr>
+            <td>其他</td>
+            <td>空("")</td>
+        </tr>
+
+    </table>
+</div>
 <p>&nbsp;</p>
 
 <p><strong>标签</strong></p>
