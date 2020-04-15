@@ -711,27 +711,31 @@ func (stmt mysqlStmt) buildExecutePacket(args *[]driver.Value) (e error) {
 
 	// Reset packet-sequence
 	stmt.mc.sequence = 0
-
 	pktLen := 1 + 4 + 1 + 4 + (stmt.paramCount+7)/8 + 1 + argsLen*2
 	paramValues := make([][]byte, 0, argsLen)
 	paramTypes := make([]byte, 0, argsLen*2)
-	bitMask := uint64(0)
+
 	var i, valLen int
 	var pv reflect.Value
+
+	var nullMask []byte
+	maskLen := (argsLen+7)/8
+	nullMask = make([]byte,maskLen)
+	for i := 0; i < maskLen; i++ {
+		nullMask[i] = 0
+	}
 	for i = 0; i < stmt.paramCount; i++ {
 		// build nullBitMap	
 		if (*args)[i] == nil {
-			bitMask += 1 << uint(i)
-		}
-
-		// cache types and values
-		switch (*args)[i].(type) {
-		case nil:
+			nullMask[i/8] |= 1 << (uint(i) & 7)
 			paramTypes = append(paramTypes, []byte{
 				byte(FIELD_TYPE_NULL),
 				0x0}...)
 			continue
+		}
 
+		// cache types and values
+		switch (*args)[i].(type) {
 		case []byte:
 			paramTypes = append(paramTypes, []byte{byte(FIELD_TYPE_STRING), 0x0}...)
 			val := (*args)[i].([]byte)
@@ -808,15 +812,8 @@ func (stmt mysqlStmt) buildExecutePacket(args *[]driver.Value) (e error) {
 	// iteration_count [4 bytes]
 	data = append(data, uint32ToBytes(1)...)
 
-	// append nullBitMap [(param_count+7)/8 bytes]
 	if stmt.paramCount > 0 {
-		// Convert bitMask to bytes
-		nullBitMap := make([]byte, (stmt.paramCount+7)/8)
-		for i = 0; i < len(nullBitMap); i++ {
-			nullBitMap[i] = byte(bitMask >> uint(i*8))
-		}
-
-		data = append(data, nullBitMap...)
+		data = append(data, nullMask...)
 	}
 
 	// newParameterBoundFlag 1 [1 byte]
