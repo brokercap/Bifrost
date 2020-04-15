@@ -287,7 +287,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(string(debug.Stack()))
-			log.Fatal(string(debug.Stack()))
+			log.Println(string(debug.Stack()))
 			This.conn.err = e
 		}
 	}()
@@ -435,7 +435,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
-			log.Fatal(string(debug.Stack()))
+			log.Println(string(debug.Stack()))
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
 		}
 	}()
@@ -457,19 +457,19 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 				v = int64(0)
 				break
 			case "date":
-				v = "0000-00-00"
+				v = "1970-01-01"
 				break
 			case "timestamp":
-				v = "0000-00-00 00:00:00"
+				v = "1970-01-01 00:00:01"
 				break
 			case "datetime":
-				v = "0000-00-00 00:00:00"
+				v = "1000-01-01 00:00:00"
 				break
 			case "time":
-				v = "00:00:00"
+				v = "00:00:01"
 				break
 			case "year":
-				v = "0000"
+				v = "1970"
 				break
 			case "float","double","decimal","number","point":
 				v = "0.00"
