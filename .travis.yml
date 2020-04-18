@@ -3,6 +3,7 @@ language: go
 go:
     - "1.12"
     - "1.13"
+    - "1.14"
 
 before_install:
     - go get github.com/gmallard/stompngo

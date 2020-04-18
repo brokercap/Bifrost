@@ -1,3 +1,15 @@
+v1.1.1-release   2020-04-18
+===========================
+1. clickhouse插件delete合并一条sql执行
+2. 全量任务查询sql查询分页语句通过子查询性能优化
+3. 启动的时候获取正确位点新增部分日志
+4. 修复mysql插件在数据库有存在特殊符号的时候报语句错误的bug
+5. 修复mysql写入字段名是保留字段报错的bug
+6. char存储字节大于255解析错误的bug
+7. Mysql插件新增NullTransferDefault配置,可强制将NULL转成对应的默认值
+8. 新复因mysql连接异常造成的崩溃问题
+9. 修复多个null值的情况下，报Incorrect arguments to mysqld_stmt_execute 错误
+
 v1.1.0-release   2019-12-08
 ===========================
 1. redis 配置存储去掉了一个重复的 bifrost 字符串
