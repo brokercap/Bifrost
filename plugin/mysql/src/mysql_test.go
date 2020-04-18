@@ -504,3 +504,26 @@ func TestRandDataAndCheck(t *testing.T){
 
 	t.Log("test over")
 }
+
+func TestCommitBySymbol(t *testing.T){
+
+	url = "root:@tcp(127.0.0.1:3306)/bifrost_test"
+	beforeTest()
+	TableName  = "binlog_field_test-3"
+	conn := getPluginConn()
+	initDBTable(false)
+
+	e := pluginTestData.NewEvent()
+
+	conn.Insert(e.GetTestInsertData())
+	conn.Del(e.GetTestDeleteData())
+	conn.Update(e.GetTestUpdateData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData())
+
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		log.Fatal(err2)
+	}
+}

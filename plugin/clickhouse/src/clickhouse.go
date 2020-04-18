@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.1.1"
+const BIFROST_VERION = "v1.1.1"
 
 var l sync.RWMutex
 
@@ -115,6 +115,7 @@ type PluginParam struct {
 	replaceInto		bool  // 记录当前表是否有replace into操作
 	PriKey			[]fieldStruct
 	ckPriKey		string   // ck 主键字段
+	ckPriKeyFieldIsInt bool // ck 主键存储类型是否为int类型
 	mysqlPriKey		string  //ck对应 mysql 的主键id
 	Data			*dataTableStruct
 	SyncType		SyncType
@@ -173,10 +174,18 @@ func (This *Conn) getCktFieldType() {
 	}
 	if len(ckFields) == 0{
 		return
-}
+	}
 	ckFieldsMap := make(map[string]string)
 	for _,v:=range ckFields{
 		ckFieldsMap[v.Name] = v.Type
+		if v.Name == This.p.mysqlPriKey {
+			switch v.Type {
+			case "Int8","Nullable(Int8)","UInt8","Nullable(UInt8)","Int16","Nullable(Int16)","UInt16","Nullable(UInt16)","Int32","Nullable(Int32)","UInt32","Nullable(UInt32)","Int64","Nullable(Int64)","UInt64","Nullable(UInt64)":
+				This.p.ckPriKeyFieldIsInt = true
+			default:
+				This.p.ckPriKeyFieldIsInt = false
+			}
+		}
 	}
 
 	for k,v:=range This.p.Field{
@@ -279,6 +288,13 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 		stmt,This.conn.err = This.conn.conn.Prepare("ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
 		if This.conn.err != nil{
 			log.Println("clickhouse getStmt delete err:",This.conn.err)
+		}
+		break
+	default:
+		//默认是传sql进来
+		stmt,This.conn.err = This.conn.conn.Prepare(Type)
+		if This.conn.err != nil{
+			log.Println("clickhouse getStmt err:",This.conn.err," sql:",Type)
 		}
 		break
 	}
@@ -455,21 +471,36 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			return nil, This.conn.err
 		}
 
+		// delete 的话，将多条数据，where id in (1,2) 方式合并
 		if len(deleteDataMap) > 0 {
 			stmt = This.getStmt("delete")
 			if stmt == nil {
 				goto errLoop
 			}
+			keys := make([]dbDriver.Value,0)
 			for _, v := range deleteDataMap {
-				where := make([]dbDriver.Value, 1)
-				where[0] = v[This.p.mysqlPriKey]
-				_, This.err = stmt.Exec(where)
+				keys = append(keys,v[This.p.mysqlPriKey])
+			}
+			if len(keys) > 0{
+				var where string
+				//假如字段是int的话，就 in ()
+				if This.p.ckPriKeyFieldIsInt {
+					where = strings.Replace(strings.Trim(fmt.Sprint(keys), "[]"), " ", ",", -1)
+				}else{
+					where = "'"+strings.Replace(strings.Trim(fmt.Sprint(keys), "[]"), " ", "','", -1)+"'"
+				}
+				sql := "ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+This.p.ckPriKey+ " in ( " +where+" )"
+				stmt = This.getStmt(sql)
+				if stmt == nil {
+					goto errLoop
+				}
+				_, This.err = stmt.Exec([]dbDriver.Value{where})
 				if This.err != nil {
 					stmt.Close()
 					goto errLoop
 				}
+				stmt.Close()
 			}
-			stmt.Close()
 		}
 
 		if len(insertDataMap) > 0 {

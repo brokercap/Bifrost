@@ -345,10 +345,33 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 		case FIELD_TYPE_STRING:
 			var length int
-			var b byte
-			b, e = buf.ReadByte()
-			length = int(b)
+			if tableSchemaMap[i].CHARACTER_OCTET_LENGTH > 255 {
+				var short uint16
+				e = binary.Read(buf, binary.LittleEndian, &short)
+				length = int(short)
+			}else{
+				var b byte
+				b, e = buf.ReadByte()
+				length = int(b)
+			}
+			//row[column_name] = string(buf.Next(length+1))
+			/*
+			log.Println("======================")
+			log.Println("column_name:", column_name," length:",length)
+			//log.Println("name:",tableMap.columnMetaData[i].name)
+			log.Println("size:",tableMap.columnMetaData[i].size)
+			log.Println("precision:",tableMap.columnMetaData[i].precision)
+			log.Println("max_length:",tableMap.columnMetaData[i].max_length)
+			log.Println("length_size:",tableMap.columnMetaData[i].length_size)
+			log.Println("fsp:",tableMap.columnMetaData[i].fsp)
+			log.Println("decimals:",tableMap.columnMetaData[i].decimals)
+			log.Println("unsigned:",tableMap.columnMetaData[i].unsigned)
+			log.Println("column_type:",tableMap.columnMetaData[i].column_type)
+			log.Println("tableMap.columnMetaData[i]:",tableMap.columnMetaData[i])
+			*/
 			row[column_name] = string(buf.Next(length))
+			//log.Println("column_name: ",column_name," == ",row[column_name])
+
 			break
 
 		case FIELD_TYPE_ENUM:
@@ -558,6 +581,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		default:
 			return nil, fmt.Errorf("Unknown FieldType %d", tableMap.columnTypes[i])
 		}
+		//log.Println("column_name:",column_name," row[column_name]:",row[column_name])
 		if e != nil {
 			log.Println("lastField err:",column_name,tableMap.columnMetaData[i].column_type,e)
 			return nil, e

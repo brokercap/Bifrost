@@ -26,6 +26,7 @@ type column_schema_type struct {
 	auto_increment     bool
 	COLUMN_DEFAULT	   string
 	DATA_TYPE		   string
+	CHARACTER_OCTET_LENGTH	uint64
 }
 
 type MysqlConnection interface {

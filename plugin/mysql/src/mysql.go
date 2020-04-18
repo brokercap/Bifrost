@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.1.1"
+const BIFROST_VERION = "v1.1.1"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
@@ -121,6 +121,7 @@ type PluginParam struct {
 	Data			*dataTableStruct
 	fieldCount		int
 	stmtArr			[]dbDriver.Stmt
+	NullTransferDefault bool  //是否将null值强制转成相对应类型的默认值
 }
 
 
@@ -138,7 +139,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 		param.BatchSize = 500
 	}
 	param.Data = &dataTableStruct{Data:make([]*pluginDriver.PluginDataType,0)}
-	param.Datakey = param.Schema+"."+param.Table
+	param.Datakey = "`"+param.Schema+"`.`"+param.Table+"`"
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
 	param.fieldCount = len(param.Field)
@@ -286,7 +287,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(string(debug.Stack()))
-			log.Fatal(string(debug.Stack()))
+			log.Println(string(debug.Stack()))
 			This.conn.err = e
 		}
 	}()
@@ -339,9 +340,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
-				//toV,This.err = dataTypeTransfer(data.Rows[1][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
-
-				toV,This.err = dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 
 				if This.err != nil{
 					return nil,This.err
@@ -364,8 +363,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
-				toV,This.err = dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				//toV,_ = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
 			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
@@ -384,8 +382,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
-				toV,This.err = dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				//toV,This.err = dataTypeTransfer(data.Rows[0][v.FromMysqlField],v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return nil,This.err
 				}
@@ -435,23 +432,61 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
+func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
-			log.Fatal(string(debug.Stack()))
+			log.Println(string(debug.Stack()))
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
 		}
 	}()
-	if data == nil{
-		if defaultVal == nil{
-			v = nil
-			return
+	if data == nil {
+		if This.p.NullTransferDefault == false{
+			if defaultVal == nil{
+				v = nil
+				return
+			}else{
+				data = *defaultVal
+			}
 		}else{
-			data = *defaultVal
+			//假如配置是强制转成默认值
+			switch toDataType {
+			case "int","tinyint","smallint","mediumint","bigint","bool":
+				v = "0"
+				break
+			case "bit":
+				v = int64(0)
+				break
+			case "date":
+				v = "1970-01-01"
+				break
+			case "timestamp":
+				v = "1970-01-01 00:00:01"
+				break
+			case "datetime":
+				v = "1000-01-01 00:00:00"
+				break
+			case "time":
+				v = "00:00:01"
+				break
+			case "year":
+				v = "1970"
+				break
+			case "float","double","decimal","number","point":
+				v = "0.00"
+				break
+			default:
+				v = ""
+				break
+			}
+			return
 		}
 	}
 	switch toDataType {
 	case "bool":
+		if data == nil{
+			v = false
+			break
+		}
 		switch data.(type) {
 		case bool:
 			if data.(bool) == true{
@@ -509,10 +544,10 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		values := ""
 		for _,v:= range This.p.Field{
 			if fields == ""{
-				fields = v.ToField
+				fields = "`"+v.ToField+"`"
 				values = "?"
 			}else{
-				fields += ","+v.ToField
+				fields += ",`"+v.ToField+"`"
 				values += ",?"
 			}
 		}
@@ -526,9 +561,9 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		where := ""
 		for _,v:= range This.p.PriKey{
 			if where == ""{
-				where = v.ToField+"=?"
+				where = "`"+v.ToField+"`=?"
 			}else{
-				where += " AND "+v.ToField+"=?"
+				where += " AND `"+v.ToField+"`=?"
 			}
 		}
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
@@ -542,13 +577,13 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		fields2 := ""
 		for _,v:= range This.p.Field{
 			if fields == ""{
-				fields = v.ToField
+				fields = "`"+v.ToField+"`"
 				values = "?"
-				fields2 = v.ToField+"=?"
+				fields2 = "`"+v.ToField+"`=?"
 			}else{
-				fields += ","+v.ToField
+				fields += ",`"+v.ToField+"`"
 				values += ",?"
-				fields2 += ","+v.ToField+"=?"
+				fields2 += ",`"+v.ToField+"`=?"
 			}
 		}
 		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2

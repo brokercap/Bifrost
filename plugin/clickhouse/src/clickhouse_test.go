@@ -56,6 +56,21 @@ func initDBTable(delTable bool) {
 	c.Close()
 }
 
+func initDBTablePriString(delTable bool) {
+	c := MyPlugin.NewClickHouseDBConn(url)
+	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
+	c.Exec(sql1,[]driver.Value{})
+	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id String,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);"
+	if delTable == false{
+		c.Exec(sql2,[]driver.Value{})
+	}else{
+		sql3 := "DROP TABLE "+SchemaName+"."+TableName
+		c.Exec(sql3,[]driver.Value{})
+		c.Exec(sql2,[]driver.Value{})
+	}
+	c.Close()
+}
+
 func TestChechUri(t *testing.T){
 	myConn := MyPlugin.MyConn{}
 	if err := myConn.CheckUri(url);err!= nil{
@@ -146,6 +161,37 @@ func initSyncParam() {
 func TestCommit(t *testing.T){
 	testBefore()
 	initDBTable(true)
+	initSyncParam()
+	insertdata := event.GetTestInsertData()
+	conn.Insert(insertdata)
+	conn.Del(event.GetTestDeleteData())
+	conn.Update(event.GetTestUpdateData())
+
+	conn.Insert(event.GetTestInsertData())
+	conn.Del(event.GetTestDeleteData())
+	conn.Insert(event.GetTestInsertData())
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+
+	conn.Del(event.GetTestDeleteData())
+	conn.Update(event.GetTestUpdateData())
+
+	conn.Insert(event.GetTestInsertData())
+	conn.Del(event.GetTestDeleteData())
+	conn.Insert(event.GetTestInsertData())
+	conn.Insert(event.GetTestInsertData())
+	conn.Insert(event.GetTestInsertData())
+	_,err2 = conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+}
+
+func TestCommitPriKeyIsString(t *testing.T){
+	testBefore()
+	initDBTablePriString(true)
 	initSyncParam()
 	insertdata := event.GetTestInsertData()
 	conn.Insert(insertdata)

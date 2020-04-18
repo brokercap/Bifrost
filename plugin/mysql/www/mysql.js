@@ -4,6 +4,7 @@ function doGetPluginParam(){
 	var Table = $("#to_mysql_table").val();
     var Schema = $("#to_mysql_schema").val();
     var BatchSize = $("#MySQL_BatchSize").val();
+    var NullTransferDefault = $("#MySQL_NullTransferDefault").val();
 
     if (Schema == ""){
         result.msg = "请选择 数据库!";
@@ -56,7 +57,11 @@ function doGetPluginParam(){
     result.data["Schema"]   = Schema;
     result.data["Table"]    = Table;
     result.data["BatchSize"] = parseInt(BatchSize);
-
+    if (NullTransferDefault == "true"){
+        result.data["NullTransferDefault"] = true;
+    }else{
+        result.data["NullTransferDefault"] = false;
+    }
 	return result;
 }
 

@@ -16,25 +16,26 @@ limitations under the License.
 package main
 
 import (
-	"log"
-	"github.com/brokercap/Bifrost/plugin"
-	"github.com/brokercap/Bifrost/manager"
-	"github.com/brokercap/Bifrost/config"
 	"flag"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-	"io"
-	"sync"
-	"io/ioutil"
 	"fmt"
-	"strings"
+	"github.com/brokercap/Bifrost/config"
+	"github.com/brokercap/Bifrost/manager"
+	"github.com/brokercap/Bifrost/plugin"
+	"github.com/brokercap/Bifrost/server"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
-	"github.com/brokercap/Bifrost/server"
 	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
 )
 
 var l sync.Mutex
@@ -124,9 +125,34 @@ func main() {
 	}
 
 	if *BifrostDaemon == "true"{
+		/*
+		file := execDir+"/pid.log"
+		logFile, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0700)
+		if err != nil {
+			panic(err)
+		}
+		loger := log.New(logFile, "[qSkiptool]",log.LstdFlags | log.Lshortfile | log.LUTC)
+		loger.Println("os.Getppid()：",os.Getppid())
+		loger.Println("os.Getgid()：",os.Getgid())
+		loger.Println("os.Getpid()：",os.Getpid())
+		 */
+		isDaemo := false
 		if os.Getppid() != 1{
+			// 因为有一些桌面系统,父进程开了子进程之后,父进程退出之后,并不是由 pid=1 的 systemd 进程接管,可能有些系统给每个桌面帐号重新分配了一下systemd 进程
+			// 这里每去判断 一下是不是 systemd 进程名，如果是的话，也认为是父进程被退出了
+			cmdString := "ps -ef|grep "+strconv.Itoa(os.Getppid())+" | grep systemd|grep -v grep"
+			resultBytes,err := CmdShell(cmdString)
+			if err == nil && resultBytes != nil && string(resultBytes) != ""{
+				isDaemo = true
+			}
+		}else {
+			isDaemo = true
+		}
+		if !isDaemo {
 			filePath,_:=filepath.Abs(os.Args[0])  //将命令行参数中执行文件路径转换成可用路径
 			args:=append([]string{filePath},os.Args[1:]...)
+			fmt.Println(filePath)
+			fmt.Println(args)
 			os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
 			return
 		}else{
@@ -251,19 +277,46 @@ func initLog(){
 }
 
 func WritePid(){
-	f, err2 := os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0700) //打开文件
-	if err2 !=nil{
-		log.Println("Open BifrostPid Error; File:",*BifrostPid,"; Error:",err2)
+	var err error
+	var pidFileFd *os.File
+	pidFileFd, err = os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0700) //打开文件
+	if err !=nil{
+		log.Println("Open BifrostPid Error; File:",*BifrostPid,"; Error:",err)
 		os.Exit(1)
 		return
 	}
-	pidContent, err2 := ioutil.ReadAll(f)
+	defer pidFileFd.Close()
+	pidContent, err2 := ioutil.ReadAll(pidFileFd)
 	if string(pidContent) != ""{
-		log.Println("Birostd server quit without updating PID file ; File:",*BifrostPid,"; Error:",err2)
-		os.Exit(1)
+		ExitBool := true
+		cmdString := "ps -ef|grep "+string(pidContent)+" | grep "+filepath.Base(os.Args[0]+"|grep -v grep")
+		resultBytes,err := CmdShell(cmdString)
+		// err 不为 nil 则代表没有grep 到进程，可以认为有可能被 kill -9 等操作了
+		if err != nil &&  resultBytes != nil{
+			ExitBool = false
+		}else{
+			log.Println(cmdString," result:",string(resultBytes)," err:",err,)
+		}
+		if ExitBool {
+			log.Println("Birostd server quit without updating PID file ; File:", *BifrostPid, "; Error:", err2)
+			os.Exit(1)
+		}
 	}
-	defer f.Close()
-	io.WriteString(f, fmt.Sprint(os.Getpid()))
+	os.Truncate(*BifrostPid, 0)
+	pidFileFd.Seek(0,0)
+	io.WriteString(pidFileFd,fmt.Sprint(os.Getpid()))
+}
+
+func CmdShell(cmdString string)([]byte,error){
+	switch runtime.GOOS {
+		case "linux","darwin","freebsd":
+		cmd := exec.Command("/bin/bash", "-c", cmdString)
+		return cmd.Output()
+		break
+	default:
+		break
+	}
+	return nil,fmt.Errorf(runtime.GOOS+" not supported")
 }
 
 func doSaveDbInfo(){

@@ -8,19 +8,23 @@ import (
 )
 
 func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
+	// position == 4 是 Format_desc 事件
+	if position == 4{
+		return nil
+	}
 	db := NewConnect(dbUri)
 	defer db.Close()
 	sql := "show binlog events IN '"+filename+"' FROM "+ strconv.FormatInt(int64(position),10) +" LIMIT 1"
 	stmt,err := db.Prepare(sql)
-	if err !=nil{
+	if err != nil{
 		return err
 	}
 	defer stmt.Close()
 	rows, err := stmt.Query([]driver.Value{})
-	defer rows.Close()
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	var returnErr error
 	for {
 		dest := make([]driver.Value, 6, 6)

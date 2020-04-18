@@ -210,6 +210,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 				parser.conn.Close()
 			}
 			errs = fmt.Errorf(fmt.Sprint(err))
+			log.Println(err)
 		}
 	}()
 	if parser.connStatus == 0 {
@@ -217,7 +218,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	}
 	//set dbAndTable Name tableId
 	parser.tableNameMap[database+"."+tablename] = tableId
-	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
+	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_OCTET_LENGTH FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
 	stmt, err := parser.conn.Prepare(sql)
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
@@ -231,7 +232,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		ColumnSchemaTypeList:	make([]*column_schema_type,0),
 	}
 	for {
-		dest := make([]driver.Value, 9, 9)
+		dest := make([]driver.Value, 10, 10)
 		err := rows.Next(dest)
 		if err != nil {
 			break
@@ -245,6 +246,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		var enum_values, set_values []string
 		var COLUMN_DEFAULT	string
 		var DATA_TYPE string
+		var CHARACTER_OCTET_LENGTH uint64
 
 		COLUMN_NAME = dest[0].(string)
 		COLUMN_KEY = dest[1].(string)
@@ -310,6 +312,13 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		} else {
 			set_values = make([]string, 0)
 		}
+
+		if dest[9] == nil{
+			CHARACTER_OCTET_LENGTH = 0
+		}else{
+			CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+		}
+
 		tableInfo.ColumnSchemaTypeList = append(tableInfo.ColumnSchemaTypeList, &column_schema_type{
 			COLUMN_NAME: COLUMN_NAME,
 			COLUMN_KEY:  COLUMN_KEY,
@@ -325,6 +334,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			NUMERIC_SCALE:NUMERIC_SCALE,
 			COLUMN_DEFAULT:COLUMN_DEFAULT,
 			DATA_TYPE:DATA_TYPE,
+			CHARACTER_OCTET_LENGTH:CHARACTER_OCTET_LENGTH,
 		})
 
 		if strings.ToUpper(COLUMN_KEY) == "PRI"{

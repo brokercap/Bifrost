@@ -26,6 +26,7 @@ import (
 	"strings"
 	"strconv"
 	"fmt"
+	"runtime/debug"
 )
 
 var dbAndTableSplitChars = "_-"
@@ -324,15 +325,16 @@ func (db *db) AddReplicateDoDb(dbName string) bool {
 func (db *db) getRightBinlogPosition() (newPosition uint32) {
 	defer func() {
 		if err := recover();err != nil{
-			log.Println(db.Name," getRightBinlogPosition recover err:",err)
+			log.Println(db.Name," getRightBinlogPosition recover err:",err," binlogDumpFileName:",db.binlogDumpFileName," binlogDumpPosition:",db.binlogDumpPosition)
+			log.Println(string(debug.Stack()))
 			newPosition = 0
 		}
 	}()
 	err := mysql.CheckBinlogIsRight(db.ConnectUri,db.binlogDumpFileName,db.binlogDumpPosition)
-	if err ==nil {
+	if err == nil {
 		return db.binlogDumpPosition
 	}
-	log.Println(db.Name," getRightBinlogPosition err:",err)
+	log.Println(db.Name," getRightBinlogPosition err:",err," binlogDumpFileName:",db.binlogDumpFileName," binlogDumpPosition:",db.binlogDumpPosition)
 	if strings.Index(err.Error(),"connect: operation timed out") != -1 {
 		return newPosition
 	}
