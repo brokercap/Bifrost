@@ -1,4 +1,4 @@
-<p><strong>ClickHouse</strong></p>
+<p><strong>MYSQL</strong></p>
 
 <p>必须先选择 MySQL 的表后，再选择 目标库的MySQL 插件，在选择 目标 库表的时候，如果目标表字段和源MySQL表字段一致的情况下会自动填充</p>
 <p>&nbsp;</p>
@@ -72,6 +72,44 @@
 
         </div>
 
+<p><strong>同步模式</strong></p>
+
+以下不同模式 源操作对应 目标库操作 对比
+<div id="typeDesc">
+    <table>
+        <tr>
+            <th>操作/同步模式</th>
+            <th>INSERT</th>
+            <th>UPDATE</th>
+            <th>DELETE</th>
+        </tr>
+
+        <tr>
+            <td>普通模式(Normal)</td>
+            <td>REPLACE INTO</td>
+            <td>INSERT ON DUPLICATE KEY UPDATE</td>
+            <td>DELETE</td>
+        </tr>
+        <tr>
+            <td>日志模式-修改(LogUpdate)</td>
+            <td>REPLACE INTO</td>
+            <td>INSERT ON DUPLICATE KEY UPDATE</td>
+            <td>INSERT ON DUPLICATE KEY UPDATE</td>
+        </tr>
+
+        <tr>
+            <td>日志模式-修改(LogUpdate)</td>
+            <td>INSERT INTO</td>
+            <td>INSERT INTO</td>
+            <td>INSERT INTO</td>
+        </tr>
+
+    </table>
+</div>
+
+<p> </p>
+
+<p> </p>
 
 <p><strong>连接配置</strong></p>
 
@@ -80,7 +118,7 @@
 
 <p><strong>自动过滤规则</strong></p>
 
-<p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作</p>
+<p>假如同一个主键的数据，在同一批次刷数据，会自动过滤多余操作，进行性能优化操作（ 只限 普通模式(Normal) 和 日志模式-修改(LogUpdate) ，日志模式-修改(LogUpdate) ）</p>
 
 <p>&nbsp;</p>
 <p>1. 假如 id = 1 这条数据，连接有 insert ,delete ,update 操作</p>
@@ -90,11 +128,18 @@
 <p>2. 假如 id = 1 这条数据，连接有 insert ,delete ,insert ,delete 顺序操作</p>
 <p>则只会执行最后的 delete 操作一次，不会执行 insert</p>
 
-<p>&nbsp;</p>
-<p>update 操作是转换成 insert ** ON DUPLICATE KEY UPDATE 操作 </p>
 
 <p>&nbsp;</p>
-<p>insert 操作是转换成 replace insert  操作 </p>
+
+
+<p><strong>标签</strong></p>
+
+<p>{$Timestamp} : 同步的时间戳,并不是 Binlog 发生的时间</p>
+<p>{$EventType} : 事件类型,insert delete update 三个字符串</p>
+
+<p>{$BinlogTimestamp} : Binlog记录的时间戳</p>
+<p>{$BinlogFileNum} : Binlog文件编号,并不是 整个Binlog文件名,比如 binlog 文件是 mysql-bin.000001 那这个 BinlogFileNum 的值 是1</p>
+<p>{$BinlogPosition} : Binlog position 位点</p>
 
 <p>&nbsp;</p>
 
@@ -147,17 +192,6 @@
 
     </table>
 </div>
-<p>&nbsp;</p>
-
-<p><strong>标签</strong></p>
-
-<p>{$Timestamp} : 同步的时间戳,并不是 Binlog 发生的时间</p>
-<p>{$EventType} : 事件类型,insert delete update 三个字符串</p>
-
-<p>{$BinlogTimestamp} : Binlog记录的时间戳</p>
-<p>{$BinlogFileNum} : Binlog文件编号,并不是 整个Binlog文件名,比如 binlog 文件是 mysql-bin.000001 那这个 BinlogFileNum 的值 是1</p>
-<p>{$BinlogPosition} : Binlog position 位点</p>
-
 <p>&nbsp;</p>
 
 <p><strong>备注</strong></p>

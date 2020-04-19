@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.1.1"
-const BIFROST_VERION = "v1.1.1"
+const VERSION  = "v1.2.0"
+const BIFROST_VERION = "v1.2.0"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
@@ -28,7 +28,15 @@ const (
 	INSERT EventType = 0
 	UPDATE EventType = 1
 	DELETE EventType = 2
-	SQLTYPE EventType = 3
+	REPLACE_INSERT EventType = 3
+	SQLTYPE EventType = 4
+)
+
+type SyncMode string
+const (
+	SYNCMODE_NORMAL SyncMode = "Normal"
+	SYNCMODE_LOG_UPDATE SyncMode = "LogUpdate"
+	SYNCMODE_LOG_APPEND SyncMode = "LogAppend"
 )
 
 type dataStruct struct {
@@ -122,6 +130,7 @@ type PluginParam struct {
 	fieldCount		int
 	stmtArr			[]dbDriver.Stmt
 	NullTransferDefault bool  //是否将null值强制转成相对应类型的默认值
+	SyncMode		SyncMode
 }
 
 
@@ -143,7 +152,10 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
 	param.fieldCount = len(param.Field)
-	param.stmtArr = make([]dbDriver.Stmt,3)
+	param.stmtArr = make([]dbDriver.Stmt,4)
+	if param.SyncMode == ""{
+		param.SyncMode = SYNCMODE_NORMAL
+	}
 	This.p = &param
 	This.getCktFieldType()
 	return &param,nil
@@ -311,111 +323,29 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		return nil,This.conn.err
 	}
 
-	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
-	// update 转成 insert on update
-	// insert 转成 replace into
-	// delete 则是 delete 操作
-	// 只要是同一条数据，只要有遍历过，后面遍历出来的数据，则不再进行操作
-
-	type opLog struct{
-		Data *[]dbDriver.Value
-		EventType string
+	switch This.p.SyncMode {
+	case SYNCMODE_NORMAL:
+		This.CommitNormal(list)
+		break
+	case SYNCMODE_LOG_UPDATE:
+		This.CommitLogMod_Update(list)
+		break
+	case SYNCMODE_LOG_APPEND:
+		This.CommitLogMod_Append(list)
+		break
+	default:
+		This.err = fmt.Errorf("同步模式ERROR:",This.p.SyncMode)
+		break
 	}
 
-	//用于存储数据库中最后一次操作记录
-	opMap := make(map[interface{}]*opLog, 0)
-
-	var checkOpMap = func(key interface{}, EvenType string) bool {
-		if _,ok := opMap[key];ok{
-			return true
-		}
-		return false
+	if This.conn.err != nil{
+		This.err = This.conn.err
 	}
-	//从最后一条数据开始遍历
-	var toV dbDriver.Value
-	var stmt dbDriver.Stmt
-	for i := n - 1; i >= 0; i-- {
-		data := list[i]
-		switch data.EventType {
-		case "update":
-			val := make([]dbDriver.Value,This.p.fieldCount*2)
-			for i,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-
-				if This.err != nil{
-					return nil,This.err
-				}
-				val[i] = toV
-				//第几个字段 + 总字段数量 - 1  算出，on update 所在数组中的位置
-				val[i+This.p.fieldCount] = toV
-			}
-
-			if checkOpMap(data.Rows[1][This.p.mysqlPriKey], "update") == true {
-				continue
-			}
-			stmt = This.getStmt(UPDATE)
-			if stmt == nil{
-				goto errLoop
-			}
-			_,This.conn.err = stmt.Exec(val)
-			opMap[data.Rows[1][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"update"}
-			break
-		case "delete":
-			where := make([]dbDriver.Value,0)
-			for _,v := range This.p.PriKey{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				where = append(where,toV)
-			}
-			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "delete") == false {
-				stmt = This.getStmt(DELETE)
-				if stmt == nil{
-					goto errLoop
-				}
-				_,This.conn.err = stmt.Exec(where)
-				if This.conn.err != nil{
-					goto errLoop
-				}
-				opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:nil,EventType:"delete"}
-			}
-			break
-		case "insert":
-			val := make([]dbDriver.Value,0)
-			i:=0
-			for _,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				if This.err != nil{
-					return nil,This.err
-				}
-				val = append(val,toV)
-				i++
-			}
-
-			if checkOpMap(data.Rows[0][This.p.mysqlPriKey], "insert") == true {
-				continue
-			}
-			stmt = This.getStmt(INSERT)
-			if stmt == nil{
-				goto errLoop
-			}
-			_,This.conn.err = stmt.Exec(val)
-			if This.conn.err != nil{
-				goto errLoop
-			}
-			opMap[data.Rows[0][This.p.mysqlPriKey]] = &opLog{Data:&val,EventType:"insert"}
-			break
-		}
-
+	if This.err != nil{
+		This.conn.Rollback()
+		log.Println("This.err",This.err)
+		return nil,This.err
 	}
-
-	errLoop:
-		if This.conn.err != nil{
-			This.err = This.conn.err
-		}
-		if This.err != nil{
-			This.conn.Rollback()
-			log.Println("This.err",This.err)
-			return nil,This.err
-		}
 
 	err2 := This.conn.Commit()
 	if err2 != nil{
@@ -539,7 +469,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		return This.p.stmtArr[Type]
 	}
 	switch Type {
-	case INSERT:
+	case REPLACE_INSERT:
 		fields := ""
 		values := ""
 		for _,v:= range This.p.Field{
@@ -552,6 +482,24 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 			}
 		}
 		sql := "REPLACE INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
+		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
+		if This.conn.err != nil{
+			log.Println("mysql getStmt insert err:",This.conn.err,sql)
+		}
+		break
+	case INSERT:
+		fields := ""
+		values := ""
+		for _,v:= range This.p.Field{
+			if fields == ""{
+				fields = "`"+v.ToField+"`"
+				values = "?"
+			}else{
+				fields += ",`"+v.ToField+"`"
+				values += ",?"
+			}
+		}
+		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
 			log.Println("mysql getStmt insert err:",This.conn.err,sql)
@@ -605,3 +553,16 @@ func (This *Conn) closeStmt(){
 		This.p.stmtArr[k] = nil
 	}
 }
+
+
+func checkOpMap(opMap map[interface{}]*opLog,key interface{}, EvenType string) bool {
+	if _,ok := opMap[key];ok{
+		return true
+	}
+	return false
+}
+
+func setOpMapVal(opMap map[interface{}]*opLog,key interface{},data *[]dbDriver.Value,EventType string) {
+	opMap[key] = &opLog{Data:data,EventType:"update"}
+}
+
