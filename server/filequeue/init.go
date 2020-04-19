@@ -31,13 +31,23 @@ type FileInfo struct {
 
 type Queue struct{
 	sync.RWMutex
-	minId int64
-	maxId int64
-	maxFileSize uint64
-	path	string
-	readInfo *FileInfo
-	writeInfo *FileInfo
-	noData	bool
+	minId 			int64			// 最小文件
+	maxId 			int64			// 当前最大文件，当 -1 的时候，代表整个目录为空
+	maxFileSize 	uint64			//
+	path			string			// 文件夹路径
+	readInfo 		*FileInfo
+	writeInfo 		*FileInfo
+	fileCount 		int				// 文件数量
+	noData			bool			// 整个队列是否有数据，true 代表 没有数据
+}
+
+type QueueInfo struct{
+	sync.RWMutex
+	MinId 			int64			// 最小文件
+	maxId 			int64			// 当前最大文件，当 -1 的时候，代表整个目录为空
+	Path			string			// 文件夹路径
+	FileCount 		int				// 文件数量
+	NoData			bool			// 整个队列是否有数据，true 代表 没有数据
 }
 
 func NewQueue(path string) *Queue{
@@ -57,6 +67,7 @@ func NewQueue(path string) *Queue{
 	}
 	maxId := int64(-1)
 	minId := int64(0)
+	fileCount := 0
 	var id0 int64
 	//遍历所有path下所有文件,找出最大id
 	rd, err := ioutil.ReadDir(path)
@@ -64,13 +75,17 @@ func NewQueue(path string) *Queue{
 		for _, fi := range rd {
 			if !fi.IsDir() {
 				sArr := strings.Split(fi.Name(), ".")
-				id0, err = strconv.ParseInt(sArr[0], 10, 64)
-				if err == nil {
-					if id0 > maxId {
-						maxId = id0
-					}
-					if id0 < minId{
-						minId = id0
+				//后缀是.list 才是队列存储文件
+				if sArr[len(sArr[0])-1] == "list" {
+					fileCount++
+					id0, err = strconv.ParseInt(sArr[0], 10, 64)
+					if err == nil {
+						if id0 > maxId {
+							maxId = id0
+						}
+						if id0 < minId {
+							minId = id0
+						}
 					}
 				}
 
@@ -83,6 +98,7 @@ func NewQueue(path string) *Queue{
 	}else{
 		Q.minId = minId
 		Q.maxId = maxId
+		Q.fileCount = fileCount
 		Q.noData = false
 	}
 	Q.path = path
@@ -94,9 +110,21 @@ func NewQueue(path string) *Queue{
 func (This *Queue) noDataInit(){
 	This.maxId = -1
 	This.minId = 0
+	This.fileCount = 0
 	This.readInfo = nil
 	This.writeInfo = nil
 	This.noData = true
+}
+
+func (This *Queue) GetInfo() QueueInfo{
+	This.Lock()
+	defer This.Unlock()
+	return QueueInfo{
+		MinId: 			This.minId,
+		maxId: 			This.maxId,
+		Path:  			This.path,
+		FileCount: 		This.fileCount,
+	}
 }
 
 func (This *Queue) readInfoInit(){
@@ -116,6 +144,7 @@ func (This *Queue) writeInfoInit(){
 	if err!=nil{
 		log.Fatal("filequeue writeInfoInit err:",err)
 	}
+	This.fileCount++
 	This.writeInfo = &FileInfo{
 		fd:fd0,
 		name:fileName,

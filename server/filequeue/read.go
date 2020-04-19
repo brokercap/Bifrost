@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 )
 
-func (This *Queue) Pop() (content string,e error){
+func (This *Queue) Pop() (content []byte,e error){
 	This.Lock()
 	defer This.Unlock()
 	if This.noData == true{
-		return "",nil
+		return nil,nil
 	}
 	if This.readInfo == nil{
 		This.readInfoInit()
@@ -38,26 +38,23 @@ func (This *Queue) Pop() (content string,e error){
 		}
 		This.readInfo.fd.Close()
 		os.Remove(This.readInfo.name)
-		content = string(c[0:n-4])
+		This.fileCount--
+		content = c[0:n-4]
 		This.readInfo = nil
 		This.writeInfo = nil
 		if This.maxId <= This.minId {
 			This.noDataInit()
 		}
 	} else {
-		content = string(c[0:n-5])
+		content = c[0:n-5]
 		This.readInfo.pos += int64(n)
-		//This.readInfo.fd.Seek(This.readInfo.pos, 0)
 	}
 
 	return
 }
 
-
-
-
 //获取最后一条数据
-func (This *Queue) ReadLast() (content string,e error){
+func (This *Queue) ReadLast() (content []byte,e error){
 	l.Lock()
 	defer l.Unlock()
 	if This.maxId == -1{
@@ -84,8 +81,7 @@ func (This *Queue) ReadLast() (content string,e error){
 	fd.Seek(fileSize - 4 - int64(l),0)
 	c := make([]byte,l)
 	fd.Read(c)
-	content = string(c)
-	return
+	return c,e
 }
 
 func getFileSize(filename string) int64 {
