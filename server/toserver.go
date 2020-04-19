@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"github.com/brokercap/Bifrost/server/filequeue"
 	"sync"
 	"log"
 	"github.com/brokercap/Bifrost/plugin/driver"
@@ -33,6 +35,8 @@ type ToServer struct {
 	LastBinlogPosition  uint32                    // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
 	LastBinlogKey 		[]byte `json:"-"`         // 将数据保存到 level 的key
 	QueueMsgCount			uint32 					  // 队列里的堆积的数量
+	fileQueueObj		*filequeue.Queue
+	FileQueueStatus 	bool					  // 是否启动文件队列
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
@@ -101,6 +105,8 @@ func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID in
 		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
 		db.Unlock()
 	}
+	//将文件队列的路径也相应的删除掉
+	filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(ToServerID)))
 	return true
 }
 

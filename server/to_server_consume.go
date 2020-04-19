@@ -1,14 +1,14 @@
 package server
 
 import (
-	"time"
-	"log"
+	"fmt"
 	"github.com/brokercap/Bifrost/plugin"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"runtime"
-	"fmt"
-	"runtime/debug"
 	"github.com/brokercap/Bifrost/server/warning"
+	"log"
+	"runtime"
+	"runtime/debug"
+	"time"
 )
 
 func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)  {
@@ -128,8 +128,38 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 	var n1 int = 0
 	var n0 int = 0
+	var FileQueueStatus bool
 	for {
 		CheckStatusFun()
+		//只有当前 内存队列 中没有数据了才需要从 文件队列 中加载数据
+		if This.QueueMsgCount == 0 {
+			This.Lock()
+			FileQueueStatus = This.FileQueueStatus
+			This.Unlock()
+			if FileQueueStatus {
+				This.InitFileQueue(db.Name, SchemaName, TableName)
+				data0, err := This.PopFileQueue()
+				if err != nil {
+					doWarningFun(warning.WARNINGERROR, "PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+";dbName:"+db.Name+";SchemaName:"+SchemaName+";TableName:"+TableName+"; PopFileQueue err:"+errs.Error())
+					log.Println(db.Name, SchemaName, TableName, ";ToServerKey:"+This.ToServerKey, " PopFileQueue err:", err, " restart Bifrost please!")
+					panic("PluginName:" + This.PluginName + ";ToServerKey:" + This.ToServerKey + ";dbName:" + db.Name + ";SchemaName:" + SchemaName + ";TableName:" + TableName + "; PopFileQueue err:" + errs.Error())
+				}
+				if data0 == nil {
+					//这里采用一个 func 来执行，是防止 fileQueueObj 本身有问题，造成 Lock 没释放
+					func(){
+						This.Lock()
+						defer This.Unlock()
+						//这里要重新获取一次GetInfo ，是确保，在我们在读取完 文件队列的时候，没有被数据被立马写进去，因为其他线程 往队列写之前都会调用 ToServer.Lock,并且 FileQueue 也是线程安全的 为了安全启见
+						if This.fileQueueObj.GetInfo().FileCount == 0{
+							This.FileQueueStatus = false
+						}
+					}()
+				} else {
+					This.QueueMsgCount++
+					c <- data0
+				}
+			}
+		}
 		select {
 		case data = <- c:
 			This.Lock()

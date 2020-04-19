@@ -626,6 +626,7 @@
                             others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
                             others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+                            others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
                             if ("QueueMsgCount" in v) {
                                 others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
                             }
