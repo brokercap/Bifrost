@@ -5,6 +5,7 @@ function doGetPluginParam(){
     var Schema = $("#to_mysql_schema").val();
     var BatchSize = $("#MySQL_BatchSize").val();
     var NullTransferDefault = $("#MySQL_NullTransferDefault").val();
+    var SyncMode = $("#MySQL_SyncMode").val();
 
     if (Schema == ""){
         result.msg = "请选择 数据库!";
@@ -41,7 +42,7 @@ function doGetPluginParam(){
         Field.push(d);
     });
 
-    if(PriKey.length == 0){
+    if(PriKey.length == 0 && SyncMode != 'LogAppend'){
         result.msg = "请选择一个字段为主键！";
         return result;
     }
@@ -62,6 +63,7 @@ function doGetPluginParam(){
     }else{
         result.data["NullTransferDefault"] = false;
     }
+    result.data["SyncMode"] = SyncMode;
 	return result;
 }
 
@@ -147,9 +149,12 @@ function GetToTableDesc(schemaName,tableName) {
                             toField = "{$BinlogTimestamp}";
                             break;
                         case "binlogfilenum":
+                        case "binlog_filenum":
                             toField = "{$BinlogFileNum}";
                             break;
                         case "binlogposition":
+                        case "binlog_position":
+                        case "binlog_pos":
                             toField = "{$BinlogPosition}";
                             break;
                         default:
