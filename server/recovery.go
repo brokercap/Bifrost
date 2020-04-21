@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brokercap/Bifrost/config"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/server/filequeue"
 	"log"
 	"os"
@@ -331,6 +332,23 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			}
 		}
 	}
+
+	//启动同步的消费线程
+	for _,db := range  DbList{
+		for tableKey,t := range db.tableMap{
+			for _,toServer := range t.ToServerList{
+				if toServer.FileQueueStatus == false{
+					continue
+				}
+				SchemaName,TableName := GetSchemaAndTableBySplit(tableKey)
+				toServer.ToServerChan = &ToServerChan{
+					To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
+				}
+				go toServer.consume_to_server(db,SchemaName,TableName)
+			}
+		}
+	}
+
 }
 
 

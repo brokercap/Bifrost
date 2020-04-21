@@ -29,6 +29,11 @@ type FileInfo struct {
 	pos int64
 }
 
+type unackFileInfo struct {
+	id int64			// 文件编号
+	unackCount int		// unack 数量
+}
+
 type Queue struct{
 	sync.RWMutex
 	minId 			int64			// 最小文件
@@ -39,6 +44,7 @@ type Queue struct{
 	writeInfo 		*FileInfo
 	fileCount 		int				// 文件数量
 	noData			bool			// 整个队列是否有数据，true 代表 没有数据
+	unackFileList	[]*unackFileInfo		// 已经被加载到内存了的文件信息
 }
 
 type QueueInfo struct{
@@ -66,7 +72,7 @@ func NewQueue(path string) *Queue{
 		}
 	}
 	maxId := int64(-1)
-	minId := int64(0)
+	minId := int64(-1)
 	fileCount := 0
 	var id0 int64
 	//遍历所有path下所有文件,找出最大id
@@ -83,7 +89,7 @@ func NewQueue(path string) *Queue{
 						if id0 > maxId {
 							maxId = id0
 						}
-						if id0 < minId {
+						if id0 < minId || minId == -1{
 							minId = id0
 						}
 					}
@@ -109,7 +115,7 @@ func NewQueue(path string) *Queue{
 
 func (This *Queue) noDataInit(){
 	This.maxId = -1
-	This.minId = 0
+	This.minId = -1
 	This.fileCount = 0
 	This.readInfo = nil
 	This.writeInfo = nil
@@ -128,7 +134,8 @@ func (This *Queue) GetInfo() QueueInfo{
 }
 
 func (This *Queue) readInfoInit(){
-	fileName := This.path+"/"+fmt.Sprint(This.maxId)+".list"
+	This.minId += 1
+	fileName := This.path+"/"+fmt.Sprint(This.minId)+".list"
 	fd0,_:=os.OpenFile(fileName,os.O_CREATE|os.O_RDONLY,0700)
 	This.readInfo = &FileInfo{
 		fd:fd0,

@@ -31,3 +31,14 @@ func TestReadLast(t *testing.T)  {
 	t.Log("over")
 
 }
+
+func TestSlice(t *testing.T)  {
+	List := make([]int,0)
+	List = append(List,0)
+	List = append(List,1)
+	List = append(List,2)
+	List = append(List,3)
+	List = append(List,4)
+	List = append(List,5)
+	t.Log(List[0:1])
+}

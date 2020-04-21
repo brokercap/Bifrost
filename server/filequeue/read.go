@@ -29,27 +29,15 @@ func (This *Queue) Pop() (content []byte,e error){
 	if e != nil {
 		return
 	}
-	//假如实际读取数据大小,小于 l+5,则代表当前队列文件没有下一条数据了,可以把这个文件给删除掉了
+	//假如实际读取数据大小,小于 l+5,则代表当前队列文件没有下一条数据了
 	if n < int(l+5) {
-		if This.maxId <= This.minId {
-			if This.writeInfo!=nil{
-				This.writeInfo.fd.Close()
-			}
-		}
-		This.readInfo.fd.Close()
-		os.Remove(This.readInfo.name)
-		This.fileCount--
 		content = c[0:n-4]
+		This.readInfo.fd.Close()
 		This.readInfo = nil
-		This.writeInfo = nil
-		if This.maxId <= This.minId {
-			This.noDataInit()
-		}
+		This.readInfo.pos = 0
 	} else {
 		content = c[0:n-5]
-		This.readInfo.pos += int64(n)
 	}
-
 	return
 }
 
