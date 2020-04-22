@@ -7,6 +7,9 @@ import (
 
 // ack 消息数量
 func (This *Queue) Ack(n int) (e error){
+	if n == 0{
+		return nil
+	}
 	l.Lock()
 	defer l.Unlock()
 	var i int = -1

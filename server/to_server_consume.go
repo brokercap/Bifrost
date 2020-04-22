@@ -81,17 +81,38 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var commitErrorCount int = 0
 
 
-	var unack int = 0      //从文件队列中加载出来的数量，需要
-	var tmpUnack int = 0
+	var unack int = 0      // 在一次遍历中从文件队列中加载出来的数量，需要
+	var tmpUnack int = 0   // 在一次遍历中从文件队列中加载出来 但是实际位点是被成功处理过后的 数量
+	var fromFileEndBinlogNum int = 0   // 从文件队列中加载出来的最后 位点
+	var fromFileEndBinlogPosition uint32 = 0  // 从文件队列中加载出来的最后 位点
 
 	var fileAck = func() {
+		if PluginBinlog == nil{
+			return
+		}
 		if unack == 0{
 			return
 		}
-		if This.fileQueueObj != nil{
+		if This.fileQueueObj == nil{
 			return
 		}
-		This.fileQueueObj.Ack(1)
+		if PluginBinlog.BinlogFileNum == 0 || PluginBinlog.BinlogPosition == 0{
+			return
+		}
+		//假如 最后成功的位点，大于文件中加载的位点，则将所有待从文件中的数量  ack 掉
+		if PluginBinlog.BinlogFileNum > fromFileEndBinlogNum{
+			This.fileQueueObj.Ack(unack)
+			return
+		}
+		if PluginBinlog.BinlogFileNum == fromFileEndBinlogNum{
+			if PluginBinlog.BinlogPosition >= fromFileEndBinlogPosition{
+				This.fileQueueObj.Ack(unack)
+			}else{
+				This.fileQueueObj.Ack(1)
+			}
+		}else{
+			return
+		}
 	}
 	var forSendData = func(data *pluginDriver.PluginDataType) {
 		for {
@@ -149,11 +170,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var FileQueueStatus bool
 	for {
 		CheckStatusFun()
-		//只有当前 内存队列 中数据数量  小于 内存队列可存最大值的一半 才需要从 文件队列 中加载数据
-		if This.FileQueueStatus && This.QueueMsgCount <= 0{
-			This.Lock()
-			FileQueueStatus = This.FileQueueStatus
-			This.Unlock()
+		if This.FileQueueStatus && This.QueueMsgCount == 0{
 			//这要问我这里为什么 -1, 因为我不知道 在同一个线程里写满后再消费，会不会进入 chan 死锁的情况
 			queueVariableSize := config.ToServerQueueSize - 1
 			if FileQueueStatus && queueVariableSize > 0{
@@ -181,6 +198,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							tmpUnack++
 							continue
 						}
+						fromFileEndBinlogNum,fromFileEndBinlogPosition = data0.BinlogFileNum,data0.BinlogPosition
 						unack++
 						This.QueueMsgCount++
 						c <- data0
@@ -290,12 +308,16 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				noData = true
 				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
+			fileAck()
 			if PluginBinlog == nil && errs == nil{
 				This.Lock()
 				if This.QueueMsgCount == 0{
 					This.ToServerChan = nil
 					This.Status = ""
 					This.Unlock()
+					//这里要执行一次fileAck ，是为了最终数据一致，将已经从文件中加载出来的数据 ack掉
+					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum,fromFileEndBinlogPosition}
+					fileAck()
 					runtime.Goexit()
 				}
 				This.Unlock()
