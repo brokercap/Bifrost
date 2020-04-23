@@ -186,6 +186,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					}
 					if data0 == nil {
 						// 说明没有数据可以加载了
+						This.Lock()
+						This.FileQueueStatus = false
+						This.Unlock()
 						break
 					} else {
 						// 这里为什么要判断一下位点，是因为文件队列是要整个文件的数据都被从加载到内存后才会 删除文件
