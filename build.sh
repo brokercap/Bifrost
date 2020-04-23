@@ -198,7 +198,7 @@ build()
     mkdir -p $tagDir/plugin
 
     echo "$mode build starting "
-    CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
+    CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build -mod=mod ./Bifrost.go
     echo "$mode build over "
 
     if [[ "$mode" == "windows" ]];then
@@ -402,11 +402,13 @@ if [[ "$1" == "install" ]];then
     exit 0
 fi
 
-
-
 rm -rf $tagDir
 build $mode $tagDir $BifrostVersion
 
 echo "target:" $tagDir
+echo ""
+echo "假如下载依懒包慢,编译失败,请尝试修改 GOPROXY 代理"
+
+echo "例如：export GOPROXY=https://goproxy.cn"
 
 #mv -rf $vendorBakDir ./vendor
