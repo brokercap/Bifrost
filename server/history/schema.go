@@ -5,6 +5,8 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"log"
+	"strconv"
+	"fmt"
 )
 
 func DBConnect(uri string) mysql.MysqlConnection{
@@ -104,4 +106,32 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		})
 	}
 	return FieldList
+}
+
+func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection,schema string,table string,PriKey string) (minId uint64,maxId uint64){
+	sql := "SELECT MIN(`"+PriKey+"`),MAX(`"+PriKey+"`) FROM `"+schema+"`.`"+table+"`"
+	log.Println("sql:",sql)
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err," sql:",sql)
+		return
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query([]driver.Value{})
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
+	defer rows.Close()
+	for {
+		var err error
+		dest := make([]driver.Value, 2, 2)
+		err = rows.Next(dest)
+		if err != nil {
+			break
+		}
+		minId, err = strconv.ParseUint(fmt.Sprint(dest[0]), 10, 64)
+		maxId, err = strconv.ParseUint(fmt.Sprint(dest[1]), 10, 64)
+		break
+	}
+	return
 }
