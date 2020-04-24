@@ -110,7 +110,6 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 
 func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection,schema string,table string,PriKey string) (minId uint64,maxId uint64){
 	sql := "SELECT MIN(`"+PriKey+"`),MAX(`"+PriKey+"`) FROM `"+schema+"`.`"+table+"`"
-	log.Println("sql:",sql)
 	stmt,err := db.Prepare(sql)
 	if err !=nil{
 		log.Println(err," sql:",sql)
