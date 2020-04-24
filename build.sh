@@ -198,7 +198,7 @@ build()
     mkdir -p $tagDir/plugin
 
     echo "$mode build starting "
-    CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build -mod=mod ./Bifrost.go
+    CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
     echo "$mode build over "
 
     if [[ "$mode" == "windows" ]];then
