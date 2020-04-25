@@ -5,9 +5,6 @@ import (
 	"time"
 	"strings"
 	"strconv"
-)
-
-import (
 	"fmt"
 	"database/sql/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
@@ -19,13 +16,13 @@ import (
 )
 
 func (This *History) threadStart(i int)  {
-	log.Println("threadStart start:",i,This.SchemaName,This.TableName)
+	log.Println("history threadStart start:",i,This.DbName,This.SchemaName,This.TableName)
 	defer func() {
-		log.Println("threadStart over:",i,This.SchemaName,This.TableName)
+		log.Println("history threadStart over:",i,This.DbName,This.SchemaName,This.TableName)
 		This.threadResultChan <- i
 		if err :=recover();err!=nil{
 			This.ThreadPool[i].Error = fmt.Errorf( fmt.Sprint(err) + string(debug.Stack()) )
-			log.Println("History threadStart:",fmt.Sprint(err) + string(debug.Stack()))
+			log.Println("history threadStart:",fmt.Sprint(err) + string(debug.Stack()))
 		}
 	}()
 	This.ThreadPool[i] = &ThreadStatus{
@@ -38,10 +35,9 @@ func (This *History) threadStart(i int)  {
 	This.initMetaInfo(db)
 	if len(This.Fields) == 0{
 		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName)
-		log.Println("Fields empty",This.DbName,This.SchemaName,This.TableName)
+		log.Println("history Fields empty",This.DbName,This.SchemaName,This.TableName)
 		return
 	}
-	var start int
 
 	var toServerList []*server.ToServer
 	toServerList = make([]*server.ToServer,0)
@@ -78,16 +74,17 @@ func (This *History) threadStart(i int)  {
 		ToServerInfo.ToServerChan.To <- pluginData
 	}
 	n := len(This.Fields)
-
+	var start uint64
+	var sql string
 	for {
-		sql := This.GetNextSql()
+		sql,start = This.GetNextSql()
 		if sql == ""{
 			break
 		}
 		stmt, err := db.Prepare(sql)
 		if err != nil{
 			This.ThreadPool[i].Error = err
-			log.Println("threadStart err:",err,"sql:",sql)
+			log.Println("history threadStart err:",err,"sql:",sql, This.DbName,This.SchemaName,This.TableName)
 			return
 		}
 		This.ThreadPool[i].NowStartI = start
@@ -175,14 +172,14 @@ func (This *History) threadStart(i int)  {
 	}
 }
 
-func (This *History) GetNextSql() (sql string){
+func (This *History) GetNextSql() (sql string,start uint64){
 	var where string = ""
 	if This.Property.Where != "" {
 		where = " WHERE (" + This.Property.Where+ ")"
 	}
 	if This.TablePriKeyMaxId  == 0{
 		This.Lock()
-		start := This.NowStartI
+		start = This.NowStartI
 		This.NowStartI += uint64(This.Property.ThreadCountPer)
 		This.Unlock()
 		var limit string = ""
@@ -213,7 +210,7 @@ func (This *History) GetNextSql() (sql string){
 		if This.NowStartI == 0{
 			This.NowStartI = This.TablePriKeyMinId
 		}
-		start := This.NowStartI
+		start = This.NowStartI
 		// 这里最大值 - 每次分页数量 是为了 不int内存溢出，避免 NowStartI + ThreadCountPer 大于 uint64
 		// 假如 between 右区间 endI 大于 当前 This.NowStartI，则设置 This.NowStartI 为 endI+1，因为 This.NowStartI 是代表下一次查询的开始位置
 		if This.TablePriKeyMaxId >= uint64(This.Property.ThreadCountPer) && This.TablePriKeyMaxId - uint64(This.Property.ThreadCountPer) - 1 > This.NowStartI{
@@ -230,6 +227,5 @@ func (This *History) GetNextSql() (sql string){
 		}
 		sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "` " + where
 	}
-
 	return
 }

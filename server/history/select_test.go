@@ -7,7 +7,7 @@ import (
 func TestHistory_GetNextSql(t *testing.T) {
 	historyObj := &History{
 		DbName:"test",
-		SchemaName:"bifrost_test",
+		SchemaName:"test",
 		TableName:"binlog_field_test",
 		Status:HISTORY_STATUS_CLOSE,
 		NowStartI:0,
@@ -15,14 +15,16 @@ func TestHistory_GetNextSql(t *testing.T) {
 			ThreadNum:1,
 			ThreadCountPer:1,
 		},
-		Uri:"root:@tcp(127.0.0.1:3306)/bifrost_test",
+		Uri:"root:root@tcp(192.168.0.114:3306)/bifrost_test",
 	}
-
+	var sql string
+	var start uint64
 	db := DBConnect(historyObj.Uri)
 	historyObj.initMetaInfo(db)
 	for{
-		sql := historyObj.GetNextSql()
+		sql,start = historyObj.GetNextSql()
 		t.Log("sql1:",sql)
+		t.Log("start:",start)
 		if sql == ""{
 			break
 		}
@@ -30,23 +32,24 @@ func TestHistory_GetNextSql(t *testing.T) {
 
 	historyObj = &History{
 		DbName:"test",
-		SchemaName:"bifrost_test",
+		SchemaName:"test",
 		TableName:"binlog_field_test",
 		Status:HISTORY_STATUS_CLOSE,
 		NowStartI:0,
 		Property:HistoryProperty{
 			ThreadNum:1,
 			ThreadCountPer:10,
-			Where:" id > 0 ",
+			Where:" id > 3 ",
 		},
-		Uri:"root:@tcp(127.0.0.1:3306)/bifrost_test",
+		Uri:"root:root@tcp(192.168.0.114:3306)/bifrost_test",
 	}
 
 	db = DBConnect(historyObj.Uri)
 	historyObj.initMetaInfo(db)
 	for{
-		sql := historyObj.GetNextSql()
+		sql,start = historyObj.GetNextSql()
 		t.Log("sql1:",sql)
+		t.Log("start:",start)
 		if sql == ""{
 			break
 		}

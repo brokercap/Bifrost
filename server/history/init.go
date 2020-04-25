@@ -128,7 +128,7 @@ type HistoryProperty struct {
 type ThreadStatus struct {
 	Num					int
 	Error				error
-	NowStartI			int     // 当前执行第几条
+	NowStartI			uint64     // 当前执行第几条
 }
 
 type History struct {
@@ -187,7 +187,7 @@ func (This *History) Start() error {
 				break
 			}
 			i := <- This.threadResultChan
-			log.Println("thread over:",i)
+			log.Println("history threadResultChan over:",i,This.DbName,This.SchemaName,This.TableName)
 			c++
 		}
 		This.OverTime = time.Now().Format("2006-01-02 15:04:05")
@@ -225,7 +225,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.TablePriArr) > 0{
 		for _,v := range This.Fields{
 			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.ToLower(*v.EXTRA) == "auto_increment"{
-				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.TableName,*v.COLUMN_NAME)
+				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.TableName,*v.COLUMN_NAME,This.Property.Where)
 				This.TablePriKey = *v.COLUMN_NAME
 				break
 			}
