@@ -267,6 +267,10 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 			e = fmt.Errorf("db conn ,uknow error")
 		}
 		defer dbconn.Close()
+		e = CheckUserSlavePrivilege(dbconn)
+		if e != nil{
+			return
+		}
 		MasterBinlogInfo := GetBinLogInfo(dbconn)
 		if MasterBinlogInfo.File != ""{
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
