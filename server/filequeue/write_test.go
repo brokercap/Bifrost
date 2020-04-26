@@ -6,11 +6,13 @@ import (
 )
 
 func TestWrite(t *testing.T)  {
-	path := "./filequeueTest"
+	path := "E:/filequeueTest"
 	q := NewQueue(path)
-	q.Append("mysqlcontent1")
-	q.Append("mysqlcontent2")
-	q.Append("mysqlcontent33333")
+	c := ""
+	for i:=0;i< 50000;i++{
+		c+="c"
+	}
+	q.Append(c)
 }
 
 

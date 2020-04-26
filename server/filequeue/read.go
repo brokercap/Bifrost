@@ -1,8 +1,8 @@
 package filequeue
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 

@@ -21,15 +21,14 @@ func TestRead(t *testing.T)  {
 
 
 func TestReadLast(t *testing.T)  {
-	path := "./filequeueTest"
+	path := "E:/filequeueTest"
 	q := NewQueue(path)
 	c,err := q.ReadLast()
 	if err!= nil{
 		t.Fatal(err)
 	}
-	t.Log("c:",c)
+	t.Log("c:",string(c))
 	t.Log("over")
-
 }
 
 func TestSlice(t *testing.T)  {

@@ -60,7 +60,7 @@ func NewQueue(path string) *Queue{
 	l.Lock()
 	defer l.Unlock()
 	if _,ok := QueueMap[path];ok{
-		return QueueMap[path];
+		return QueueMap[path]
 	}
 	Q := &Queue{}
 	_, err := os.Stat(path)
@@ -82,7 +82,7 @@ func NewQueue(path string) *Queue{
 			if !fi.IsDir() {
 				sArr := strings.Split(fi.Name(), ".")
 				//后缀是.list 才是队列存储文件
-				if sArr[len(sArr[0])-1] == "list" {
+				if sArr[len(sArr)-1] == "list" {
 					fileCount++
 					id0, err = strconv.ParseInt(sArr[0], 10, 64)
 					if err == nil {
