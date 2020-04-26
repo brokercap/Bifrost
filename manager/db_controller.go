@@ -203,9 +203,13 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		if dbconn != nil{
 			e = nil
 		}else{
-			e = fmt.Errorf("db conn ,uknow error")
+			e = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
 		}
 		defer dbconn.Close()
+		e = CheckUserSlavePrivilege(dbconn)
+		if e != nil{
+			return
+		}
 		MasterBinlogInfo := GetBinLogInfo(dbconn)
 		if MasterBinlogInfo.File != ""{
 			dbInfo.BinlogFile = MasterBinlogInfo.File
@@ -264,13 +268,9 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 		if dbconn != nil{
 			e = nil
 		}else{
-			e = fmt.Errorf("db conn ,uknow error")
+			e = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
 		}
 		defer dbconn.Close()
-		e = CheckUserSlavePrivilege(dbconn)
-		if e != nil{
-			return
-		}
 		MasterBinlogInfo := GetBinLogInfo(dbconn)
 		if MasterBinlogInfo.File != ""{
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File

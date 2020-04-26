@@ -337,6 +337,7 @@ func GetGrantsFor(db mysql.MysqlConnection) (grantSQL string,err error){
 func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error){
 	var grantSQL string
 	grantSQL,err = GetGrantsFor(db)
+	log.Println(grantSQL)
 	if err != nil {
 		return
 	}
@@ -349,29 +350,24 @@ func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error){
 	errArr := make([]string,0)
 	if strings.Index(grantSQL,"SELECT") < 0{
 		errArr = append(errArr,"SELECT")
-		return
 	}
 	if strings.Index(grantSQL,"SHOW DATABASES") < 0{
 		errArr = append(errArr,"SHOW DATABASES")
-		return
 	}
 	if strings.Index(grantSQL,"SUPER") < 0{
 		errArr = append(errArr,"SUPER")
-		return
 	}
 
 	if strings.Index(grantSQL,"REPLICATION SLAVE") < 0{
 		errArr = append(errArr,"REPLICATION SLAVE")
-		return
 	}
 
 	if strings.Index(grantSQL,"EVENT") < 0{
 		errArr = append(errArr,"EVENT")
-		return
 	}
 
 	if len(errArr) > 0{
-		err = fmt.Errorf("MySQL权限不足，没有权限: %s",fmt.Sprint(errArr))
+		err = fmt.Errorf("MySQL权限不足，没有权限: %s",strings.Replace(fmt.Sprint(errArr)," ", ",", -1))
 	}
 	return
 }
