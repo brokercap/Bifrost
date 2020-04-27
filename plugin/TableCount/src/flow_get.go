@@ -32,7 +32,9 @@ func fitlerFlow(data []CountContent,timeDiff int64,listCount int) []CountContent
 
 		n2 := int((NowTime - lastTime ) / everBlankTime)
 		n1 := listCount - n - n2
-
+		if n1 < 0{
+			return data
+		}
 		tmp := make([]CountContent,n1)
 		for i:=0;i < n1;i++{
 			tmp[i].Time = lastTime - everBlankTime * int64(n1-i)
