@@ -2,12 +2,13 @@ package filequeue
 
 import (
 	"fmt"
+	"log"
 	"os"
 )
 
 // ack 消息数量
 func (This *Queue) Ack(n int) (e error){
-	if n == 0{
+	if n <= 0{
 		return nil
 	}
 	l.Lock()
@@ -16,12 +17,14 @@ func (This *Queue) Ack(n int) (e error){
 	var n0 int
 	for _,f := range This.unackFileList{
 		n0 = f.unackCount - n
-		if n0 < 0 {
+		if n0 <= 0 {
+			f.unackCount = 0
 			n = 0 - n0   // 转成正数，待下一次执行
-			i++
+			if f.allInMemory == true{
+				i++
+			}
 		}else{
-			f.unackCount = f.unackCount - n
-			n = n0
+			f.unackCount = n0
 			break
 		}
 	}
@@ -35,7 +38,9 @@ func (This *Queue) Ack(n int) (e error){
 				This.writeInfo.fd.Close()
 				This.writeInfo = nil
 			}
+			log.Println("filequeue remove file:",path)
 			os.Remove(path)
+			This.fileCount--
 		}
 	}
 	return nil

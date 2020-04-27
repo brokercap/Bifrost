@@ -2,6 +2,8 @@ package filequeue
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -9,11 +11,11 @@ import (
 func (This *Queue) Pop() (content []byte,e error){
 	This.Lock()
 	defer This.Unlock()
-	if This.noData == true{
-		return nil,nil
-	}
 	if This.readInfo == nil{
 		This.readInfoInit()
+	}
+	if This.readInfo == nil{
+		return nil,nil
 	}
 	var n int
 	var l int32
@@ -27,17 +29,29 @@ func (This *Queue) Pop() (content []byte,e error){
 	c := make([]byte, l+5)
 	n, e = This.readInfo.fd.Read(c)
 	if e != nil {
-		return
+		if e == io.EOF{
+			e = nil
+		}else{
+			return nil,e
+		}
 	}
-	//假如实际读取数据大小,小于 l+5,则代表当前队列文件没有下一条数据了
-	if n < int(l+5) {
-		content = c[0:n-4]
-		This.readInfo.fd.Close()
-		This.readInfo = nil
-		This.readInfo.pos = 0
-	} else {
+	if n == int(l)+5 {
 		content = c[0:n-5]
+	} else if n == int(l)+4 {
+		content = c[0:n-4]
+		//log.Println("content:",string(content))
+		This.readInfo.fd.Close()
+		This.readInfo.pos = 0
+		This.readInfo = nil
+		This.unackFileList[len(This.unackFileList)-1].allInMemory = true
+		for _,list := range This.unackFileList{
+			log.Println(*list)
+		}
+	}else{
+		return nil,fmt.Errorf("read file err,fileName:%s",This.readInfo.name)
 	}
+	This.unackFileList[len(This.unackFileList)-1].unackCount++
+	This.unackFileList[len(This.unackFileList)-1].totalCount++
 	return
 }
 
@@ -56,13 +70,13 @@ func (This *Queue) ReadLast() (content []byte,e error){
 	fileSize := getFileSize(fileName)
 	var fd *os.File
 	fd,e=os.OpenFile(fileName,os.O_RDONLY,0700)
-	if e!=nil{
+	if e !=nil{
 		return
 	}
 	fd.Seek(fileSize - 4,0)
 	b := make([]byte,4)
 	_, e = fd.Read(b)
-	if e!=nil{
+	if e != nil && e != io.EOF {
 		return
 	}
 	l := BytesToInt32(b)

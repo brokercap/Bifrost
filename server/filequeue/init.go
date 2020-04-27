@@ -32,6 +32,8 @@ type FileInfo struct {
 type unackFileInfo struct {
 	id int64			// 文件编号
 	unackCount int		// unack 数量
+	allInMemory bool	// 全部数据已经加载到内存
+	totalCount int		// 整个文件已经加载到内存消息条数
 }
 
 type Queue struct{
@@ -43,7 +45,6 @@ type Queue struct{
 	readInfo 		*FileInfo
 	writeInfo 		*FileInfo
 	fileCount 		int				// 文件数量
-	noData			bool			// 整个队列是否有数据，true 代表 没有数据
 	unackFileList	[]*unackFileInfo		// 已经被加载到内存了的文件信息
 }
 
@@ -53,7 +54,6 @@ type QueueInfo struct{
 	maxId 			int64			// 当前最大文件，当 -1 的时候，代表整个目录为空
 	Path			string			// 文件夹路径
 	FileCount 		int				// 文件数量
-	NoData			bool			// 整个队列是否有数据，true 代表 没有数据
 }
 
 func NewQueue(path string) *Queue{
@@ -63,13 +63,14 @@ func NewQueue(path string) *Queue{
 		return QueueMap[path]
 	}
 	Q := &Queue{}
-	_, err := os.Stat(path)
-	if err != nil {
-		err = os.MkdirAll(path,0700)
-		if err != nil{
-			log.Println("mkdir queue dir err:",err)
-			return nil
-		}
+	//这里为什么要加 /tmp/ 结尾来创建，是因为 在实际 测试中centos7  go1.14.2 版本中数字结尾的目录，最后一层个位数字名字目录，可能是不会被创建的
+	err := os.MkdirAll(path+"/tmp/",0700)
+	//os.MkdirAll(path+"/a/",0700)
+	//os.MkdirAll("/data/bifrost/filequeue/mysqlLocalTest/test/binlog_field_test/a/",0700)
+	//log.Println("path:",path+"/")
+	if err != nil{
+		log.Println("mkdir queue dir err:",err)
+		return nil
 	}
 	maxId := int64(-1)
 	minId := int64(-1)
@@ -105,9 +106,10 @@ func NewQueue(path string) *Queue{
 		Q.minId = minId
 		Q.maxId = maxId
 		Q.fileCount = fileCount
-		Q.noData = false
 	}
 	Q.path = path
+	Q.unackFileList = make([]*unackFileInfo,0)
+	QueueMap[path] = Q
 	return Q
 
 }
@@ -115,11 +117,10 @@ func NewQueue(path string) *Queue{
 
 func (This *Queue) noDataInit(){
 	This.maxId = -1
-	This.minId = -1
+	This.minId = 0
 	This.fileCount = 0
 	This.readInfo = nil
 	This.writeInfo = nil
-	This.noData = true
 }
 
 func (This *Queue) GetInfo() QueueInfo{
@@ -134,9 +135,19 @@ func (This *Queue) GetInfo() QueueInfo{
 }
 
 func (This *Queue) readInfoInit(){
-	This.minId += 1
 	fileName := This.path+"/"+fmt.Sprint(This.minId)+".list"
-	fd0,_:=os.OpenFile(fileName,os.O_CREATE|os.O_RDONLY,0700)
+	fd0,err:=os.OpenFile(fileName,os.O_RDONLY,0700)
+	if err != nil{
+		This.readInfo = nil
+		return
+	}
+	unackFile := &unackFileInfo{
+		id:This.minId,
+		unackCount:0,
+		allInMemory:false,
+	}
+	This.minId += 1
+	This.unackFileList = append(This.unackFileList,unackFile)
 	This.readInfo = &FileInfo{
 		fd:fd0,
 		name:fileName,
