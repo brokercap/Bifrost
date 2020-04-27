@@ -6,6 +6,7 @@ import (
 	"github.com/brokercap/Bifrost/config"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/server/filequeue"
+	"log"
 )
 
 func GetFileQueue(dbName,SchemaName,tableName,ToServerID string) string  {
@@ -39,8 +40,10 @@ func (This *ToServer) PopFileQueue() (*pluginDriver.PluginDataType,error) {
 		return nil,err
 	}
 	var data pluginDriver.PluginDataType
+	//log.Println(string(v))
 	err = json.Unmarshal(v,&data)
 	if err != nil {
+		log.Println("fileQueueObj err data:",string(v))
 		return nil,err
 	}
 	return &data,nil

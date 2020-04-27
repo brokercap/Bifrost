@@ -188,6 +188,11 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						toServer.LastBinlogPosition = PerformanceTestingPosition
 					}
 
+					// 假如没有开启文件队列,则不管什么情况，都不启用文件队列
+					if config.FileQueueUsable == false{
+						toServer.FileQueueStatus = false
+					}
+
 					toServerObj := &ToServer{
 						ToServerID:			toServer.ToServerID,
 						MustBeSuccess:  	toServer.MustBeSuccess,

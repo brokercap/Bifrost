@@ -5,6 +5,7 @@ import (
 	"github.com/brokercap/Bifrost/plugin"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/server/warning"
+	"io"
 	"log"
 	"runtime"
 	"runtime/debug"
@@ -85,7 +86,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var tmpUnack int = 0   // 在一次遍历中从文件队列中加载出来 但是实际位点是被成功处理过后的 数量
 	var fromFileEndBinlogNum int = 0   // 从文件队列中加载出来的最后 位点
 	var fromFileEndBinlogPosition uint32 = 0  // 从文件队列中加载出来的最后 位点
-
+	var fileTotalCount int = 0
 	var fileAck = func() {
 		if PluginBinlog == nil{
 			return
@@ -94,6 +95,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			return
 		}
 		if This.fileQueueObj == nil{
+			unack = 0
 			return
 		}
 		if PluginBinlog.BinlogFileNum == 0 || PluginBinlog.BinlogPosition == 0{
@@ -101,14 +103,20 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		}
 		//假如 最后成功的位点，大于文件中加载的位点，则将所有待从文件中的数量  ack 掉
 		if PluginBinlog.BinlogFileNum > fromFileEndBinlogNum{
+			//log.Println("file ackn:",unack," fileTotalCount:",fileTotalCount)
 			This.fileQueueObj.Ack(unack)
+			unack = 0
 			return
 		}
 		if PluginBinlog.BinlogFileNum == fromFileEndBinlogNum{
 			if PluginBinlog.BinlogPosition >= fromFileEndBinlogPosition{
+				//log.Println("file ackn2:",unack," and unack:",unack," fileTotalCount:",fileTotalCount)
 				This.fileQueueObj.Ack(unack)
+				unack = 0
 			}else{
 				This.fileQueueObj.Ack(1)
+				unack--
+				//log.Println("file ack1:",1," and unack:",unack," fileTotalCount:",fileTotalCount)
 			}
 		}else{
 			return
@@ -126,9 +134,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						//自动恢复
 						doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
 					}
-					if PluginBinlog != nil{
-						fileAck()
-					}
+					fileAck()
 					break
 				} else {
 					if lastErrId > 0{
@@ -167,30 +173,38 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 	var n1 int = 0
 	var n0 int = 0
-	var FileQueueStatus bool
+
+	//time.Sleep(20 * time.Second)
 	for {
 		CheckStatusFun()
 		if This.FileQueueStatus && This.QueueMsgCount == 0{
 			//这要问我这里为什么 -1, 因为我不知道 在同一个线程里写满后再消费，会不会进入 chan 死锁的情况
 			queueVariableSize := config.ToServerQueueSize - 1
-			if FileQueueStatus && queueVariableSize > 0{
+			if queueVariableSize > 0{
+				This.InitFileQueue(db.Name, SchemaName, TableName)
+				//log.Println("file ack2:",unack," fileTotalCount:",fileTotalCount)
+				This.fileQueueObj.Ack(unack)
 				tmpUnack = 0
 				unack = 0
-				This.InitFileQueue(db.Name, SchemaName, TableName)
 				for i:=0; i < queueVariableSize; i++ {
 					data0, err := This.PopFileQueue()
-					if err != nil {
-						doWarningFun(warning.WARNINGERROR, "PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+";dbName:"+db.Name+";SchemaName:"+SchemaName+";TableName:"+TableName+"; PopFileQueue err:"+errs.Error())
+					if err != nil && err != io.EOF {
+						doWarningFun(warning.WARNINGERROR, "PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+";dbName:"+db.Name+";SchemaName:"+SchemaName+";TableName:"+TableName+"; PopFileQueue err:"+err.Error())
 						log.Println(db.Name, SchemaName, TableName, ";ToServerKey:"+This.ToServerKey, " PopFileQueue err:", err, " restart Bifrost please!")
-						panic("PluginName:" + This.PluginName + ";ToServerKey:" + This.ToServerKey + ";dbName:" + db.Name + ";SchemaName:" + SchemaName + ";TableName:" + TableName + "; PopFileQueue err:" + errs.Error())
+						panic("PluginName:" + This.PluginName + ";ToServerKey:" + This.ToServerKey + ";dbName:" + db.Name + ";SchemaName:" + SchemaName + ";TableName:" + TableName + "; PopFileQueue err:" + err.Error())
 					}
-					if data0 == nil {
+					if data0 == nil && err == nil {
 						// 说明没有数据可以加载了
 						This.Lock()
 						This.FileQueueStatus = false
 						This.Unlock()
 						break
 					} else {
+						/*
+						if i == 0{
+							log.Println("PopFileQueue first: ",*data0)
+						}
+						*/
 						// 这里为什么要判断一下位点，是因为文件队列是要整个文件的数据都被从加载到内存后才会 删除文件
 						// 那有一种可能，一个文件还没被完全加载完，进程就被重启了呢？那重启后，是不是旧的数据会被重新读取吗？
 						if data0.BinlogFileNum < This.BinlogFileNum{
@@ -203,13 +217,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						}
 						fromFileEndBinlogNum,fromFileEndBinlogPosition = data0.BinlogFileNum,data0.BinlogPosition
 						unack++
+						fileTotalCount++
 						This.QueueMsgCount++
 						c <- data0
 					}
 				}
-				if tmpUnack > 0{
-					This.fileQueueObj.Ack(tmpUnack)
-				}
+				This.fileQueueObj.Ack(tmpUnack)
 			}
 		}
 		select {
@@ -440,16 +453,9 @@ func (This *ToServer) getPluginAndSetParam() (err error){
 func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
-		if err2 := recover();err2!=nil{
-			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
+		if err2 := recover();err2 != nil {
+			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
-			func() {
-				defer func() {
-					if err2 := recover();err2!=nil{
-						return
-					}
-				}()
-			}()
 		}
 	}()
 
@@ -466,16 +472,9 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
-		if err2 := recover();err2!=nil{
-			err = fmt.Errorf(This.ToServerKey,err2,string(debug.Stack()))
+		if err2 := recover();err2 != nil{
+			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
-			func() {
-				defer func() {
-					if err2 := recover();err2!=nil{
-						return
-					}
-				}()
-			}()
 		}
 	}()
 

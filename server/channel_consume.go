@@ -94,24 +94,36 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
 	}
 	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
-	if FileQueueStatus{
+	if FileQueueStatus {
 		ToServerInfo.InitFileQueue(This.db.Name,pluginData.SchemaName,pluginData.TableName)
 		ToServerInfo.AppendToFileQueue(pluginData)
 		return
 	}
-	timer := time.NewTimer(5 * time.Second)
-	defer timer.Stop()
-	select{
-	case ToServerInfo.ToServerChan.To <- pluginData:
-		ToServerInfo.QueueMsgCount++
-		break
-	case <-timer.C:
+
+	// 假如开启了全局文件队列的功能,假如5秒内都没写进内存chan队列,则往文件队列中写数据
+	if config.FileQueueUsable {
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
+		select {
+		case ToServerInfo.ToServerChan.To <- pluginData:
+			ToServerInfo.Lock()
+			ToServerInfo.QueueMsgCount++
+			ToServerInfo.Unlock()
+			break
+		case <-timer.C:
+			ToServerInfo.Lock()
+			defer ToServerInfo.Unlock()
+			ToServerInfo.InitFileQueue(This.db.Name, pluginData.SchemaName, pluginData.TableName)
+			ToServerInfo.AppendToFileQueue(pluginData)
+			ToServerInfo.FileQueueStatus = true
+			//log.Println("start FileQueueStatus = true;",*pluginData)
+			break
+		}
+	}else{
+		ToServerInfo.ToServerChan.To <- pluginData
 		ToServerInfo.Lock()
-		defer ToServerInfo.Unlock()
-		ToServerInfo.InitFileQueue(This.db.Name,pluginData.SchemaName,pluginData.TableName)
-		ToServerInfo.AppendToFileQueue(pluginData)
-		ToServerInfo.FileQueueStatus = true
-		break
+		ToServerInfo.QueueMsgCount++
+		ToServerInfo.Unlock()
 	}
 
 }
@@ -129,6 +141,7 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 		BinlogFileNum:BinlogFileNum,
 		BinlogPosition:data.Header.LogPos,
 		Query:data.Query,
+		Pri: data.Pri,
 	}
 }
 
