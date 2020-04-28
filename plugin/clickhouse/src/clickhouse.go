@@ -14,19 +14,14 @@ import (
 )
 
 
-const VERSION  = "v1.1.1"
-const BIFROST_VERION = "v1.1.1"
+const VERSION  = "v1.2.0"
+const BIFROST_VERION = "v1.2.0"
 
 var l sync.RWMutex
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
 	Data 			[]*pluginDriver.PluginDataType
-}
-
-type dataStruct struct {
-	sync.RWMutex
-	Data map[string]*dataTableStruct
 }
 
 type fieldStruct struct {
@@ -71,7 +66,7 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 }
 
 func (MyConn *MyConn) GetUriExample() string{
-	return "tcp://127.0.0.1:9000?username=&compress=true&debug=true"
+	return "tcp://127.0.0.1:9000?username=&password=&compress=true"
 }
 
 type Conn struct {
@@ -101,10 +96,11 @@ func (This *Conn) SetConnStatus(status string) {
 type SyncType string
 
 const (
-	FILTER_DEFEALT SyncType = ""
-	FILTER_NORMAL SyncType = "Normal"
-	FILTER_INSERT_ALL SyncType = "insertAll"
+	SYNCMODE_NORMAL SyncType = "Normal"
+	SYNCMODE_LOG_UPDATE SyncType = "LogUpdate"
+	SYNCMODE_LOG_APPEND SyncType = "insertAll"
 )
+
 
 type PluginParam struct {
 	Field 			[]fieldStruct
@@ -119,6 +115,8 @@ type PluginParam struct {
 	mysqlPriKey		string  //ck对应 mysql 的主键id
 	Data			*dataTableStruct
 	SyncType		SyncType
+	bifrostDataVersionField string 	// 版本记录字段，delete的时候有用
+	nowBifrostDataVersion	int64	// 每次提交的时候都会更新这个版本号，纳秒时间戳
 }
 
 
@@ -139,8 +137,23 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	param.ckPriKey = param.PriKey[0].CK
 	param.mysqlPriKey = param.PriKey[0].MySQL
 	param.Data = &dataTableStruct{Data:make([]*pluginDriver.PluginDataType,0)}
+	if param.SyncType == ""{
+		param.SyncType = SYNCMODE_NORMAL
+	}
 	This.p = &param
 	This.getCktFieldType()
+	I:
+	for _,v := range This.p.Field{
+		if v.CK == "{$BifrostDataVersion}" {
+			switch v.CkType {
+			case "Int64","Nullable(Int64)","UInt64","Nullable(UInt64)":
+				This.p.bifrostDataVersionField = v.CK
+				break I
+			default:
+				break
+			}
+		}
+	}
 	return &param,nil
 }
 
@@ -325,8 +338,11 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key s
 	case "{$BinlogPosition}":
 		return data.BinlogPosition
 		break
+	case "{$BifrostDataVersion}":
+		return This.p.nowBifrostDataVersion
+		break
 	default:
-		return  pluginDriver.TransfeResult(key,data,index)
+		return pluginDriver.TransfeResult(key,data,index)
 		break
 	}
 	return ""
@@ -355,6 +371,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	if This.conn.err != nil {
 		return nil,This.conn.err
 	}
+	This.p.nowBifrostDataVersion = time.Now().UnixNano()
 
 	n := len(This.p.Data.Data)
 	if n == 0{
@@ -364,181 +381,30 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		n = This.p.BatchSize
 	}
 	list := This.p.Data.Data[:n]
-
-	deleteDataMap := make(map[interface{}]map[string]interface{},0)
-	insertDataMap := make(map[interface{}]map[string]interface{},0)
-
-	var ok bool
-
-	var normalFun = func(v *pluginDriver.PluginDataType) {
-		switch v.EventType {
-		case "insert":
-			for _,row := range v.Rows{
-				key := row[This.p.mysqlPriKey]
-				if _,ok=deleteDataMap[key];!ok {
-					if _, ok = insertDataMap[key]; !ok {
-						insertDataMap[key] = row
-					}
-				}
-			}
-			break
-		case "update":
-			for k := len(v.Rows)-1; k >= 0;k--{
-				row := v.Rows[k]
-				key := row[This.p.mysqlPriKey]
-				if k%2 == 0{
-					if _,ok:=deleteDataMap[key];!ok{
-						deleteDataMap[key] = row
-					}
-				}else{
-					if _,ok=deleteDataMap[key];!ok {
-						if _, ok = insertDataMap[key]; !ok {
-							insertDataMap[key] = row
-						}
-					}
-				}
-			}
-			break
-		case "delete":
-			for _,row := range v.Rows{
-				key := row[This.p.mysqlPriKey]
-				if _,ok:=deleteDataMap[key];!ok{
-					deleteDataMap[key] = row
-				}
-			}
-			break
-		default:
-			break
-		}
+	_, This.conn.err = This.conn.conn.Begin()
+	if This.conn.err != nil {
+		return nil, This.conn.err
+	}
+	switch This.p.SyncType {
+	case SYNCMODE_LOG_APPEND:
+		This.CommitLogMod_Append(list,n)
+		break
+	case SYNCMODE_NORMAL,SYNCMODE_LOG_UPDATE:
+		This.CommitNormal(list,n)
+		break
+	default:
+		This.err = fmt.Errorf("clickhoue SyncType:%s ,not found! ",This.p.SyncType)
+		break
 	}
 
-	var stmt dbDriver.Stmt
-
-	if This.p.SyncType == FILTER_INSERT_ALL{
-		_, This.conn.err = This.conn.conn.Begin()
-		if This.conn.err != nil {
-			return nil, This.conn.err
-		}
-		var toV interface{}
-		stmt = This.getStmt("insert")
-		for i := n - 1; i >= 0; i-- {
-			vData := list[i]
-			val := make([]dbDriver.Value, 0)
-			l := len(vData.Rows)
-			switch vData.EventType {
-			case "insert","delete":
-				for k := 0; k < l ;k++{
-					for _, v := range This.p.Field {
-						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
-						if This.err != nil {
-							stmt.Close()
-							goto errLoop
-						}
-						val = append(val, toV)
-					}
-				}
-				break
-			case "update":
-				for k := 0; k < l ;k++{
-					if k%2 != 0 {
-						for _, v := range This.p.Field {
-							toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
-							if This.err != nil {
-								stmt.Close()
-								goto errLoop
-							}
-							val = append(val, toV)
-						}
-					}
-				}
-				break
-			default:
-				break
-			}
-			_, This.err = stmt.Exec(val)
-			if This.err != nil {
-				stmt.Close()
-				goto errLoop
-			}
-		}
-	}else{
-		for i := n - 1; i >= 0; i-- {
-			v := list[i]
-			normalFun(v)
-		}
-		_, This.conn.err = This.conn.conn.Begin()
-		if This.conn.err != nil {
-			return nil, This.conn.err
-		}
-
-		// delete 的话，将多条数据，where id in (1,2) 方式合并
-		if len(deleteDataMap) > 0 {
-			stmt = This.getStmt("delete")
-			if stmt == nil {
-				goto errLoop
-			}
-			keys := make([]dbDriver.Value,0)
-			for _, v := range deleteDataMap {
-				keys = append(keys,v[This.p.mysqlPriKey])
-			}
-			if len(keys) > 0{
-				var where string
-				//假如字段是int的话，就 in ()
-				if This.p.ckPriKeyFieldIsInt {
-					where = strings.Replace(strings.Trim(fmt.Sprint(keys), "[]"), " ", ",", -1)
-				}else{
-					where = "'"+strings.Replace(strings.Trim(fmt.Sprint(keys), "[]"), " ", "','", -1)+"'"
-				}
-				sql := "ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+This.p.ckPriKey+ " in ( " +where+" )"
-				stmt = This.getStmt(sql)
-				if stmt == nil {
-					goto errLoop
-				}
-				_, This.err = stmt.Exec([]dbDriver.Value{where})
-				if This.err != nil {
-					stmt.Close()
-					goto errLoop
-				}
-				stmt.Close()
-			}
-		}
-
-		if len(insertDataMap) > 0 {
-			stmt = This.getStmt("insert")
-			if stmt == nil {
-				goto errLoop
-			}
-			var toV interface{}
-			for _, dataMap := range insertDataMap {
-				val := make([]dbDriver.Value, 0)
-				for _, v := range This.p.Field {
-					toV, This.err = CkDataTypeTransfer(This.getMySQLData2(dataMap,v.MySQL), v.CK, v.CkType)
-					if This.err != nil {
-						stmt.Close()
-						goto errLoop
-					}
-					val = append(val, toV)
-				}
-				_, This.err = stmt.Exec(val)
-				if This.err != nil {
-					stmt.Close()
-					goto errLoop
-				}
-			}
-			stmt.Close()
-		}
+	if This.conn.err != nil{
+		This.err = This.conn.err
 	}
-
-	errLoop:
-		if This.conn.err != nil{
-			This.err = This.conn.err
-			This.conn.conn.Rollback()
-			return nil,This.conn.err
-		}
-		if This.err != nil{
-			This.conn.conn.Rollback()
-			return nil,This.err
-		}
+	if This.err != nil{
+		This.conn.conn.Rollback()
+		log.Println("This.err",This.err)
+		return nil,This.err
+	}
 
 	err2 := This.conn.conn.Commit()
 	if err2 != nil{
