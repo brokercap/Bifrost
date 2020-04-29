@@ -15,7 +15,7 @@ func TestHistory_GetNextSql(t *testing.T) {
 			ThreadNum:1,
 			ThreadCountPer:1,
 		},
-		Uri:"root:root@tcp(192.168.0.114:3306)/bifrost_test",
+		Uri:"root:root@tcp(192.168.220.128:3307)/bifrost_test",
 	}
 	var sql string
 	var start uint64
@@ -41,7 +41,7 @@ func TestHistory_GetNextSql(t *testing.T) {
 			ThreadCountPer:10,
 			Where:" id > 3 ",
 		},
-		Uri:"root:root@tcp(192.168.0.114:3306)/bifrost_test",
+		Uri:"root:root@tcp(192.168.220.128:3307)/bifrost_test",
 	}
 
 	db = DBConnect(historyObj.Uri)

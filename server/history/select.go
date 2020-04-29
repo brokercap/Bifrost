@@ -174,10 +174,10 @@ func (This *History) threadStart(i int)  {
 
 func (This *History) GetNextSql() (sql string,start uint64){
 	var where string = ""
-	if This.Property.Where != "" {
-		where = " WHERE (" + This.Property.Where+ ")"
-	}
 	if This.TablePriKeyMaxId  == 0{
+		if This.Property.Where != "" {
+			where = " WHERE (" + This.Property.Where+ ")"
+		}
 		This.Lock()
 		start = This.NowStartI
 		This.NowStartI += uint64(This.Property.ThreadCountPer)
@@ -220,10 +220,10 @@ func (This *History) GetNextSql() (sql string,start uint64){
 			endI = This.TablePriKeyMaxId
 			This.NowStartI = endI
 		}
-		if where == ""{
+		if This.Property.Where == ""{
 			where =  " WHERE `"+ This.TablePriKey + "` BETWEEN "+ strconv.FormatUint(start,10)+" AND "+ strconv.FormatUint(endI,10)
 		}else{
-			where += " AND `" + This.TablePriKey + "` BETWEEN "+ strconv.FormatUint(start,10)+" AND "+ strconv.FormatUint(endI,10)
+			where = " WHERE `" + This.TablePriKey + "` BETWEEN "+ strconv.FormatUint(start,10)+" AND "+ strconv.FormatUint(endI,10) + " AND " + This.Property.Where
 		}
 		sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "` " + where
 	}
