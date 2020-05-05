@@ -14,6 +14,12 @@ func DBConnect(uri string) mysql.MysqlConnection{
 	return db
 }
 
+type TableInfoStruct struct {
+	TABLE_TYPE 		string
+	ENGINE 			string
+	TABLE_ROWS 		uint64
+}
+
 type TableStruct struct {
 	COLUMN_NAME 		*string
 	COLUMN_DEFAULT 		*string
@@ -133,6 +139,55 @@ func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection,schema,table,PriKey,whe
 		}
 		minId, err = strconv.ParseUint(fmt.Sprint(dest[0]), 10, 64)
 		maxId, err = strconv.ParseUint(fmt.Sprint(dest[1]), 10, 64)
+		break
+	}
+	return
+}
+
+
+func GetSchemaTableInfo(db mysql.MysqlConnection,schema string,table string) (tableInfo TableInfoStruct){
+	sql := "SELECT `TABLE_TYPE`,`ENGINE`,`TABLE_ROWS` FROM information_schema.tables WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return tableInfo
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	p = append(p,schema)
+	p = append(p,table)
+	rows, err := stmt.Query(p)
+	if err != nil{
+		return
+	}
+	defer rows.Close()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return tableInfo
+	}
+
+	for {
+		dest := make([]driver.Value, 3, 3)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		var TABLE_TYPE 		string
+		var ENGINE 			string
+		var TABLE_ROWS 		uint64
+
+		TABLE_TYPE 		= dest[0].(string)
+		ENGINE 			= dest[1].(string)
+		if dest[2] == nil{
+			TABLE_ROWS 		= 0
+		}else{
+			TABLE_ROWS 		= dest[2].(uint64)
+		}
+		tableInfo = TableInfoStruct{
+			TABLE_TYPE:TABLE_TYPE,
+			ENGINE:ENGINE,
+			TABLE_ROWS:TABLE_ROWS,
+		}
 		break
 	}
 	return

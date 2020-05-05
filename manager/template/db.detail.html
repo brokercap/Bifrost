@@ -285,6 +285,17 @@
                             </td>
 
                         </tr>
+                        <tr>
+                            <td align="right" height="50" width="20%" valign="top">分页方式 : </td>
+                            <td style="text-indent:10px; padding-bottom: 5px;" >
+                                <select class="form-control" name="LimitOptimize" id="addHisotryLimitOptimize">
+                                    <option value="1">BETWEEN</option>
+                                    <option value="0">LIMIT</option>
+                                </select>
+                                <p>BETWEEN : 主键是自增自段的时候生效</p>
+                                <p>LIMIT   ：常规分页读取方式 </p>
+                            </td>
+                        </tr>
 
                         <tr>
                             <td align="right" height="50" width="20%">ThreadNum : </td>
@@ -1089,6 +1100,7 @@
                 var schema_name     = $("#addHisotrySchema").val();
                 var table_name      = $("#addHisotryTableName").val();
                 var where           = $("#addHisotryWhere").val();
+                var LimitOptimize   = $("#addHisotryLimitOptimize").val();
 
                 var ToServerIds = [];
                 $.each($("#addHisotryToServer input:checkbox:checked"),function(){
@@ -1110,6 +1122,7 @@
                 Property["ThreadNum"]       = parseInt(ThreadNum);
                 Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
                 Property["Where"]           = $.trim(where);
+                Property["LimitOptimize"]   = parseInt(LimitOptimize);
 
                 var url = "/history/add";
                 $.post(url,
@@ -1128,6 +1141,16 @@
                         },
                         'json');
 
+            }
+        );
+
+        $("#addHisotryWhere").change(
+            function () {
+                if ( $(this).val() == "" ) {
+                    $("#addHisotryLimitOptimize").val(1);
+                }else{
+                    $("#addHisotryLimitOptimize").val(0);
+                }
             }
         );
 

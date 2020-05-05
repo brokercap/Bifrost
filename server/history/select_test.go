@@ -13,7 +13,8 @@ func TestHistory_GetNextSql(t *testing.T) {
 		NowStartI:0,
 		Property:HistoryProperty{
 			ThreadNum:1,
-			ThreadCountPer:1,
+			ThreadCountPer:10000,
+			LimitOptimize:1,
 		},
 		Uri:"root:root@tcp(192.168.220.128:3307)/bifrost_test",
 	}
@@ -38,8 +39,9 @@ func TestHistory_GetNextSql(t *testing.T) {
 		NowStartI:0,
 		Property:HistoryProperty{
 			ThreadNum:1,
-			ThreadCountPer:10,
+			ThreadCountPer:1000,
 			Where:" id > 3 ",
+			LimitOptimize:0,
 		},
 		Uri:"root:root@tcp(192.168.220.128:3307)/bifrost_test",
 	}

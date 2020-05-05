@@ -123,12 +123,14 @@ type HistoryProperty struct {
 	ThreadNum			int      // 协程数量,每个协程一个连接
 	ThreadCountPer		int		 // 协程每次最多处理多少条数据
 	Where				string   // where 条件
+	LimitOptimize		int8	 // 是否自动分页优化, 1 采用 between 方式优化 0 不启动优化
 }
 
 type ThreadStatus struct {
 	Num					int
-	Error				error
+	Error				error      // 拉取数据错误
 	NowStartI			uint64     // 当前执行第几条
+	SyncError			error	   // 同步错误
 }
 
 type History struct {
@@ -143,6 +145,7 @@ type History struct {
 	ThreadPool			[]*ThreadStatus
 	threadResultChan	chan int `json:"-"`
 	Fields				[]TableStruct `json:"-"`
+	TableInfo			TableInfoStruct `json:"-"`
 	Uri					string `json:"-"`
 	ToServerIDList		[]int
 	StartTime			string
@@ -214,6 +217,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.Fields) > 0{
 		return
 	}
+	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.TableName)
 	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.TableName)
 	This.TablePriArr = make([]*string,0)
 	for _,v := range This.Fields{

@@ -174,18 +174,21 @@ func (This *History) threadStart(i int)  {
 
 func (This *History) GetNextSql() (sql string,start uint64){
 	var where string = ""
-	if This.TablePriKeyMaxId  == 0{
+	if This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 {
+		if This.NowStartI > This.TableInfo.TABLE_ROWS{
+			return
+		}
 		if This.Property.Where != "" {
-			where = " WHERE (" + This.Property.Where+ ")"
+			where = " WHERE " + This.Property.Where
 		}
 		This.Lock()
 		start = This.NowStartI
 		This.NowStartI += uint64(This.Property.ThreadCountPer)
 		This.Unlock()
 		var limit string = ""
-		//假如没有主键的话，直接 select *from t limit x
+		// 假如没有主键 或者 非 InnoDB 引擎，直接 select *from t limit x,y
 		limit = " LIMIT " + strconv.FormatUint(start,10) + "," + strconv.Itoa(This.Property.ThreadCountPer)
-		if This.TablePriKey == "" {
+		if This.TableInfo.ENGINE != "InnoDB" || This.TablePriKey == "" {
 			sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "`" + where + limit
 		}else{
 			// 假如有主键的情况下，采用 join 子查询的方式先分页再 通过 主键去查数据,大分页的情况下，有一定优化作用，innodb下才有效
