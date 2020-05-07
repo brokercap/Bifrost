@@ -17,7 +17,7 @@ import (
 	"os"
 )
 
-var url string = "tcp://10.40.2.41:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://192.168.220.128:9000?Database=test&debug=true&compress=1"
 
 
 //var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);"
@@ -43,15 +43,19 @@ func testBefore(){
 
 func initDBTable(delTable bool) {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`";
+	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
 	c.Exec(sql1,[]driver.Value{})
-	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);"
+	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id0 UInt32,id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,bifrost_data_version Int64) ENGINE = MergeTree() ORDER BY (id);"
 	if delTable == false{
 		c.Exec(sql2,[]driver.Value{})
 	}else{
-		sql3 := "DROP TABLE "+SchemaName+"."+TableName;
+		sql3 := "DROP TABLE "+SchemaName+"."+TableName
 		c.Exec(sql3,[]driver.Value{})
-		c.Exec(sql2,[]driver.Value{})
+		err := c.Exec(sql2,[]driver.Value{})
+		if err != nil{
+			log.Fatal(err)
+		}
+		log.Println(sql2)
 	}
 	c.Close()
 }
@@ -60,7 +64,7 @@ func initDBTablePriString(delTable bool) {
 	c := MyPlugin.NewClickHouseDBConn(url)
 	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
 	c.Exec(sql1,[]driver.Value{})
-	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id String,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);"
+	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id0 String,id String,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,bifrost_data_version Int64) ENGINE = MergeTree() ORDER BY (id);"
 	if delTable == false{
 		c.Exec(sql2,[]driver.Value{})
 	}else{
@@ -74,26 +78,26 @@ func initDBTablePriString(delTable bool) {
 func TestChechUri(t *testing.T){
 	myConn := MyPlugin.MyConn{}
 	if err := myConn.CheckUri(url);err!= nil{
-		log.Println("TestChechUri err:",err)
+		t.Fatal("TestChechUri err:",err)
 	}else{
-		log.Println("TestChechUri success")
+		t.Log("TestChechUri success")
 	}
 }
 
 func TestGetSchemaList(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	log.Println(c.GetSchemaList())
+	t.Log(c.GetSchemaList())
 }
 
 
 func TestGetSchemaTableList(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	log.Println(c.GetSchemaTableList("test"))
+	t.Log(c.GetSchemaTableList("test"))
 }
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	log.Println(c.GetTableFields("test.binlog_field_test"))
+	t.Log(c.GetTableFields("test.binlog_field_test"))
 }
 
 func getParam() map[string]interface{} {
@@ -104,6 +108,7 @@ func getParam() map[string]interface{} {
 
 	param := make(map[string]interface{},0)
 	Field := make([]fieldStruct,0)
+	Field = append(Field,fieldStruct{"id0",""})
 	Field = append(Field,fieldStruct{"id","id"})
 	Field = append(Field,fieldStruct{"test_unsinged_bigint","test_unsinged_bigint"})
 	Field = append(Field,fieldStruct{"test_unsinged_int","test_unsinged_int"})
@@ -136,6 +141,8 @@ func getParam() map[string]interface{} {
 	Field = append(Field,fieldStruct{"testtinyblob","testtinyblob"})
 	Field = append(Field,fieldStruct{"testenum","testenum"})
 	Field = append(Field,fieldStruct{"testset","testset"})
+	Field = append(Field,fieldStruct{"bifrost_event_type","{$EventType}"})
+	Field = append(Field,fieldStruct{"bifrost_data_version","{$BifrostDataVersion}"})
 
 	param["Field"] = Field
 
@@ -247,9 +254,9 @@ func TestReConnCommit(t *testing.T){
 	}
 	log.Println("success")
 }
-
 func TestInsertNullAndChekcData(t *testing.T){
 	testBefore()
+
 	initDBTable(true)
 	initSyncParam()
 	e := pluginTestData.NewEvent()

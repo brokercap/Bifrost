@@ -191,7 +191,10 @@ function formatDate(timestamp) {
                                 <div style="position: absolute; right: -65px; top: 0px;">
                                     <button data-toggle="button" class="btn-sm btn-warning " id="checkUriBtn" type="button">Check</button>
                                 </div>
-                                <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri"> <span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span>
+                                <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri">
+                                <p><span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span></p>
+                                <p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
+
                             </div>
                         </div>
                         <div class="form-group">
@@ -222,7 +225,7 @@ function formatDate(timestamp) {
                             <label class="col-sm-3 control-label">MaxBinlogFileName：</label>
                             <div class="col-sm-9">
                                 <input type="text" name="max_filename" id="max_filename" class="form-control" placeholder="BinlogFileName">
-                                <span class="help-block m-b-none">读取到的最大位移的文件名</span>
+                                <span class="help-block m-b-none">读取到的最大位移的文件名,和 MaxBinlogPosition 一起使用,到达最大位点后，则自动停止解析，不填则不限制</span>
 
                             </div>
                         </div>
@@ -241,7 +244,10 @@ function formatDate(timestamp) {
                                 <select class="form-control" name="update_toserver" id="update_toserver">
                                     <option value="0">False</option>
                                     <option value="1">True</option>
-                                </select><span class="help-block m-b-none"></span>
+                                </select>
+                                <span class="help-block m-b-none">
+                                    True：将所有表同步的位点强制更新,请查阅相关文档
+                                </span>
                             </div>
                         </div>
 

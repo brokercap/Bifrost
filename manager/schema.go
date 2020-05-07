@@ -21,6 +21,7 @@ import (
 	"log"
 	"strconv"
 	"fmt"
+	"strings"
 )
 
 func init(){
@@ -300,6 +301,73 @@ func GetVariables(db mysql.MysqlConnection,variablesValue string) (data map[stri
 		variableName := dest[0].(string)
 		value := dest[1].(string)
 		data[variableName] = value
+	}
+	return
+}
+
+//获取当前用户授权语句
+func GetGrantsFor(db mysql.MysqlConnection) (grantSQL string,err error){
+	sql := "SHOW GRANTS FOR CURRENT_USER()"
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer rows.Close()
+	for{
+		dest := make([]driver.Value, 1, 1)
+		err := rows.Next(dest)
+		if err != nil{
+			break
+		}
+		grantSQL = dest[0].(string)
+		break
+	}
+	return
+}
+
+// 校验用户是否拥有权限
+func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error){
+	var grantSQL string
+	grantSQL,err = GetGrantsFor(db)
+	log.Println(grantSQL)
+	if err != nil {
+		return
+	}
+	if grantSQL == ""{
+		return fmt.Errorf("请确认当前帐号是否能正确连接！")
+	}
+	if strings.Index(grantSQL,"ALL PRIVILEGES") > 0{
+		return nil
+	}
+	errArr := make([]string,0)
+	if strings.Index(grantSQL,"SELECT") < 0{
+		errArr = append(errArr,"SELECT")
+	}
+	if strings.Index(grantSQL,"SHOW DATABASES") < 0{
+		errArr = append(errArr,"SHOW DATABASES")
+	}
+	if strings.Index(grantSQL,"SUPER") < 0{
+		errArr = append(errArr,"SUPER")
+	}
+
+	if strings.Index(grantSQL,"REPLICATION SLAVE") < 0{
+		errArr = append(errArr,"REPLICATION SLAVE")
+	}
+
+	if strings.Index(grantSQL,"EVENT") < 0{
+		errArr = append(errArr,"EVENT")
+	}
+
+	if len(errArr) > 0{
+		err = fmt.Errorf("MySQL权限不足，没有权限: %s",strings.Replace(fmt.Sprint(errArr)," ", ",", -1))
 	}
 	return
 }

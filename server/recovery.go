@@ -16,13 +16,15 @@ limitations under the License.
 package server
 
 import (
-	"os"
 	"encoding/json"
-	"log"
-	"strings"
 	"fmt"
-	"strconv"
 	"github.com/brokercap/Bifrost/config"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/server/filequeue"
+	"log"
+	"os"
+	"strconv"
+	"strings"
 )
 
 type dbSaveInfo struct {
@@ -186,21 +188,42 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						toServer.LastBinlogPosition = PerformanceTestingPosition
 					}
 
-					db.AddTableToServer(schemaName, tableName,
-						&ToServer{
-							ToServerID:			toServer.ToServerID,
-							MustBeSuccess:  	toServer.MustBeSuccess,
-							FilterQuery:  		toServer.FilterQuery,
-							FilterUpdate:  		toServer.FilterUpdate,
-							ToServerKey:    	toServer.ToServerKey,
-							PluginName:   		toServer.PluginName,
-							FieldList:      	toServer.FieldList,
-							BinlogFileNum:  	toServer.BinlogFileNum,
-							BinlogPosition: 	toServer.BinlogPosition,
-							PluginParam:    	toServer.PluginParam,
-							LastBinlogPosition:	toServer.LastBinlogPosition,
-							LastBinlogFileNum: 	toServer.LastBinlogFileNum,
-						})
+					// 假如没有开启文件队列,则不管什么情况，都不启用文件队列
+					if config.FileQueueUsable == false{
+						toServer.FileQueueStatus = false
+					}
+
+					toServerObj := &ToServer{
+						ToServerID:			toServer.ToServerID,
+						MustBeSuccess:  	toServer.MustBeSuccess,
+						FilterQuery:  		toServer.FilterQuery,
+						FilterUpdate:  		toServer.FilterUpdate,
+						ToServerKey:    	toServer.ToServerKey,
+						PluginName:   		toServer.PluginName,
+						FieldList:      	toServer.FieldList,
+						BinlogFileNum:  	toServer.BinlogFileNum,
+						BinlogPosition: 	toServer.BinlogPosition,
+						PluginParam:    	toServer.PluginParam,
+						LastBinlogPosition:	toServer.LastBinlogPosition,
+						LastBinlogFileNum: 	toServer.LastBinlogFileNum,
+						FileQueueStatus:    toServer.FileQueueStatus,
+					}
+					if toServerObj.FileQueueStatus {
+						lastDataEvent,err := toServerObj.InitFileQueue(db.Name,schemaName,tableName).ReadLastFromFileQueue()
+						if err != nil{
+							log.Fatal(fmt.Sprintf("dbName:%s ;SchemaName:%s ; TableName:%s ; ReadLastFromFileQueue Error:%s",db.Name,schemaName,tableName,err.Error()))
+						}
+						// 假如没有找到数据，或者文件队列里的最后一条数据，位点 对不上 ToServer里保存的数据，则认为数据是有异常的，则需要将 FileQueueStatus 修改为  false,清空文件队列数据
+						// 假如文件队列里最后一条数据和当前同步记录的进入 这个同步最后一个位点数据 相等，则不进行位点计算，随便其他 同步位点怎么来
+						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastBinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastBinlogPosition{
+							toServerObj.FileQueueStatus = false
+						}else{
+							continue
+						}
+					}
+					//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
+					filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(toServerObj.ToServerID)))
+					db.AddTableToServer(schemaName, tableName,toServerObj)
 
 					//假如当前同步配置 最后输入的 位点 等于 最后成功的位点，说明当前这个 同步配置的位点是没有问题的
 					if toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
@@ -314,6 +337,27 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			}
 		}
 	}
+
+	//启动同步的消费线程
+	for _,db := range  DbList{
+		for tableKey,t := range db.tableMap{
+			for _,toServer := range t.ToServerList {
+				if toServer.FileQueueStatus == false {
+					continue
+				}
+				SchemaName, TableName := GetSchemaAndTableBySplit(tableKey)
+				func() {
+					toServer.Lock()
+					defer toServer.Unlock()
+					toServer.ToServerChan = &ToServerChan{
+						To: make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
+					}
+					go toServer.consume_to_server(db, SchemaName, TableName)
+				}()
+			}
+		}
+	}
+
 }
 
 

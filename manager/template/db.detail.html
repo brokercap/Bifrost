@@ -281,9 +281,20 @@
                         <tr>
                             <td align="right" height="50" width="20%">Where : </td>
                             <td style="text-indent:10px; padding-bottom: 5px;" >
-                                <textarea type="text" name="where" class="form-control" placeholder="例如: update_time >= '2019-10-10'" value="" id="addHisotryWhere"></textarea>
+                                <textarea type="text" name="where" class="form-control" placeholder="例如: update_time >= '2019-10-10'; 如果有 OR 等条件的话，请用 ( ) 包起来" value="" id="addHisotryWhere"></textarea>
                             </td>
-                            <span>where条件,例如:update_time >= '2019-10-10'</span>
+
+                        </tr>
+                        <tr>
+                            <td align="right" height="50" width="20%" valign="top">分页方式 : </td>
+                            <td style="text-indent:10px; padding-bottom: 5px;" >
+                                <select class="form-control" name="LimitOptimize" id="addHisotryLimitOptimize">
+                                    <option value="1">BETWEEN</option>
+                                    <option value="0">LIMIT</option>
+                                </select>
+                                <p>BETWEEN : 主键是自增自段的时候生效</p>
+                                <p>LIMIT   ：常规分页读取方式 </p>
+                            </td>
                         </tr>
 
                         <tr>
@@ -626,6 +637,7 @@
                             others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
                             others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+                            others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
                             if ("QueueMsgCount" in v) {
                                 others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
                             }
@@ -1088,6 +1100,7 @@
                 var schema_name     = $("#addHisotrySchema").val();
                 var table_name      = $("#addHisotryTableName").val();
                 var where           = $("#addHisotryWhere").val();
+                var LimitOptimize   = $("#addHisotryLimitOptimize").val();
 
                 var ToServerIds = [];
                 $.each($("#addHisotryToServer input:checkbox:checked"),function(){
@@ -1109,6 +1122,7 @@
                 Property["ThreadNum"]       = parseInt(ThreadNum);
                 Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
                 Property["Where"]           = $.trim(where);
+                Property["LimitOptimize"]   = parseInt(LimitOptimize);
 
                 var url = "/history/add";
                 $.post(url,
@@ -1127,6 +1141,16 @@
                         },
                         'json');
 
+            }
+        );
+
+        $("#addHisotryWhere").change(
+            function () {
+                if ( $(this).val() == "" ) {
+                    $("#addHisotryLimitOptimize").val(1);
+                }else{
+                    $("#addHisotryLimitOptimize").val(0);
+                }
             }
         );
 

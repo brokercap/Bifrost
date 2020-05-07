@@ -23,9 +23,12 @@ function doGetPluginParam(){
 
 	var PriKey = [];
 	var Field = [];
+	var eventTypeBool = false;
+	var bifrostDataVersionBool = false;
 
     $.each($("#CKTableFieldsTable tr"),function () {
         var ck_field_name = $(this).find("input[name=ck_field_name]").val();
+        var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
         var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
 
         var d       = {};
@@ -39,6 +42,14 @@ function doGetPluginParam(){
             PriKey.push(d);
         }
         Field.push(d);
+
+        //$BifrostDataVersion 字段必须为 Int64 或者 UInt64 类型
+        if(mysql_field_name == "{$BifrostDataVersion}" && ck_field_type.indexOf("Int64") != -1){
+            bifrostDataVersionBool = true;
+        }
+        if(mysql_field_name == "{$EventType}"){
+            eventTypeBool = true;
+        }
     });
 
     if(PriKey.length == 0){
@@ -50,6 +61,24 @@ function doGetPluginParam(){
         $(this).attr("checked",false);
     });
 
+    switch(SyncType){
+        case "LogUpdate":
+        case "Normal":
+            if(bifrostDataVersionBool == false){
+                if(!confirm("ClickHouse 表中没有配置 {$BifrostDataVersion} 标签的 字段！建议 ClickHouse 表中新增一个名为 [bifrost_data_version]  的字段后，刷新后配置再重试！请问是否继续 继续提交？！！！")){
+                    result.msg = "请给 ClickHouse 表，新增字段 bifrost_data_version 后刷新再配置！";
+                    return result;
+                }
+            }
+        case "insertAll":
+            if(eventTypeBool == false){
+                if(!confirm("日志模式-追加 模式，将会把 delete,update 也转成 insert 方式，追加到ClickHouse表中，当前没有字段配置 {$EventType} 标签表示数据是什么事件类型的！建议在表中新增一个名为 [bifrost_event_type] 的字段，刷新界面再重新配置！请问是否继续提交，还是 给 ClickHouse 表中 新增字段后再配置？！！！")){
+                    result.msg = "请给 ClickHouse 表，新增字段 bifrost_event_type 后刷新再配置！";
+                    return result;
+                }
+            }
+            break;
+    }
     result.msg = "success";
     result.status = true;
     result.data["Field"]    = Field;
@@ -173,6 +202,7 @@ function getClickHouseTableCreateSQL(tableName) {
         }
 	);
 
+    ddlSql += ",binlog_event_type String,bifrost_data_version Int64";
 
     var SQL = "CREATE TABLE "+tableName+"("+ddlSql+") ENGINE = MergeTree() ";
     if (index != ""){
@@ -255,6 +285,8 @@ function GetCkTableDesc(schemaName,tableName) {
                     switch (tmpKey){
                         case "eventtype":
                         case "event_type":
+                        case "bifrost_event_type":
+                        case "binlog_event_type":
                             toField = "{$EventType}";
                             break;
                         case "timestamp":
@@ -270,13 +302,17 @@ function GetCkTableDesc(schemaName,tableName) {
                         case "binlogposition":
                             toField = "{$BinlogPosition}";
                             break;
+                        case "bifrostdataversion":
+                        case "bifrost_data_version":
+                            toField = "{$BifrostDataVersion}";
+                            break;
                         default:
                             break;
                     }
                 }
 
                 var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
-                htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
+                htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" ck_field_type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
                 htmlTr += "<td> <input type='radio'"
                 if(isPri){

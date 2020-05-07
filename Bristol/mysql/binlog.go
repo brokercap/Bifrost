@@ -132,6 +132,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case TABLE_MAP_EVENT:
 		var table_map_event *TableMapEvent
 		table_map_event, err = parser.parseTableMapEvent(buf)
+		//log.Println("table_map_event:",table_map_event)
 		parser.tableMap[table_map_event.tableId] = table_map_event
 		//log.Println("table_map_event:",*table_map_event,"tableId:",table_map_event.tableId," schemaName:",table_map_event.schemaName," tableName:",table_map_event.tableName)
 		if parser.binlogDump.CheckReplicateDb(table_map_event.schemaName,table_map_event.tableName) == false{
@@ -142,9 +143,11 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 			}
 		}
+		/*
 		if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok {
 			parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 		}
+		*/
 		event = &EventReslut{
 			Header:         table_map_event.header,
 			BinlogFileName: parser.binlogFileName,
@@ -159,14 +162,26 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		if err != nil{
 			log.Println("row event err:",err)
 		}
-		event = &EventReslut{
-			Header:         rowsEvent.header,
-			BinlogFileName: parser.binlogFileName,
-			BinlogPosition: parser.binlogPosition,
-			SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
-			TableName:      parser.tableMap[rowsEvent.tableId].tableName,
-			Rows:           rowsEvent.rows,
-			Pri:			parser.tableSchemaMap[rowsEvent.tableId].Pri,
+		if _,ok:=parser.tableSchemaMap[rowsEvent.tableId];ok {
+			event = &EventReslut{
+				Header:         rowsEvent.header,
+				BinlogFileName: parser.binlogFileName,
+				BinlogPosition: parser.binlogPosition,
+				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
+				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				Rows:           rowsEvent.rows,
+				Pri:            parser.tableSchemaMap[rowsEvent.tableId].Pri,
+			}
+		}else{
+			event = &EventReslut{
+				Header:         rowsEvent.header,
+				BinlogFileName: parser.binlogFileName,
+				BinlogPosition: parser.binlogPosition,
+				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
+				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				Rows:           rowsEvent.rows,
+				Pri:            make([]*string,0),
+			}
 		}
 		break
 	default:
@@ -191,12 +206,19 @@ func (parser *eventParser) initConn() {
 }
 
 func (parser *eventParser) GetTableSchema(tableId uint64, database string, tablename string) {
+	//var errPrint bool = false
+	var lastErr string
 	for {
 		parser.connLock.Lock()
 		err := parser.GetTableSchemaByName(tableId,database,tablename)
 		parser.connLock.Unlock()
 		if err == nil{
 			break
+		}else{
+			if lastErr != err.Error() {
+				log.Println("binlog GetTableSchema err:", err, " tableId:", tableId, " database:", database, " tablename:", tablename)
+				lastErr = err.Error()
+			}
 		}
 	}
 }
@@ -209,8 +231,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 				parser.connStatus = 0
 				parser.conn.Close()
 			}
-			errs = fmt.Errorf(fmt.Sprint(err))
-			log.Println(err)
+			errs = fmt.Errorf(string(debug.Stack()))
 		}
 	}()
 	if parser.connStatus == 0 {
@@ -220,12 +241,18 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	parser.tableNameMap[database+"."+tablename] = tableId
 	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_OCTET_LENGTH FROM information_schema.columns WHERE table_schema='" + database + "' AND table_name='" + tablename + "' ORDER BY `ORDINAL_POSITION` ASC"
 	stmt, err := parser.conn.Prepare(sql)
+	if err != nil{
+		errs = err
+		return
+	}
+	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
 		errs = err
 		return
 	}
+	defer rows.Close()
 	//columeArr := make([]*tableStructcolumn_schema_type,0)
 	tableInfo := &tableStruct{
 		Pri:					make([]*string,0),
@@ -341,9 +368,8 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			tableInfo.Pri = append(tableInfo.Pri,&COLUMN_NAME)
 		}
 	}
-	rows.Close()
 	if len(tableInfo.ColumnSchemaTypeList) == 0{
-		return fmt.Errorf("column len is 0 "+"db:"+database," table:"+tablename+" tableId:"+fmt.Sprint(tableId))
+		return fmt.Errorf("column len is 0 "+"db:"+database+" table:"+tablename+" tableId:"+fmt.Sprint(tableId)+" may be no privilege")
 	}
 	parser.tableSchemaMap[tableId] = tableInfo
 	errs = nil
@@ -448,9 +474,10 @@ func (parser *eventParser) GetQueryTableName(sql string) (string, string) {
 func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("DumpBinlog err:",err)
-			result <- fmt.Errorf(fmt.Sprint(err))
 			log.Println(string(debug.Stack()))
+			log.Println(parser.dataSource," binlogFileName:",parser.binlogFileName," binlogPosition:",parser.binlogPosition)
+			result <- fmt.Errorf(fmt.Sprint(err))
+
 			return
 		}
 	}()
@@ -809,6 +836,7 @@ func (This *BinlogDump) checksum_enabled() {
 		This.mysqlConn.Exec("set @master_binlog_checksum= @@global.binlog_checksum",p)
 		This.parser.binlog_checksum = true
 	}
+	log.Println("binlog_checksum:",This.parser.binlog_checksum)
 	return
 }
 

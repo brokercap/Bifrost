@@ -237,6 +237,10 @@ func initParam(){
 		}
 	}
 
+	if config.GetConfigVal("Bifrostd","file_queue_usable") == "false"{
+		config.FileQueueUsable = false
+	}
+
 	initTLSParam()
 }
 

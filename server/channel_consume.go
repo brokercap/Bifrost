@@ -73,6 +73,7 @@ func (This *consume_channel_obj) checkChannleStatus() {
 func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,pluginData *pluginDriver.PluginDataType){
 	ToServerInfo.Lock()
 	status := ToServerInfo.Status
+	FileQueueStatus := ToServerInfo.FileQueueStatus
 	if status == "deling" || status == "deled"{
 		ToServerInfo.Unlock()
 		return
@@ -82,7 +83,6 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	}
 	//修改toserver 对应最后接收的 位点信息
 	ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition = pluginData.BinlogFileNum,pluginData.BinlogPosition
-	ToServerInfo.QueueMsgCount++
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
@@ -94,7 +94,38 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
 	}
 	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
-	ToServerInfo.ToServerChan.To <- pluginData
+	if FileQueueStatus {
+		ToServerInfo.InitFileQueue(This.db.Name,pluginData.SchemaName,pluginData.TableName)
+		ToServerInfo.AppendToFileQueue(pluginData)
+		return
+	}
+
+	// 假如开启了全局文件队列的功能,假如5秒内都没写进内存chan队列,则往文件队列中写数据
+	if config.FileQueueUsable {
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
+		select {
+		case ToServerInfo.ToServerChan.To <- pluginData:
+			ToServerInfo.Lock()
+			ToServerInfo.QueueMsgCount++
+			ToServerInfo.Unlock()
+			break
+		case <-timer.C:
+			ToServerInfo.Lock()
+			defer ToServerInfo.Unlock()
+			ToServerInfo.InitFileQueue(This.db.Name, pluginData.SchemaName, pluginData.TableName)
+			ToServerInfo.AppendToFileQueue(pluginData)
+			ToServerInfo.FileQueueStatus = true
+			//log.Println("start FileQueueStatus = true;",*pluginData)
+			break
+		}
+	}else{
+		ToServerInfo.ToServerChan.To <- pluginData
+		ToServerInfo.Lock()
+		ToServerInfo.QueueMsgCount++
+		ToServerInfo.Unlock()
+	}
+
 }
 
 func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) pluginDriver.PluginDataType{
@@ -110,6 +141,7 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 		BinlogFileNum:BinlogFileNum,
 		BinlogPosition:data.Header.LogPos,
 		Query:data.Query,
+		Pri: data.Pri,
 	}
 }
 

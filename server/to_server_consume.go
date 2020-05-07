@@ -1,14 +1,16 @@
 package server
 
 import (
-	"time"
-	"log"
+	"fmt"
 	"github.com/brokercap/Bifrost/plugin"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"runtime"
-	"fmt"
-	"runtime/debug"
 	"github.com/brokercap/Bifrost/server/warning"
+	"io"
+	"log"
+	"runtime"
+	"runtime/debug"
+	"time"
+	"github.com/brokercap/Bifrost/config"
 )
 
 func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)  {
@@ -79,6 +81,47 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	defer timer.Stop()
 	var commitErrorCount int = 0
 
+
+	var unack int = 0      // 在一次遍历中从文件队列中加载出来的数量，需要
+	var tmpUnack int = 0   // 在一次遍历中从文件队列中加载出来 但是实际位点是被成功处理过后的 数量
+	var fromFileEndBinlogNum int = 0   // 从文件队列中加载出来的最后 位点
+	var fromFileEndBinlogPosition uint32 = 0  // 从文件队列中加载出来的最后 位点
+	var fileTotalCount int = 0
+	var fileAck = func() {
+		if PluginBinlog == nil{
+			return
+		}
+		if unack == 0{
+			return
+		}
+		if This.fileQueueObj == nil{
+			unack = 0
+			return
+		}
+		if PluginBinlog.BinlogFileNum == 0 || PluginBinlog.BinlogPosition == 0{
+			return
+		}
+		//假如 最后成功的位点，大于文件中加载的位点，则将所有待从文件中的数量  ack 掉
+		if PluginBinlog.BinlogFileNum > fromFileEndBinlogNum{
+			//log.Println("file ackn:",unack," fileTotalCount:",fileTotalCount)
+			This.fileQueueObj.Ack(unack)
+			unack = 0
+			return
+		}
+		if PluginBinlog.BinlogFileNum == fromFileEndBinlogNum{
+			if PluginBinlog.BinlogPosition >= fromFileEndBinlogPosition{
+				//log.Println("file ackn2:",unack," and unack:",unack," fileTotalCount:",fileTotalCount)
+				This.fileQueueObj.Ack(unack)
+				unack = 0
+			}else{
+				This.fileQueueObj.Ack(1)
+				unack--
+				//log.Println("file ack1:",1," and unack:",unack," fileTotalCount:",fileTotalCount)
+			}
+		}else{
+			return
+		}
+	}
 	var forSendData = func(data *pluginDriver.PluginDataType) {
 		for {
 			errs = nil
@@ -91,6 +134,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						//自动恢复
 						doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
 					}
+					fileAck()
 					break
 				} else {
 					if lastErrId > 0{
@@ -122,14 +166,65 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				}
 			}else{
 				PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}
+				fileAck()
 				break
 			}
 		}
 	}
 	var n1 int = 0
 	var n0 int = 0
+
+	//time.Sleep(20 * time.Second)
 	for {
 		CheckStatusFun()
+		if This.FileQueueStatus && This.QueueMsgCount == 0{
+			//这要问我这里为什么 -1, 因为我不知道 在同一个线程里写满后再消费，会不会进入 chan 死锁的情况
+			queueVariableSize := config.ToServerQueueSize - 1
+			if queueVariableSize > 0{
+				This.InitFileQueue(db.Name, SchemaName, TableName)
+				//log.Println("file ack2:",unack," fileTotalCount:",fileTotalCount)
+				This.fileQueueObj.Ack(unack)
+				tmpUnack = 0
+				unack = 0
+				for i:=0; i < queueVariableSize; i++ {
+					data0, err := This.PopFileQueue()
+					if err != nil && err != io.EOF {
+						doWarningFun(warning.WARNINGERROR, "PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+";dbName:"+db.Name+";SchemaName:"+SchemaName+";TableName:"+TableName+"; PopFileQueue err:"+err.Error())
+						log.Println(db.Name, SchemaName, TableName, ";ToServerKey:"+This.ToServerKey, " PopFileQueue err:", err, " restart Bifrost please!")
+						panic("PluginName:" + This.PluginName + ";ToServerKey:" + This.ToServerKey + ";dbName:" + db.Name + ";SchemaName:" + SchemaName + ";TableName:" + TableName + "; PopFileQueue err:" + err.Error())
+					}
+					if data0 == nil && err == nil {
+						// 说明没有数据可以加载了
+						This.Lock()
+						This.FileQueueStatus = false
+						This.Unlock()
+						break
+					} else {
+						/*
+						if i == 0{
+							log.Println("PopFileQueue first: ",*data0)
+						}
+						*/
+						// 这里为什么要判断一下位点，是因为文件队列是要整个文件的数据都被从加载到内存后才会 删除文件
+						// 那有一种可能，一个文件还没被完全加载完，进程就被重启了呢？那重启后，是不是旧的数据会被重新读取吗？
+						if data0.BinlogFileNum < This.BinlogFileNum{
+							tmpUnack++
+							continue
+						}
+						if data0.BinlogFileNum == This.BinlogFileNum && data0.BinlogPosition <= This.BinlogPosition {
+							tmpUnack++
+							continue
+						}
+						fromFileEndBinlogNum,fromFileEndBinlogPosition = data0.BinlogFileNum,data0.BinlogPosition
+						unack++
+						fileTotalCount++
+						This.QueueMsgCount++
+						c <- data0
+					}
+				}
+				This.fileQueueObj.Ack(tmpUnack)
+			}
+		}
 		select {
 		case data = <- c:
 			This.Lock()
@@ -229,12 +324,16 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				noData = true
 				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
+			fileAck()
 			if PluginBinlog == nil && errs == nil{
 				This.Lock()
 				if This.QueueMsgCount == 0{
 					This.ToServerChan = nil
 					This.Status = ""
 					This.Unlock()
+					//这里要执行一次fileAck ，是为了最终数据一致，将已经从文件中加载出来的数据 ack掉
+					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum,fromFileEndBinlogPosition}
+					fileAck()
 					runtime.Goexit()
 				}
 				This.Unlock()
@@ -354,16 +453,9 @@ func (This *ToServer) getPluginAndSetParam() (err error){
 func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
-		if err2 := recover();err2!=nil{
-			err = fmt.Errorf(This.ToServerKey,string(debug.Stack()))
+		if err2 := recover();err2 != nil {
+			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
-			func() {
-				defer func() {
-					if err2 := recover();err2!=nil{
-						return
-					}
-				}()
-			}()
 		}
 	}()
 
@@ -380,16 +472,9 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		This.pluginReBack()
-		if err2 := recover();err2!=nil{
-			err = fmt.Errorf(This.ToServerKey,err2,string(debug.Stack()))
+		if err2 := recover();err2 != nil{
+			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
-			func() {
-				defer func() {
-					if err2 := recover();err2!=nil{
-						return
-					}
-				}()
-			}()
 		}
 	}()
 
