@@ -319,6 +319,9 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 }
 
 func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key string) interface{} {
+	if key == ""{
+		return nil
+	}
 	if _,ok := data.Rows[index][key];ok {
 		return data.Rows[index][key]
 	}
