@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var url string = "root:root@tcp(10.40.2.41:3306)/bifrost_test"
+var url string = "root:root@tcp(192.168.220.128:3307)/bifrost_test"
 
 var SchemaName string = "bifrost_test"
 var TableName string = "binlog_field_test"
@@ -84,7 +84,7 @@ func initDBTable(delTable bool) {
 	if err != nil{
 		log.Fatal(err)
 	}
-	sql2:="CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64) NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT NULL DEFAULT '5', PRIMARY KEY (`id`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
+	sql2:="CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id0` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,`id` INT(11) UNSIGNED DEFAULT NULL , `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64)  NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT  NULL  DEFAULT '5', PRIMARY KEY (`id0`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
 	if delTable == false{
 		_,err = c.Exec(sql2,[]dbDriver.Value{})
 		if err != nil{
@@ -96,6 +96,7 @@ func initDBTable(delTable bool) {
 		if err != nil{
 			log.Fatal(err)
 		}
+		log.Println("sql2:",sql2)
 		_,err = c.Exec(sql2,[]dbDriver.Value{})
 		if err != nil{
 			log.Fatal(err)
@@ -113,6 +114,7 @@ func getParam()  map[string]interface{}{
 
 	param := make(map[string]interface{},0)
 	Field := make([]fieldStruct,0)
+	Field = append(Field,fieldStruct{"id0",""})
 	Field = append(Field,fieldStruct{"id","id"})
 	Field = append(Field,fieldStruct{"test_unsinged_bigint","test_unsinged_bigint"})
 	Field = append(Field,fieldStruct{"test_unsinged_int","test_unsinged_int"})
@@ -181,7 +183,7 @@ func TestCommit(t *testing.T){
 
 	beforeTest()
 	conn := getPluginConn()
-	initDBTable(false)
+	initDBTable(true)
 
 	e := pluginTestData.NewEvent()
 
@@ -286,7 +288,7 @@ func TestUpdateAndChekcData(t *testing.T){
 
 func TestDelAndChekcData(t *testing.T){
 	beforeTest()
-	initDBTable(false)
+	initDBTable(true)
 	conn := getPluginConn()
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()

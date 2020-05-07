@@ -49,6 +49,7 @@ type fieldStruct struct {
 	FromMysqlField 	string
 	ToFieldType  	string
 	ToFieldDefault	*string
+	ToFieldIsAutoIncrement bool
 }
 
 var dataMap map[string]*dataStruct
@@ -200,7 +201,12 @@ func (This *Conn) getCktFieldType() {
 
 	for k,v:=range This.p.Field{
 		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField].DATA_TYPE
-		This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+		if strings.ToLower(ckFieldsMap[v.ToField].EXTRA) == "auto_increment"{
+			This.p.Field[k].ToFieldDefault = nil
+			This.p.Field[k].ToFieldIsAutoIncrement = true
+		}else {
+			This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+		}
 	}
 }
 
@@ -269,6 +275,9 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 }
 
 func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key string) interface{} {
+	if key == ""{
+		return nil
+	}
 	if _,ok := data.Rows[index][key];ok {
 		return data.Rows[index][key]
 	}
@@ -334,7 +343,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 		This.CommitLogMod_Append(list)
 		break
 	default:
-		This.err = fmt.Errorf("同步模式ERROR:",This.p.SyncMode)
+		This.err = fmt.Errorf("同步模式ERROR:%s",This.p.SyncMode)
 		break
 	}
 
@@ -362,7 +371,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
+func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string,isAutoIncrement bool) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			log.Println(string(debug.Stack()))
@@ -378,6 +387,9 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 				data = *defaultVal
 			}
 		}else{
+			if isAutoIncrement == true{
+				return nil,nil
+			}
 			//假如配置是强制转成默认值
 			switch toDataType {
 			case "int","tinyint","smallint","mediumint","bigint","bool":
