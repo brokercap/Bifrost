@@ -32,6 +32,9 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 				goto errLoop
 			}
 			_,This.conn.err = stmt.Exec(val)
+			if This.conn.err != nil{
+				goto errLoop
+			}
 			break
 		case "insert","delete":
 			val := make([]dbDriver.Value,0)
