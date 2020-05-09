@@ -183,6 +183,7 @@ func closeDB_Action(w http.ResponseWriter,req *http.Request){
 func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbUri := req.Form.Get("uri")
+	checkPrivilege := req.Form.Get("checkPrivilege")
 	type dbInfoStruct struct{
 		BinlogFile string
 		BinlogPosition int
@@ -205,10 +206,15 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		}else{
 			e = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
 		}
-		defer dbconn.Close()
-		e = CheckUserSlavePrivilege(dbconn)
 		if e != nil{
 			return
+		}
+		defer dbconn.Close()
+		if checkPrivilege == "true"{
+			e = CheckUserSlavePrivilege(dbconn)
+			if e != nil{
+				return
+			}
 		}
 		MasterBinlogInfo := GetBinLogInfo(dbconn)
 		if MasterBinlogInfo.File != ""{
@@ -259,6 +265,7 @@ func check_db_last_position_Action(w http.ResponseWriter,req *http.Request){
 		e = nil
 		defer func() {
 			if err := recover();err != nil{
+				log.Println(err)
 				log.Println(string(debug.Stack()))
 				e = fmt.Errorf(fmt.Sprint(err))
 				return

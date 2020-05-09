@@ -188,13 +188,23 @@ function formatDate(timestamp) {
                         <div class="form-group" >
                             <label class="col-sm-3 control-label">ConnUri：</label>
                             <div class="col-sm-9" style=" position: relative">
-                                <div style="position: absolute; right: -65px; top: 0px;">
-                                    <button data-toggle="button" class="btn-sm btn-warning " id="checkUriBtn" type="button">Check</button>
+                                <div style="position: absolute; right: -200px; top: 0px;">
+
+                                    <input type="checkbox" value="1" name="CheckPrivilege" id="checkPrivilege" checked >
+                                    <label class="hover">
+                                        <div class="icheckbox_square-green hover" style="position: relative;"></div>验证是否有足够权限</label>
+
+                                    <button data-toggle="button" class="btn-sm btn-warning" id="checkUriBtn" type="button">Check</button>
                                 </div>
+
                                 <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri">
+
+
                                 <p><span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span></p>
                                 <p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
-
+                                <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限</span></p>
+                                <p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
+                                <p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -279,10 +289,11 @@ function formatDate(timestamp) {
     function getDBPostion(uri) {
         var url = "/db/check_uri";
         var MyData;
+        var checkPrivilege = $("#checkPrivilege").prop("checked");
         $.ajax({
             type : "post",
             url : url,
-            data:{uri:uri},
+            data:{uri:uri,checkPrivilege:checkPrivilege},
             async : false,
             dataType:"json",
             success : function(data,status){

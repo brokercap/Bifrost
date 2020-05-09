@@ -337,7 +337,6 @@ func GetGrantsFor(db mysql.MysqlConnection) (grantSQL string,err error){
 func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error){
 	var grantSQL string
 	grantSQL,err = GetGrantsFor(db)
-	log.Println(grantSQL)
 	if err != nil {
 		return
 	}
