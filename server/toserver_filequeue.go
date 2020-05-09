@@ -65,3 +65,11 @@ func (This *ToServer) ReadLastFromFileQueue() (*pluginDriver.PluginDataType,erro
 	}
 	return &data,nil
 }
+
+//文件队列启用
+func (This *ToServer) FileQueueStart() error {
+	This.Lock()
+	defer This.Unlock()
+	This.FileQueueStatus = true
+	return nil
+}
