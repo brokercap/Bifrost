@@ -30,7 +30,11 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}()
 	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
-
+	This.Lock()
+	if This.Status == ""{
+		This.Status = "running"
+	}
+	This.Unlock()
 	var data *pluginDriver.PluginDataType
 	CheckStatusFun := func(){
 		if db.killStatus == 1{
