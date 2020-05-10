@@ -1,5 +1,10 @@
 #/bin/bash
 
+echo "假如下载依懒包慢,编译失败,请尝试修改 GOPROXY 代理"
+
+echo "例如：export GOPROXY=https://goproxy.cn"
+echo ""
+
 # 插件包的地址,:之后是版本号,假如本地调试的话,写上local,将会成$GOPATH里查找
 PLUGINS=(
     #github.com/brokercap/bifrost_plugin_to_http:local
@@ -407,8 +412,4 @@ build $mode $tagDir $BifrostVersion
 
 echo "target:" $tagDir
 echo ""
-echo "假如下载依懒包慢,编译失败,请尝试修改 GOPROXY 代理"
-
-echo "例如：export GOPROXY=https://goproxy.cn"
-
 #mv -rf $vendorBakDir ./vendor

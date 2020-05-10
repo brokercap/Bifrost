@@ -65,3 +65,22 @@ func (This *ToServer) ReadLastFromFileQueue() (*pluginDriver.PluginDataType,erro
 	}
 	return &data,nil
 }
+
+//文件队列启用
+func (This *ToServer) FileQueueStart() error {
+	This.Lock()
+	defer This.Unlock()
+	This.FileQueueStatus = true
+	return nil
+}
+
+//查看文件队列基本信息
+func (This *ToServer) GetFileQueueInfo() (info filequeue.QueueInfo,err error) {
+	This.Lock()
+	defer This.Unlock()
+	if This.FileQueueStatus == false || This.fileQueueObj == nil{
+		err = fmt.Errorf("filequeue not start")
+		return
+	}
+	return This.fileQueueObj.GetInfo(),nil
+}

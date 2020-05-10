@@ -166,6 +166,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			for tKey, tInfo := range dbInfo.TableMap {
 				schemaName,tableName := GetSchemaAndTableBySplit(tKey)
 				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
+				log.Println(tInfo.ToServerList)
 				for _, toServer := range tInfo.ToServerList {
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{
@@ -217,8 +218,6 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						// 假如文件队列里最后一条数据和当前同步记录的进入 这个同步最后一个位点数据 相等，则不进行位点计算，随便其他 同步位点怎么来
 						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastBinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastBinlogPosition{
 							toServerObj.FileQueueStatus = false
-						}else{
-							continue
 						}
 					}
 					//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
@@ -236,7 +235,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
 
 							}else{
-								log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+								log.Println("recovery binlog change1:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
 								BinlogFileNum = BinlogFileNum1
 								BinlogPosition = BinlogPosition1
 							}
@@ -250,7 +249,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
 
 							}else{
-								log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+								log.Println("recovery binlog change2:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
 								BinlogFileNum = BinlogFileNum1
 								BinlogPosition = BinlogPosition1
 							}
@@ -272,7 +271,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
 
 					}else{
-						log.Println("recovery binlog change:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
+						log.Println("recovery binlog change3:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
 						BinlogFileNum = BinlogFileNum1
 						BinlogPosition = BinlogPosition1
 					}
@@ -293,7 +292,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			if LastDBBinlogFileNum == LastDBBinlogFileNum1 && db.binlogDumpPosition == binlogDumpPosition1{
 
 			}else{
-				log.Println("recovery binlog change:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
+				log.Println("recovery binlog change4:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
 				LastDBBinlogFileNum = LastDBBinlogFileNum1
 				db.binlogDumpPosition = binlogDumpPosition1
 			}
@@ -316,7 +315,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			if LastDBBinlogFileNum == LastDBBinlogFileNum1 && db.binlogDumpPosition == binlogDumpPosition1{
 
 			}else{
-				log.Println("recovery binlog change:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
+				log.Println("recovery binlog change5:",dbInfo.Name, " old:",LastDBBinlogFileNum," ",db.binlogDumpPosition, " new:",LastDBBinlogFileNum1," ",db.binlogDumpPosition)
 				LastDBBinlogFileNum = LastDBBinlogFileNum1
 				db.binlogDumpPosition = binlogDumpPosition1
 			}

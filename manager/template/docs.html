@@ -25,6 +25,25 @@
                 <div class="ibox-content">
                     <h2><strong>数据源</strong></h2>
                     <p>&nbsp;</p>
+                    <h3>需要权限</h3>
+                    <p>GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</p>
+                    <p>RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限</p>
+                    <p>会执行的SQL：</p>
+                    <p>SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_KEY`,`EXTRA`,`COLUMN_COMMENT`,`DATA_TYPE`,`NUMERIC_PRECISION`,`NUMERIC_SCALE` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?</p>
+                    <p>SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_OCTET_LENGTH FROM information_schema.columns WHERE table_schema= ? AND table_name= ? ORDER BY `ORDINAL_POSITION` ASC</p>
+                    <p>SELECT `SCHEMA_NAME` FROM `information_schema`.`SCHEMATA`</p>
+                    <p>SELECT TABLE_NAME,TABLE_TYPE FROM `information_schema`.`TABLES` WHERE TABLE_SCHEMA = ?</p>
+                    <p>SHOW GLOBAL VARIABLES LIKE 'BINLOG_CHECKSUM'</p>
+                    <p>SHOW MASTER STATUS</p>
+                    <p>SHOW VARIABLES LIKE 'server_id'</p>
+                    <p>SHOW VARIABLES LIKE 'binlog_format'</p>
+                    <p>SELECT connection_id()</p>
+                    <p>SELECT TIME,STATE FROM `information_schema`.`PROCESSLIST` WHERE ID = ?'</p>
+                    <p>KILL 当前帐号binlog监控的异常连接</p>
+                    <p>&nbsp;</p>
+                    <p>根据以上SQL,如果是RDS等云产品,请自行确认是否有 <strong>监听Binlog的权限</strong>，<strong>KILL 当前帐号连接的权限</strong>,<strong>SET 权限</strong></p>
+
+                    <p>&nbsp;</p>
                     <h3>状态</h3>
                     <p>close : 表示数据源没有启动,只有 close 状态的时候才能 <strong>人工修改位点</strong> 或者 <strong>删除数据源</strong></p>
                     <p>starting : 请求正在尝试连接或者重连 MySQL</p>
@@ -50,12 +69,18 @@
 
                     <p>&nbsp;</p>
 
-                    <3>位点延时</h3>
+                    <h3>位点延时</h3>
 
                     <p>在点击 <strong>最新位点</strong> 按钮的时候 并且数据源是running状态 </p>
                     <p>假如会计算当前位点 和 最新位点 不一致的情况下,将会拿最后解析成功的位点时间 与 当前时间点进行对比,算出差值,单位(秒)</p>
                     <p>这里并不是拿最新位点的时间对比,而是当前服务器时间</p>
                     <p>&nbsp;</p>
+
+                    <h2><strong>全量任务</strong></h2>
+                    <p>全量任务假如在选择了 分页方式 为 BETWEEN 的情况下，并且 数据库 主键为自增类型的时候，将会按 BETWEEN X AND Y 的方式进行查询</p>
+                    <p>当前 全量任务 和 增量数据同步 共一个线程同步,全量任务的时候,请先将数据源关闭</p>
+                    <p>&nbsp;</p>
+
 
                     <h2><strong>DDL 支持说明</strong></h2>
 

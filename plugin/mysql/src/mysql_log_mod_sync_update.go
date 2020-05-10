@@ -52,6 +52,9 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 				goto errLoop
 			}
 			_,This.conn.err = stmt.Exec(val)
+			if This.conn.err != nil{
+				goto errLoop
+			}
 			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
 			break
 		case "delete":

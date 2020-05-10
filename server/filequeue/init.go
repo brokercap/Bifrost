@@ -51,9 +51,17 @@ type Queue struct{
 type QueueInfo struct{
 	sync.RWMutex
 	MinId 			int64			// 最小文件
-	maxId 			int64			// 当前最大文件，当 -1 的时候，代表整个目录为空
+	MaxId 			int64			// 当前最大文件，当 -1 的时候，代表整个目录为空
 	Path			string			// 文件夹路径
 	FileCount 		int				// 文件数量
+	UnackFileList	[]UnackFileInfo	// 已加载到内存的文件信息
+}
+
+type UnackFileInfo struct {
+	Id int64			// 文件编号
+	UnackCount int		// unack 数量
+	AllInMemory bool	// 全部数据已经加载到内存
+	TotalCount int		// 整个文件已经加载到内存消息条数
 }
 
 func NewQueue(path string) *Queue{
@@ -126,11 +134,21 @@ func (This *Queue) noDataInit(){
 func (This *Queue) GetInfo() QueueInfo{
 	This.Lock()
 	defer This.Unlock()
+	FileList := make([]UnackFileInfo,0)
+	for _ , fileInfo := range This.unackFileList{
+		FileList = append(FileList,UnackFileInfo{
+			Id			: fileInfo.id,
+			UnackCount	: fileInfo.unackCount,
+			AllInMemory	: fileInfo.allInMemory,
+			TotalCount	: fileInfo.totalCount,
+		})
+	}
 	return QueueInfo{
 		MinId: 			This.minId,
-		maxId: 			This.maxId,
+		MaxId: 			This.maxId,
 		Path:  			This.path,
 		FileCount: 		This.fileCount,
+		UnackFileList:	FileList,
 	}
 }
 

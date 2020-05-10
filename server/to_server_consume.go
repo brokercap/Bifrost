@@ -30,7 +30,11 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}()
 	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
-
+	This.Lock()
+	if This.Status == ""{
+		This.Status = "running"
+	}
+	This.Unlock()
 	var data *pluginDriver.PluginDataType
 	CheckStatusFun := func(){
 		if db.killStatus == 1{
@@ -77,8 +81,6 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		})
 	}
 	var noData bool = true
-	timer := time.NewTimer(5 * time.Second)
-	defer timer.Stop()
 	var commitErrorCount int = 0
 
 
@@ -173,7 +175,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 	var n1 int = 0
 	var n0 int = 0
-
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
 	//time.Sleep(20 * time.Second)
 	for {
 		CheckStatusFun()
@@ -186,6 +189,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				This.fileQueueObj.Ack(unack)
 				tmpUnack = 0
 				unack = 0
+				log.Println(db.Name, SchemaName, TableName,This.PluginName,This.ToServerKey,"ToServer consume_to_server start PopFileQueue")
 				for i:=0; i < queueVariableSize; i++ {
 					data0, err := This.PopFileQueue()
 					if err != nil && err != io.EOF {
@@ -223,7 +227,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					}
 				}
 				This.fileQueueObj.Ack(tmpUnack)
+				//假如这一次循环加载出来的数据，全是已经同步过的，则继续从文件中加载
+				if unack == 0{
+					continue
+				}
 			}
+			timer.Reset(5  * time.Second)
 		}
 		select {
 		case data = <- c:
