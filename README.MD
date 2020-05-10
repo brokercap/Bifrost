@@ -1,6 +1,6 @@
-## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,MongoDB等服务的异构中间件
+## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.1.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.2.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
@@ -17,8 +17,8 @@
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.2.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.2.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -37,13 +37,15 @@
 
 * 同时支持 **增量** 及 **全量** 数据同步
 
-* 宕机后重启自动恢复配置
+* 宕机后重启自动恢复配置,位点精确控制
 
 * 支持自定义插件开发，动态加载
 
 * 支持 Email 及 微信企业号等**监控报警**功能
 
 * 提供第三方监控平台访问接口(Http Basic验证)
+
+* 一个Binlog解析线程,多个目标库**并行同步**
 
 * 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
 
@@ -55,12 +57,12 @@ http://www.xbifrost.com/demo/goto.html
 
 密码  :  Bifrost123
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.2.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.1.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.2.x/diagram.png)
 
 
 
@@ -99,11 +101,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.1.x-release/linux.zip
+wget https://github.com/brokercap/Bifrost/releases/download/v1.2.0-rc.01/linux.zip
 
 unzip linux.zip
 
-cd linux
+cd linux && chmod a+x ./Bifrost*
 
 `````
 

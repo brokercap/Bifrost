@@ -15,4 +15,4 @@ limitations under the License.
 */
 package config
 
-const VERSION  =  "v1.2.0-beta.03_20200510"
+const VERSION  =  "v1.2.0-rc.01"
