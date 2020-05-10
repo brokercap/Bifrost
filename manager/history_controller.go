@@ -30,6 +30,9 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 	case "running":
 		status = history.HISTORY_STATUS_RUNNING
 		break
+	case "selectOver":
+		status = history.HISTORY_STATUS_SELECT_OVER
+		break
 	case "over":
 		status = history.HISTORY_STATUS_OVER
 		break
@@ -73,6 +76,7 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 			history.HISTORY_STATUS_CLOSE,
 			history.HISTORY_STATUS_RUNNING,
 			history.HISTORY_STATUS_HALFWAY,
+			history.HISTORY_STATUS_SELECT_OVER,
 			history.HISTORY_STATUS_OVER,
 			history.HISTORY_STATUS_KILLED},
 		Status:status,

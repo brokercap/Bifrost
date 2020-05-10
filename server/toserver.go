@@ -5,7 +5,6 @@ import (
 	"github.com/brokercap/Bifrost/server/filequeue"
 	"sync"
 	"log"
-	"github.com/brokercap/Bifrost/plugin/driver"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 
 	"encoding/json"
@@ -28,15 +27,17 @@ type ToServer struct {
 	Error		  		string
 	ErrorWaitDeal 		int
 	ErrorWaitData 		interface{}
-	PluginConn	  		driver.ConnFun `json:"-"`
-	PluginConnKey 		string `json:"-"`
+	//PluginConn	  		driver.ConnFun `json:"-"`
+	//PluginConnKey 		string `json:"-"`
 	PluginParamObj 		interface{} `json:"-"`
 	LastBinlogFileNum   int                       // 由 channel 提交到 ToServerChan 的最后一个位点
 	LastBinlogPosition  uint32                    // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
 	LastBinlogKey 		[]byte `json:"-"`         // 将数据保存到 level 的key
-	QueueMsgCount			uint32 					  // 队列里的堆积的数量
+	QueueMsgCount		uint32 					  // 队列里的堆积的数量
 	fileQueueObj		*filequeue.Queue
 	FileQueueStatus 	bool					  // 是否启动文件队列
+	Notes				string
+	ThreadCount			int16					  // 消费线程数量
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
