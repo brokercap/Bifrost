@@ -73,3 +73,14 @@ func (This *ToServer) FileQueueStart() error {
 	This.FileQueueStatus = true
 	return nil
 }
+
+//查看文件队列基本信息
+func (This *ToServer) GetFileQueueInfo() (info filequeue.QueueInfo,err error) {
+	This.Lock()
+	defer This.Unlock()
+	if This.FileQueueStatus == false || This.fileQueueObj == nil{
+		err = fmt.Errorf("filequeue not start")
+		return
+	}
+	return This.fileQueueObj.GetInfo(),nil
+}

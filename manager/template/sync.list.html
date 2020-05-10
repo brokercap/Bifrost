@@ -112,7 +112,14 @@
                                     <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
                                     <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
                                     <p title="已解析出来的数据,有多少条消息堆积在队列中待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
-                                    <p title="是否已启用文件队列">FileQueueStatus: {{$v.FileQueueStatus}} {{if eq $v.FileQueueStatus false}}<button data-toggle="button" onclick="fileQueueStart(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary fileQueueStartBtn" type="button" >启用</button>{{end}}</p>
+                                    <p title="是否已启用文件队列">FileQueueStatus: {{$v.FileQueueStatus}}
+                                        {{if eq $v.FileQueueStatus false}}
+                                            <button data-toggle="button" onclick="fileQueueStart(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary fileQueueStartBtn" type="button" >启用</button>
+                                        {{else}}
+                                            <button data-toggle="button" onclick="getFileQueueInfo(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary" type="button" >文件队列信息</button>
+                                        {{end}}
+                                    </p>
+                                    <div id="{{$toServer.DbName}}_{{$toServer.SchemaName}}_{{$toServer.TableName}}_{{$v.ToServerID}}"></div>
                                 </td>
                                 <td>
                                     {{$v.Status}}
@@ -150,23 +157,8 @@
             location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid+"&sync_status="+sync_status;
         }
     );
-    function fileQueueStart(thisObj,dbname,schema_name,table_name,to_server_id,index){
-        var url = "/table/toserver/filequeue/update";
-        $.post(url,
-            {dbname:dbname,schema_name:schema_name,table_name:table_name,to_server_id:to_server_id,index:index},
-            function(data,status){
-                if( status != 'success' ){
-                    alert("reqeust error, reqeust status : "+status);
-                    return false;
-                }
-                alert(data.msg)
-                if(data.status) {
-                    $(thisObj).remove();
-                }
-            },
-            'json');
-    }
-
 </script>
+
+<script src="/js/filequeue.js?v1.2.0-beta.03"></script>
 
 {{template "footer" .}}

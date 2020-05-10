@@ -3,7 +3,6 @@ package filequeue
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -44,9 +43,6 @@ func (This *Queue) Pop() (content []byte,e error){
 		This.readInfo.pos = 0
 		This.readInfo = nil
 		This.unackFileList[len(This.unackFileList)-1].allInMemory = true
-		for _,list := range This.unackFileList{
-			log.Println(*list)
-		}
 	}else{
 		return nil,fmt.Errorf("read file err,fileName:%s",This.readInfo.name)
 	}
