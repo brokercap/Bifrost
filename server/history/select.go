@@ -77,7 +77,7 @@ func (This *History) threadStart(i int)  {
 	var sql string
 	for {
 		sql,start = This.GetNextSql()
-		log.Println(sql)
+		//log.Println(sql)
 		if sql == ""{
 			break
 		}
@@ -166,7 +166,7 @@ func (This *History) threadStart(i int)  {
 		rows.Close()
 		stmt.Close()
 
-		if This.TablePriKeyMaxId == 0 && rowCount < This.Property.ThreadCountPer {
+		if ( This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 ) && rowCount < This.Property.ThreadCountPer {
 			return
 		}
 	}
