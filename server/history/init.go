@@ -251,7 +251,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 		}
 	}
 	// 当总数小于100万的时候的时候，并且自增id 最大值和最小值 差值 的分页数  是 直接 limit 分页数的 2 倍以上的时候，采用常规 limit 分页
-	if This.Property.LimitOptimize == 1 && This.TableInfo.TABLE_ROWS <= 1000000 && (This.TablePriKeyMaxId - This.TablePriKeyMinId) / uint64(This.Property.ThreadCountPer) > This.TableInfo.TABLE_ROWS / uint64(This.Property.ThreadCountPer) * 2 {
+	if This.Property.Where == "" && This.Property.LimitOptimize == 1 && This.TableInfo.TABLE_ROWS <= 1000000 && (This.TablePriKeyMaxId - This.TablePriKeyMinId) / uint64(This.Property.ThreadCountPer) > This.TableInfo.TABLE_ROWS / uint64(This.Property.ThreadCountPer) * 2 {
 		log.Println("history",This.DbName,This.SchemaName,This.TableName,This.ID," TABLE_ROWS: ",This.TableInfo.TABLE_ROWS," <= 1000000 ,then transfer LIMIT x,y",)
 		This.Property.LimitOptimize = 0
 	}
