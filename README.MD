@@ -101,7 +101,7 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.2.0-rc.01/linux.zip
+wget https://github.com/brokercap/Bifrost/releases/download/v1.2.1-rc.01/linux.zip
 
 unzip linux.zip
 
@@ -192,6 +192,15 @@ tls=true
 #server.key 及 server.crt 相对于 Bifrost 的路径，也可以填绝对路径
 tls_key_file=./etc/server.key
 tls_crt_file=./etc/server.crt
+
+#是否开启文件队列功能 true|false
+file_queue_usable=true
+
+#统计是否启文件队列的时间，单位毫秒
+file_queue_usable_count_time_diff=5000
+
+#file_queue_usable_count_time_diff 时间内内存队列被挤满的次数
+file_queue_usable_count=10
 
 #采用什么方式存储,默认文件方式
 meta_storage_type=redis
