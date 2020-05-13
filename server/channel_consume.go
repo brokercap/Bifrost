@@ -100,14 +100,30 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		return
 	}
 
-	// 假如开启了全局文件队列的功能,假如5秒内都没写进内存chan队列,则往文件队列中写数据
+	// 假如开启了全局文件队列的功能,假如 规定时间内 都没写进内存chan队列,则往文件队列中写数据
 	if config.FileQueueUsable {
-		timer := time.NewTimer(5 * time.Second)
+		timer := time.NewTimer(time.Duration(config.FileQueueUsableCountTimeDiff) * time.Millisecond)
 		defer timer.Stop()
 		select {
 		case ToServerInfo.ToServerChan.To <- pluginData:
 			ToServerInfo.Lock()
 			ToServerInfo.QueueMsgCount++
+			if int(ToServerInfo.QueueMsgCount) >= config.ToServerQueueSize {
+				ToServerInfo.FileQueueUsableCount++
+				if ToServerInfo.FileQueueUsableCount == 1{
+					ToServerInfo.FileQueueUsableCountStartTime = time.Now().UnixNano() / 1e6
+				}else{
+					// 假如在 FileQueueUsableCountTimeDiff 时间 内 内存队列 被挤满的次数大于 配置的 FileQueueUsableCount 大小，则认为 需要启动文件队列
+					// 否则重新开始计算
+					if time.Now().UnixNano() / 1e6 - ToServerInfo.FileQueueUsableCountStartTime > config.FileQueueUsableCountTimeDiff {
+						if ToServerInfo.FileQueueUsableCount > config.FileQueueUsableCount {
+							ToServerInfo.FileQueueStatus = true
+						}else{
+							ToServerInfo.FileQueueUsableCount = 0
+						}
+					}
+				}
+			}
 			ToServerInfo.Unlock()
 			break
 		case <-timer.C:
