@@ -1,3 +1,4 @@
+var ckFieldDataMap = {};
 function doGetPluginParam(){
 	var result = {data:{},status:false,msg:"failed"}
 
@@ -28,7 +29,9 @@ function doGetPluginParam(){
 
     $.each($("#CKTableFieldsTable tr"),function () {
         var ck_field_name = $(this).find("input[name=ck_field_name]").val();
-        var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
+        //var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
+        var ck_field_type = ckFieldDataMap[ck_field_name];
+        console.log("ck_field_name_input_:"+ck_field_name+ " ck_field_type:"+ck_field_type);
         var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
 
         var d       = {};
@@ -253,6 +256,7 @@ function GetCkSchameTableList(schemaName) {
 
 function GetCkTableDesc(schemaName,tableName) {
     $("#CKTableFieldsTable").html("");
+    ckFieldDataMap = {};
     $.get(
         "/bifrost/clickhouse/tableinfo?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
         function (d, status) {
@@ -310,9 +314,9 @@ function GetCkTableDesc(schemaName,tableName) {
                             break;
                     }
                 }
-
+                ckFieldDataMap[d[i].Name]=d[i].Type;
                 var htmlTr = "<tr id='ck_field_name_"+d[i].Name+"'>";
-                htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" ck_field_type='"+d[i].Type+"' name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
+                htmlTr += "<td> <input type=\"text\"  value=\""+d[i].Name+"\" name=\"ck_field_name\" disabled  class=\"form-control\" placeholder=\"\"></td>"
                 htmlTr += "<td> <input type=\"text\" onfocus='ClickHouse_Input_onFocus(this)' id='ck_mysql_filed_from_"+d[i].Name+"' name=\"mysql_field_name\" value='"+toField+"' class=\"form-control\" placeholder=\"\"></td>";
                 htmlTr += "<td> <input type='radio'"
                 if(isPri){
