@@ -30,6 +30,7 @@ const (
 	HISTORY_STATUS_OVER		HisotryStatus = "over"
 	HISTORY_STATUS_HALFWAY	HisotryStatus = "halfway"
 	HISTORY_STATUS_KILLED	HisotryStatus = "killed"
+	HISTORY_STATUS_SELECT_OVER	HisotryStatus = "selectOver"   //拉取数据结束
 )
 
 
@@ -42,6 +43,12 @@ func AddHistory(dbName string,SchemaName string,TableName string,Property Histor
 	}
 	if _,ok := historyMap[dbName];!ok{
 		historyMap[dbName] = make(map[int]*History,0)
+	}
+	if Property.SyncThreadNum <= 0 {
+		Property.SyncThreadNum = 1
+	}
+	if len(ToServerIDList) * int(Property.SyncThreadNum) > 16384 {
+		return 0,fmt.Errorf("SyncThreadNum * len(ToServerIDList) > 16384")
 	}
 	ID := lastHistoryID+1
 	historyMap[dbName][ID] = &History{
@@ -83,6 +90,9 @@ func KillHistory(dbName string,ID int) error {
 		return fmt.Errorf("%s %d not exist",dbName,ID)
 	}
 	historyMap[dbName][ID].Status = HISTORY_STATUS_KILLED
+	for _,toServerInfo := range historyMap[dbName][ID].ToServerList{
+		toServerInfo.Status = "deled"
+	}
 	return nil
 }
 
@@ -120,17 +130,17 @@ func GetHistoryList(dbName,SchemaName,TableName string,status HisotryStatus) []H
 }
 
 type HistoryProperty struct {
-	ThreadNum			int      // 协程数量,每个协程一个连接
+	ThreadNum			int      // 拉取数据协程数量,每个协程一个连接
 	ThreadCountPer		int		 // 协程每次最多处理多少条数据
 	Where				string   // where 条件
 	LimitOptimize		int8	 // 是否自动分页优化, 1 采用 between 方式优化 0 不启动优化
+	SyncThreadNum		int		 // 同步协程数
 }
 
 type ThreadStatus struct {
 	Num					int
 	Error				error      // 拉取数据错误
 	NowStartI			uint64     // 当前执行第几条
-	SyncError			error	   // 同步错误
 }
 
 type History struct {
@@ -154,6 +164,9 @@ type History struct {
 	TablePriKeyMaxId	uint64		// 假如主键是自增id的情况下 这个值是当前自增id最大值
 	TablePriKey			string		// 主键字段
 	TablePriArr			[]*string
+	ToServerList		[]*server.ToServer
+	ToServerTheadCount	int16			// 实际正在运行的同步协程数
+	toServerTheadCountChan chan int16	// 同步协程 开始或者结束,都会往这个chan里 +1,-1写数据.用于计算是不是所有同步协程都已结束
 }
 
 func Start(dbName string,ID int) error {
@@ -180,6 +193,8 @@ func (This *History) Start() error {
 	This.Fields = make([]TableStruct,0)
 	This.ThreadPool = make([]*ThreadStatus,This.Property.ThreadNum)
 	This.threadResultChan = make(chan int,1)
+	This.ToServerList = make([]*server.ToServer,0)
+	This.OverTime = ""
 	for i:=1;i<=This.Property.ThreadNum;i++{
 		go This.threadStart(i-1)
 	}
@@ -199,8 +214,8 @@ func (This *History) Start() error {
 				This.Status = HISTORY_STATUS_HALFWAY
 			}
 		}
-		if This.Status != HISTORY_STATUS_HALFWAY{
-			This.Status = HISTORY_STATUS_OVER
+		if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER {
+			This.Status = HISTORY_STATUS_SELECT_OVER
 		}
 	}()
 	return nil
@@ -234,6 +249,11 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 				break
 			}
 		}
+	}
+	// 当总数小于100万的时候的时候，并且自增id 最大值和最小值 差值 的分页数  是 直接 limit 分页数的 2 倍以上的时候，采用常规 limit 分页
+	if This.Property.Where == "" && This.Property.LimitOptimize == 1 && This.TableInfo.TABLE_ROWS <= 1000000 && (This.TablePriKeyMaxId - This.TablePriKeyMinId) / uint64(This.Property.ThreadCountPer) > This.TableInfo.TABLE_ROWS / uint64(This.Property.ThreadCountPer) * 2 {
+		log.Println("history",This.DbName,This.SchemaName,This.TableName,This.ID," TABLE_ROWS: ",This.TableInfo.TABLE_ROWS," <= 1000000 ,then transfer LIMIT x,y",)
+		This.Property.LimitOptimize = 0
 	}
 	return
 }

@@ -18,17 +18,23 @@ func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)
 }
 
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
+	This.Lock()
+	This.ThreadCount++
+	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
 	defer func() {
 		//This.pluginClose()
 		if err := recover();err !=nil{
-			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
+			log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
 		}else{
-			log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
+			log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
+		This.Lock()
+		This.ThreadCount--
+		This.Unlock()
 	}()
-	log.Println(db.Name,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
+	log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	This.Lock()
 	if This.Status == ""{
@@ -331,7 +337,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			}
 			if noData == false{
 				noData = true
-				log.Println("consume_to_server:",This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+				log.Println("consume_to_server:",This.Notes,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
 			fileAck()
 			if PluginBinlog == nil && errs == nil{
@@ -434,53 +440,45 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 	return newData,true
 }
 
-func (This *ToServer) pluginReBack(){
-	if This.PluginConn != nil{
-		plugin.BackPlugin(This.ToServerKey,This.PluginConnKey,This.PluginConn)
-		This.PluginConn = nil
-	}
-}
-
 //从插件实例池中获取一个插件实例
-func (This *ToServer) getPluginAndSetParam() (err error){
-	This.PluginConn,This.PluginConnKey = plugin.GetPlugin(This.ToServerKey)
-	if This.PluginConn == nil{
-		return fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
+func (This *ToServer) getPluginAndSetParam() (PluginConn pluginDriver.ConnFun,PluginConnKey string,err error){
+	PluginConn,PluginConnKey = plugin.GetPlugin(This.ToServerKey)
+	if PluginConn == nil{
+		return nil,"",fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
 	if This.PluginParamObj == nil{
-		This.PluginParamObj,err = This.PluginConn.SetParam(This.PluginParam)
+		This.PluginParamObj,err = PluginConn.SetParam(This.PluginParam)
 	}else{
-		_, err = This.PluginConn.SetParam(This.PluginParamObj)
+		_, err = PluginConn.SetParam(This.PluginParamObj)
 	}
 
 	if err != nil {
-		return err
+		return
 	}
-	return nil
+	return
 }
 
 func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
-		This.pluginReBack()
 		if err2 := recover();err2 != nil {
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
 		}
 	}()
 
-	err = This.getPluginAndSetParam()
+	PluginConn,PluginConnKey,err := This.getPluginAndSetParam()
 	if err != nil{
 		return Binlog,err
 	}
+	defer plugin.BackPlugin(This.ToServerKey,PluginConnKey,PluginConn)
 
-	Binlog, err = This.PluginConn.Commit()
+	Binlog, err = PluginConn.Commit()
 	return
 }
 
 
 func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
-		This.pluginReBack()
 		if err2 := recover();err2 != nil{
 			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
@@ -492,23 +490,24 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Bin
 	if b == false{
 		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 	}
-	err = This.getPluginAndSetParam()
+	PluginConn,PluginConnKey,err := This.getPluginAndSetParam()
 	if err != nil{
 		return Binlog,err
 	}
+	defer plugin.BackPlugin(This.ToServerKey,PluginConnKey,PluginConn)
 
 	switch data.EventType {
 	case "insert":
-		Binlog, err = This.PluginConn.Insert(data)
+		Binlog, err = PluginConn.Insert(data)
 		break
 	case "update":
-		Binlog, err = This.PluginConn.Update(data)
+		Binlog, err = PluginConn.Update(data)
 		break
 	case "delete":
-		Binlog, err = This.PluginConn.Del(data)
+		Binlog, err = PluginConn.Del(data)
 		break
 	case "sql":
-		Binlog, err = This.PluginConn.Query(data)
+		Binlog, err = PluginConn.Query(data)
 		break
 	default:
 		break

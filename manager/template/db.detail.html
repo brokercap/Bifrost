@@ -298,10 +298,19 @@
                         </tr>
 
                         <tr>
-                            <td align="right" height="50" width="20%">ThreadNum : </td>
+                            <td align="right" height="50" width="20%">Select ThreadNum : </td>
                             <td style="text-indent:10px;">
                                 <input type="text" name="ThreadCount" class="form-control" placeholder="ThreadNum" value="1" id="addHisotryThreadNum">
                                 <span>开启多少个连接并发查询</span>
+
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="right" height="50" width="20%">Sync ThreadNum : </td>
+                            <td style="text-indent:10px;">
+                                <input type="text" name="SyncThreadNum" class="form-control" placeholder="SyncThreadNum" value="1" id="addHisotrySyncThreadNum">
+                                <span>开启多少个同步协程</span>
 
                             </td>
                         </tr>
@@ -1101,28 +1110,35 @@
                 var table_name      = $("#addHisotryTableName").val();
                 var where           = $("#addHisotryWhere").val();
                 var LimitOptimize   = $("#addHisotryLimitOptimize").val();
+                var SyncThreadNum   = $("#addHisotrySyncThreadNum").val();
 
                 var ToServerIds = [];
                 $.each($("#addHisotryToServer input:checkbox:checked"),function(){
                     ToServerIds.push(parseInt($(this).val()));
                 });
+                if (ToServerIds.length == 0){
+                    alert("请选择 ToServer");
+                    return false;
+                }
                 if (isNaN(ThreadNum)){
                     alert("ThreadNum must be int!");
+                    return false;
+                }
+                if (isNaN(SyncThreadNum) || ( parseInt(SyncThreadNum) * ToServerIds.length > 16384 ) ){
+                    alert("SyncThreadNum must be int,and SyncThreadNum * ToServerIds.length <= 16384 ! ");
                     return false;
                 }
                 if (isNaN(ThreadCountPer)){
                     alert("ThreadCountPer must be int!");
                     return false;
                 }
-                if (ToServerIds.length == 0){
-                    alert("请选择 ToServer");
-                    return false;
-                }
+
                 var Property = {};
                 Property["ThreadNum"]       = parseInt(ThreadNum);
                 Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
                 Property["Where"]           = $.trim(where);
                 Property["LimitOptimize"]   = parseInt(LimitOptimize);
+                Property["SyncThreadNum"]   = parseInt(SyncThreadNum);
 
                 var url = "/history/add";
                 $.post(url,
