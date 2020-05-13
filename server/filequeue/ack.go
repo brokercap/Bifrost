@@ -11,8 +11,8 @@ func (This *Queue) Ack(n int) (e error){
 	if n <= 0{
 		return nil
 	}
-	l.Lock()
-	defer l.Unlock()
+	This.Lock()
+	defer This.Unlock()
 	var i int = -1
 	var n0 int
 	for _,f := range This.unackFileList{

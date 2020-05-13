@@ -16,13 +16,13 @@ import (
 )
 
 func (This *History) threadStart(i int)  {
-	log.Println("history threadStart start:",i,This.DbName,This.SchemaName,This.TableName)
+	log.Println("history select threadStart start:",i,This.DbName,This.SchemaName,This.TableName)
 	defer func() {
-		log.Println("history threadStart over:",i,This.DbName,This.SchemaName,This.TableName)
+		log.Println("history select threadStart over:",i,This.DbName,This.SchemaName,This.TableName)
 		This.threadResultChan <- i
 		if err :=recover();err!=nil{
 			This.ThreadPool[i].Error = fmt.Errorf( fmt.Sprint(err) + string(debug.Stack()) )
-			log.Println("history threadStart:",fmt.Sprint(err) + string(debug.Stack()))
+			log.Println("history select threadStart:",fmt.Sprint(err) + string(debug.Stack()))
 		}
 	}()
 	This.ThreadPool[i] = &ThreadStatus{
@@ -35,22 +35,11 @@ func (This *History) threadStart(i int)  {
 	This.initMetaInfo(db)
 	if len(This.Fields) == 0{
 		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName)
-		log.Println("history Fields empty",This.DbName,This.SchemaName,This.TableName)
+		log.Println("history select Fields empty",This.DbName,This.SchemaName,This.TableName)
 		return
 	}
-
-	var toServerList []*server.ToServer
-	toServerList = make([]*server.ToServer,0)
-
 	dbSouceInfo := server.GetDBObj(This.DbName)
-	for _,toServerInfo := range dbSouceInfo.GetTable(This.SchemaName,This.TableName).ToServerList{
-		for _,ID := range This.ToServerIDList{
-			if ID == toServerInfo.ToServerID{
-				toServerList = append(toServerList,toServerInfo)
-				break
-			}
-		}
-	}
+	This.InitToServer()
 	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
 	CountKey := This.SchemaName + "_-" + This.TableName
 	var sendToServerResult = func(ToServerInfo *server.ToServer,pluginData *pluginDriver.PluginDataType)  {
@@ -60,15 +49,25 @@ func (This *History) threadStart(i int)  {
 			ToServerInfo.Unlock()
 			return
 		}
-		if status == ""{
-			ToServerInfo.Status = "running"
-		}
 		ToServerInfo.QueueMsgCount++
 		if ToServerInfo.ToServerChan == nil{
+			// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
+			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是直阻塞在那吗?
+			This.AsyncWaitToServerOver()
 			ToServerInfo.ToServerChan = &server.ToServerChan{
 				To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
 			}
-			go ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
+			for i := 0; i < This.Property.SyncThreadNum; i++{
+				This.toServerTheadCountChan <- 1
+				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
+				go func() {
+					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
+					defer func() {
+						This.toServerTheadCountChan <- -1
+					}()
+					ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
+				}()
+			}
 		}
 		ToServerInfo.Unlock()
 		ToServerInfo.ToServerChan.To <- pluginData
@@ -78,13 +77,14 @@ func (This *History) threadStart(i int)  {
 	var sql string
 	for {
 		sql,start = This.GetNextSql()
+		//log.Println(sql)
 		if sql == ""{
 			break
 		}
 		stmt, err := db.Prepare(sql)
 		if err != nil{
 			This.ThreadPool[i].Error = err
-			log.Println("history threadStart err:",err,"sql:",sql, This.DbName,This.SchemaName,This.TableName)
+			log.Println("history select threadStart err:",err,"sql:",sql, This.DbName,This.SchemaName,This.TableName)
 			return
 		}
 		This.ThreadPool[i].NowStartI = start
@@ -152,7 +152,7 @@ func (This *History) threadStart(i int)  {
 				Pri:			This.TablePriArr,
 			}
 
-			for _,toServerInfo := range toServerList{
+			for _,toServerInfo := range This.ToServerList{
 				sendToServerResult(toServerInfo,d)
 			}
 
@@ -160,13 +160,13 @@ func (This *History) threadStart(i int)  {
 				//Time:"",
 				Count:1,
 				TableId:CountKey,
-				ByteSize:sizeCount*int64(len(toServerList)),
+				ByteSize:sizeCount*int64(len(This.ToServerList)),
 			}
 		}
 		rows.Close()
 		stmt.Close()
 
-		if This.TablePriKeyMaxId == 0 && rowCount < This.Property.ThreadCountPer {
+		if ( This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 ) && rowCount < This.Property.ThreadCountPer {
 			return
 		}
 	}

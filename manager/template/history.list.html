@@ -67,8 +67,10 @@
                                 <th>TableName</th>
                                 <th>Property</th>
                                 <th>NowStartI</th>
-                                <th>ThreadPool</th>
+                                <th>SelectThreadPool</th>
                                 <th>ToServerIDList</th>
+                                <th>SyncThreadCount</th>
+                                <th>SyncToServer</th>
                                 <th>StartTime</th>
                                 <th>OverTime</th>
                                 <th>Status</th>
@@ -101,6 +103,19 @@
 
                                 </td>
                                 <td>{{$v.ToServerIDList}}</td>
+                                <td>{{$v.ToServerTheadCount}}</td>
+                                <td>
+                                {{range $k,$toServerInfo := $v.ToServerList}}
+                                    <p>ToServerKey:{{$toServerInfo.ToServerKey}}</p>
+                                    <p>PluginName:{{$toServerInfo.PluginName}}</p>
+                                    <p>QueueMsgCount:{{$toServerInfo.QueueMsgCount}}</p>
+                                    <p>ThreadCount:{{$toServerInfo.ThreadCount}}</p>
+                                    <p>Error:{{$toServerInfo.Error}}</p>
+                                    <p>ErrorWaitData:{{$toServerInfo.ErrorWaitData}}</p>
+                                    <p>&nbsp;</p>
+                                {{end}}
+
+                                </td>
                                 <td>{{$v.StartTime}}</td>
                                 <td>{{$v.OverTime}}</td>
                                 <td>{{$v.Status}}</td>

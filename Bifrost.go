@@ -210,6 +210,8 @@ func initParam(){
 		intA, err := strconv.Atoi(tmp)
 		if err == nil && intA > 0{
 			config.ToServerQueueSize = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.toserver_queue_size type conversion to int err:",err)
 		}
 	}
 
@@ -218,6 +220,8 @@ func initParam(){
 		intA, err := strconv.Atoi(tmp)
 		if err == nil && intA > 0{
 			config.ChannelQueueSize = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.channel_queue_size type conversion to int err:",err)
 		}
 	}
 
@@ -226,6 +230,8 @@ func initParam(){
 		intA, err := strconv.Atoi(tmp)
 		if err == nil && intA > 0{
 			config.CountQueueSize = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.count_queue_size type conversion to int err:",err)
 		}
 	}
 
@@ -234,11 +240,33 @@ func initParam(){
 		intA, err := strconv.Atoi(tmp)
 		if err == nil && intA > 0{
 			config.KeyCachePoolSize = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.key_cache_pool_size type conversion to int err:",err)
 		}
 	}
 
 	if config.GetConfigVal("Bifrostd","file_queue_usable") == "false"{
 		config.FileQueueUsable = false
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","file_queue_usable_count")
+	if  tmp != ""{
+		intA, err :=  strconv.ParseUint(tmp,10,32)
+		if err == nil && intA > 0{
+			config.FileQueueUsableCount = uint32(intA)
+		}else{
+			log.Println("Bifrost.ini Bifrostd.file_queue_usable_count type conversion to uint32 err:",err)
+		}
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","file_queue_usable_count_time_diff")
+	if  tmp != ""{
+		intA, err :=  strconv.ParseInt(tmp,10,64)
+		if err == nil && intA > 0{
+			config.FileQueueUsableCountTimeDiff = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.file_queue_usable_count_time_diff type conversion to int64 err:",err)
+		}
 	}
 
 	initTLSParam()
