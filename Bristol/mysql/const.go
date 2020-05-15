@@ -87,8 +87,10 @@ const (
 	FIELD_TYPE_DATETIME2                   //18
 	FIELD_TYPE_TIME2                       //19
 )
+
 const (
-	FIELD_TYPE_NEWDECIMAL  FieldType = iota + 0xf6 //246
+	FIELD_TYPE_JSON		 FieldType = iota + 0xf5   //245
+	FIELD_TYPE_NEWDECIMAL						   //246
 	FIELD_TYPE_ENUM                                //247
 	FIELD_TYPE_SET                                 //248
 	FIELD_TYPE_TINY_BLOB                           //249
