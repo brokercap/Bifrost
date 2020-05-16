@@ -24,7 +24,7 @@ function ToserverListGruid() {
 }
 
 //数据源详情 表同步配置界面 引导
-function ToserverListGruid() {
+function DbDetailGruid() {
     $("#DatabaseListContair").attr({"data-intro":"1. 选择数据库，背景为绿色则为选中状态","data-position":"top"});
     $("#TableListContair").attr({"data-intro":"2. 点击 ADD 按钮 让表和通道绑定！ 再点击表名 变为绿色！！才能设置表同步！！","data-position":"top"});
     $("#TableListContair input[name='table_check_name']").eq(0).attr({"data-intro":"备： 复选框 是用于 批量绑定通道和删除，要设置表同步，请击 ADD 按钮后再点击 表名，背景成为绿色","data-position":"right"});
@@ -53,7 +53,7 @@ if(document.URL.indexOf("/db/list") != -1){
     ToserverListGruid();
     gruidBool = true;
 }else if(document.URL.indexOf("/db/detail") != -1){
-    ToserverListGruid();
+    DbDetailGruid();
     gruidBool = true;
 }else{
     var RelativePath = GetUrlRelativePath();
