@@ -1,21 +1,20 @@
 package src
 
 import (
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"sync"
+	dbDriver "database/sql/driver"
 	"encoding/json"
 	"fmt"
-	dbDriver "database/sql/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
+	"runtime/debug"
 	"strconv"
 	"strings"
-	"runtime/debug"
 	"time"
 )
 
 
-const VERSION  = "v1.2.0"
-const BIFROST_VERION = "v1.2.0"
+const VERSION  = "v1.2.1"
+const BIFROST_VERION = "v1.2.1"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
@@ -39,24 +38,15 @@ const (
 	SYNCMODE_LOG_APPEND SyncMode = "LogAppend"
 )
 
-type dataStruct struct {
-	sync.RWMutex
-	Data map[string]*dataTableStruct
-}
-
 type fieldStruct struct {
-	ToField 		string
-	FromMysqlField 	string
-	ToFieldType  	string
-	ToFieldDefault	*string
-	ToFieldIsAutoIncrement bool
+	ToField                string
+	FromMysqlField         string
+	ToFieldType            string
+	ToFieldDefault         *string
 }
-
-var dataMap map[string]*dataStruct
 
 func init(){
 	pluginDriver.Register("mysql",&MyConn{},VERSION,BIFROST_VERION)
-	dataMap = make(map[string]*dataStruct,0)
 }
 
 type MyConn struct {}
@@ -152,7 +142,6 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	param.Datakey = "`"+param.Schema+"`.`"+param.Table+"`"
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
-	param.fieldCount = len(param.Field)
 	param.stmtArr = make([]dbDriver.Stmt,4)
 	if param.SyncMode == ""{
 		param.SyncMode = SYNCMODE_NORMAL
@@ -198,24 +187,24 @@ func (This *Conn) getCktFieldType() {
 	for _,v:=range fields{
 		ckFieldsMap[v.COLUMN_NAME] = v
 	}
-
+	list := make([]fieldStruct,0)
 	for k,v:=range This.p.Field{
 		This.p.Field[k].ToFieldType = ckFieldsMap[v.ToField].DATA_TYPE
 		if strings.ToLower(ckFieldsMap[v.ToField].EXTRA) == "auto_increment"{
 			This.p.Field[k].ToFieldDefault = nil
-			This.p.Field[k].ToFieldIsAutoIncrement = true
+			if v.FromMysqlField != ""{
+				list = append(list,This.p.Field[k])
+			}
 		}else {
 			This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+			list = append(list,This.p.Field[k])
 		}
 	}
+	This.p.Field = list
+	This.p.fieldCount = len(list)
 }
 
 func (This *Conn) Connect() bool {
-	if _,ok:= dataMap[This.uri];!ok{
-		dataMap[This.uri] = &dataStruct{
-			Data: make(map[string]*dataTableStruct,0),
-		}
-	}
 	This.conn = NewMysqlDBConn(This.uri)
 	if This.conn.err != nil{
 		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
@@ -227,10 +216,10 @@ func (This *Conn) ReConnect() bool {
 	if This.conn != nil{
 		defer func() {
 			if err := recover();err !=nil{
-				This.conn.err = fmt.Errorf(fmt.Sprint(err))
+				This.conn.err = fmt.Errorf(fmt.Sprint(err)+" debug:"+string(debug.Stack()))
 			}
 		}()
-		This.closeStmt()
+		This.closeStmt0()
 		This.conn.Close()
 	}
 	This.Connect()
@@ -238,6 +227,23 @@ func (This *Conn) ReConnect() bool {
 		This.getCktFieldType()
 	}
 	return  true
+}
+
+func (This *Conn) StmtClose() {
+	for k,stmt := range This.p.stmtArr{
+		if stmt != nil{
+			func(){
+				defer func() {
+					if err := recover();err!=nil{
+						This.conn.err = fmt.Errorf("StmtClose err:%s",fmt.Sprint(err))
+						return
+					}
+				}()
+				stmt.Close()
+			}()
+		}
+		This.p.stmtArr[k] = nil
+	}
 }
 
 func (This *Conn) HeartCheck() {
@@ -312,15 +318,15 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 			This.conn.err = e
 		}
 	}()
+	n := len(This.p.Data.Data)
+	if n == 0{
+		return nil,nil
+	}
 	if This.conn.err != nil {
 		This.ReConnect()
 	}
 	if This.conn.err != nil {
 		return nil,This.conn.err
-	}
-	n := len(This.p.Data.Data)
-	if n == 0{
-		return nil,nil
 	}
 	if n > This.p.BatchSize{
 		n = This.p.BatchSize
@@ -349,14 +355,17 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 
 	if This.conn.err != nil{
 		This.err = This.conn.err
+		log.Println("plugin mysql conn.err",This.err)
+		return nil,This.err
 	}
 	if This.err != nil{
-		This.conn.Rollback()
-		log.Println("This.err",This.err)
+		This.conn.err = This.conn.Rollback()
+		log.Println("plugin mysql err",This.err)
 		return nil,This.err
 	}
 
 	err2 := This.conn.Commit()
+	This.StmtClose()
 	if err2 != nil{
 		This.conn.err = err2
 		return nil,This.conn.err
@@ -371,9 +380,10 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
 }
 
-func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string,isAutoIncrement bool) (v dbDriver.Value,e error) {
+func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
 	defer func() {
 		if err := recover();err != nil{
+			log.Println("plugin mysql dataTypeTransfer:",fmt.Sprint(err))
 			log.Println(string(debug.Stack()))
 			e = fmt.Errorf(fieldName+" "+fmt.Sprint(err))
 		}
@@ -384,12 +394,15 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 				v = nil
 				return
 			}else{
-				data = *defaultVal
+				// 这里要判断 是不是 bit 类型，因为 bit 类型在传输值 上 必须 为 int64 类型，不能是字符串
+				if toDataType == "bit"{
+					v,_ = strconv.ParseInt(*defaultVal,10,64)
+				}else{
+					v = *defaultVal
+				}
+				return
 			}
 		}else{
-			if isAutoIncrement == true{
-				return nil,nil
-			}
 			//假如配置是强制转成默认值
 			switch toDataType {
 			case "int","tinyint","smallint","mediumint","bigint","bool":
@@ -423,27 +436,25 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 			return
 		}
 	}
+	switch data.(type) {
+	case bool:
+		if data.(bool) == false{
+			data = "0"
+		}else{
+			data = "1"
+		}
+		break
+	default:
+		break
+	}
 	switch toDataType {
 	case "bool":
-		if data == nil{
-			v = false
-			break
-		}
-		switch data.(type) {
-		case bool:
-			if data.(bool) == true{
-				v = "1"
-			}else{
-				v = "0"
-			}
+		switch fmt.Sprint(data) {
+		case "0","":
+			v = "0"
 			break
 		default:
-			if fmt.Sprint(data) != ""{
-				v = "1"
-			}else{
-				v = "0"
-			}
-			break
+			v = "1"
 		}
 		break
 	case "bit":
@@ -496,7 +507,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		sql := "REPLACE INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
-			log.Println("mysql getStmt insert err:",This.conn.err,sql)
+			log.Println("mysql getStmt REPLACE_INSERT err:",This.conn.err,sql)
 		}
 		break
 	case INSERT:
@@ -514,7 +525,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
-			log.Println("mysql getStmt insert err:",This.conn.err,sql)
+			log.Println("mysql getStmt INSERT err:",This.conn.err,sql)
 		}
 		break
 	case DELETE:
@@ -528,7 +539,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		}
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
 		if This.conn.err != nil{
-			log.Println("mysql getStmt delete err:",This.conn.err)
+			log.Println("mysql getStmt DELETE err:",This.conn.err)
 		}
 		break
 	case UPDATE:
@@ -549,7 +560,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
-			log.Println("mysql getStmt update err:",This.conn.err,sql)
+			log.Println("mysql getStmt INSERT ON DUPLICATE KEY UPDATE err:",This.conn.err,sql)
 		}
 		break
 	}
@@ -557,11 +568,8 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 	return This.p.stmtArr[Type]
 }
 
-func (This *Conn) closeStmt(){
-	for k,stmt := range This.p.stmtArr{
-		if stmt != nil{
-			stmt.Close()
-		}
+func (This *Conn) closeStmt0(){
+	for k,_ := range This.p.stmtArr{
 		This.p.stmtArr[k] = nil
 	}
 }
@@ -575,6 +583,6 @@ func checkOpMap(opMap map[interface{}]*opLog,key interface{}, EvenType string) b
 }
 
 func setOpMapVal(opMap map[interface{}]*opLog,key interface{},data *[]dbDriver.Value,EventType string) {
-	opMap[key] = &opLog{Data:data,EventType:"update"}
+	opMap[key] = &opLog{Data:data,EventType:EventType}
 }
 

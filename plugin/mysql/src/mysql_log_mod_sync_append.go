@@ -20,7 +20,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 		case "update":
 			val := make([]dbDriver.Value,0)
 			for _,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 
 				if This.err != nil{
 					return This.err
@@ -39,7 +39,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 		case "insert","delete":
 			val := make([]dbDriver.Value,0)
 			for _,v:=range This.p.Field {
-				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault)
 				if This.err != nil {
 					return This.err
 				}

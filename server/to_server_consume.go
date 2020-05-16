@@ -18,23 +18,33 @@ func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)
 }
 
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
+	var MyConsumerId uint16
 	This.Lock()
+	if This.CosumerPluginParamMap == nil{
+		This.CosumerPluginParamMap = make(map[uint16]interface{},0)
+	}
 	This.ThreadCount++
+	MyConsumerId = This.CosumerIdInrc
+	This.CosumerPluginParamMap[MyConsumerId] = nil
+ 	This.CosumerIdInrc++
 	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
 	defer func() {
-		//This.pluginClose()
 		if err := recover();err !=nil{
-			log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
+			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
 		}else{
-			log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
+			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
 		This.Lock()
 		This.ThreadCount--
+		delete(This.CosumerPluginParamMap,MyConsumerId)
+		if This.ThreadCount == 0{
+			This.CosumerIdInrc = 0
+		}
 		This.Unlock()
 	}()
-	log.Println(db.Name,This.Notes,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
+	log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	This.Lock()
 	if This.Status == ""{
@@ -133,7 +143,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var forSendData = func(data *pluginDriver.PluginDataType) {
 		for {
 			errs = nil
-			PluginBinlog,errs = This.sendToServer(data)
+			PluginBinlog,errs = This.sendToServer(data,MyConsumerId)
 			if This.MustBeSuccess == true {
 				if errs == nil{
 					if lastErrId > 0 {
@@ -318,7 +328,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			SaveBinlog()
 			break
 		case <-timer.C:
-			PluginBinlog, errs = This.commit()
+			PluginBinlog, errs = This.commit(MyConsumerId)
 			if errs == nil {
 				if commitErrorCount > 0 {
 					commitErrorCount = 0
@@ -337,7 +347,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			}
 			if noData == false{
 				noData = true
-				log.Println("consume_to_server:",This.Notes,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+				log.Println("consume_to_server:",This.Notes,"MyConsumerId:",MyConsumerId,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
 			fileAck()
 			if PluginBinlog == nil && errs == nil{
@@ -441,24 +451,25 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 }
 
 //从插件实例池中获取一个插件实例
-func (This *ToServer) getPluginAndSetParam() (PluginConn pluginDriver.ConnFun,PluginConnKey string,err error){
+func (This *ToServer) getPluginAndSetParam(MyConsumerId uint16) (PluginConn pluginDriver.ConnFun,PluginConnKey string,err error){
 	PluginConn,PluginConnKey = plugin.GetPlugin(This.ToServerKey)
 	if PluginConn == nil{
 		return nil,"",fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
-	if This.PluginParamObj == nil{
-		This.PluginParamObj,err = PluginConn.SetParam(This.PluginParam)
+	This.RLock()
+	if This.CosumerPluginParamMap[MyConsumerId] == nil{
+		This.CosumerPluginParamMap[MyConsumerId],err = PluginConn.SetParam(This.PluginParam)
 	}else{
-		_, err = PluginConn.SetParam(This.PluginParamObj)
+		_, err = PluginConn.SetParam(This.CosumerPluginParamMap[MyConsumerId])
 	}
-
+	This.RUnlock()
 	if err != nil {
 		return
 	}
 	return
 }
 
-func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
+func (This *ToServer) commit(MyConsumerId uint16) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		if err2 := recover();err2 != nil {
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
@@ -466,7 +477,7 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 		}
 	}()
 
-	PluginConn,PluginConnKey,err := This.getPluginAndSetParam()
+	PluginConn,PluginConnKey,err := This.getPluginAndSetParam(MyConsumerId)
 	if err != nil{
 		return Binlog,err
 	}
@@ -477,7 +488,7 @@ func (This *ToServer) commit() ( Binlog *pluginDriver.PluginBinlog,err error){
 }
 
 
-func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Binlog *pluginDriver.PluginBinlog,err error){
+func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyConsumerId uint16) ( Binlog *pluginDriver.PluginBinlog,err error){
 	defer func() {
 		if err2 := recover();err2 != nil{
 			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
@@ -490,7 +501,7 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType) ( Bin
 	if b == false{
 		return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
 	}
-	PluginConn,PluginConnKey,err := This.getPluginAndSetParam()
+	PluginConn,PluginConnKey,err := This.getPluginAndSetParam(MyConsumerId)
 	if err != nil{
 		return Binlog,err
 	}

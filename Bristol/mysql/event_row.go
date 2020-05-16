@@ -441,7 +441,13 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
 			row[column_name] = string(buf.Next(int(length)))
 			break
-
+			/*
+		case FIELD_TYPE_JSON:
+			var length uint64
+			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
+			row[column_name] = string(buf.Next(int(length)))
+			break
+			 */
 		case FIELD_TYPE_BIT:
 			var resp string = ""
 			for k := 0; k < tableMap.columnMetaData[i].bytes; k++ {
@@ -577,13 +583,12 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_DATETIME2:
 			row[column_name],e = read_datetime2(buf)
 			break
-
 		default:
-			return nil, fmt.Errorf("Unknown FieldType %d", tableMap.columnTypes[i])
+			return nil, fmt.Errorf("schemaName:%s tableName:%s columnName:%s Unknown FieldType %d",tableMap.schemaName,tableMap.tableName, column_name,tableMap.columnTypes[i])
 		}
 		//log.Println("column_name:",column_name," row[column_name]:",row[column_name])
 		if e != nil {
-			log.Println("lastField err:",column_name,tableMap.columnMetaData[i].column_type,e)
+			log.Printf("lastField schemaName:%s tableName:%s columnName:%s Unknown FieldType %d err:%s",tableMap.schemaName,tableMap.tableName, column_name,tableMap.columnTypes[i],e)
 			return nil, e
 		}
 		//log.Println("column_name:",column_name,"=",row[column_name])

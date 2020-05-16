@@ -27,9 +27,6 @@ type ToServer struct {
 	Error		  		string
 	ErrorWaitDeal 		int
 	ErrorWaitData 		interface{}
-	//PluginConn	  		driver.ConnFun `json:"-"`
-	//PluginConnKey 		string `json:"-"`
-	PluginParamObj 		interface{} `json:"-"`
 	LastBinlogFileNum   int                       // 由 channel 提交到 ToServerChan 的最后一个位点
 	LastBinlogPosition  uint32                    // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
 	LastBinlogKey 		[]byte `json:"-"`         // 将数据保存到 level 的key
@@ -39,7 +36,9 @@ type ToServer struct {
 	Notes				string
 	ThreadCount			int16					  // 消费线程数量
 	FileQueueUsableCount uint32					  // 在开始文件队列的配置下，每次写入 ToServerChan 后 ，在 FileQueueUsableCountTimeDiff 时间内 队列都是满的次数
-	FileQueueUsableCountStartTime int64			  // 开始统计 FileQueueUsableCount 计算的时间
+	FileQueueUsableCountStartTime 	int64			  // 开始统计 FileQueueUsableCount 计算的时间
+	CosumerPluginParamMap 		  	map[uint16]interface{} `json:"-"` // 用以区分多个消费者的身份
+	CosumerIdInrc 				  	uint16 		  // 消费者自增id
 }
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {

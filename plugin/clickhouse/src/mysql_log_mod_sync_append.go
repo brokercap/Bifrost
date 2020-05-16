@@ -12,6 +12,9 @@ import (
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (e error)  {
 	var toV interface{}
 	stmt := This.getStmt("insert")
+	if stmt == nil {
+		goto errLoop
+	}
 	for i := n - 1; i >= 0; i-- {
 		vData := list[i]
 		val := make([]dbDriver.Value, 0)
