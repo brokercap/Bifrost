@@ -207,7 +207,7 @@ function showMySQLCreateSQL() {
     var schemaName = $("#tableToServerListContair").attr("schema");
     var tableName = $("#tableToServerListContair").attr("table_name");
     $.get(
-        "/bifrost/mysql/createsql?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
+        "/db/table/createsql?dbname="+getDbName()+"&schema_name="+schemaName+"&table_name="+tableName,
         function (d, status) {
             if (status != "success") {
                 return false;
