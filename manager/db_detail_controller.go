@@ -27,6 +27,7 @@ func init(){
 	addRoute("/db/detail",db_detail_controller)
 	addRoute("/db/tablelist",get_table_List_controller)
 	addRoute("/db/tablefields",get_table_fields_controller)
+	addRoute("/db/table/createsql",get_table_create_sql_controller)
 }
 
 func db_detail_controller(w http.ResponseWriter,req *http.Request){
@@ -118,4 +119,24 @@ func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
 	TableFieldsList := GetSchemaTableFieldList(dbConn,schema_name,table_name)
 	b,_:=json.Marshal(TableFieldsList)
 	w.Write(b)
+}
+
+func get_table_create_sql_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	schema_name := req.Form.Get("schema_name")
+	table_name := req.Form.Get("table_name")
+
+	schema_name = tansferSchemaName(schema_name)
+	table_name = tansferTableName(table_name)
+
+	DBObj := server.GetDBObj(dbname)
+	dbUri := DBObj.ConnectUri
+	dbConn := DBConnect(dbUri)
+	if dbConn == nil{
+		return
+	}
+	defer dbConn.Close()
+	sql := ShowTableCreate(dbConn,schema_name,table_name)
+	w.Write([]byte(sql))
 }
