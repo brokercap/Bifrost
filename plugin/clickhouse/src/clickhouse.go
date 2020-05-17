@@ -517,7 +517,7 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			break
 		}
 		switch data.(type) {
-		case []string:
+		case []string,[]interface{}:
 			v = strings.Replace(strings.Trim(fmt.Sprint(data), "[]"), " ", ",", -1)
 			break
 		default:
