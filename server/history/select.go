@@ -1,6 +1,7 @@
 package history
 
 import (
+	"runtime"
 	"sync"
 	"unsafe"
 	"time"
@@ -26,12 +27,22 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 			log.Println("history select threadStart:",fmt.Sprint(err) + string(debug.Stack()))
 		}
 	}()
+	This.Lock()
 	This.ThreadPool[i] = &ThreadStatus{
 		Num:i+1,
 		Error:nil,
 		NowStartI:0,
 	}
+	This.Unlock()
 	db := DBConnect(This.Uri)
+	defer func() {
+		defer func() {
+			if err:=recover();err!=nil{
+				return
+			}
+		}()
+		db.Close()
+	}()
 	db.Exec("SET NAMES UTF8",[]driver.Value{})
 	This.initMetaInfo(db)
 	if len(This.Fields) == 0{
@@ -90,11 +101,13 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		rows, err := stmt.Query(p)
 		if err != nil{
 			This.ThreadPool[i].Error = err
+			runtime.Goexit()
 			return
 		}
 		rowCount := 0
 		for {
 			if This.Status == HISTORY_STATUS_KILLED{
+				runtime.Goexit()
 				return
 			}
 			dest := make([]driver.Value, n, n)
@@ -165,9 +178,10 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		stmt.Close()
 
 		if ( This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 ) && rowCount < This.Property.ThreadCountPer {
-			return
+			runtime.Goexit()
 		}
 	}
+	runtime.Goexit()
 }
 
 func (This *History) GetNextSql() (sql string,start uint64){

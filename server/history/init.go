@@ -63,6 +63,7 @@ func AddHistory(dbName string,SchemaName string,TableName string,Property Histor
 		ThreadPool:make([]*ThreadStatus,0),
 		Uri:db.ConnectUri,
 	}
+	lastHistoryID = ID
 	return ID,nil
 }
 
@@ -210,6 +211,9 @@ func (This *History) Start() error {
 			if v.Error != nil{
 				This.Status = HISTORY_STATUS_HALFWAY
 			}
+		}
+		if len(This.ToServerList) > 0 {
+			This.ToServerList = nil
 		}
 		if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER {
 			This.Status = HISTORY_STATUS_SELECT_OVER
