@@ -355,7 +355,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 
 	if This.conn.err != nil{
 		This.err = This.conn.err
-		log.Println("plugin mysql conn.err",This.err)
+		//log.Println("plugin mysql conn.err",This.err)
 		return nil,This.err
 	}
 	if This.err != nil{
@@ -471,7 +471,7 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 		break
 	case "set":
 		switch data.(type) {
-		case []string:
+		case []string,[]interface{}:
 			v = strings.Replace(strings.Trim(fmt.Sprint(data), "[]"), " ", ",", -1)
 			break
 		default:
