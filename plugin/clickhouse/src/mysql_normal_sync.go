@@ -128,10 +128,6 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 	var stmt dbDriver.Stmt
 	// delete 的话，将多条数据，where id in (1,2) 方式合并
 	if len(deleteDataMap) > 0 {
-		stmt = This.getStmt("delete")
-		if stmt == nil {
-			goto errLoop
-		}
 		keys := make([]dbDriver.Value,0)
 		for _, v := range deleteDataMap {
 			keys = append(keys,v.Rows[0][This.p.mysqlPriKey])
