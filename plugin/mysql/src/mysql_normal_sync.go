@@ -10,6 +10,7 @@ package src
 import (
 	dbDriver "database/sql/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
 )
 
 func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
@@ -48,6 +49,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
@@ -65,6 +67,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 				}
 				_,This.conn.err = stmt.Exec(where)
 				if This.conn.err != nil{
+					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
 					goto errLoop
 				}
 				setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],nil,"delete")
@@ -91,6 +94,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],&val,"insert")

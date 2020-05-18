@@ -58,6 +58,7 @@ func (This *History) SyncWaitToServerOver(n int)  {
 		defer func() {
 			This.Lock()
 			defer This.Unlock()
+			This.ToServerTheadGroup = nil
 			switch This.Status {
 			case HISTORY_STATUS_KILLED, HISTORY_STATUS_HALFWAY:
 				break

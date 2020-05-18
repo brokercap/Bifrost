@@ -7,6 +7,7 @@ package src
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	dbDriver "database/sql/driver"
+	"log"
 )
 
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e error)  {
@@ -33,6 +34,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			break
@@ -51,6 +53,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			break

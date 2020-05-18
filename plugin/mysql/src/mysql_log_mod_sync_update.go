@@ -10,6 +10,7 @@ package src
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	dbDriver "database/sql/driver"
+	"log"
 )
 
 type opLog struct{
@@ -53,6 +54,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
@@ -76,6 +78,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 				}
 				_,This.conn.err = stmt.Exec(val)
 				if This.conn.err != nil{
+					log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 					goto errLoop
 				}
 				setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],nil,"delete")
@@ -102,6 +105,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],&val,"insert")
