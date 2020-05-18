@@ -1,7 +1,7 @@
 //首页导引
 function IndexGruid() {
-    $("#header_nav").find("li").eq(2).attr({"data-intro":"2. 点击添加 数据源","data-position":"bottom"});
-    $("#header_nav").find("li").eq(3).attr({"data-intro":"1. 点击添加 目标库,数据需要同步到哪些地方","data-position":"bottom"});
+    $("#header_nav").find("li").eq(1).attr({"data-intro":"2. 点击添加 数据源","data-position":"bottom"});
+    $("#header_nav").find("li").eq(2).attr({"data-intro":"1. 点击添加 目标库,数据需要同步到哪些地方","data-position":"bottom"});
 }
 
 //数据源界面引导
