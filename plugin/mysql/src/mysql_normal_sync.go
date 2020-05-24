@@ -8,8 +8,9 @@
 package src
 
 import (
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	dbDriver "database/sql/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
 )
 
 func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
@@ -29,7 +30,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 
 				if This.err != nil{
 					return This.err
@@ -48,6 +49,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
@@ -55,7 +57,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
 			if checkOpMap(opMap,data.Rows[0][This.p.mysqlPriKey], "delete") == false {
@@ -65,6 +67,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 				}
 				_,This.conn.err = stmt.Exec(where)
 				if This.conn.err != nil{
+					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
 					goto errLoop
 				}
 				setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],nil,"delete")
@@ -74,7 +77,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return This.err
 				}
@@ -91,6 +94,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],&val,"insert")

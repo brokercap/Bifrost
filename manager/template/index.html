@@ -90,7 +90,9 @@
                             -->
 
                             <div class="col-md-12" id="bifrost_memory_used">
-                                <h1 class="no-margins number">0</h1>
+                                <h1 class="no-margins"><span class="number">0</span>
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" id="freeOSMemory">释放</button>
+                                </h1>
                                 <div class="font-bold text-navy"><span class="proportion"></span> <i class="fa fa-level-up"></i> <small class="notes">Bifrost Used</small>
                                 </div>
                             </div>
@@ -313,6 +315,20 @@
                     });
                 }
             
+        );
+
+        $("#freeOSMemory").click(
+            function() {
+                $.get(
+                    "/freeOSMemory",
+                    function (d, status) {
+                        if (status != "success") {
+                            return false;
+                        }
+                        alert("释放成功！");
+                        return true;
+                    }, 'json');
+            }
         );
     });
 

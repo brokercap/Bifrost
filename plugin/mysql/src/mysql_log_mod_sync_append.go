@@ -7,6 +7,7 @@ package src
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	dbDriver "database/sql/driver"
+	"log"
 )
 
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e error)  {
@@ -20,7 +21,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 		case "update":
 			val := make([]dbDriver.Value,0)
 			for _,v:=range This.p.Field{
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 
 				if This.err != nil{
 					return This.err
@@ -33,13 +34,14 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			break
 		case "insert","delete":
 			val := make([]dbDriver.Value,0)
 			for _,v:=range This.p.Field {
-				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault,v.ToFieldIsAutoIncrement)
+				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault)
 				if This.err != nil {
 					return This.err
 				}
@@ -51,6 +53,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
 			break

@@ -308,12 +308,11 @@ func (This *mysqlDB) ShowTableCreate(schema,table string) string {
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
-	defer rows.Close()
 	if err != nil {
-		log.Printf("%v\n", err)
+		log.Printf("sql:%s, err:%v\n",sql, err)
 		return ""
 	}
-
+	defer rows.Close()
 	var createSQL string
 
 	for {

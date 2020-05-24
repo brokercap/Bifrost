@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"runtime"
 	"github.com/brokercap/Bifrost/config"
+	"runtime/debug"
 	"time"
 )
 
@@ -21,8 +22,7 @@ func init()  {
 	addRoute("/",index_controller)
 	addRoute("/overview",overview_controller)
 	addRoute("/serverinfo",server_monitor_controller)
-
-
+	addRoute("/freeOSMemory",freeOSMemory_controller)
 }
 
 func index_controller(w http.ResponseWriter,req *http.Request){
@@ -85,4 +85,10 @@ func server_monitor_controller(w http.ResponseWriter,req *http.Request){
 	}
 	b,_:=json.Marshal(data)
 	w.Write(b)
+}
+
+func freeOSMemory_controller(w http.ResponseWriter,req *http.Request){
+	debug.FreeOSMemory()
+	data,_:=json.Marshal(resultStruct{Status:true,Msg:"success"})
+	w.Write(data)
 }

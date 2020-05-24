@@ -1,6 +1,8 @@
 package history
 
 import (
+	"runtime"
+	"sync"
 	"unsafe"
 	"time"
 	"strings"
@@ -15,22 +17,32 @@ import (
 	"runtime/debug"
 )
 
-func (This *History) threadStart(i int)  {
+func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
+	defer wg.Done()
 	log.Println("history select threadStart start:",i,This.DbName,This.SchemaName,This.TableName)
 	defer func() {
 		log.Println("history select threadStart over:",i,This.DbName,This.SchemaName,This.TableName)
-		This.threadResultChan <- i
 		if err :=recover();err!=nil{
 			This.ThreadPool[i].Error = fmt.Errorf( fmt.Sprint(err) + string(debug.Stack()) )
 			log.Println("history select threadStart:",fmt.Sprint(err) + string(debug.Stack()))
 		}
 	}()
+	This.Lock()
 	This.ThreadPool[i] = &ThreadStatus{
 		Num:i+1,
 		Error:nil,
 		NowStartI:0,
 	}
+	This.Unlock()
 	db := DBConnect(This.Uri)
+	defer func() {
+		defer func() {
+			if err:=recover();err!=nil{
+				return
+			}
+		}()
+		db.Close()
+	}()
 	db.Exec("SET NAMES UTF8",[]driver.Value{})
 	This.initMetaInfo(db)
 	if len(This.Fields) == 0{
@@ -53,18 +65,15 @@ func (This *History) threadStart(i int)  {
 		if ToServerInfo.ToServerChan == nil{
 			// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
 			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是直阻塞在那吗?
-			This.AsyncWaitToServerOver()
+			This.SyncWaitToServerOver(This.Property.SyncThreadNum)
 			ToServerInfo.ToServerChan = &server.ToServerChan{
 				To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
 			}
 			for i := 0; i < This.Property.SyncThreadNum; i++{
-				This.toServerTheadCountChan <- 1
 				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
 				go func() {
 					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
-					defer func() {
-						This.toServerTheadCountChan <- -1
-					}()
+					defer This.ToServerTheadGroup.Done()
 					ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
 				}()
 			}
@@ -92,11 +101,13 @@ func (This *History) threadStart(i int)  {
 		rows, err := stmt.Query(p)
 		if err != nil{
 			This.ThreadPool[i].Error = err
+			runtime.Goexit()
 			return
 		}
 		rowCount := 0
 		for {
 			if This.Status == HISTORY_STATUS_KILLED{
+				runtime.Goexit()
 				return
 			}
 			dest := make([]driver.Value, n, n)
@@ -167,9 +178,10 @@ func (This *History) threadStart(i int)  {
 		stmt.Close()
 
 		if ( This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 ) && rowCount < This.Property.ThreadCountPer {
-			return
+			runtime.Goexit()
 		}
 	}
+	runtime.Goexit()
 }
 
 func (This *History) GetNextSql() (sql string,start uint64){

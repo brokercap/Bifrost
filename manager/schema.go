@@ -370,3 +370,32 @@ func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error){
 	}
 	return
 }
+
+func ShowTableCreate(db mysql.MysqlConnection,schema,table string) string {
+	sql := "SHOW CREATE TABLE `"+schema+"`.`"+table+"`"
+	stmt,err := db.Prepare(sql)
+	if err !=nil{
+		log.Println(err)
+		return ""
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("sql:%s, err:%v\n",sql, err)
+		return ""
+	}
+	defer rows.Close()
+	var createSQL string
+
+	for {
+		dest := make([]driver.Value, 2, 2)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		createSQL = dest[1].(string)
+		break
+	}
+	return createSQL
+}

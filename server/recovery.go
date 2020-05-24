@@ -225,7 +225,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					db.AddTableToServer(schemaName, tableName,toServerObj)
 
 					//假如当前同步配置 最后输入的 位点 等于 最后成功的位点，说明当前这个 同步配置的位点是没有问题的
-					if toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
+					if toServer.LastBinlogFileNum >0 && toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
 						if lastAllToServerNoraml == false{
 							//假如有一个同步不太正常的情况下，取小值
 							//这里用判断 BinlogFileNum == 0 是因为 绝对不会出现，因为绝对 第一次循环 lastAllToServerNoraml == true

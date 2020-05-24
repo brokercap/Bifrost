@@ -79,7 +79,8 @@ func (event *TableMapEvent) parseColumnMetadata(data []byte) error {
 			FIELD_TYPE_FLOAT,
 			FIELD_TYPE_TINY_BLOB,
 			FIELD_TYPE_MEDIUM_BLOB,
-			FIELD_TYPE_LONG_BLOB:
+			FIELD_TYPE_LONG_BLOB,
+			FIELD_TYPE_JSON:
 			event.columnMetaData[i].length_size = uint8(data[pos])
 			pos += 1
 

@@ -63,6 +63,7 @@ func AddHistory(dbName string,SchemaName string,TableName string,Property Histor
 		ThreadPool:make([]*ThreadStatus,0),
 		Uri:db.ConnectUri,
 	}
+	lastHistoryID = ID
 	return ID,nil
 }
 
@@ -166,7 +167,8 @@ type History struct {
 	TablePriArr			[]*string
 	ToServerList		[]*server.ToServer
 	ToServerTheadCount	int16			// 实际正在运行的同步协程数
-	toServerTheadCountChan chan int16	// 同步协程 开始或者结束,都会往这个chan里 +1,-1写数据.用于计算是不是所有同步协程都已结束
+	//toServerTheadCountChan chan int16	// 同步协程 开始或者结束,都会往这个chan里 +1,-1写数据.用于计算是不是所有同步协程都已结束
+	ToServerTheadGroup	*sync.WaitGroup
 }
 
 func Start(dbName string,ID int) error {
@@ -195,27 +197,29 @@ func (This *History) Start() error {
 	This.threadResultChan = make(chan int,1)
 	This.ToServerList = make([]*server.ToServer,0)
 	This.OverTime = ""
+	var wg sync.WaitGroup
 	for i:=1;i<=This.Property.ThreadNum;i++{
-		go This.threadStart(i-1)
+		wg.Add(1)
+		go This.threadStart(i-1,&wg)
 	}
 	go func() {
-		c:=0
-		for{
-			if c == This.Property.ThreadNum{
-				break
-			}
-			i := <- This.threadResultChan
-			log.Println("history threadResultChan over:",i,This.DbName,This.SchemaName,This.TableName)
-			c++
-		}
+		wg.Wait()
+		This.Lock()
+		defer This.Unlock()
 		This.OverTime = time.Now().Format("2006-01-02 15:04:05")
 		for _,v := range This.ThreadPool{
 			if v.Error != nil{
 				This.Status = HISTORY_STATUS_HALFWAY
 			}
 		}
+		if len(This.ToServerList) > 0 {
+			This.ToServerList = nil
+		}
 		if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER {
 			This.Status = HISTORY_STATUS_SELECT_OVER
+		}
+		if This.TableInfo.TABLE_ROWS == 0 {
+			This.Status = HISTORY_STATUS_OVER
 		}
 	}()
 	return nil

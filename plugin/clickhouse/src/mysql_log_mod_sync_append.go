@@ -5,13 +5,17 @@ package src
 */
 
 import (
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	dbDriver "database/sql/driver"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
 )
 
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (e error)  {
 	var toV interface{}
 	stmt := This.getStmt("insert")
+	if stmt == nil {
+		goto errLoop
+	}
 	for i := n - 1; i >= 0; i-- {
 		vData := list[i]
 		val := make([]dbDriver.Value, 0)
@@ -48,6 +52,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 		}
 		_, This.err = stmt.Exec(val)
 		if This.err != nil {
+			log.Println("plugin clickhouse insert exec err:",This.err," data:",val)
 			stmt.Close()
 			goto errLoop
 		}

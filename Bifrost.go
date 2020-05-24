@@ -273,18 +273,29 @@ func initParam(){
 }
 
 func initTLSParam(){
+	path,_ := filepath.Abs(filepath.Dir(os.Args[0]))
 	if config.GetConfigVal("Bifrostd","tls") == "true"{
 		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
-			log.Println("tls_server_key:",config.GetConfigVal("Bifrostd","tls_key_file"),err)
-			return
+			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
+				log.Println("tls_server_key:",config.GetConfigVal("Bifrostd","tls_key_file"),err)
+				return
+			}else{
+				config.TLSServerKeyFile = path+"/"+config.GetConfigVal("Bifrostd","tls_key_file")
+			}
+		}else{
+			config.TLSServerKeyFile = config.GetConfigVal("Bifrostd","tls_key_file")
 		}
 		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
-			log.Println("tls_server_crt:",config.GetConfigVal("Bifrostd","tls_crt_file"),err)
-			return
+			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
+				log.Println("tls_server_crt:",config.GetConfigVal("Bifrostd","tls_crt_file"),err)
+				return
+			}else{
+				config.TLSServerCrtFile = path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file")
+			}
+		}else{
+			config.TLSServerCrtFile = config.GetConfigVal("Bifrostd","tls_crt_file")
 		}
 		config.TLS = true
-		config.TLSServerKeyFile = config.GetConfigVal("Bifrostd","tls_key_file")
-		config.TLSServerCrtFile = config.GetConfigVal("Bifrostd","tls_crt_file")
 	}
 }
 
