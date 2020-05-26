@@ -176,8 +176,17 @@ func GetSchemaTableInfo(db mysql.MysqlConnection,schema string,table string) (ta
 		var ENGINE 			string
 		var TABLE_ROWS 		uint64
 
-		TABLE_TYPE 		= dest[0].(string)
-		ENGINE 			= dest[1].(string)
+		if dest[0] == nil {
+			TABLE_TYPE = ""
+		}else{
+			TABLE_TYPE 		= dest[0].(string)
+		}
+		if dest[1] == nil {
+			ENGINE = ""
+		}else {
+			ENGINE 			= dest[1].(string)
+		}
+
 		if dest[2] == nil{
 			TABLE_ROWS 		= 0
 		}else{

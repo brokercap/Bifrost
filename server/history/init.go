@@ -218,6 +218,9 @@ func (This *History) Start() error {
 		if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER {
 			This.Status = HISTORY_STATUS_SELECT_OVER
 		}
+		if This.TableInfo.TABLE_ROWS == 0 {
+			This.Status = HISTORY_STATUS_OVER
+		}
 	}()
 	return nil
 }
