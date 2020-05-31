@@ -9,8 +9,8 @@ import (
 	"log"
 )
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.3.0"
+const BIFROST_VERION = "v1.3.0"
 
 func init(){
 	pluginDriver.Register("rabbitmq",&MyConn{},VERSION,BIFROST_VERION)
@@ -285,12 +285,12 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 	var exchange string
 	var routingkey string
 	index := len(data.Rows)-1
-	exchange = pluginDriver.TransfeResult(This.p.Exchange.Name,data,index)
-	routingkey = pluginDriver.TransfeResult(This.p.RoutingKey,data,index)
+	exchange = fmt.Sprint(pluginDriver.TransfeResult(This.p.Exchange.Name,data,index))
+	routingkey = fmt.Sprint(pluginDriver.TransfeResult(This.p.RoutingKey,data,index))
 	if This.p.Declare == true {
-		queuename = pluginDriver.TransfeResult(This.p.Queue.Name, data, index)
+		queuename = fmt.Sprint(pluginDriver.TransfeResult(This.p.Queue.Name, data, index))
 		if err := This.Declare(&queuename,&exchange,&routingkey); err != nil{
-			return nil,err;
+			return nil,err
 		}
 	}
 	if This.p.Confirm == true{

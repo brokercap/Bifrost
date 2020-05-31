@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"github.com/brokercap/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"time"
 	"os"
 	"fmt"
@@ -695,6 +695,7 @@ func main() {
 				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
 				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
 				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
+				"`testjson` json,"+
 				"PRIMARY KEY (`id`)"+
 				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8",
 		}

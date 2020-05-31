@@ -148,6 +148,7 @@ func getParam(SyncMode string)  map[string]interface{}{
 	Field = append(Field,fieldStruct{"testenum","testenum"})
 	Field = append(Field,fieldStruct{"testset","testset"})
 	Field = append(Field,fieldStruct{"event_type","{$EventType}"})
+	Field = append(Field,fieldStruct{"testjson","testjson"})
 
 	sql := ""
 	for _,f := range Field{
@@ -512,9 +513,9 @@ func TestRandDataAndCheck(t *testing.T){
 
 func TestCommitBySymbol(t *testing.T){
 
-	url = "root:@tcp(127.0.0.1:3306)/bifrost_test"
+	url = "root:root@tcp(192.168.220.128:3308)/bifrost_test"
 	beforeTest()
-	TableName  = "binlog_field_test-3"
+	TableName  = "binlog_field_test4"
 	conn := getPluginConn("Normal")
 	initDBTable(false)
 
@@ -529,6 +530,7 @@ func TestCommitBySymbol(t *testing.T){
 
 	_,err2 := conn.Commit()
 	if err2 != nil{
-		log.Fatal(err2)
+		t.Fatal(err2)
 	}
+	t.Log("success")
 }

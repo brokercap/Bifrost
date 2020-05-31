@@ -6,6 +6,7 @@ import (
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
+	"reflect"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -13,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.2.1"
-const BIFROST_VERION = "v1.2.1"
+const VERSION  = "v1.3.0"
+const BIFROST_VERION = "v1.3.0"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
@@ -429,6 +430,9 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 			case "float","double","decimal","number","point":
 				v = "0.00"
 				break
+			case "json":
+				v = "{}"
+				break
 			default:
 				v = ""
 				break
@@ -479,8 +483,34 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 			break
 		}
 		break
+	case "json":
+		switch reflect.TypeOf(data).Kind() {
+		case reflect.Array,reflect.Slice,reflect.Map:
+			var c []byte
+			c,e = json.Marshal(data)
+			if e != nil{
+				return
+			}
+			v = string(c)
+			break
+		default:
+			e = fmt.Errorf("field:%s ,data source type: %s, is not object or array, s ",fieldName,reflect.TypeOf(data).Kind().String())
+		}
+		break
 	default:
-		v = fmt.Sprint(data)
+		switch reflect.TypeOf(data).Kind() {
+		case reflect.Array,reflect.Slice,reflect.Map:
+			var c []byte
+			c,e = json.Marshal(data)
+			if e != nil{
+				e = fmt.Errorf("field:%s ,data source type: %s , json.Marshal err: %s ",fieldName,reflect.TypeOf(data).Kind().String(),e.Error())
+				return
+			}
+			v = string(c)
+			break
+		default:
+			v = fmt.Sprint(data)
+		}
 		break
 	}
 	return
