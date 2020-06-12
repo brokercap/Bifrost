@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.2.0"
-const BIFROST_VERION = "v1.2.0"
+const VERSION  = "v1.2.2"
+const BIFROST_VERION = "v1.2.2"
 
 var l sync.RWMutex
 
@@ -418,7 +418,7 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	if len(This.p.Data.Data) <= int(This.p.BatchSize){
 		This.p.Data.Data = make([]*pluginDriver.PluginDataType,0)
 	}else{
-		This.p.Data.Data = This.p.Data.Data[n+1:]
+		This.p.Data.Data = This.p.Data.Data[n:]
 	}
 
 	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
