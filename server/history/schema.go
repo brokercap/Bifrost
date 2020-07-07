@@ -88,14 +88,26 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 		if dest[8] == nil{
 			NUMERIC_PRECISION 	= nil
 		}else{
-			var t uint64 = dest[8].(uint64)
-			NUMERIC_PRECISION 	= &t
+			switch dest[8].(type) {
+			case uint32:
+				t := uint64(dest[8].(uint32))
+				NUMERIC_PRECISION = &t
+			case uint64:
+				t := dest[8].(uint64)
+				NUMERIC_PRECISION 	= &t
+			}
 		}
 		if dest[9] == nil{
 			NUMERIC_SCALE 	= nil
 		}else{
-			var t uint64 = dest[9].(uint64)
-			NUMERIC_SCALE 	= &t
+			switch dest[9].(type) {
+			case uint32:
+				t := uint64(dest[9].(uint32))
+				NUMERIC_PRECISION = &t
+			case uint64:
+				t := dest[8].(uint64)
+				NUMERIC_PRECISION 	= &t
+			}
 		}
 
 		FieldList = append(FieldList,TableStruct{
