@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 )
 
-const VERSION  = "0.1.2"
+const VERSION  = "1.3.0"
 
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
@@ -524,6 +524,17 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				Value := enum_values[rand.Intn(len(enum_values)-1)]
 				columnType.Value = Value
 				data = append(data,Value)
+				break
+			case "json":
+				m := make(map[string][]interface{},1)
+				m["key1"] = make([]interface{},0)
+				m["key1"] = append(m["key"],1)
+				m["key1"] = append(m["key"],"2")
+				m["key1"] = append(m["key"],nil)
+				m["key1"] = append(m["key"],true)
+				c,_ := json.Marshal(m)
+				columnType.Value = m
+				data = append(data,string(c))
 				break
 			default:
 				data = append(data,"0")
