@@ -1,0 +1,93 @@
+<style type="text/css">
+#ClickHouse_Contair td{
+    height: 30px; line-height: 30px; width: 50%;
+}
+
+</style>
+<div class="form-group" id="ClickHouse_Contair">
+    <div class="form-group">
+        <label class="col-sm-3 control-label">同步方式：</label>
+        <div class="col-sm-9">
+            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type" onchange="ClickHouse_Sync_Type_Change();">
+                <option value="Normal" selected="selected">普通模式</option>
+                <option value="LogUpdate">日志模式-UPDATE</option>
+                <option value="insertAll">日志模式-追加</option>
+            </select>
+            <span class="help-block m-b-none">
+                <p><strong>普通模式：</strong>源insert,update,delete, 目标库也对应insert,update,delete , 建议 ClickHouse 表中新增一个名为 bifrost_data_version 的字段，使用{$BifrostDataVersion} 标签，用于异步删除数据安全</p>
+                <p><strong>日志模式-UPDATE：</strong>源delete, 目标库将转成 update, 目标库需要额外新增一个字段并且使用{$EventType}标签，用于标记删除。并且建议 ClickHouse 表中新增一个名为 bifrost_data_version 的字段，使用{$BifrostDataVersion} 标签，用于异步删除数据安全</p>
+                <p><strong>日志模式-追加：</strong>源的所有操作，将转成 insert 追加的方式写到目标库，建议 ClickHouse 表中新增一个名为 bifrost_event_type 的字段，使用{$EventType} 标签</p>
+                <p>新增的字段，请参考 文档 的标签配合使用</p>
+            </span>
+        </div>
+    </div>
+    <div>&nbsp;</div>
+
+    <div class="form-group">
+        <div class="col-sm-3">
+            <select class="form-control" name="clickhouse_schema" id="clickhouse_schema" onchange="GetCkSchameTableList($(this).val());">
+                <option value="true" selected="selected">请选择数据库</option>
+            </select>
+        </div>
+        <div class="col-sm-9">
+            <select class="form-control" name="clickohuse_table" id="clickohuse_table" onchange="GetCkTableDesc($('#clickhouse_schema').val(),$(this).val());" >
+                <option value="true" selected="selected">请选择表</option>
+            </select>
+            如果ClickHouse还没建表,<a href="javasripts:return false;" onclick="showClickHouseCreateSQL();"> 点击获取 参考建表 SQL</a>
+        </div>
+    </div>
+
+    <div class="form-group">
+    <div class="col-sm-12" >
+        <table style="width: 100%">
+            <thead>
+            <tr>
+                <th width="45%" height="35">Ck Field</th>
+                <th width="45%">DB Field</th>
+                <th>PRI</th>
+            </tr>
+            </thead>
+            <tbody id="CKTableFieldsTable">
+
+
+            </tbody>
+            <!--
+            <tr>
+                <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
+                <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
+            </tr>
+            -->
+        </table>
+        <p>&nbsp;</p>
+    </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">BatchSize：</label>
+        <div class="col-sm-9">
+            <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control" placeholder="">
+            <span class="help-block m-b-none">* 多少条刷一次数据</span>
+        </div>
+    </div>
+</div>
+
+
+<!--show clickhouse create sql start-->
+<div class="modal inmodal fade" id="showClickHouseCreateSQL" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+            </div>
+            <div class="modal-body">
+
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--show clickhouse create sql over-->

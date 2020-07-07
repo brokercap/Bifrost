@@ -1,45 +1,44 @@
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error",batchSupport:false}
-    var data = {};
-	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
-	if (Type == "list"){
-		result.batchSupport = true;
-	}
+	let result = {data:{},status:false,msg:"error",batchSupport:true}
+    let data = {};
 
-    var DataType = $("#Redis_Plugin_Contair #Redis_DataType").val();
-    var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();
-	var ValueConfig = $("#Redis_Plugin_Contair #ValueConfig").val();
-    if (KeyConfig==""){
+	let type = $("#Redis_Plugin_Container #Plugin_type").val();
+    let keyConfig = $("#Redis_Plugin_Container #KeyConfig").val();
+	let fieldKeyConfig = $("#Redis_FieldKeyConfigContainer #FieldKeyConfig").val();
+    if (keyConfig === ""){
 		result.msg = "Key must be not empty!"
 		return result
     }
-    if (DataType == "string" && ValueConfig==""){
-		result.msg = "DataType==string,ValueConfig muest be!"
-        return result;
-    }
+	if (fieldKeyConfig ==="" && type === "hash"){
+		result.msg = "Hash FieldKey must be not empty!"
+		return result
+	}
 	
-	var Expir = $("#Redis_Plugin_Contair input[name='Expir']").val();
+	let Expir = $("#Redis_Plugin_Container input[name='Expir']").val();
 
-    if (Expir != "" && Expir != null && isNaN(Expir)){
-		result.msg = "Expir must be int!"
+    if (!Expir && isNaN(Expir)){
+		result.msg = "expired must be int!"
         return result;
     }
-    data["KeyConfig"] = KeyConfig;
-    data["ValueConfig"] = ValueConfig;
+    
+    data["KeyConfig"] = keyConfig;
+    data["FieldConfig"] = fieldKeyConfig;
     data["Expir"] = parseInt(Expir);
-	data["DataType"] = DataType;
-	data["Type"] = Type;
+	data["Type"] = type;
+	result.batchSupport = true;
 	result.data = data;
 	result.msg = "success";
 	result.status = true;
     return result;
 }
 
-function Redis_DataType_Change(){
-	var dataType = $("#Redis_DataType").val();
-	if(dataType == "string"){
-		$("#Redis_ValueConfigContair").show();
+function redisTypeChange(){
+	let type = $("#Plugin_type").val();
+	if(type === "hash"){
+		$("#Redis_FieldKeyConfigContainer").show();
 	}else{
-		$("#Redis_ValueConfigContair").hide();
+		$("#Redis_FieldKeyConfigContainer").hide();
 	}
 }
+
+redisTypeChange()

@@ -1,0 +1,89 @@
+.chardinjs-overlay {
+  position: absolute;
+  z-index: 9999990;
+  background-color: #000;
+  opacity: 0.8;
+  width: 100%;
+  left: 0;
+  top: 0;
+  -webkit-transition: all 0.3s ease-out;
+  -moz-transition: all 0.3s ease-out;
+  -ms-transition: all 0.3s ease-out;
+  -o-transition: all 0.3s ease-out;
+  transition: all 0.3s ease-out; }
+
+.chardinjs-helper-layer {
+  position: absolute;
+  z-index: 9999998;
+  color: white;
+  -webkit-transition: all 0.3s ease-out;
+  -moz-transition: all 0.3s ease-out;
+  -ms-transition: all 0.3s ease-out;
+  -o-transition: all 0.3s ease-out;
+  transition: all 0.3s ease-out; }
+  .chardinjs-helper-layer.chardinjs-left {
+    border-left: solid 1px;
+    margin-left: -10px; }
+  .chardinjs-helper-layer.chardinjs-right {
+    border-right: solid 1px;
+    padding-right: 10px; }
+  .chardinjs-helper-layer.chardinjs-bottom {
+    border-bottom: solid 1px;
+    padding-bottom: 10px; }
+  .chardinjs-helper-layer.chardinjs-top {
+    border-top: solid 1px;
+    padding-top: 10px; }
+
+.chardinjs-tooltip {
+  position: absolute;
+  -webkit-transition: opacity 0.1s ease-out;
+  -moz-transition: opacity 0.1s ease-out;
+  -ms-transition: opacity 0.1s ease-out;
+  -o-transition: opacity 0.1s ease-out;
+  transition: opacity 0.1s ease-out;
+  max-width: 200px; }
+  .chardinjs-tooltip.chardinjs-left {
+    margin-left: -75px;
+    padding-right: 10px; }
+  .chardinjs-tooltip.chardinjs-right {
+    margin-right: -75px;
+    padding-left: 10px; }
+  .chardinjs-tooltip.chardinjs-bottom {
+    margin-bottom: -30px;
+    padding-top: 10px; }
+  .chardinjs-tooltip.chardinjs-top {
+    margin-top: -30px;
+    padding-bottom: 10px; }
+  .chardinjs-tooltip.chardinjs-right:before, .chardinjs-tooltip.chardinjs-left:after, .chardinjs-tooltip.chardinjs-bottom:before, .chardinjs-tooltip.chardinjs-top:after {
+    content: ".";
+    display: inline-block;
+    background-color: white;
+    height: 1px;
+    overflow: hidden;
+    position: absolute; }
+  .chardinjs-tooltip.chardinjs-right:before, .chardinjs-tooltip.chardinjs-left:after {
+    width: 50px;
+    top: 50%; }
+  .chardinjs-tooltip.chardinjs-bottom:before, .chardinjs-tooltip.chardinjs-top:after {
+    width: 1px;
+    height: 30px;
+    left: 50%; }
+  .chardinjs-tooltip.chardinjs-bottom:before {
+    top: -30px; }
+  .chardinjs-tooltip.chardinjs-top:after {
+    bottom: -30px; }
+  .chardinjs-tooltip.chardinjs-right:before {
+    left: -50px; }
+  .chardinjs-tooltip.chardinjs-left:after {
+    right: -50px; }
+
+.chardinjs-show-element {
+  z-index: 9999995;
+  opacity: 0.8; }
+
+.chardinjs-relative-position {
+  position: relative; }
+
+.chardinjs-no-fixed {
+  z-index: auto !important;
+  position: absolute !important; }

@@ -1,0 +1,379 @@
+
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>流量</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+
+                    <div class="ibox-tools" style="width: auto; padding-right:8px;">
+                        <select class="form-control" style=" margin-top:-8px;" id="selectLengthsAge">
+                            <option value="minute">1 分钟</option>
+                            <option value="tenminute">10 分钟</option>
+                            <option value="hour">1 小时</option>
+                            <option value="eighthour">8 小时</option>
+                            <option value="day">24 小时</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="ibox-content" >
+                    <div class="echarts" id="morris-line-chart" style="height: 250px"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-2">
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="ibox float-e-margins" id="flow_count">
+                        <div class="ibox-title">
+                            <span class="label label-info pull-right unit">条</span>
+                            <h5>条数</h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="ibox float-e-margins" id="flow_bytesize">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">Byte</span>
+                            <h5>数据大小</h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="col-md-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-primary pull-right"></span>
+                        <h5>内存使用</h5>
+                    </div>
+                    <div class="ibox-content">
+                        <div class="row">
+                            <!--
+                            <div class="col-md-4" id="memory_all">
+                                <h1 class="no-margins number">0</h1>
+                                <div class="font-bold text-navy"><i class="fa fa-level-up"></i> <small class="notes">总大小</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="memory_used">
+                                <h1 class="no-margins">0</h1>
+                                <div class="font-bold text-navy"><span class="proportion">0%</span> <i class="fa fa-level-up"></i> <small class="notes">总使用量</small>
+                                </div>
+                            </div>
+                            -->
+
+                            <div class="col-md-12" id="bifrost_memory_used">
+                                <h1 class="no-margins"><span class="number">0</span>
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" id="freeOSMemory">释放</button>
+                                </h1>
+                                <div class="font-bold text-navy"><span class="proportion"></span> <i class="fa fa-level-up"></i> <small class="notes">Bifrost Used</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-primary pull-right"></span>
+                        <h5>基本信息</h5>
+                    </div>
+                    <div class="ibox-content">
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <small class="stats-label">Bifrost Version</small>
+                                <h4 id="BifrostVersion"></h4>
+                            </div>
+
+                            <div class="col-xs-6">
+                                <small class="stats-label">Go Version</small>
+                                <h4 id="GoVersion"></h4>
+                            </div>
+                            <div class="col-xs-6">
+                                <small class="stats-label">StartTime</small>
+                                <h4 id="BifrostStartTime"></h4>
+                            </div>
+
+                            <div class="col-xs-6">
+                                <small class="stats-label">OS</small>
+                                <h4 id="OSVersion"></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-sm-12">
+
+                    <div class="col-md-2">
+                        <div class="ibox float-e-margins" id="db_count">
+                            <div class="ibox-title">
+                                <span class="label label-success pull-right unit">个</span>
+                                <h5><a href="/db/list">数据源</a></h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins number">0</h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="ibox float-e-margins" id="plugin_count">
+                            <div class="ibox-title">
+                                <span class="label label-success pull-right unit">个</span>
+                                <h5><a href="/plugin/list">插件</a></h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins number">0</h1>
+                            </div>
+                        </div>
+                    </div>
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins" id="toserver_count">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit">个</span>
+                        <h5><a href="/toserver/list">目标库</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                        <h1 class="no-margins number">0</h1>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins" id="table_count">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit">个</span>
+                        <h5><a href="/toserver/list">数据表</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                        <h1 class="no-margins number">0</h1>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="col-md-2">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit"></span>
+                        <h5><a href="#">数据备份</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                        <a href="/backup/export"><button data-toggle="button" class="btn-sm btn-primary" type="button" >点击备份</button></a>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="col-md-2">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <span class="label label-success pull-right unit"></span>
+                        <h5><a href="#">数据恢复</a></h5>
+                    </div>
+                    <div class="ibox-content">
+                            <input class="style_file_content" accept=".json" type="file" id="backup_file" name="backup_file"/>
+                            <br/>
+                            <button data-toggle="button" class="btn-sm btn-primary" type="button" id="backupRecoveryBtn" >上传恢复</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+{{template "footer" .}}
+
+<script src="/js/echarts.min.js"></script>
+<script src="/js/flow.js"></script>
+<script type="text/javascript">
+    var flowObj = Object.create(FlowClass)
+    flowObj.setCanvasId("morris-line-chart");
+    $("#selectLengthsAge").val("tenminute");
+    flowObj.setAgetLength("tenminute");
+    function getFlowDataCallBack() {
+        var count = flowObj.getCountSum();
+        var CountUint = flowObj.CountType;
+        var ByteSize = flowObj.getByteSizeSum();
+        var ByteSizeType = "Byte";
+        if (ByteSize >= 1024000) {
+            ByteSize = (ByteSize / 1024).toFixed(2)
+            ByteSizeType = "kb"
+        }
+
+        if (ByteSize >= 1024000000) {
+            ByteSize = (ByteSize / 1024000).toFixed(2)
+            ByteSizeType = "MB"
+        }
+
+        if (ByteSize >= 1024000000000) {
+            ByteSize = (ByteSize / 1024000000).toFixed(2)
+            ByteSizeType = "GB"
+        }
+
+        $("#flow_count .number").text(count);
+        $("#flow_count .unit").text(CountUint);
+        $("#flow_bytesize .number").text(ByteSize);
+        $("#flow_bytesize .unit").text(ByteSizeType);
+    }
+    flowObj.setCallBackFun(getFlowDataCallBack);
+
+
+    $(function(){
+        $("#selectLengthsAge").change(
+                function(){
+                    flowObj.setAgetLength($(this).val());
+                    flowObj.getFlowData();
+                }
+        );
+        
+        $("#backupRecoveryBtn").click(
+                function () {
+                    var backup_file = $('#backup_file')[0].files[0];
+                    if (backup_file == undefined || backup_file == "undefined"){
+                        alert("请选择要上传的恢复文件!");
+                        return;
+                    }
+
+                    if(!confirm("假如已经存在了的数据源,请先删除,再进行恢复,要不然可能存在数据异常!并且进行恢复的数据,全部都默认为 close 状态!")){
+                       return false;
+                    }
+
+                    var formData = new FormData();
+                    formData.append("backup_file",$('#backup_file')[0].files[0]);
+
+                    $.ajax({
+                        url:'/backup/import',
+                        dataType:'json',
+                        type:'POST',
+                        async: false,
+                        data: formData,
+                        processData : false, // 使数据不做处理
+                        contentType : false, // 不要设置Content-Type请求头
+                        success: function(data){
+                            if (data.status == true) {
+                                alert('恢复成功！');
+                            }else{
+                                alert(data.msg);
+                            }
+
+                        },
+                        error:function(response){
+                            alert(response)
+                        }
+                    });
+                }
+            
+        );
+
+        $("#freeOSMemory").click(
+            function() {
+                $.get(
+                    "/freeOSMemory",
+                    function (d, status) {
+                        if (status != "success") {
+                            return false;
+                        }
+                        alert("释放成功！");
+                        return true;
+                    }, 'json');
+            }
+        );
+    });
+
+    function getOverView() {
+        $.get(
+                "/overview",
+                function (d, status) {
+                    if (status != "success") {
+                        return false;
+                    }
+                    $("#db_count .number").text(d.DbCount);
+                    $("#plugin_count .number").text(d.PluginCount);
+                    $("#toserver_count .number").text(d.ToServerCount);
+                    $("#table_count .number").text(d.TableCount);
+                    $("#BifrostStartTime").text(d.StartTime);
+                    $("#BifrostVersion").text(d.BifrostVersion);
+                    $("#GoVersion").text(d.GoVersion);
+                    $("#OSVersion").text(d.GOOS +" / "+d.GOARCH);
+                }, 'json');
+    }
+    getOverView();
+
+    function getServerInfo() {
+        $.get(
+                "/serverinfo",
+                function (d, status) {
+                    if (status != "success") {
+                        return false;
+                    }
+                    var size = d.SeftMemStats.Sys/1024/1024;
+                    var sizeString = "";
+                    if (size>1024){
+                        sizeString = (size / 1024).toFixed(2) + " G";
+                    }else{
+                        sizeString = size.toFixed(2) + " M";
+                    }
+                    $("#bifrost_memory_used .number").text(sizeString);
+                }, 'json');
+    }
+
+    var IntervalFun = function () {
+        flowObj.getFlowData();
+        getServerInfo();
+    }
+
+</script>
+
+<script src="/js/timeInterval.js"></script>

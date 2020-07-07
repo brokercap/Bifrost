@@ -1,0 +1,136 @@
+<div id="RabbitMQ_Plugin_Contair">
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Declare：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="RabbitMQ_Declare" id="RabbitMQ_Declare" onchange="RabbitMQ_Declare_Onchange();">
+            <option value="true" selected="selected">Yes</option>
+            <option value="false">No</option>
+        </select>
+        <span class="help-block m-b-none" id="declare_help">
+        Yes: 自动创建队列交换机及和RoutingKey绑定 </br>
+        No : 不自动创建队列交换机，也不和Routingkey绑定
+        </span>
+    </div>
+</div>
+
+<div class="form-group RabbitMQ_Declare_show_div">
+    <label class="col-sm-3 control-label">Queue：</label>
+    <div class="col-sm-9">
+        <input type="text"  name="queue_name" id="queue_name" class="form-control" placeholder="队列名">
+        <span class="help-block m-b-none"></span>
+    </div>
+</div>
+
+<div class="form-group RabbitMQ_Declare_show_div">
+    <label class="col-sm-3 control-label">Durability：</label>
+    <div class="col-sm-3">
+        <select class="form-control" name="queue_durable" id="queue_durable">
+            <option value="true" selected="selected">Durable</option>
+            <option value="false">Transient</option>
+        </select>
+    </div>
+</div>
+
+<div class="form-group RabbitMQ_Declare_show_div">
+    <label class="col-sm-3 control-label">AutoDelete：</label>
+    <div class="col-sm-3">
+        <select class="form-control" name="queue_auto_delete" id="queue_durable">
+            <option value="true">Yes</option>
+            <option value="false" selected="selected">No</option>
+        </select>
+    </div>
+</div>
+
+<div class="RabbitMQ_Declare_show_div" style=" clear:both; margin-bottom:15px"></div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Exchange：</label>
+    <div class="col-sm-6">
+        <input type="text"  name="exchange_name" id="exchange_name" class="form-control" placeholder="交换机名">
+        <span class="help-block m-b-none"></span>
+    </div>
+    
+    <div class="col-sm-3">
+        <select class="form-control" name="exchange_type" id="exchange_type">
+            <option value="direct" selected="selected">direct</option>
+            <option value="topic">topic</option>
+            <option value="headers">headers</option>
+            <option value="fanout">fanout</option>
+        </select>
+    </div>
+</div>
+
+<div class="RabbitMQ_Declare_show_div" style=" clear:both; margin-bottom:15px"></div>
+
+<div class="form-group RabbitMQ_Declare_show_div">
+    <label class="col-sm-3 control-label">Durability：</label>
+    <div class="col-sm-3">
+        <select class="form-control" name="exchange_durable" id="exchange_durable">
+            <option value="true" selected="selected">Durable</option>
+            <option value="false">Transient</option>
+        </select>
+    </div>
+</div>
+
+<div class="form-group RabbitMQ_Declare_show_div">
+    <label class="col-sm-3 control-label">AutoDelete：</label>
+    <div class="col-sm-3">
+        <select class="form-control" name="exchange_auto_delete" id="exchange_durable">
+            <option value="true">Yes</option>
+            <option value="false" selected="selected">No</option>
+        </select>
+    </div>
+</div>
+
+<div style=" clear:both; margin-bottom:15px"></div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">RoutingKey：</label>
+    <div class="col-sm-9">
+        <input type="text"  name="RoutingKey" id="RoutingKey" class="form-control" placeholder="RoutingKey">
+        <span class="help-block m-b-none">自定义RoutingKey,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
+        <p>&nbsp;</p>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Expir：</label>
+    <div class="col-sm-9">
+        <input type="text" name="Expir" id="RabbitMQ_Expir"  class="form-control" value="0" placeholder="Expir time (ms)">
+        <span class="help-block m-b-none">消息过期时间,单位毫秒(ms)</span>
+        <p>&nbsp;</p>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">消息持久化：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="RabbitMQ_Persistent" id="RabbitMQ_Persistent">
+            <option value="true" selected="selected">Yes</option>
+            <option value="false">No</option>
+        </select>
+        <span class="help-block m-b-none" id="declare_help">
+        Yes: 消息将以持久化方式写入 </br>
+        No : 消息不持久化
+        </span>
+    </div>
+</div>
+
+<div style=" clear:both; margin-bottom:15px"></div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Confirm：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="RabbitMQ_Confirm" id="RabbitMQ_Confirm">
+            <option value="true" selected="selected">Yes</option>
+            <option value="false">No</option>
+        </select>
+        <span class="help-block m-b-none" id="declare_help">
+        Yes: 开启confirm机制
+        </span>
+    </div>
+</div>
+<div style=" clear:both; margin-bottom:15px"></div>
+
+</div>

@@ -1,0 +1,164 @@
+
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>数据更新统计
+                        </h5>
+
+                        <div style="float: left; margin-top: -10px; margin-left: 10px">
+                            <select class="form-control" name="dbname" id="dbname">
+                                <option value="" > 数据源 </option>
+                            {{range $i, $name := .DbList}}
+                                <option value="{{$name}}"> {{$name}} </option>
+                            {{end}}
+                            </select>
+
+                        </div>
+
+                        <div style="float: left; margin-top: -10px; margin-left: 10px">
+                            <select class="form-control" name="schema" id="schema">
+                                <option value="" > 库 </option>
+                            </select>
+
+                        </div>
+
+                        <div style="float: left; margin-top: -10px; margin-left: 10px">
+                            <select class="form-control" name="tableName" id="tableName">
+                                <option value="" > 表 </option>
+                            </select>
+
+                        </div>
+
+
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+
+
+
+                        <div class="ibox-tools" style="width: auto; padding-right:8px;">
+							<select class="form-control" style=" margin-top:-8px;" id="selectLengthsAge">
+                            	<option value="tenminute">10 分钟</option>
+                            	<option value="hour">1 小时</option>
+                                <option value="eighthour">8 小时</option>
+                                <option value="day">24 小时</option>
+                            </select>
+                        </div>
+
+
+                </div>
+                    
+                    <div class="ibox-content">
+                        <div class="echarts" id="morris-line-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+</div>
+
+
+{{template "footer" .}}
+
+<script src="/js/echarts.min.js"></script>
+<script src="/plugin/TableCount/www/flow.js"></script>
+<script type="text/javascript">
+
+    var flowObj = Object.create(FlowClass)
+    flowObj.setCanvasId("morris-line-chart");
+    flowObj.setAgetLength($("#selectLengthsAge").val());
+
+	$(function(){
+        $("#selectLengthsAge,#dbname,#schema,#tableName").change(
+                function(){
+                    var dbName = $("#dbname").val();
+                    var schema = $("#schema").val();
+                    var tableName = $("#tableName").val();
+                    var flowType = $("#selectLengthsAge").val();
+                    flowObj.setDbName(dbName);
+                    flowObj.setTableName(tableName);
+                    flowObj.setSchema(schema);
+                    flowObj.setAgetLength(flowType);
+                    flowObj.getFlowData();
+                }
+        );
+
+        $("#dbname").change(
+            function () {
+                if ( $("#dbname").val() == ""){
+                    return;
+                }
+                $.post(
+                    "/bifrost/TableCount/flow/schema/list",
+                    {
+                        dbname: $("#dbname").val(),
+                        schema: $("#schema").val()
+                    },
+                    function (d, status) {
+                        if (status != "success") {
+                            return false;
+                        }
+                        var html = "<option value=\"\" > 库 </option>";
+                        for(var i in d){
+                            html += "<option value=\""+d[i]+"\" > "+d[i]+" </option>";
+                        }
+                        $("#schema").html(html);
+
+                    }, 'json')
+            }
+
+
+        );
+
+        $("#schema").change(
+            function () {
+                if ($("#dbname").val() == ""){
+                    return;
+                }
+                $.post(
+                    "/bifrost/TableCount/flow/table/list",
+                    {
+                        dbname: $("#dbname").val(),
+                        schema: $("#schema").val(),
+                    },
+                    function (d, status) {
+                        if (status != "success") {
+                            return false;
+                        }
+                        var html = "<option value=\"\" > 表 </option>";
+                        for(var i in d){
+                            html += "<option value=\""+d[i]+"\" > "+d[i]+" </option>";
+                        }
+                        $("#tableName").html(html);
+
+                    }, 'json')
+            }
+
+
+        );
+	});
+	var IntervalFun = function () {
+        flowObj.getFlowData();
+    }
+
+</script>
+
+<script src="/js/timeInterval.js"></script>

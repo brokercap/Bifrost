@@ -1,0 +1,27 @@
+<p><strong>Http 插件</strong></p>
+
+<p>采用 Http 推送插件情况下，Bifrost 将数据以Http POST 请求方式推送到 指定的 URL 服务端，支持 HTTP Authorization 认证</p>
+
+<p>&nbsp;</p>
+<h4>URL 格式</h4>
+
+<pre>
+http://10.40.2.41:3332/bifrost_http_api_test
+</pre>
+
+<p>URL 这个请求必须同时支持 GET 和 POST 请求</p>
+<p>GET 请求只用于在添加 ToServer 的时候使用，用于 Check URL 是否合法</p>
+<p>POST 请求用于推送数据的时候采用。比如insert,update,delete,sql 等事件的时候将 POST 请求数据过来</p>
+<p>&nbsp;</p>
+
+<h4>POST数据格式</h4>
+
+<p><strong>EventType : </strong>事件类型,(insert,update,delete,sql)</p>
+<p><strong>SchemaName : </strong>数据库名</p>
+<p><strong>TableName : </strong>数据表名</p>
+<p><strong>Data : </strong>字符串，数据结构 EventType 有关</p>
+
+<p>EventType == insert | delete 的时候，data 数据格式为  map[string]interfacle{} 格式的 json 字符串, 字符名作为key， 字段内容作为值</p>
+<p>EventType ==  update 的时候，data 数据格式为 []map[string]interfacle{} 数组里是map格式的 json字符串, 数组 下标0 里的数据是更新之前的数据， 下标 1 里的数据是更新之后的数据</p>
+<p>EventType ==  sql 的时候，data 数据为 执行的 sql 语句</p>
+

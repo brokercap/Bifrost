@@ -1,130 +1,123 @@
 package src
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	//"github.com/garyburd/redigo/redis"
 	"github.com/go-redis/redis"
-	"fmt"
-	"encoding/json"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION = "v1.2.1"
+const BIFROST_VERION = "v1.2.1"
 
-func init(){
-	driver.Register("redis",&MyConn{},VERSION,BIFROST_VERION)
+func init() {
+	driver.Register("redis", &MyConn{}, VERSION, BIFROST_VERION)
 }
 
-type MyConn struct {}
+type MyConn struct{}
 
-func (MyConn *MyConn) Open(uri string) driver.ConnFun{
+func (MyConn *MyConn) Open(uri string) driver.ConnFun {
 	return newConn(uri)
 }
 
-func (MyConn *MyConn) GetUriExample() string{
+func (MyConn *MyConn) GetUriExample() string {
 	return "pwd@tcp(127.0.0.1:6379)/0 or 127.0.0.1:6379 or pwd@tcp(127.0.0.1:6379,127.0.0.1:6380)/0 or 127.0.0.1:6379,127.0.0.1:6380"
 }
 
-func (MyConn *MyConn) CheckUri(uri string) error{
-	c:= newConn(uri)
-	if c.err != nil{
+func (MyConn *MyConn) CheckUri(uri string) error {
+	c := newConn(uri)
+	if c.err != nil {
 		return c.err
 	}
 	c.Close()
 	return nil
 }
 
-func getUriParam(uri string)(pwd string, network string, url string, database int){
+func getUriParam(uri string) (pwd string, network string, url string, database int) {
 	i := strings.IndexAny(uri, "@")
 	pwd = ""
-	if i > 0{
+	if i > 0 {
 		pwd = uri[0:i]
 		url = uri[i+1:]
-	}else{
+	} else {
 		url = uri
 	}
 	i = strings.IndexAny(url, "/")
 	if i > 0 {
 		databaseString := url[i+1:]
-		intv,err:=strconv.Atoi(databaseString)
-		if err != nil{
+		intv, err := strconv.Atoi(databaseString)
+		if err != nil {
 			database = -1
 		}
 		database = intv
 		url = url[0:i]
-	}else{
+	} else {
 		database = 0
 	}
 	i = strings.IndexAny(url, "(")
-	if i > 0{
+	if i > 0 {
 		network = url[0:i]
-		url = url[i+1:len(url)-1]
-	}else{
+		url = url[i+1 : len(url)-1]
+	} else {
 		network = "tcp"
 	}
 	return
 }
 
 type Conn struct {
-	Uri    		string
-	pwd 		string
-	database 	int
-	network 	string
-	status 		string
-	conn   		redis.UniversalClient
-	err    		error
-	p 			*PluginParam
+	Uri      string
+	pwd      string
+	database int
+	network  string
+	status   string
+	conn     redis.UniversalClient
+	err      error
+	p        *PluginParam
 }
 
 type PluginParam struct {
-	KeyConfig 		string
-	Expir 			int
-	DataType 		string
-	ValConfig 		string
-	Type 			string
+	KeyConfig      string
+	FieldKeyConfig string
+	Type           string
+	Expir          int
 }
 
-
-func newConn(uri string) *Conn{
-	pwd,network,uri,database := getUriParam(uri)
+func newConn(uri string) *Conn {
+	pwd, network, uri, database := getUriParam(uri)
 	f := &Conn{
-		pwd:pwd,
-		network:network,
-		database:database,
-		Uri:uri,
+		pwd:      pwd,
+		network:  network,
+		database: database,
+		Uri:      uri,
 	}
 	f.Connect()
 	return f
 }
 
-
-func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
-	s,err := json.Marshal(p)
-	if err != nil{
-		return nil,err
-	}
-	var param PluginParam
-	err2 := json.Unmarshal(s,&param)
-	if err2 != nil{
-		return nil,err2
-	}
-	This.p = &param
-	return &param,nil
-}
-
-func (This *Conn) SetParam(p interface{}) (interface{},error){
-	if p == nil{
-		return nil,fmt.Errorf("param is nil")
+func (This *Conn) SetParam(p interface{}) (interface{}, error) {
+	if p == nil {
+		return nil, fmt.Errorf("param is nil")
 	}
 	switch p.(type) {
 	case *PluginParam:
 		This.p = p.(*PluginParam)
-		return p,nil
+		return p, nil
 	default:
-		return This.GetParam(p)
+		s, err := json.Marshal(p)
+		if err != nil {
+			return nil, err
+		}
+		var param PluginParam
+		err = json.Unmarshal(s, &param)
+		if err != nil {
+			return nil, err
+		}
+		This.p = &param
+		return &param, nil
 	}
 }
 
@@ -137,7 +130,7 @@ func (This *Conn) SetConnStatus(status string) {
 }
 
 func (This *Conn) Connect() bool {
-	if This.database < 0 || This.database >16{
+	if This.database < 0 || This.database > 16 {
 		This.err = fmt.Errorf("database must be in 0 and 16")
 		return false
 	}
@@ -159,24 +152,26 @@ func (This *Conn) Connect() bool {
 		return false
 	}
 	This.conn = universalClient
-	if This.conn == nil{
+	if This.conn == nil {
 		This.status = ""
 		return false
-	}else{
+	} else {
 		This.err = nil
 		return true
 	}
 }
 
 func (This *Conn) ReConnect() bool {
+	result := true
 	defer func() {
-		if err := recover();err !=nil{
+		if err := recover(); err != nil {
 			This.err = fmt.Errorf(fmt.Sprint(err))
+			result = false
 		}
 	}()
 	This.conn.Close()
 	This.Connect()
-	return  true
+	return result
 }
 
 func (This *Conn) HeartCheck() {
@@ -184,109 +179,94 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
-	This.conn.Close()
+	err := This.conn.Close()
+	if err != nil {
+		return false
+	}
 	return true
 }
 
-
-func (This *Conn) getKeyVal(data *driver.PluginDataType,index int) string {
-	return driver.TransfeResult(This.p.KeyConfig,data,index)
-}
-
-func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
-	return driver.TransfeResult(This.p.ValConfig,data,index)
-}
-
-func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog, error) {
 	return This.Update(data)
 }
 
-func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
-	index := len(data.Rows)-1
-	Key := This.getKeyVal(data,index)
+
 	var err error
+
+	index := len(data.Rows) - 1
+	key := This.getKeyVal(data, This.p.KeyConfig, index)
+
+	j, err := json.Marshal(data.Rows[index])
+	if err != nil {
+		return nil, err
+	}
+
 	switch This.p.Type {
 	case "set":
-		if This.p.ValConfig != ""{
-			err =This.conn.Set(Key, This.getVal(data,index), time.Duration(This.p.Expir) * time.Second).Err()
-		}else{
-			vbyte, _ := json.Marshal(data.Rows[index])
-			err =This.conn.Set(Key, string(vbyte), time.Duration(This.p.Expir) * time.Second).Err()
-		}
-		break
+		err = This.conn.Set(key, string(j), time.Duration(This.p.Expir)*time.Second).Err()
+	case "hash":
+		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
+		err = This.conn.HSet(key, fieldKey, string(j)).Err()
 	case "list":
-		_,err = This.SendToList(Key,data)
-		break
+		if len(data.Rows) == 2 {
+			jo, err := json.Marshal(data.Rows[0])
+			if err != nil {
+				return nil, err
+			}
+			This.conn.LRem(key, 1, string(jo))
+		}
+		err = This.conn.LPush(key, string(j)).Err()
 	default:
-		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
-		break
+		err = fmt.Errorf(This.p.Type + " not in(set,hash,list)")
 	}
 
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil, err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return &driver.PluginBinlog{BinlogFileNum: data.BinlogFileNum, BinlogPosition: data.BinlogPosition}, nil
 }
 
-func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog, error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
-	Key := This.getKeyVal(data, 0)
+	Key := This.getKeyVal(data, This.p.KeyConfig, 0)
 	var err error
 	switch This.p.Type {
 	case "set":
 		err = This.conn.Del(Key).Err()
-		break
+	case "hash":
+		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+		err = This.conn.HDel(Key, fieldKey).Err()
 	case "list":
-		_,err = This.SendToList(Key,data)
-		break
+		j, e := json.Marshal(data.Rows[0])
+		if e != nil {
+			return nil, e
+		}
+		err = This.conn.LRem(Key, 1, string(j)).Err()
 	default:
-		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
+		err = fmt.Errorf(This.p.Type + " not in(set,hash,list)")
 	}
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil, err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return &driver.PluginBinlog{BinlogFileNum: data.BinlogFileNum, BinlogPosition: data.BinlogPosition}, nil
 }
 
-func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	var Val string
-	var err error
-	if This.p.ValConfig != ""{
-		Val = This.getVal(data,0)
-	}else{
-		if This.p.ValConfig != ""{
-			Val = This.getVal(data,0)
-		}else{
-			c,err := json.Marshal(data)
-			if err != nil{
-				return nil,err
-			}
-			Val = string(c)
-		}
-	}
-	err =This.conn.LPush(Key, Val).Err()
-
-	if err != nil {
-		return nil,err
-	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog, error) {
+	return &driver.PluginBinlog{BinlogFileNum: data.BinlogFileNum, BinlogPosition: data.BinlogPosition}, nil
 }
 
-func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	if This.p.Type == "list"{
-		Key := This.getKeyVal(data, 0)
-		return This.SendToList(Key,data)
-	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+func (This *Conn) Commit() (*driver.PluginBinlog, error) {
+	return nil, nil
 }
 
-func (This *Conn) Commit() (*driver.PluginBinlog,error){
-	return nil,nil
+func (This *Conn) getKeyVal(data *driver.PluginDataType, key string, index int) string {
+	return driver.TransfeResult(key, data, index)
 }

@@ -1,0 +1,39 @@
+<div id="Memcache_Plugin_Contair">
+<div class="form-group">
+    <label class="col-sm-3 control-label">DataType：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="datatype" id="Memcache_DataType" onchange="Memcache_DataType_Change()">
+            <option value="string">string</option>
+            <option value="json" selected>json</option>
+        </select><span class="help-block m-b-none"></span>
+    </div>
+</div>
+
+<div class="form-group" id="Memcache_KeyConfigContair">
+    <label class="col-sm-3 control-label">Key：</label>
+    <div class="col-sm-9" style="position: relative">
+        <input type="text"  name="KeyConfig" id="KeyConfig" class="form-control" placeholder="请输入文本">
+        <span class="help-block m-b-none">自定义key,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
+        <p>&nbsp;</p>
+    </div>
+</div>
+
+<div class="form-group" id="Memcache_ValueConfigContair" style="display: none">
+    <label class="col-sm-3 control-label">Value：</label>
+    <div class="col-sm-9">
+        <textarea id="ValueConfig" name="ValueConfig" class="form-control" required="" placeholder="{$SchemaName},{$TableName},{$EventType},{$'+filedName+'}" aria-required="true"></textarea> <span class="help-block m-b-none">自定,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</span>
+        <p>&nbsp;</p>
+
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">Expir：</label>
+    <div class="col-sm-9">
+        <input type="text" name="Expir" id="Memcache_Expir" class="form-control" value="0" placeholder="Expir time (s)">
+        <span class="help-block m-b-none">消息过期时间,单位秒</span>
+        <p>&nbsp;</p>
+    </div>
+</div>
+
+</div>

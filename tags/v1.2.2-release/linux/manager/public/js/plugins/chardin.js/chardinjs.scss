@@ -1,0 +1,140 @@
+$vertical-distance-list: (
+	"100": 30,
+	"200": 60,
+	"300": 90,
+	"400": 120,
+	"500": 150,
+	"600": 180,
+	"700": 210,
+	"800": 240,
+	"900": 270,
+	"1000": 300
+);
+
+@mixin transition($property) {
+	-webkit-transition: $property;
+	-moz-transition: $property;
+	-ms-transition: $property;
+	-o-transition: $property;
+	transition: $property;
+}
+
+.chardinjs-overlay {
+	position: absolute;
+	z-index: 9999990;
+	background-color: #000;
+	opacity: 0.8;
+	width: 100%;
+	left: 0;
+	top: 0;
+	@include transition(all 0.3s ease-out);
+}
+
+.chardinjs-helper-layer {
+	position: absolute;
+	z-index: 9999998;
+	color: white;
+	@include transition(all 0.3s ease-out);
+
+	&.chardinjs-left {
+		border-left: solid 1px;
+		margin-left: -10px;
+	}
+
+	&.chardinjs-right {
+		border-right: solid 1px;
+		padding-right: 10px;
+	}
+
+	&.chardinjs-bottom {
+		border-bottom: solid 1px;
+		padding-bottom: 10px;
+	}
+
+	&.chardinjs-top {
+		border-top: solid 1px;
+		padding-top: 10px;
+	}
+}
+
+.chardinjs-tooltip {
+	position: absolute;
+	@include transition(opacity 0.1s ease-out);
+	max-width: 200px;
+
+	&.chardinjs-left {
+		margin-left: -75px;
+		padding-right: 10px;
+	}
+
+	&.chardinjs-right {
+		margin-right: -75px;
+		padding-left: 10px;
+	}
+
+	&.chardinjs-bottom {
+		margin-bottom: -30px;
+		padding-top: 10px;
+	}
+
+	&.chardinjs-top {
+		margin-top: -30px;
+		padding-bottom: 10px;
+	}
+
+	&.chardinjs-right:before, &.chardinjs-left:after, &.chardinjs-bottom:before, &.chardinjs-top:after {
+		content: ".";
+		display: inline-block;
+		background-color: white;
+		height: 1px;
+		overflow: hidden;
+		position: absolute;
+	}
+
+	&.chardinjs-right:before, &.chardinjs-left:after {
+		width: 50px;
+		top: 50%;
+	}
+
+	&.chardinjs-bottom:before, &.chardinjs-top:after {
+		width: 1px;
+		left: 50%;
+	}
+
+	&.chardinjs-right:before {
+		left: -50px;
+	}
+
+	&.chardinjs-left:after {
+		right: -50px;
+	}
+
+	@each $percent, $offset in $vertical-distance-list {
+		&.chardinjs-bottom.chardinjs-distance-#{$percent}:before,
+		&.chardinjs-top.chardinjs-distance-#{$percent}:after {
+			height: #{$offset}px;
+		}
+
+		&.chardinjs-bottom.chardinjs-distance-#{$percent}:before {
+			top: -#{$offset}px;
+		}
+
+		&.chardinjs-top.chardinjs-distance-#{$percent}:after {
+			bottom: -#{$offset}px;
+		}
+	}
+}
+
+.chardinjs-show-element {
+	z-index: 9999995;
+	opacity: 0.8;
+}
+
+.chardinjs-relative-position {
+	position: relative;
+}
+
+.chardinjs-no-fixed {
+	z-index: auto !important;
+	position: absolute !important;
+}

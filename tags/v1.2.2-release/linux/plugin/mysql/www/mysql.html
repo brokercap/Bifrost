@@ -1,0 +1,101 @@
+<style type="text/css">
+#ToMYQL_Contair td{
+    height: 30px; line-height: 30px; width: 50%;
+}
+
+</style>
+<div class="form-group" id="ToMYQL_Contair">
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">同步模式：</label>
+        <div class="col-sm-9">
+            <select name="SyncMode" id="MySQL_SyncMode" class="form-control">
+                <option value="Normal" selected>普通模式</option>
+                <option value="LogUpdate">日志模式-修改</option>
+                <option value="LogAppend">日志模式-追加</option>
+            </select>
+            <span class="help-block m-b-none">
+                <p><strong>普通模式：</strong>源insert,update,delete, 目标库也对应insert,update,delete</p>
+                <p><strong>日志模式-修改：</strong>源delete, 目标库将转成 update, 目标库需要额外新增一个字段，用于标记删除</p>
+                <p><strong>日志模式-追加：</strong>源的所有操作，将转成 insert 追加的方式写到目标库</p>
+                <p>新增的字段，请参考 文档 的标签配合使用</p>
+            </span>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-sm-3">
+            <select class="form-control" name="to_mysql_schema" id="to_mysql_schema" onchange="GetToSchameTableList($(this).val());">
+                <option value="true" selected="selected">请选择数据库</option>
+            </select>
+        </div>
+        <div class="col-sm-9">
+            <select class="form-control" name="to_mysql_table" id="to_mysql_table" onchange="GetToTableDesc($('#to_mysql_schema').val(),$(this).val());" >
+                <option value="true" selected="selected">请选择表</option>
+            </select>
+            如果目标库还没建表,<a href="javasripts:return false;" onclick="showMySQLCreateSQL();"> 点击获取 参考建表 SQL</a>
+        </div>
+    </div>
+
+    <div class="form-group">
+    <div class="col-sm-12" >
+        <table style="width: 100%">
+            <thead>
+            <tr>
+                <th width="45%" height="35">To MySQL Field</th>
+                <th width="45%">From DB Field</th>
+                <th>PRI</th>
+            </tr>
+            </thead>
+            <tbody id="ToTableFieldsTable">
+
+
+            </tbody>
+        </table>
+        <p>&nbsp;</p>
+    </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">BatchSize：</label>
+        <div class="col-sm-9">
+            <input type="text" name="BatchSize" id="MySQL_BatchSize" value="500" class="form-control" placeholder="">
+            <span class="help-block m-b-none">* 多少条刷一次数据</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Null转成默认值：</label>
+        <div class="col-sm-9">
+            <select name="NullTransferDefault" id="MySQL_NullTransferDefault" class="form-control">
+                <option value="true">True</option>
+                <option value="false" selected>False</option>
+            </select>
+            <span class="help-block m-b-none">
+                <p>True : NULL会强制转成对应类型的默认值 </p>
+                <p>False: 不进行转换</p>
+            </span>
+        </div>
+    </div>
+</div>
+
+
+
+<!--show mysql create sql start-->
+<div class="modal inmodal fade" id="showMySQLCreateSQL" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">CreateSQL For Table</h3>
+            </div>
+            <div class="modal-body">
+
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--show mysql create sql over-->

@@ -1,0 +1,16 @@
+<h3>Memcache 插件 参数解析</h3>
+<p>&nbsp;</p>
+
+<h4>DataType</h4>
+<p><strong>string : </strong> 指定写入哪些数据, 选择这个，Value 参数生效</p>
+<p><strong>json : </strong> 自动将选择中的Fields 进行json 写入 Memcache</p>
+
+<h4>Key</h4>
+<p>Memcache 写入数据时候的key值,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"} 标签将会替换成数据库名 ，表名 ,事件类型 ， 甚至字段内容</p>
+
+<h4>Value</h4>
+<p>当DataType == string 的时候 , 同样会标签替换</p>
+
+<h4>Expir</h4>
+
+<p>消息过期时间，必须为 int 类型，默认为0，不过期</p>
