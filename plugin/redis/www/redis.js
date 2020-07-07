@@ -22,7 +22,7 @@ function doGetPluginParam(){
     }
     
     data["KeyConfig"] = keyConfig;
-    data["FieldConfig"] = fieldKeyConfig;
+    data["FieldKeyConfig"] = fieldKeyConfig;
     data["Expir"] = parseInt(Expir);
 	data["Type"] = type;
 	result.batchSupport = true;
