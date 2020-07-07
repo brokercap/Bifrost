@@ -82,6 +82,7 @@ type Conn struct {
 type PluginParam struct {
 	KeyConfig      string
 	FieldKeyConfig string
+	SortedConfig   string
 	Type           string
 	Expir          int
 }
@@ -206,11 +207,24 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 	}
 
 	switch This.p.Type {
-	case "set":
+	case "string":
 		err = This.conn.Set(key, string(j), time.Duration(This.p.Expir)*time.Second).Err()
 	case "hash":
 		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
 		err = This.conn.HSet(key, fieldKey, string(j)).Err()
+	case "zset":
+		sort, err := strconv.ParseFloat(This.getKeyVal(data, This.p.SortedConfig, index), 64)
+		if err != nil {
+			return nil, err
+		}
+		if len(data.Rows) == 2 {
+			jo, err := json.Marshal(data.Rows[0])
+			if err != nil {
+				return nil, err
+			}
+			This.conn.ZRem(key, 1, string(jo))
+		}
+		err = This.conn.ZAdd(key, redis.Z{Score: sort, Member: string(j)}).Err()
 	case "list":
 		if len(data.Rows) == 2 {
 			jo, err := json.Marshal(data.Rows[0])
@@ -235,20 +249,26 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog, error)
 	if This.err != nil {
 		This.ReConnect()
 	}
-	Key := This.getKeyVal(data, This.p.KeyConfig, 0)
+	key := This.getKeyVal(data, This.p.KeyConfig, 0)
 	var err error
 	switch This.p.Type {
-	case "set":
-		err = This.conn.Del(Key).Err()
+	case "string":
+		err = This.conn.Del(key).Err()
 	case "hash":
 		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
-		err = This.conn.HDel(Key, fieldKey).Err()
+		err = This.conn.HDel(key, fieldKey).Err()
+	case "zset":
+		j, e := json.Marshal(data.Rows[0])
+		if e != nil {
+			return nil, e
+		}
+		err = This.conn.ZRem(key, string(j)).Err()
 	case "list":
 		j, e := json.Marshal(data.Rows[0])
 		if e != nil {
 			return nil, e
 		}
-		err = This.conn.LRem(Key, 1, string(j)).Err()
+		err = This.conn.LRem(key, 1, string(j)).Err()
 	default:
 		err = fmt.Errorf(This.p.Type + " not in(set,hash,list)")
 	}

@@ -3,8 +3,9 @@
         <label class="col-sm-3 control-label">Type：</label>
         <div class="col-sm-9">
             <select class="form-control" name="type" id="Plugin_type" onchange="redisTypeChange()">
-                <option value="set">key=>value</option>
+                <option value="string">String</option>
                 <option value="hash">Hash</option>
+                <option value="zset">Sorted sets</option>
                 <option value="list">List</option>
             </select><span class="help-block m-b-none"></span>
         </div>
@@ -28,6 +29,14 @@
         </div>
     </div>
 
+    <div class="form-group" id="Redis_SortConfigContainer">
+        <label class="col-sm-3 control-label">Sort：</label>
+        <div class="col-sm-9" style="position: relative">
+            <input type="text" name="SortConfig" id="SortConfig" class="form-control" placeholder="请输入文本" value="{$}">
+            <span class="help-block m-b-none">sorted, 自定义FieldKey,{$SchemaName},{$TableName},{$EventType},{$fieldName}</span>
+            <p>&nbsp;</p>
+        </div>
+    </div>
 
     <div class="form-group">
         <label class="col-sm-3 control-label">Expired：</label>
