@@ -195,6 +195,7 @@ $(function(){
                     .tableDiv .right .button{ float: left;}
                     .tableDiv .right .check_input{ float: left;margin-left: 8px; margin-top: 2px}
                     .tableDiv .right1 .button{ float: left;}
+					.ibox-content .list-group { height: 70vh; overflow-y: scroll;}
                 </style>
                 <div class="ibox-content">
                     <div class="list-group" id="TableListContair">
@@ -1235,7 +1236,7 @@ $(function(){
                             }
                             var Html = "";
                             $.each(data,function(index,v){
-                                Html += "<p><input style='height: 20px; width: 20px;' type='checkbox' name='addHistoryToServerID' value='"+ v.ToServerID + "' />"+v.PluginName +"-"+v.ToServerKey+"</p>";
+                                Html += "<p><input style='height: 20px; width: 20px;' type='checkbox' checked name='addHistoryToServerID' value='"+ v.ToServerID + "' />"+v.PluginName +"-"+v.ToServerKey+"</p>";
                             });
 
                             $("#addHisotryToServer").html(Html);
@@ -1287,8 +1288,11 @@ $(function(){
                                 return false;
                             }
                             if(data.status) {
-                                alert("success,请点击开始按钮进行开启 初始化操作")
-                                window.location.href = "/history/list?dbname=" + dbname + "&schema_name=" + schema_name + "&table_name=" + table_name;
+                                if (confirm("success,请点击开始按钮进行开启 初始化操作")){
+                                    window.location.href = "/history/list?dbname=" + dbname + "&schema_name=" + schema_name + "&table_name=" + table_name;
+                                }else{
+									$("#addHistoryDiv").modal('hide');
+								}
                             }else{
                                 alert(data.msg);
                             }

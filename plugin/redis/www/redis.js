@@ -53,4 +53,4 @@ function redisTypeChange() {
     }
 }
 
-redisTypeChange()
+$('#Redis_Plugin_Container').ready(redisTypeChange())
