@@ -27,11 +27,13 @@ function doGetPluginParam() {
     }
 
     data["KeyConfig"] = keyConfig;
-    data["FieldKeyConfig"] = fieldKeyConfig;
-    data["SortedConfig"] = sortedConfig;
+    if (type === "hash")
+        data["FieldKeyConfig"] = fieldKeyConfig;
+    if (type === "zset")
+        data["SortedConfig"] = sortedConfig;
     data["Expir"] = parseInt(Expir);
     data["Type"] = type;
-    result.batchSupport = true;
+    result.batchSupport = false;
     result.data = data;
     result.msg = "success";
     result.status = true;
@@ -52,5 +54,3 @@ function redisTypeChange() {
         $("#Redis_SortConfigContainer").hide();
     }
 }
-
-$('#Redis_Plugin_Container').ready(redisTypeChange())
