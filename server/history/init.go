@@ -200,8 +200,8 @@ func (This *History) Start() error {
 		wg.Add(1)
 		go This.threadStart(i-1, &wg)
 	}
-	wg.Wait()
 	go func() {
+		wg.Wait()
 		This.Lock()
 		defer This.Unlock()
 		This.OverTime = time.Now().Format("2006-01-02 15:04:05")

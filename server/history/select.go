@@ -3,12 +3,17 @@ package history
 import (
 	"database/sql/driver"
 	"fmt"
+	"github.com/brokercap/Bifrost/config"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/server"
+	"github.com/brokercap/Bifrost/server/count"
 	"log"
 	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -45,37 +50,37 @@ func (This *History) threadStart(i int, wg *sync.WaitGroup) {
 		log.Println("history select Fields empty", This.DbName, This.SchemaName, This.TableName)
 		return
 	}
-	//dbSouceInfo := server.GetDBObj(This.DbName)
-	//This.InitToServer()
-	//countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
-	//CountKey := This.SchemaName + "_-" + This.TableName
-	//var sendToServerResult = func(ToServerInfo *server.ToServer,pluginData *pluginDriver.PluginDataType)  {
-	//	ToServerInfo.Lock()
-	//	status := ToServerInfo.Status
-	//	if status == "deling" || status == "deled"{
-	//		ToServerInfo.Unlock()
-	//		return
-	//	}
-	//	ToServerInfo.QueueMsgCount++
-	//	if ToServerInfo.ToServerChan == nil{
-	//		// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
-	//		// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是直阻塞在那吗?
-	//		This.SyncWaitToServerOver(This.Property.SyncThreadNum)
-	//		ToServerInfo.ToServerChan = &server.ToServerChan{
-	//			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
-	//		}
-	//		for i := 0; i < This.Property.SyncThreadNum; i++{
-	//			//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
-	//			go func() {
-	//				//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
-	//				defer This.ToServerTheadGroup.Done()
-	//				ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
-	//			}()
-	//		}
-	//	}
-	//	ToServerInfo.Unlock()
-	//	ToServerInfo.ToServerChan.To <- pluginData
-	//}
+	dbSouceInfo := server.GetDBObj(This.DbName)
+	This.InitToServer()
+	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName, This.TableName).ChannelKey).GetCountChan()
+	CountKey := This.SchemaName + "_-" + This.TableName
+	var sendToServerResult = func(ToServerInfo *server.ToServer, pluginData *pluginDriver.PluginDataType) {
+		ToServerInfo.Lock()
+		status := ToServerInfo.Status
+		if status == "deling" || status == "deled" {
+			ToServerInfo.Unlock()
+			return
+		}
+		ToServerInfo.QueueMsgCount++
+		if ToServerInfo.ToServerChan == nil {
+			// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
+			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是直阻塞在那吗?
+			This.SyncWaitToServerOver(This.Property.SyncThreadNum)
+			ToServerInfo.ToServerChan = &server.ToServerChan{
+				To: make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
+			}
+			for i := 0; i < This.Property.SyncThreadNum; i++ {
+				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
+				go func() {
+					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
+					defer This.ToServerTheadGroup.Done()
+					ToServerInfo.ConsumeToServer(dbSouceInfo, pluginData.SchemaName, pluginData.TableName)
+				}()
+			}
+		}
+		ToServerInfo.Unlock()
+		ToServerInfo.ToServerChan.To <- pluginData
+	}
 	n := len(This.Fields)
 	var start uint64
 	var sql string
@@ -146,28 +151,28 @@ func (This *History) threadStart(i int, wg *sync.WaitGroup) {
 			}
 			Rows := make([]map[string]interface{}, 1)
 			Rows[0] = m
-			//d := &pluginDriver.PluginDataType{
-			//	Timestamp:		uint32(time.Now().Unix()),
-			//	EventType: 		"insert",
-			//	Rows:           Rows,
-			//	Query:          "",
-			//	SchemaName:		This.SchemaName,
-			//	TableName:		This.TableName,
-			//	BinlogFileNum:	0,
-			//	BinlogPosition:	0,
-			//	Pri:			This.TablePriArr,
-			//}
+			d := &pluginDriver.PluginDataType{
+				Timestamp:      uint32(time.Now().Unix()),
+				EventType:      "insert",
+				Rows:           Rows,
+				Query:          "",
+				SchemaName:     This.SchemaName,
+				TableName:      This.TableName,
+				BinlogFileNum:  0,
+				BinlogPosition: 0,
+				Pri:            This.TablePriArr,
+			}
 
-			//for _,toServerInfo := range This.ToServerList{
-			//	sendToServerResult(toServerInfo,d)
-			//}
-			//
-			//countChan <- &count.FlowCount{
-			//	//Time:"",
-			//	Count:1,
-			//	TableId:CountKey,
-			//	ByteSize:sizeCount*int64(len(This.ToServerList)),
-			//}
+			for _, toServerInfo := range This.ToServerList {
+				sendToServerResult(toServerInfo, d)
+			}
+
+			countChan <- &count.FlowCount{
+				//Time:"",
+				Count:    1,
+				TableId:  CountKey,
+				ByteSize: sizeCount * int64(len(This.ToServerList)),
+			}
 		}
 		rows.Close()
 		stmt.Close()
