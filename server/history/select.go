@@ -242,5 +242,6 @@ func (This *History) GetNextSql() (sql string, start uint64) {
 		}
 		sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "` " + where
 	}
+	println(sql, "\t", This.NowStartI, "\t", This.TablePriKeyMaxId, "\t", This.TableInfo.TABLE_ROWS)
 	return
 }
