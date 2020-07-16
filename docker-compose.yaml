@@ -5,12 +5,10 @@ services:
     networks:
       - share
     ports:
-      - "21036:21036"
+      - "21037:21036"
     volumes:
       - .:/sync
     working_dir: /sync
     entrypoint: ./Bifrost-server start
 networks:
   share:
-    external:
-      name: docker_share

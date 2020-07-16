@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brokercap/Bifrost/plugin/driver"
-	//"github.com/garyburd/redigo/redis"
 	"github.com/go-redis/redis"
 	"strconv"
 	"strings"
