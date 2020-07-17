@@ -206,7 +206,7 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 				t := uint64(dest[9].(uint32))
 				NUMERIC_PRECISION = &t
 			case uint64:
-				t := dest[8].(uint64)
+				t := dest[9].(uint64)
 				NUMERIC_PRECISION 	= &t
 			}
 		}
