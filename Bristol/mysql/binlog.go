@@ -343,7 +343,12 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		if dest[9] == nil{
 			CHARACTER_OCTET_LENGTH = 0
 		}else{
-			CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+			switch dest[9].(type) {
+			case uint32:
+				CHARACTER_OCTET_LENGTH = uint64(dest[9].(uint32))
+			case uint64:
+				CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+			}
 		}
 
 		tableInfo.ColumnSchemaTypeList = append(tableInfo.ColumnSchemaTypeList, &column_schema_type{
