@@ -191,6 +191,8 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 }
 
 func (This *History) GetNextSql() (sql string,start uint64){
+	This.Lock()
+	defer This.Unlock()
 	var where string = ""
 	if This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 {
 		if This.NowStartI > This.TableInfo.TABLE_ROWS{
@@ -199,10 +201,8 @@ func (This *History) GetNextSql() (sql string,start uint64){
 		if This.Property.Where != "" {
 			where = " WHERE " + This.Property.Where
 		}
-		This.Lock()
 		start = This.NowStartI
 		This.NowStartI += uint64(This.Property.ThreadCountPer)
-		This.Unlock()
 		var limit string = ""
 		// 假如没有主键 或者 非 InnoDB 引擎，直接 select *from t limit x,y
 		limit = " LIMIT " + strconv.FormatUint(start,10) + "," + strconv.Itoa(This.Property.ThreadCountPer)
@@ -219,8 +219,6 @@ func (This *History) GetNextSql() (sql string,start uint64){
 		}
 	}else{
 		// 假如TablePriKeyMaxId 有最大值，则说明 主键是 数字类型，可以通过 between 来分页
-		This.Lock()
-		defer This.Unlock()
 		//假如最大开始值 已经超过最大Id值了，则说明不需要再去查询了
 		if This.NowStartI >= This.TablePriKeyMaxId {
 			return
