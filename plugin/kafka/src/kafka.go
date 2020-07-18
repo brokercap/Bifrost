@@ -157,11 +157,11 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 			return nil,This.err
 		}
 	}
-	Topic := pluginDriver.TransfeResult(This.p.Topic,data,len(data.Rows)-1)
+	Topic := fmt.Sprint(pluginDriver.TransfeResult(This.p.Topic,data,len(data.Rows)-1))
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = Topic
 	if This.p.Key != ""{
-		Key := pluginDriver.TransfeResult(This.p.Key,data,len(data.Rows)-1)
+		Key := fmt.Sprint(pluginDriver.TransfeResult(This.p.Key,data,len(data.Rows)-1))
 		msg.Key = sarama.StringEncoder(Key)
 	}
 

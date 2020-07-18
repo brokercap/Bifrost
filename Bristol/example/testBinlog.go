@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/jc3wish/Bristol/mysql"
-	"time"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"reflect"
+	"time"
 )
 
 func callback(data *mysql.EventReslut) {
@@ -23,34 +23,31 @@ func main() {
 	var position uint32 = 203785789
 	var DBsource = ""
 
-	//89
+	DBsource = "root:root@tcp(192.168.220.128:3308)/bifrost_test"
+	filename = "mysql-bin.000003"
+	position = 339
 
-	DBsource = "root:root123@tcp(10.40.6.89:3306)/test"
-	filename = "mysql-bin.000078"
-	position = 43564768
+	DBsource = "root:root@tcp(192.168.220.128:3307)/bifrost_test"
+	filename = "mysql-bin.000016"
+	position = 11857
 
-	DBsource = "root:root123@tcp(10.40.6.89:3306)/test"
-	filename = "mysql-bin.000078"
-	position = 44125248
 
-	/*
-	DBsource = "root:root@tcp(10.40.2.41:3306)/test"
-	filename = "mysql-bin.000072"
-	position =
-	*/
-
+	DBsource = "root:root@tcp(192.168.220.128:3308)/bifrost_test"
+	filename = "mysql-bin.000004"
+	position = 25051078
 
 	reslut := make(chan error, 1)
 	m := make(map[string]uint8, 0)
 	m["bifrost_test"] = 1
-	m["mysql"] = 1
 	BinlogDump := &mysql.BinlogDump{
 		DataSource:    DBsource,
 		CallbackFun:   callback,
-		ReplicateDoDb: m,
+		//ReplicateDoDb: m,
 		OnlyEvent:     []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
 	}
-	go BinlogDump.StartDumpBinlog(filename, position, 100,reslut,"",0)
+	BinlogDump.AddReplicateDoDb("bifrost_test","*")
+	BinlogDump.AddReplicateDoDb("test","*")
+	go BinlogDump.StartDumpBinlog(filename, position, 633,reslut,"",0)
 	go func() {
 		for {
 			v := <-reslut

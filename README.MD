@@ -1,6 +1,6 @@
 ## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.2.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.3.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
@@ -17,8 +17,8 @@
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.2.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.2.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.3.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.3.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -57,12 +57,12 @@ http://www.xbifrost.com/demo/goto.html
 
 密码  :  Bifrost123
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.2.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.3.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.2.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.3.x/diagram.png)
 
 
 
@@ -101,7 +101,7 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.2.3-release/linux.zip
+wget https://github.com/brokercap/Bifrost/releases/download/v1.3.0-release/linux.zip
 
 unzip linux.zip
 

@@ -2,6 +2,7 @@ package src
 
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"reflect"
 	"sync"
 	"encoding/json"
 	"fmt"
@@ -14,8 +15,8 @@ import (
 )
 
 
-const VERSION  = "v1.2.2"
-const BIFROST_VERION = "v1.2.2"
+const VERSION  = "v1.3.0"
+const BIFROST_VERION = "v1.3.0"
 
 var l sync.RWMutex
 
@@ -516,13 +517,18 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 			v = ""
 			break
 		}
-		switch data.(type) {
-		case []string,[]interface{}:
-			v = strings.Replace(strings.Trim(fmt.Sprint(data), "[]"), " ", ",", -1)
+		switch reflect.TypeOf(data).Kind() {
+		case reflect.Array,reflect.Slice,reflect.Map:
+			var c []byte
+			c,e = json.Marshal(data)
+			if e != nil{
+				e = fmt.Errorf("field:%s ,data source type: %s , json.Marshal err: %s ",fieldName,reflect.TypeOf(data).Kind().String(),e.Error())
+				return
+			}
+			v = string(c)
 			break
 		default:
 			v = fmt.Sprint(data)
-			break
 		}
 		break
 	case "Int8","Nullable(Int8)":
@@ -742,7 +748,19 @@ func CkDataTypeTransfer(data interface{},fieldName string,toDataType string) (v 
 		if toDataType[0:3] == "Dec" || ( toDataType[0:3] == "Nul" && strings.Contains(toDataType,"Decimal") ) {
 			v = interfaceToFloat64(data)
 		}else{
-			v = fmt.Sprint(data)
+			switch reflect.TypeOf(data).Kind() {
+			case reflect.Array,reflect.Slice,reflect.Map:
+				var c []byte
+				c,e = json.Marshal(data)
+				if e != nil{
+					e = fmt.Errorf("field:%s ,data source type: %s , json.Marshal err: %s ",fieldName,reflect.TypeOf(data).Kind().String(),e.Error())
+					return
+				}
+				v = string(c)
+				break
+			default:
+				v = fmt.Sprint(data)
+			}
 		}
 		break
 	}

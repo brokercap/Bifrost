@@ -1,6 +1,9 @@
 package history_test
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 import (
 	"github.com/brokercap/Bifrost/server/history"
 	"log"
@@ -29,8 +32,8 @@ func TestGetDataList(t *testing.T)  {
 
 func TestChekcDataType(t *testing.T)  {
 	SchemaName := "bifrost_test"
-	TableName := "binlog_field_test"
-	Uri:= "root:@tcp(127.0.0.1:3306)/test"
+	TableName := "binlog_field_test2"
+	Uri:= "root:root@tcp(192.168.220.128:3308)/bifrost_test"
 	db := history.DBConnect(Uri)
 	Fields := history.GetSchemaTableFieldList(db,SchemaName,TableName)
 	sql := "select * from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
@@ -445,6 +448,24 @@ func TestChekcDataType(t *testing.T)  {
 				noError  = false
 			}
 			break
+		case "testjson":
+			switch v.(type) {
+			case string:
+				var d interface{}
+				json.Unmarshal([]byte(v.(string)),&d)
+				switch reflect.ValueOf(d).Kind(){
+				case reflect.Map,reflect.Slice,reflect.Array:
+					t.Log(k,"data:",d," is json is right,")
+					break
+				default:
+					t.Error(k,5,"!=",v, " type:",reflect.TypeOf(v))
+					break
+				}
+				break
+			default:
+				t.Error(k,5,"!=",v, " type:",reflect.TypeOf(v))
+			}
+
 		default:
 			t.Error(k,":",v," error type")
 			noError  = false

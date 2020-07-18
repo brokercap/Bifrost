@@ -1,6 +1,7 @@
 package history
 
 import (
+	"encoding/json"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -139,6 +140,11 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 						m[*v.COLUMN_NAME] = dest[i]
 						break
 					}
+					break
+				case "json":
+					var d interface{}
+					json.Unmarshal([]byte(dest[i].(string)),&d)
+					m[*v.COLUMN_NAME] = d
 					break
 				default:
 					m[*v.COLUMN_NAME] = dest[i]

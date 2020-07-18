@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 	"strconv"
+	"time"
 )
 
 // Read packet to buffer
@@ -972,7 +972,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			case FIELD_TYPE_VARCHAR, FIELD_TYPE_ENUM,
 				FIELD_TYPE_SET, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
 				FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING,
-				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY:
+				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY,FIELD_TYPE_JSON:
 				var b []byte
 				b, n, isNull, e = readLengthCodedBinary(data[pos:])
 				if e != nil {
@@ -1090,7 +1090,6 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				}
 				pos += int(num)
 				break
-
 			// Please report if this happens!
 			default:
 				return fmt.Errorf("Unknown FieldType %d", rc.columns[i].fieldType)

@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 )
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.3.0"
+const BIFROST_VERION = "v1.3.0"
 
 func init(){
 	driver.Register("memcache",&MyConn{},VERSION,BIFROST_VERION)
@@ -122,11 +122,11 @@ func (This *Conn) Close() bool {
 }
 
 func (This *Conn) getKeyVal(data *driver.PluginDataType,index int) string {
-	return driver.TransfeResult(This.p.KeyConfig,data,index)
+	return fmt.Sprint(driver.TransfeResult(This.p.KeyConfig,data,index))
 }
 
 func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
-	return driver.TransfeResult(This.p.ValConfig,data,index)
+	return fmt.Sprint(driver.TransfeResult(This.p.ValConfig,data,index))
 }
 
 func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {

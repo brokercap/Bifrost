@@ -11,8 +11,8 @@ import (
 	"log"
 )
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.3.0"
+const BIFROST_VERION = "v1.3.0"
 
 func init(){
 	pluginDriver.Register("MongoDB",&MyConn{},VERSION,BIFROST_VERION)
@@ -176,8 +176,8 @@ func (This *Conn) createIndex(c *mgo.Collection) {
 
 func (This *Conn) Insert(data *pluginDriver.PluginDataType) (postion *pluginDriver.PluginBinlog,e error) {
 	n := len(data.Rows)-1
-	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, n)
-	TableName := pluginDriver.TransfeResult(This.p.TableName, data, n)
+	SchemaName := fmt.Sprint(pluginDriver.TransfeResult(This.p.SchemaName, data, n))
+	TableName := fmt.Sprint(pluginDriver.TransfeResult(This.p.TableName, data, n))
 	if This.p.PrimaryKey == ""{
 		return nil,fmt.Errorf("PrimaryKey is empty")
 	}
@@ -227,8 +227,8 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType) (postion *pluginDriver.
 			return
 		}
 	}()
-	SchemaName := pluginDriver.TransfeResult(This.p.SchemaName, data, 0)
-	TableName := pluginDriver.TransfeResult(This.p.TableName, data, 0)
+	SchemaName := fmt.Sprint(pluginDriver.TransfeResult(This.p.SchemaName, data, 0))
+	TableName := fmt.Sprint(pluginDriver.TransfeResult(This.p.TableName, data, 0))
 	c := This.conn.DB(SchemaName).C(TableName)
 	This.createIndex(c)
 	k := make(bson.M,1)

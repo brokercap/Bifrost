@@ -348,6 +348,8 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 				CHARACTER_OCTET_LENGTH = uint64(dest[9].(uint32))
 			case uint64:
 				CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+			default:
+				CHARACTER_OCTET_LENGTH = 0
 			}
 		}
 
@@ -881,6 +883,7 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 		connectionId = fmt.Sprint(dest[0])
 		break
 	}
+	stmt.Close()
 
 	if connectionId == ""{
 		return

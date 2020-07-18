@@ -177,7 +177,7 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 		This.err = err
 		return nil,err
 	}
-	QueueName := pluginDriver.TransfeResult(This.p.QueueName, data, len(data.Rows)-1)
+	QueueName := fmt.Sprint(pluginDriver.TransfeResult(This.p.QueueName, data, len(data.Rows)-1))
 	var h stompngo.Headers
 	h = h.Add(stompngo.HK_DESTINATION,QueueName)
 	if This.p.Persistent == true{

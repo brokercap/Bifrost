@@ -8,11 +8,21 @@ import (
 	"log"
 	"encoding/json"
 	"time"
+	"reflect"
+	"strconv"
 )
 
-const API_VERSION  = "v1.0"
+const API_VERSION  = "v1.3"
 
-func init(){}
+const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_\[\]\'\"]+)\}`
+const RegularxEpressionKey  = `([a-zA-Z0-9\-\_]+)`
+
+var reqTagAll *regexp.Regexp
+var reqTagKey *regexp.Regexp
+func init(){
+	reqTagAll, _ = regexp.Compile(RegularxEpression)
+	reqTagKey, _ = regexp.Compile(RegularxEpressionKey)
+}
 
 type PluginDataType struct {
 	Timestamp 		uint32
@@ -43,7 +53,7 @@ type ConnFun interface {
 	ReConnect() bool
 	HeartCheck()
 	Close() bool
-	Insert(data *PluginDataType) (*PluginBinlog,error) //状态,是否立马更新binlog,错误内容
+	Insert(data *PluginDataType) (*PluginBinlog,error) //binlog位点，处理了多少条数据,错误信息
 	Update(data *PluginDataType) (*PluginBinlog,error)
 	Del(data *PluginDataType) (*PluginBinlog,error)
 	Query(data *PluginDataType) (*PluginBinlog,error)
@@ -128,11 +138,8 @@ func CheckUri(name string,uri string) error{
 	return drivers[name].driver.CheckUri(uri)
 }
 
-const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_]+)\}`
-
-func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
-	r, _ := regexp.Compile(RegularxEpression)
-	p := r.FindAllStringSubmatch(val, -1)
+func TransfeResult(val string, data *PluginDataType,rowIndex int) interface{} {
+	p := reqTagAll.FindAllStringSubmatch(val, -1)
 	n := len(data.Rows) - 1
 	for _, v := range p {
 		switch v[1] {
@@ -159,9 +166,71 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) string {
 			break
 		default:
 			if rowIndex <= n && rowIndex >= 0 {
-				val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)
+				// 如数据中 标签是整个字段，则自直接返回字段内容
+				if _,ok := data.Rows[rowIndex][v[1]];ok{
+					val = strings.Replace(val, v[0], fmt.Sprint(data.Rows[rowIndex][v[1]]), -1)
+					break
+				}
+				// 将标签 {$json['key1'][0]['key2']} 转成  json  key1 0 key2, json 必须是表字段名
+				// 假如 json 并不是 表里的字段 或者 只有 {$json} 这样一个标签的情况下(因为上面已经匹配过这个字段是不是表字段了)，则不对这个标签进行做任务替换处理
+				p2 := reqTagKey.FindAllStringSubmatch(v[1], -1)
+				if len(p2) == 1{
+					break
+				}
+				if _,ok := data.Rows[rowIndex][p2[0][1]];!ok{
+					if val == v[0] {
+						break
+					}
+				}
+				var d reflect.Value
+				d = reflect.ValueOf(data.Rows[rowIndex])
+				for _, v2 := range p2 {
+					if !d.IsValid() {
+						continue
+					}
+					if d.Kind() == reflect.Interface{
+						d = reflect.ValueOf(d.Interface())
+					}
+					switch d.Kind() {
+					case reflect.Array,reflect.Slice:
+						key,err := strconv.Atoi(v2[1])
+						if err != nil {
+							d = reflect.ValueOf(nil)
+							continue
+						}
+						if d.Len() - 1 < key {
+							d = reflect.ValueOf(nil)
+							continue
+						}
+						d = d.Index(key)
+						break
+					case reflect.Map:
+						d = d.MapIndex(reflect.ValueOf(v2[1]))
+						break
+					default:
+						d = reflect.ValueOf(nil)
+						break
+					}
+				}
+				if !d.IsValid() {
+					if val == v[0] {
+						return nil
+					}else{
+						val = strings.Replace(val, v[0], fmt.Sprint(nil), -1)
+					}
+				}else{
+					if val == v[0] {
+						return d.Interface()
+					}else{
+						val = strings.Replace(val, v[0],fmt.Sprint(d), -1)
+					}
+				}
 			}else{
-				val = strings.Replace(val, v[0], "nil", -1)
+				if val == v[0] {
+					return nil
+				}else {
+					val = strings.Replace(val, v[0], fmt.Sprint(nil), -1)
+				}
 			}
 			break
 		}
