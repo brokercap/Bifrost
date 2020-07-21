@@ -8,7 +8,7 @@ services:
       - "21037:21036"
     volumes:
       - .:/sync
-    working_dir: /sync
+    working_dir: /sync/linux
     entrypoint: ./Bifrost-server start
 networks:
   share:

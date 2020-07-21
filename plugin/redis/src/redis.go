@@ -11,7 +11,7 @@ import (
 )
 
 const VERSION = "v1.2.1"
-const BIFROST_VERION = "v1.2.1"
+const BIFROST_VERION = "v1.2.2"
 
 func init() {
 	driver.Register("redis", &MyConn{}, VERSION, BIFROST_VERION)
@@ -233,8 +233,17 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 			This.conn.LRem(key, 1, string(jo))
 		}
 		err = This.conn.LPush(key, string(j)).Err()
+	case "set":
+		if len(data.Rows) == 2 {
+			jo, err := json.Marshal(data.Rows[0])
+			if err != nil {
+				return nil, err
+			}
+			This.conn.SRem(key, 1, string(jo))
+		}
+		err = This.conn.SAdd(key, string(j)).Err()
 	default:
-		err = fmt.Errorf(This.p.Type + " not in(set,hash,list)")
+		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
 
 	if err != nil {
@@ -268,8 +277,14 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog, error)
 			return nil, e
 		}
 		err = This.conn.LRem(key, 1, string(j)).Err()
+	case "set":
+		j, e := json.Marshal(data.Rows[0])
+		if e != nil {
+			return nil, e
+		}
+		err = This.conn.SRem(key, string(j)).Err()
 	default:
-		err = fmt.Errorf(This.p.Type + " not in(set,hash,list)")
+		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
 	if err != nil {
 		This.err = err

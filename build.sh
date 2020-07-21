@@ -225,7 +225,7 @@ build()
     echo $bifrostVersion > $tagDir/VERSION
     cp -rf ./README.MD ./$tagDir/README.MD
     cp -rf ./LICENSE ./$tagDir/LICENSE
-    cp -f ./docker-compose.yaml ./$tagDir
+    cp -f ./docker-compose.yaml ./$tagDir/..
     echo "copy ./manager/template ==> " ./$tagDir/manager/template
 
     cp -rf ./manager/template ./$tagDir/manager/template
