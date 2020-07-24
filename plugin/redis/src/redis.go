@@ -216,32 +216,32 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		if err != nil {
 			return nil, err
 		}
-		if len(data.Rows) == 2 {
-			jo, err := json.Marshal(data.Rows[0])
-			if err != nil {
-				return nil, err
-			}
-			This.conn.ZRem(key, 1, string(jo))
+		jo, err := json.Marshal(data.Rows[0])
+		if err != nil {
+			return nil, err
 		}
-		err = This.conn.ZAdd(key, redis.Z{Score: sort, Member: string(j)}).Err()
+		pipeline := This.conn.Pipeline()
+		pipeline.ZRem(key, 1, string(jo))
+		pipeline.ZAdd(key, redis.Z{Score: sort, Member: string(j)}).Err()
+		_, err = pipeline.Exec()
 	case "list":
-		if len(data.Rows) == 2 {
-			jo, err := json.Marshal(data.Rows[0])
-			if err != nil {
-				return nil, err
-			}
-			This.conn.LRem(key, 1, string(jo))
+		jo, err := json.Marshal(data.Rows[0])
+		if err != nil {
+			return nil, err
 		}
-		err = This.conn.LPush(key, string(j)).Err()
+		pipeline := This.conn.Pipeline()
+		pipeline.LRem(key, 1, string(jo))
+		pipeline.LPush(key, string(j))
+		_, err = pipeline.Exec()
 	case "set":
-		if len(data.Rows) == 2 {
-			jo, err := json.Marshal(data.Rows[0])
-			if err != nil {
-				return nil, err
-			}
-			This.conn.SRem(key, 1, string(jo))
+		jo, err := json.Marshal(data.Rows[0])
+		if err != nil {
+			return nil, err
 		}
-		err = This.conn.SAdd(key, string(j)).Err()
+		pipeline := This.conn.Pipeline()
+		pipeline.SRem(key, 1, string(jo))
+		pipeline.SAdd(key, string(j))
+		_, err = pipeline.Exec()
 	default:
 		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
