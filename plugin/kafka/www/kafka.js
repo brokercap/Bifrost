@@ -25,5 +25,3 @@ function doGetPluginParam(){
 	result.status = true;
     return result;
 }
-
-setPluginParamDefault("FilterQuery",false);
