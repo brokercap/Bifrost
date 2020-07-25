@@ -16,7 +16,8 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 	if stmt == nil {
 		goto errLoop
 	}
-	for i := n - 1; i >= 0; i-- {
+	defer stmt.Close()
+	for i := 0; i < n; i++ {
 		vData := list[i]
 		val := make([]dbDriver.Value, 0)
 		l := len(vData.Rows)
@@ -26,7 +27,6 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 				for _, v := range This.p.Field {
 					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
 					if This.err != nil {
-						stmt.Close()
 						goto errLoop
 					}
 					val = append(val, toV)
@@ -39,7 +39,6 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 					for _, v := range This.p.Field {
 						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
 						if This.err != nil {
-							stmt.Close()
 							goto errLoop
 						}
 						val = append(val, toV)
@@ -48,12 +47,12 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			}
 			break
 		default:
+			continue
 			break
 		}
 		_, This.err = stmt.Exec(val)
 		if This.err != nil {
 			log.Println("plugin clickhouse insert exec err:",This.err," data:",val)
-			stmt.Close()
 			goto errLoop
 		}
 	}
