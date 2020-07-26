@@ -157,7 +157,7 @@ func (This *Conn) sendToList(data *driver.PluginDataType) (*driver.PluginBinlog,
 		}
 	}
 
-	topic := driver.TransfeResult(This.p.Topic, data, len(data.Rows)-1)
+	topic := fmt.Sprint(driver.TransfeResult(This.p.Topic, data, len(data.Rows)-1))
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = topic
 

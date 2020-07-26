@@ -302,5 +302,5 @@ func (This *Conn) Commit() (*driver.PluginBinlog, error) {
 }
 
 func (This *Conn) getKeyVal(data *driver.PluginDataType, key string, index int) string {
-	return driver.TransfeResult(key, data, index)
+	return fmt.Sprint(driver.TransfeResult(key, data, index))
 }

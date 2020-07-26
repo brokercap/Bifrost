@@ -1,7 +1,5 @@
 module github.com/brokercap/Bifrost
 
-
-
 require (
 	github.com/ClickHouse/clickhouse-go v1.3.14
 	github.com/DataDog/zstd v1.3.6-0.20190409195224-796139022798 // indirect
@@ -13,6 +11,7 @@ require (
 	github.com/go-redis/redis v6.15.5+incompatible
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/jc3wish/Bristol v0.0.0-20200118032415-5211116d53c7
+	github.com/jinzhu/gorm v1.9.15 // indirect
 	github.com/micro/go-plugins/broker/kafka/v2 v2.9.1 // indirect
 	github.com/pkg/profile v1.2.1 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
