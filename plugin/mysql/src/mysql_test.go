@@ -1,6 +1,8 @@
 package src_test
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 	"log"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
@@ -77,6 +79,38 @@ func beforeTest()  {
 	
 }
 
+func checkMySQLSupportJson(db mysql.MysqlConnection) bool{
+	stmt0,_ := db.Prepare("select version()")
+	rows0,_ := stmt0.Query([]dbDriver.Value{})
+	var MysqlVersion string
+	for {
+		dest := make([]dbDriver.Value, 1, 1)
+
+		err := rows0.Next(dest)
+		if err != nil {
+			break
+		}
+		MysqlVersion = fmt.Sprint(dest[0])
+		break
+	}
+	// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
+	bigVersionString := strings.Split(MysqlVersion,".")[0]
+	fmt.Println("bigVersionString:",bigVersionString)
+	bigVersion, _ := strconv.Atoi(bigVersionString)
+	fmt.Println("MysqlVersion[0:2]:",MysqlVersion[0:2])
+	if bigVersion < 8 && MysqlVersion[0:2] != "5.7" {
+		return false
+	}
+	return true
+}
+
+func getCreateTableSql(db mysql.MysqlConnection) string{
+	if checkMySQLSupportJson(db) {
+		return "CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id0` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,`id` INT(11) UNSIGNED DEFAULT NULL , `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL DEFAULT 'var', `testchar` CHAR(2) NOT NULL DEFAULT 'ch', `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT DEFAULT NULL, `testblob` BLOB DEFAULT NULL, `testbit` BIT(64)  NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB DEFAULT NULL, `testlongblob` LONGBLOB DEFAULT NULL, `testtinyblob` TINYBLOB DEFAULT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT  NULL  DEFAULT '5',`testjson` json,`event_type` VARCHAR(10) DEFAULT '', PRIMARY KEY (`id0`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
+	}
+	return "CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id0` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,`id` INT(11) UNSIGNED DEFAULT NULL , `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL DEFAULT 'var', `testchar` CHAR(2) NOT NULL DEFAULT 'ch', `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT DEFAULT NULL, `testblob` BLOB DEFAULT NULL, `testbit` BIT(64)  NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB DEFAULT NULL, `testlongblob` LONGBLOB DEFAULT NULL, `testtinyblob` TINYBLOB DEFAULT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT  NULL  DEFAULT '5',`testjson` text,`event_type` VARCHAR(10) DEFAULT '', PRIMARY KEY (`id0`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
+}
+
 func initDBTable(delTable bool) {
 	c := mysql.NewConnect(url)
 	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
@@ -84,7 +118,7 @@ func initDBTable(delTable bool) {
 	if err != nil{
 		log.Fatal(err)
 	}
-	sql2:="CREATE TABLE  IF NOT EXISTS `"+SchemaName+"`.`"+TableName+"`( `id0` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,`id` INT(11) UNSIGNED DEFAULT NULL , `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64)  NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT  NULL  DEFAULT '5',`event_type` VARCHAR(10) DEFAULT '', PRIMARY KEY (`id0`) ) ENGINE = MYISAM AUTO_INCREMENT = 0 CHARSET = utf8"
+	sql2:=getCreateTableSql(c)
 	if delTable == false{
 		_,err = c.Exec(sql2,[]dbDriver.Value{})
 		if err != nil{
@@ -148,6 +182,7 @@ func getParam(SyncMode string)  map[string]interface{}{
 	Field = append(Field,fieldStruct{"testenum","testenum"})
 	Field = append(Field,fieldStruct{"testset","testset"})
 	Field = append(Field,fieldStruct{"event_type","{$EventType}"})
+	Field = append(Field,fieldStruct{"testjson","testjson"})
 
 	sql := ""
 	for _,f := range Field{
@@ -206,7 +241,7 @@ func TestCommit(t *testing.T){
 
 func TestInsertAndChekcData(t *testing.T){
 	beforeTest()
-	initDBTable(false)
+	initDBTable(true)
 	conn := getPluginConn("Normal")
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()
@@ -233,7 +268,7 @@ func TestInsertAndChekcData(t *testing.T){
 
 func TestInsertNullAndChekcData(t *testing.T){
 	beforeTest()
-	initDBTable(false)
+	initDBTable(true)
 	conn := getPluginConn("Normal")
 	e := pluginTestData.NewEvent()
 	e.SetIsNull(true)
@@ -340,8 +375,6 @@ func getMysqlData(id string)  (map[string]interface{},error){
 	}
 	sql = "select "+sql +" from `"+schema+"`.`"+table +"` where id = "+id
 
-	//sql := "select id,test_unsinged_bigint,test_unsinged_int,test_unsinged_mediumint,test_unsinged_tinyint,testtinyint,testsmallint,testmediumint,testint,testbigint,testbit,testbool,testvarchar,testchar,testtime,testdate,testyear,testtimestamp,testdatetime,testfloat,testdouble,testdecimal,testtext,testblob,testmediumblob,testlongblob,testtinyblob,testenum,testset from bifrost_test.binlog_field_test where id = 1"
-
 	stmt,err := conn.Prepare(sql)
 	if err != nil{
 		return nil,err
@@ -433,8 +466,18 @@ func checkDataRight(eventDataMap map[string]interface{}) (map[string][]string,er
 			s := fmt.Sprint(key," == ",val," ( ",reflect.TypeOf(val)," ) ")
 			result["ok"] = append(result["ok"],s)
 		}else{
-			s := fmt.Sprint(key," src: ",val," ( ",reflect.TypeOf(val)," ) "," != ",m[key]," ( ",reflect.TypeOf(m[key])," )")
-			result["error"] = append(result["error"],s)
+			switch reflect.TypeOf(val).Kind(){
+			case reflect.Map,reflect.Slice,reflect.Array:
+				c,_:=json.Marshal(val)
+				if string(c) == fmt.Sprint(c){
+					s := fmt.Sprint(key," == ",val," ( ",reflect.TypeOf(val)," ) ")
+					result["ok"] = append(result["ok"],s)
+				}
+				break
+			default:
+				s := fmt.Sprint(key," src: ",val," ( ",reflect.TypeOf(val)," ) "," != ",m[key]," ( ",reflect.TypeOf(m[key])," )")
+				result["error"] = append(result["error"],s)
+			}
 		}
 	}
 
@@ -512,9 +555,9 @@ func TestRandDataAndCheck(t *testing.T){
 
 func TestCommitBySymbol(t *testing.T){
 
-	url = "root:@tcp(127.0.0.1:3306)/bifrost_test"
+	url = "root:root@tcp(192.168.220.128:3308)/bifrost_test"
 	beforeTest()
-	TableName  = "binlog_field_test-3"
+	TableName  = "binlog_field_test4"
 	conn := getPluginConn("Normal")
 	initDBTable(false)
 
@@ -529,6 +572,7 @@ func TestCommitBySymbol(t *testing.T){
 
 	_,err2 := conn.Commit()
 	if err2 != nil{
-		log.Fatal(err2)
+		t.Fatal(err2)
 	}
+	t.Log("success")
 }

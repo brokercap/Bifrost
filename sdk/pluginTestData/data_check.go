@@ -44,6 +44,7 @@ type DataStruct struct {
 
 	Testenum					string  `json:"testenum"`
 	Testset						[]string `json:"testset"`
+	Testjson					interface{} `json:"Testjson"`
 }
 
 func (This *Event) CheckData(src map[string]interface{},destJsonString string) (map[string][]string,error){
@@ -199,6 +200,15 @@ func (This *Event) CheckData(src map[string]interface{},destJsonString string) (
 	srcV = dest.Testset
 	key = "testset"
 	This.CheckData0(srcV,src[key],key,result)
+	srcV = dest.Testjson
+	key = "testjson"
+	if reflect.ValueOf(srcV).Kind() == reflect.ValueOf(src[key]).Kind() {
+		s := fmt.Sprint(key," == ",srcV," ( ",reflect.TypeOf(srcV)," ) ", " src val:",src[key]," ( ",reflect.TypeOf(src[key])," ) ")
+		result["ok"] = append(result["ok"],s)
+	}else{
+		s := fmt.Sprint(key," ",srcV," ( ",reflect.TypeOf(srcV)," ) "," != ( ",src,reflect.TypeOf(src)," )")
+		result["error"] = append(result["error"],s)
+	}
 
 	return result,nil
 }

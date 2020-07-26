@@ -1,5 +1,7 @@
 module github.com/brokercap/Bifrost
 
+
+
 require (
 	github.com/ClickHouse/clickhouse-go v1.3.14
 	github.com/DataDog/zstd v1.3.6-0.20190409195224-796139022798 // indirect

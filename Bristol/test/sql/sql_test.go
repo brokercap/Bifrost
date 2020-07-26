@@ -3,7 +3,7 @@ package sql
 import (
 	"testing"
 	"log"
-	"github.com/jc3wish/Bristol/mysql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"database/sql/driver"
 	"fmt"
 	"database/sql"
