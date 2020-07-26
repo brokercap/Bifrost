@@ -118,7 +118,6 @@ func DoSaveSnapshotData(){
 	storage.SaveDBInfo(data)
 }
 
-
 func DoRecoveryByBackupData(fileContent string){
 	var data recovery
 	errors := json.Unmarshal([]byte(fileContent),&data)
@@ -131,5 +130,11 @@ func DoRecoveryByBackupData(fileContent string){
 	}
 	if string(*data.DbInfo) != "{}"{
 		Recovery(data.DbInfo,true)
+	}
+	if string(*data.Warning) != "{}"{
+		warning.RecoveryWarning(data.Warning)
+	}
+	if string(*data.User) != "[]"{
+		user.RecoveryUser(data.User)
 	}
 }
