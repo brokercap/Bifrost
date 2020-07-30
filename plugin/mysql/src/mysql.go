@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.3.0"
-const BIFROST_VERION = "v1.3.0"
+const VERSION  = "v1.3.2"
+const BIFROST_VERION = "v1.3.2"
 
 type dataTableStruct struct {
 	MetaMap			map[string]string //字段类型
