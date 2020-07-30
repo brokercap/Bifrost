@@ -192,7 +192,7 @@ func (This *Conn) getCktFieldType() {
 	ckFieldsMap := make(map[string]string)
 	for _,v:=range ckFields{
 		ckFieldsMap[v.Name] = v.Type
-		if v.Name == This.p.mysqlPriKey {
+		if v.Name == This.p.ckPriKey {
 			switch v.Type {
 			case "Int8","Nullable(Int8)","UInt8","Nullable(UInt8)","Int16","Nullable(Int16)","UInt16","Nullable(UInt16)","Int32","Nullable(Int32)","UInt32","Nullable(UInt32)","Int64","Nullable(Int64)","UInt64","Nullable(UInt64)":
 				This.p.ckPriKeyFieldIsInt = true
