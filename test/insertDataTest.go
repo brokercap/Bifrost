@@ -7,16 +7,22 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"time"
 	"strings"
+	"sync"
+	"encoding/json"
+	"reflect"
+	"fmt"
 )
 
 func main(){
-	host := flag.String("host", "127.0.0.1", "-host")
+	host := flag.String("host", "192.168.126.140", "-host")
 	user := flag.String("user", "root", "-user")
 	pwd := flag.String("pwd", "root", "-pwd")
 	port := flag.String("port", "3306", "-port")
 	table := flag.String("table", "test1", "-test1")
 	schema := flag.String("schema", "bifrost_test", "-schema")
-	count := flag.Int("count", 100000, "-count")
+	count := flag.Int("count", 1000, "-count")
+	batchsize := flag.Int("batchsize", 50, "-batchsize")
+	conn := flag.Int("conn", 2, "-conn")
 	flag.Parse()
 	//root:root@tcp(10.40.2.41:3306)/test
 	dbstring := *user+":"+*pwd+"@tcp("+*host+":"+*port+")/"+*schema
@@ -24,7 +30,19 @@ func main(){
 	println("table:",*table)
 	println("count:",*count)
 	log.Println("start ",time.Now().Format("2006-01-02 15:04:05"))
-	forInsert(dbstring,*schema,*table,*count)
+
+	n := (*count)/(*conn)
+	ws := &sync.WaitGroup{}
+	ws.Add(*conn)
+	for i:=0;i < *conn ; i++{
+		go func() {
+			defer func() {
+				ws.Done()
+			}()
+			forInsert(dbstring,*schema,*table,n,*batchsize)
+		}()
+	}
+	ws.Wait()
 	log.Println("end ",time.Now().Format("2006-01-02 15:04:05"))
 }
 
@@ -33,7 +51,7 @@ func DBConnect(uri string) mysql.MysqlConnection{
 	return db
 }
 
-func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value){
+func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string,n int) (sqlstring string, data []driver.Value){
 	sql := "SELECT COLUMN_NAME,COLUMN_DEFAULT,DATA_TYPE,EXTRA,COLUMN_TYPE FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
 	data = make([]driver.Value,0)
 	stmt,err := db.Prepare(sql)
@@ -51,6 +69,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		return "", make([]driver.Value,0)
 	}
 	var sqlk ,sqlv = "",""
+	var ii int = -1
 	for {
 		dest := make([]driver.Value, 5, 5)
 		err := rows.Next(dest)
@@ -66,6 +85,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		if EXTRA == "auto_increment" {
 			continue
 		} else {
+			ii++
 			var defaultVal string
 			fieldType := string(dest[2].(string))
 			if dest[1] == nil{
@@ -161,6 +181,16 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 					data = append(data,enum_values[0])
 				}
 				break
+			case "json":
+				m := make(map[string][]interface{},1)
+				m["key1"] = make([]interface{},0)
+				m["key1"] = append(m["key1"],1)
+				m["key1"] = append(m["key1"],"2")
+				m["key1"] = append(m["key1"],nil)
+				m["key1"] = append(m["key1"],true)
+				c,_ := json.Marshal(m)
+				data = append(data,string(c))
+				break
 			default:
 				data = append(data,"0")
 				break
@@ -169,31 +199,69 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			fieldNAme = string(dest[0].(string))
 			if sqlk == "" {
 				sqlk = "`" + fieldNAme + "`"
-				sqlv = "?"
+				switch reflect.TypeOf(data[ii]).Kind() {
+				case reflect.Map:
+					b,_ := json.Marshal(data[ii])
+					sqlv = "'"+string(b)+"'"
+					break
+				case reflect.Bool:
+					if data[ii].(bool) == true{
+						sqlv = "true"
+					}else{
+						sqlv = "false"
+					}
+				default:
+					sqlv = "'"+fmt.Sprint(data[ii])+"'"
+					break
+				}
+
 			} else {
 				sqlk += ",`" + fieldNAme + "`"
-				sqlv += ",?"
+				switch reflect.TypeOf(data[ii]).Kind() {
+				case reflect.Map:
+					b,_ := json.Marshal(data[ii])
+					sqlv += "'"+string(b)+"'"
+					break
+				case reflect.Bool:
+					if data[ii].(bool) == true{
+						sqlv += ",true"
+					}else{
+						sqlv += ",false"
+					}
+				default:
+					sqlv += ",'"+fmt.Sprint(data[ii])+"'"
+					break
+				}
 			}
 		}
 
 	}
 	sqlstring = "INSERT INTO "+table+" ("+sqlk+") values ("+sqlv+")"
+	for i:=1;i<n;i++{
+		sqlstring += ",("+sqlv+")"
+	}
 	log.Println(sqlstring)
 	log.Println(data)
 	return
 }
 
-func forInsert(uri string,schema string,table string,count int){
+func forInsert(uri string,schema string,table string,count int,batchsize int){
+	n := count / batchsize
+	if n == 0 {
+		n = 1
+	}
 	db := DBConnect(uri)
-	sql,v := GetSchemaTableFieldAndVal(db,schema,table)
-	//return
+	if count - batchsize < 0 {
+		batchsize = count
+	}
+	sql,_ := GetSchemaTableFieldAndVal(db,schema,table,batchsize)
 	stmt,err := db.Prepare(sql)
 	if err != nil{
 		log.Println("db Prepare err:",err)
 		return
 	}
-	for i:=0;i<count;i++{
-		_, err2 := stmt.Exec(v)
+	for i:=0;i< n;i++{
+		_, err2 := stmt.Exec([]driver.Value{})
 		if err2 != nil {
 			log.Println("db stmt err:", err2)
 			break

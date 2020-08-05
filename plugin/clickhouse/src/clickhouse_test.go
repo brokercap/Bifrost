@@ -17,7 +17,8 @@ import (
 	"os"
 )
 
-var url string = "tcp://192.168.220.128:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://192.168.126.140:9000?Database=test&debug=true&compress=1"
+var engine  string = "MergeTree()"
 
 
 //var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testjson String) ENGINE = MergeTree() ORDER BY (id);"
@@ -45,7 +46,7 @@ func initDBTable(delTable bool) {
 	c := MyPlugin.NewClickHouseDBConn(url)
 	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
 	c.Exec(sql1,[]driver.Value{})
-	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id0 UInt32,id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = MergeTree() ORDER BY (id);"
+	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id0 UInt32,id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = "+engine+" ORDER BY (id);"
 	if delTable == false{
 		c.Exec(sql2,[]driver.Value{})
 	}else{
@@ -152,6 +153,7 @@ func getParam() map[string]interface{} {
 	param["PriKey"] = PriKey
 	param["CkSchema"] = SchemaName
 	param["CkTable"] = TableName
+	param["BatchSize"] = 5000
 	return param
 }
 
