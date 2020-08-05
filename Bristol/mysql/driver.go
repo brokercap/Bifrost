@@ -8,6 +8,7 @@ import (
 )
 
 type mysqlDriver struct{}
+
 func (d *mysqlDriver) Open(dsn string) (driver.Conn, error) {
 	var e error
 	// New mysqlConn
@@ -26,7 +27,7 @@ func (d *mysqlDriver) Open(dsn string) (driver.Conn, error) {
 	}
 	mc.bufReader = bufio.NewReader(mc.netConn)
 
-	// Reading Handshake Initialization Packet 
+	// Reading Handshake Initialization Packet
 	e = mc.readInitPacket()
 	if e != nil {
 		return nil, e

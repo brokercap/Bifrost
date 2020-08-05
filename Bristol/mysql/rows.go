@@ -15,7 +15,7 @@ type mysqlField struct {
 type rowsContent struct {
 	columns []mysqlField
 	//rows    []*[][]byte
-	rows    [][]driver.Value
+	rows [][]driver.Value
 }
 
 type mysqlRows struct {
@@ -44,12 +44,12 @@ func (rows mysqlRows) Next(dest []driver.Value) error {
 		for i := 0; i < cap(dest); i++ {
 			dest[i] = rows.content.rows[0][i]
 			/*
-			rows.content.rows[0][i] ==
-			if (*rows.content.rows[0])[i] == nil{
-				dest[i] = nil
-			}else{
-				dest[i] = (*rows.content.rows[0])[i]
-			}
+				rows.content.rows[0][i] ==
+				if (*rows.content.rows[0])[i] == nil{
+					dest[i] = nil
+				}else{
+					dest[i] = (*rows.content.rows[0])[i]
+				}
 			*/
 		}
 		rows.content.rows = rows.content.rows[1:]

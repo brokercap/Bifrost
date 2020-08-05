@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var MysqlCreateTalbeSQL  = "CREATE TABLE `binlog_field_test` ( `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64) NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT NULL DEFAULT '5',testjson json, PRIMARY KEY (`id`) ) ENGINE = MYISAM AUTO_INCREMENT = 3 CHARSET = utf8"
+var MysqlCreateTalbeSQL = "CREATE TABLE `binlog_field_test` ( `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `testtinyint` TINYINT(4) NOT NULL DEFAULT '-1', `testsmallint` SMALLINT(6) NOT NULL DEFAULT '-2', `testmediumint` MEDIUMINT(8) NOT NULL DEFAULT '-3', `testint` INT(11) NOT NULL DEFAULT '-4', `testbigint` BIGINT(20) NOT NULL DEFAULT '-5', `testvarchar` VARCHAR(400) NOT NULL, `testchar` CHAR(2) NOT NULL, `testenum` ENUM('en1', 'en2', 'en3') NOT NULL DEFAULT 'en1', `testset` SET('set1', 'set2', 'set3') NOT NULL DEFAULT 'set1', `testtime` TIME NOT NULL DEFAULT '00:00:00', `testdate` DATE NOT NULL DEFAULT '0000-00-00', `testyear` YEAR(4) NOT NULL DEFAULT '1989', `testtimestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, `testdatetime` DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00', `testfloat` FLOAT(9, 2) NOT NULL DEFAULT '0.00', `testdouble` DOUBLE(9, 2) NOT NULL DEFAULT '0.00', `testdecimal` DECIMAL(9, 2) NOT NULL DEFAULT '0.00', `testtext` TEXT NOT NULL, `testblob` BLOB NOT NULL, `testbit` BIT(64) NOT NULL DEFAULT b'0', `testbool` TINYINT(1) NOT NULL DEFAULT '0', `testmediumblob` MEDIUMBLOB NOT NULL, `testlongblob` LONGBLOB NOT NULL, `testtinyblob` TINYBLOB NOT NULL, `test_unsinged_tinyint` TINYINT(4) UNSIGNED NOT NULL DEFAULT '1', `test_unsinged_smallint` SMALLINT(6) UNSIGNED NOT NULL DEFAULT '2', `test_unsinged_mediumint` MEDIUMINT(8) UNSIGNED NOT NULL DEFAULT '3', `test_unsinged_int` INT(11) UNSIGNED NOT NULL DEFAULT '4', `test_unsinged_bigint` BIGINT(20) UNSIGNED NOT NULL DEFAULT '5',testjson json, PRIMARY KEY (`id`) ) ENGINE = MYISAM AUTO_INCREMENT = 3 CHARSET = utf8"
 
 /*
   CREATE TABLE `binlog_field_test` (
@@ -54,164 +54,162 @@ var MysqlCreateTalbeSQL  = "CREATE TABLE `binlog_field_test` ( `id` INT(11) UNSI
 var columnJsonString = `[{"ColumnName":"id","ColumnKey":"PRI","ColumnDefault":"NULL","DataType":"int","Extra":"auto_increment","ColumnType":"int(11) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":true,"AutoIncrement":true,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":10,"Value":null},{"ColumnName":"testtinyint","ColumnKey":"","ColumnDefault":"-1","DataType":"tinyint","Extra":"","ColumnType":"tinyint(4)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":3,"Value":null},{"ColumnName":"testsmallint","ColumnKey":"","ColumnDefault":"-2","DataType":"smallint","Extra":"","ColumnType":"smallint(6)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":5,"Value":null},{"ColumnName":"testmediumint","ColumnKey":"","ColumnDefault":"-3","DataType":"mediumint","Extra":"","ColumnType":"mediumint(8)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":7,"Value":null},{"ColumnName":"testint","ColumnKey":"","ColumnDefault":"-4","DataType":"int","Extra":"","ColumnType":"int(11)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":10,"Value":null},{"ColumnName":"testbigint","ColumnKey":"","ColumnDefault":"-5","DataType":"bigint","Extra":"","ColumnType":"bigint(20)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":19,"Value":null},{"ColumnName":"testvarchar","ColumnKey":"","ColumnDefault":"NULL","DataType":"varchar","Extra":"","ColumnType":"varchar(10)","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":10,"NumbericPrecision":0,"Value":null},{"ColumnName":"testchar","ColumnKey":"","ColumnDefault":"NULL","DataType":"char","Extra":"","ColumnType":"char(2)","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":2,"NumbericPrecision":0,"Value":null},{"ColumnName":"testenum","ColumnKey":"","ColumnDefault":"en1","DataType":"enum","Extra":"","ColumnType":"enum('en1','en2','en3')","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":["en1","en2","en3"],"SetValues":[],"CharacterMaximumLength":3,"NumbericPrecision":0,"Value":null},{"ColumnName":"testset","ColumnKey":"","ColumnDefault":"set1","DataType":"set","Extra":"","ColumnType":"set('set1','set2','set3')","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":["set1","set2","set3"],"CharacterMaximumLength":14,"NumbericPrecision":0,"Value":null},{"ColumnName":"testtime","ColumnKey":"","ColumnDefault":"00:00:00","DataType":"time","Extra":"","ColumnType":"time","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":0,"Value":null},{"ColumnName":"testdate","ColumnKey":"","ColumnDefault":"0000-00-00","DataType":"date","Extra":"","ColumnType":"date","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":0,"Value":null},{"ColumnName":"testyear","ColumnKey":"","ColumnDefault":"1989","DataType":"year","Extra":"","ColumnType":"year(4)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":0,"Value":null},{"ColumnName":"testtimestamp","ColumnKey":"","ColumnDefault":"CURRENT_TIMESTAMP","DataType":"timestamp","Extra":"","ColumnType":"timestamp","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":0,"Value":null},{"ColumnName":"testdatetime","ColumnKey":"","ColumnDefault":"0000-00-00 00:00:00","DataType":"datetime","Extra":"","ColumnType":"datetime","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":0,"Value":null},{"ColumnName":"testfloat","ColumnKey":"","ColumnDefault":"0.00","DataType":"float","Extra":"","ColumnType":"float(9,2)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":2,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":9,"Value":null},{"ColumnName":"testdouble","ColumnKey":"","ColumnDefault":"0.00","DataType":"double","Extra":"","ColumnType":"double(9,2)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":2,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":9,"Value":null},{"ColumnName":"testdecimal","ColumnKey":"","ColumnDefault":"0.00","DataType":"decimal","Extra":"","ColumnType":"decimal(9,2)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":2,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":9,"Value":null},{"ColumnName":"testtext","ColumnKey":"","ColumnDefault":"NULL","DataType":"text","Extra":"","ColumnType":"text","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":65535,"NumbericPrecision":0,"Value":null},{"ColumnName":"testblob","ColumnKey":"","ColumnDefault":"NULL","DataType":"blob","Extra":"","ColumnType":"blob","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":65535,"NumbericPrecision":0,"Value":null},{"ColumnName":"testbit","ColumnKey":"","ColumnDefault":"","DataType":"bit","Extra":"","ColumnType":"bit(8)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":8,"Value":null},{"ColumnName":"testbool","ColumnKey":"","ColumnDefault":"0","DataType":"tinyint","Extra":"","ColumnType":"tinyint(1)","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":true,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":3,"Value":null},{"ColumnName":"testmediumblob","ColumnKey":"","ColumnDefault":"NULL","DataType":"mediumblob","Extra":"","ColumnType":"mediumblob","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":16777215,"NumbericPrecision":0,"Value":null},{"ColumnName":"testlongblob","ColumnKey":"","ColumnDefault":"NULL","DataType":"longblob","Extra":"","ColumnType":"longblob","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":4294967295,"NumbericPrecision":0,"Value":null},{"ColumnName":"testtinyblob","ColumnKey":"","ColumnDefault":"NULL","DataType":"tinyblob","Extra":"","ColumnType":"tinyblob","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":255,"NumbericPrecision":0,"Value":null},{"ColumnName":"test_unsinged_tinyint","ColumnKey":"","ColumnDefault":"1","DataType":"tinyint","Extra":"","ColumnType":"tinyint(4) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":3,"Value":null},{"ColumnName":"test_unsinged_smallint","ColumnKey":"","ColumnDefault":"2","DataType":"smallint","Extra":"","ColumnType":"smallint(6) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":5,"Value":null},{"ColumnName":"test_unsinged_mediumint","ColumnKey":"","ColumnDefault":"3","DataType":"mediumint","Extra":"","ColumnType":"mediumint(8) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":7,"Value":null},{"ColumnName":"test_unsinged_int","ColumnKey":"","ColumnDefault":"4","DataType":"int","Extra":"","ColumnType":"int(11) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":10,"Value":null},{"ColumnName":"test_unsinged_bigint","ColumnKey":"","ColumnDefault":"5","DataType":"bigint","Extra":"","ColumnType":"bigint(20) unsigned","CharacterSetName":"NULL","CollationName":"NULL","NumbericScale":0,"IsBool":false,"Unsigned":true,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":0,"NumbericPrecision":20,"Value":null},{"ColumnName":"testjson","ColumnKey":"","ColumnDefault":"NULL","DataType":"json","Extra":"","ColumnType":"json","CharacterSetName":"utf8","CollationName":"utf8_general_ci","NumbericScale":0,"IsBool":false,"Unsigned":false,"IsPrimary":false,"AutoIncrement":false,"EnumValues":[],"SetValues":[],"CharacterMaximumLength":65535,"NumbericPrecision":0,"Value":null}]`
 
 type Column struct {
-	ColumnName string
-	ColumnKey string
-	ColumnDefault string
-	DataType string
-	Extra string
-	ColumnType string
-	CharacterSetName string
-	CollationName string
-	NumbericScale int
-	IsBool bool
-	Unsigned bool
-	IsPrimary bool
-	AutoIncrement bool
-	EnumValues []string
-	SetValues []string
+	ColumnName             string
+	ColumnKey              string
+	ColumnDefault          string
+	DataType               string
+	Extra                  string
+	ColumnType             string
+	CharacterSetName       string
+	CollationName          string
+	NumbericScale          int
+	IsBool                 bool
+	Unsigned               bool
+	IsPrimary              bool
+	AutoIncrement          bool
+	EnumValues             []string
+	SetValues              []string
 	CharacterMaximumLength int
-	NumbericPrecision int
-	Value interface{}
+	NumbericPrecision      int
+	Value                  interface{}
 }
 
 type EventType int8
+
 const (
-	RANDALL	EventType = -1
-	INSERT EventType = 0
-	UPDATE EventType = 1
-	DELETE EventType = 2
-	SQLTYPE EventType = 3
-	COMMIT EventType = 4
+	RANDALL   EventType = -1
+	INSERT    EventType = 0
+	UPDATE    EventType = 1
+	DELETE    EventType = 2
+	SQLTYPE   EventType = 3
+	COMMIT    EventType = 4
 	OTHERTYPE EventType = 5
 )
 
-func GetRandomString(l int,cn int) string {
+func GetRandomString(l int, cn int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ^&*'\";\\/%$#@90-_|<>?{}[]+.!~`,=0"
-	str2Arr := []string{"测","试","数","据"}
+	str2Arr := []string{"测", "试", "数", "据"}
 	bytes := []byte(str)
 	result1 := []byte{}
 	result2 := ""
 	for i := 0; i < l; i++ {
-		rand.Seed(time.Now().UnixNano()+int64(i))
+		rand.Seed(time.Now().UnixNano() + int64(i))
 		result1 = append(result1, bytes[rand.Intn(len(bytes))])
 	}
-	for i:=0;i < cn;i++{
-		rand.Seed(time.Now().UnixNano()+int64(i))
+	for i := 0; i < cn; i++ {
+		rand.Seed(time.Now().UnixNano() + int64(i))
 		result2 += str2Arr[rand.Intn(len(str2Arr))]
 	}
 	rand.Seed(time.Now().UnixNano())
-	return string(result1)+result2
+	return string(result1) + result2
 }
 
-
 type Event struct {
-	Schema string
-	Talbe  string
-	AutoIncrementNum uint64  //自增字段值
-	ColumnList []*Column 	//字段属性列表
-	position uint32 		//位点
-	dataMap map[uint64]map[string]interface{}    //随机生成的数据最终记录值,id为key
-	idVal uint64   			//随机生成数据的时候，指定的id值。随机生成一次数据后自动清0
-	saveHistory bool  		//是否保存历史生成的随机数据。假如一个id 有insert ,update 则只保存update之后的数据，假如后面又有delete了，则会被清除掉这个id数据
-	isNull bool				// 是否生成null值的数据，默认为false
+	Schema           string
+	Talbe            string
+	AutoIncrementNum uint64                            //自增字段值
+	ColumnList       []*Column                         //字段属性列表
+	position         uint32                            //位点
+	dataMap          map[uint64]map[string]interface{} //随机生成的数据最终记录值,id为key
+	idVal            uint64                            //随机生成数据的时候，指定的id值。随机生成一次数据后自动清0
+	saveHistory      bool                              //是否保存历史生成的随机数据。假如一个id 有insert ,update 则只保存update之后的数据，假如后面又有delete了，则会被清除掉这个id数据
+	isNull           bool                              // 是否生成null值的数据，默认为false
 }
 
 func NewEvent() *Event {
 	var data []*Column
-	json.Unmarshal([]byte(columnJsonString),&data)
+	json.Unmarshal([]byte(columnJsonString), &data)
 	return &Event{
-		Schema:"bifrost_test",
-		Talbe:"binlog_field_test",
-		AutoIncrementNum:0,
-		ColumnList:data,
-		position:0,
-		dataMap:make(map[uint64]map[string]interface{},0),
-		idVal:0,
-		saveHistory:true,
-		isNull:false,
+		Schema:           "bifrost_test",
+		Talbe:            "binlog_field_test",
+		AutoIncrementNum: 0,
+		ColumnList:       data,
+		position:         0,
+		dataMap:          make(map[uint64]map[string]interface{}, 0),
+		idVal:            0,
+		saveHistory:      true,
+		isNull:           false,
 	}
 }
 
-func (This *Event) SetSchema(name string) *Event{
+func (This *Event) SetSchema(name string) *Event {
 	This.Schema = name
 	return This
 }
 
-func (This *Event) SetTable(name string) *Event{
+func (This *Event) SetTable(name string) *Event {
 	This.Talbe = name
 	return This
 }
 
 //设置随机生成数据的id值
-func (This *Event) SetIdVal(val interface{}) *Event{
+func (This *Event) SetIdVal(val interface{}) *Event {
 	int64Val, err := strconv.ParseUint(fmt.Sprint(val), 10, 64)
-	if err == nil{
+	if err == nil {
 		This.idVal = int64Val
 	}
 	return This
 }
 
 //设置是否要保存历史数据
-func (This *Event) SetSaveHistory(b bool) *Event{
+func (This *Event) SetSaveHistory(b bool) *Event {
 	This.saveHistory = b
 	return This
 }
 
 //设置是否生成null值的数据
-func (This *Event) SetIsNull(b bool) *Event{
+func (This *Event) SetIsNull(b bool) *Event {
 	This.isNull = b
 	return This
 }
 
-
 //保存随机生成的数据
-func (This *Event) setDataToMap(data map[string]interface{})  {
-	if This.saveHistory == false{
+func (This *Event) setDataToMap(data map[string]interface{}) {
+	if This.saveHistory == false {
 		return
 	}
 	int64Val, err := strconv.ParseUint(fmt.Sprint(data["id"]), 10, 64)
-	if err == nil{
+	if err == nil {
 		This.dataMap[int64Val] = data
 	}
 }
 
 //获取所有生成的数据结果
-func (This *Event) GetDataMap() map[uint64]map[string]interface{}  {
+func (This *Event) GetDataMap() map[uint64]map[string]interface{} {
 	return This.dataMap
 }
 
 //删除数据
-func (This *Event) delDataFromMap(data map[string]interface{})  {
+func (This *Event) delDataFromMap(data map[string]interface{}) {
 	int64Val, err := strconv.ParseUint(fmt.Sprint(data["id"]), 10, 64)
-	if err == nil{
-		delete(This.dataMap,int64Val)
+	if err == nil {
+		delete(This.dataMap, int64Val)
 	}
 }
 
 //随机或者指定id获取一条已经生成的数据
-func (This *Event) getRandDataFromMap(id uint64) map[string]interface{}  {
+func (This *Event) getRandDataFromMap(id uint64) map[string]interface{} {
 	if id == 0 {
 		for _, v := range This.dataMap {
 			return v
 		}
-	}else{
-		if _,ok:=This.dataMap[id];ok{
+	} else {
+		if _, ok := This.dataMap[id]; ok {
 			return This.dataMap[id]
 		}
 	}
 	return nil
 }
 
-
 //随机生成数据
-func (This *Event) getSchemaTableFieldAndVal(columnList []*Column,eventType EventType ) ([]interface{},map[string]interface{}){
-	data := make([]interface{},0)
-	columnData := make(map[string]interface{},0)
+func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType EventType) ([]interface{}, map[string]interface{}) {
+	data := make([]interface{}, 0)
+	columnData := make(map[string]interface{}, 0)
 
 	defer func() {
 		This.setDataToMap(columnData)
 	}()
-	for _,columnType := range columnList {
+	for _, columnType := range columnList {
 		rand.Seed(time.Now().UnixNano())
 		var randResult int
 		if rand.Intn(2) >= 1 {
@@ -486,7 +484,7 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column,eventType Even
 		}
 	}
 	//log.Println("This.lastEventData:",This.lastEventData)
-	return data,columnData
+	return data, columnData
 }
 
 func GetString() string {
@@ -524,16 +522,16 @@ func GetFloat64() float64 {
 	Value2, _ := strconv.ParseFloat(Value, 64)
 	f1 := float64(rand.Intn(999999))
 	f2 := f1 + float64(Value2)
-	if (time.Now().Unix() & 2) == 0{
+	if (time.Now().Unix() & 2) == 0 {
 		f2 = 0 - f2
 	}
 	return f2
 }
 
 func (This *Event) GetJsonData() map[string][]map[string]interface{} {
-	m := make(map[string][]map[string]interface{},0)
-	m["testK"] = make([]map[string]interface{},1)
-	m["testK"][0] = make(map[string]interface{},0)
+	m := make(map[string][]map[string]interface{}, 0)
+	m["testK"] = make([]map[string]interface{}, 1)
+	m["testK"][0] = make(map[string]interface{}, 0)
 	m["testK"][0]["String"] = GetString()
 	m["testK"][0]["Null"] = GetNull()
 	m["testK"][0]["Time"] = GetTimeString()
@@ -547,34 +545,33 @@ func (This *Event) GetJsonData() map[string][]map[string]interface{} {
 	return m
 }
 
-
 func (This *Event) GetPri() []*string {
-	var id  string = "id"
-	Pri := make([]*string,1)
+	var id string = "id"
+	Pri := make([]*string, 1)
 	Pri[0] = &id
 	return Pri
 }
 
-func (This *Event) GetTestInsertData() *pluginDriver.PluginDataType{
-	Rows := make([]map[string]interface{},1)
+func (This *Event) GetTestInsertData() *pluginDriver.PluginDataType {
+	Rows := make([]map[string]interface{}, 1)
 
-	_, Rows[0] = This.getSchemaTableFieldAndVal(This.ColumnList,INSERT)
+	_, Rows[0] = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
 
-	This.position+=100
+	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "insert",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: This.Schema,
-		TableName      	: This.Talbe,
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: This.position,
-		Pri				: This.GetPri(),
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "insert",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     This.Schema,
+		TableName:      This.Talbe,
+		BinlogFileNum:  10,
+		BinlogPosition: This.position,
+		Pri:            This.GetPri(),
 	}
 }
 
-func(This *Event) deepCopy(dst, src interface{}) error {
+func (This *Event) deepCopy(dst, src interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
 		return err
@@ -582,8 +579,8 @@ func(This *Event) deepCopy(dst, src interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
 
-func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType{
-	Rows := make([]map[string]interface{},2)
+func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType {
+	Rows := make([]map[string]interface{}, 2)
 
 	//随机或者指定一个id获取一条随机生成的数据。用作为旧数据
 	var m map[string]interface{}
@@ -592,7 +589,7 @@ func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType{
 		if m == nil {
 			_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
 		}
-	}else{
+	} else {
 		m = This.getRandDataFromMap(This.idVal)
 	}
 
@@ -600,24 +597,24 @@ func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType{
 	This.SetIdVal(m["id"])
 
 	Rows[0] = m
-	_, Rows[1] = This.getSchemaTableFieldAndVal(This.ColumnList,UPDATE)
+	_, Rows[1] = This.getSchemaTableFieldAndVal(This.ColumnList, UPDATE)
 
-	This.position+=100
+	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "update",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: This.Schema,
-		TableName      	: This.Talbe,
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: This.position,
-		Pri				: This.GetPri(),
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "update",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     This.Schema,
+		TableName:      This.Talbe,
+		BinlogFileNum:  10,
+		BinlogPosition: This.position,
+		Pri:            This.GetPri(),
 	}
 }
 
-func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType{
-	Rows := make([]map[string]interface{},1)
+func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType {
+	Rows := make([]map[string]interface{}, 1)
 
 	var m map[string]interface{}
 	if This.idVal == 0 {
@@ -625,7 +622,7 @@ func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType{
 		if m == nil {
 			_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
 		}
-	}else{
+	} else {
 		m = This.getRandDataFromMap(This.idVal)
 	}
 
@@ -634,34 +631,33 @@ func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType{
 
 	Rows[0] = m
 
-	This.position+=100
+	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "delete",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: This.Schema,
-		TableName      	: This.Talbe,
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: This.position,
-		Pri				: This.GetPri(),
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "delete",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     This.Schema,
+		TableName:      This.Talbe,
+		BinlogFileNum:  10,
+		BinlogPosition: This.position,
+		Pri:            This.GetPri(),
 	}
 }
 
-func (This *Event) GetTestQueryData() *pluginDriver.PluginDataType{
+func (This *Event) GetTestQueryData() *pluginDriver.PluginDataType {
 	var Rows []map[string]interface{}
-	Rows = make([]map[string]interface{},0)
+	Rows = make([]map[string]interface{}, 0)
 
-	This.position+=100
+	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "sql",
-		Rows            : Rows,
-		Query          	: "ALTER TABLE `"+This.Schema+"`.`"+This.Talbe+"` CHANGE COLUMN `testvarchar` `testvarchar` varchar(255) NOT NULL",
-		SchemaName     	: This.Schema,
-		TableName      	: This.Talbe,
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: This.position,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "sql",
+		Rows:           Rows,
+		Query:          "ALTER TABLE `" + This.Schema + "`.`" + This.Talbe + "` CHANGE COLUMN `testvarchar` `testvarchar` varchar(255) NOT NULL",
+		SchemaName:     This.Schema,
+		TableName:      This.Talbe,
+		BinlogFileNum:  10,
+		BinlogPosition: This.position,
 	}
 }
-

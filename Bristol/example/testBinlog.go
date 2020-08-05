@@ -10,9 +10,9 @@ import (
 
 func callback(data *mysql.EventReslut) {
 	log.Println(data)
-	if data.Query == ""{
-		for k,v := range data.Rows[len(data.Rows)-1]{
-			log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
+	if data.Query == "" {
+		for k, v := range data.Rows[len(data.Rows)-1] {
+			log.Println(k, "==", v, "(", reflect.TypeOf(v), ")")
 		}
 	}
 }
@@ -31,7 +31,6 @@ func main() {
 	filename = "mysql-bin.000016"
 	position = 11857
 
-
 	DBsource = "root:root@tcp(192.168.220.128:3308)/bifrost_test"
 	filename = "mysql-bin.000004"
 	position = 25051078
@@ -40,14 +39,14 @@ func main() {
 	m := make(map[string]uint8, 0)
 	m["bifrost_test"] = 1
 	BinlogDump := &mysql.BinlogDump{
-		DataSource:    DBsource,
-		CallbackFun:   callback,
+		DataSource:  DBsource,
+		CallbackFun: callback,
 		//ReplicateDoDb: m,
-		OnlyEvent:     []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
+		OnlyEvent: []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
 	}
-	BinlogDump.AddReplicateDoDb("bifrost_test","*")
-	BinlogDump.AddReplicateDoDb("test","*")
-	go BinlogDump.StartDumpBinlog(filename, position, 633,reslut,"",0)
+	BinlogDump.AddReplicateDoDb("bifrost_test", "*")
+	BinlogDump.AddReplicateDoDb("test", "*")
+	go BinlogDump.StartDumpBinlog(filename, position, 633, reslut, "", 0)
 	go func() {
 		for {
 			v := <-reslut

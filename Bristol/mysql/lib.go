@@ -6,27 +6,27 @@ import (
 )
 
 type tableStruct struct {
-	Pri 					[]*string
-	ColumnSchemaTypeList 	[]*column_schema_type
+	Pri                  []*string
+	ColumnSchemaTypeList []*column_schema_type
 }
 
 type column_schema_type struct {
-	COLUMN_NAME        string
-	COLLATION_NAME     string
-	CHARACTER_SET_NAME string
-	COLUMN_COMMENT     string
-	COLUMN_KEY         string
-	COLUMN_TYPE        string
-	NUMERIC_SCALE      string  //浮点数精确多少数
-	enum_values        []string
-	set_values         []string
-	is_bool            bool
-	is_primary         bool
-	unsigned 		   bool
-	auto_increment     bool
-	COLUMN_DEFAULT	   string
-	DATA_TYPE		   string
-	CHARACTER_OCTET_LENGTH	uint64
+	COLUMN_NAME            string
+	COLLATION_NAME         string
+	CHARACTER_SET_NAME     string
+	COLUMN_COMMENT         string
+	COLUMN_KEY             string
+	COLUMN_TYPE            string
+	NUMERIC_SCALE          string //浮点数精确多少数
+	enum_values            []string
+	set_values             []string
+	is_bool                bool
+	is_primary             bool
+	unsigned               bool
+	auto_increment         bool
+	COLUMN_DEFAULT         string
+	DATA_TYPE              string
+	CHARACTER_OCTET_LENGTH uint64
 }
 
 type MysqlConnection interface {
@@ -34,7 +34,7 @@ type MysqlConnection interface {
 	Close() error
 	Ping() error
 	Prepare(query string) (driver.Stmt, error)
-	Exec(query string,args []driver.Value)  (driver.Result, error)
+	Exec(query string, args []driver.Value) (driver.Result, error)
 }
 
 type EventReslut struct {
@@ -45,7 +45,7 @@ type EventReslut struct {
 	TableName      string
 	BinlogFileName string
 	BinlogPosition uint32
-	Pri			   []*string
+	Pri            []*string
 }
 
 type callback func(data *EventReslut)

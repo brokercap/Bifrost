@@ -285,7 +285,7 @@ func (mc *mysqlConn) markBadConn(err error) error {
 	return driver.ErrBadConn
 }
 
-func NewConnect(uri string) MysqlConnection{
+func NewConnect(uri string) MysqlConnection {
 	dbopen := &mysqlDriver{}
 	conn, err := dbopen.Open(uri)
 	if err != nil {
