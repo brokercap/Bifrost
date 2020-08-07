@@ -620,9 +620,11 @@ type BinlogDump struct {
 	Status     			BinlogDumpStatus //stop,running,close,error,starting
 	parser     			*eventParser
 	ReplicateDoDb 		map[string]map[string]uint8
-	replicateDoDbTableCount uint32
+	ReplicateDoDbLike 	map[string]map[string]uint8
+	replicateDoDbCheck  bool
 	ReplicateIgnoreDb 	map[string]map[string]uint8
-	replicateIgnoreDbTableCount uint32
+	ReplicateIgnoreDbLike map[string]map[string]uint8
+	replicateIgnoreDbCheck bool
 	OnlyEvent     		[]EventType
 	CallbackFun   		callback
 	mysqlConn  			MysqlConnection
@@ -632,16 +634,12 @@ type BinlogDump struct {
 
 
 func NewBinlogDump(DataSource string,CallbackFun callback, OnlyEvent []EventType,ReplicateDoDb,ReplicateIgnoreDb map[string]map[string]uint8) *BinlogDump{
-	var replicateDoDbTableCount,replicateIgnoreDbTableCount uint32 = 0,0
+	var replicateDoDbCheck,replicateIgnoreDbCheck bool = false,false
 	if ReplicateDoDb != nil{
-		for _,v := range ReplicateDoDb{
-			replicateDoDbTableCount += uint32(len(v))
-		}
+		replicateDoDbCheck = true
 	}
 	if ReplicateIgnoreDb != nil{
-		for _,v := range ReplicateIgnoreDb{
-			replicateIgnoreDbTableCount += uint32(len(v))
-		}
+		replicateIgnoreDbCheck = true
 	}
 
 	return &BinlogDump{
@@ -652,132 +650,14 @@ func NewBinlogDump(DataSource string,CallbackFun callback, OnlyEvent []EventType
 		OnlyEvent:OnlyEvent,
 		CallbackFun:CallbackFun,
 		checkSlaveStatus:false,
-		replicateDoDbTableCount:replicateDoDbTableCount,
-		replicateIgnoreDbTableCount:replicateIgnoreDbTableCount,
+		replicateDoDbCheck:replicateDoDbCheck,
+		replicateIgnoreDbCheck:replicateIgnoreDbCheck,
 	}
 }
 
 func (This *BinlogDump) GetBinlog()(string,uint32,uint32){
 	return This.parser.binlogFileName,This.parser.binlogPosition,This.parser.binlogTimestamp
 }
-
-func (This *BinlogDump) AddReplicateDoDb(db string,table string)  {
-	This.Lock()
-	if This.ReplicateDoDb == nil{
-		This.ReplicateDoDb = make(map[string]map[string]uint8,0)
-	}
-	if _,ok:=This.ReplicateDoDb[db];!ok{
-		This.ReplicateDoDb[db] = make(map[string]uint8,0)
-	}
-	if table != ""{
-		if _,ok:=This.ReplicateDoDb[db][table];!ok{
-			This.ReplicateDoDb[db][table]=1
-			This.replicateDoDbTableCount++
-		}
-	}
-	This.Unlock()
-}
-
-func (This *BinlogDump) DelReplicateDoDb(db string,table string)  {
-	This.Lock()
-	if This.ReplicateDoDb != nil{
-		if table == ""{
-			n := len(This.ReplicateDoDb[db])
-			delete(This.ReplicateDoDb,db)
-			This.replicateDoDbTableCount = This.replicateDoDbTableCount-uint32(n)
-		}else{
-			if _,ok:=This.ReplicateDoDb[db];ok{
-				delete(This.ReplicateDoDb[db],table)
-				if This.replicateDoDbTableCount > 0{
-					This.replicateDoDbTableCount--
-				}
-			}
-		}
-	}
-	This.Unlock()
-}
-
-func (This *BinlogDump) AddReplicateIgnoreDb(db string,table string)  {
-	This.Lock()
-	if This.ReplicateIgnoreDb == nil{
-		This.ReplicateIgnoreDb = make(map[string]map[string]uint8,0)
-	}
-	if _,ok:=This.ReplicateIgnoreDb[db];!ok{
-		This.ReplicateIgnoreDb[db] = make(map[string]uint8,0)
-	}
-	if table != "" {
-		if _, ok := This.ReplicateIgnoreDb[db][table]; !ok {
-			This.ReplicateIgnoreDb[db][table] = 1
-			This.replicateIgnoreDbTableCount++
-		}
-	}
-	This.Unlock()
-}
-
-func (This *BinlogDump) DelReplicateIgnoreDb(db string,table string)  {
-	This.Lock()
-	if This.ReplicateIgnoreDb != nil{
-		if table == ""{
-			n := len(This.ReplicateIgnoreDb[db])
-			delete(This.ReplicateIgnoreDb,db)
-			This.replicateIgnoreDbTableCount = This.replicateIgnoreDbTableCount-uint32(n)
-		}else{
-			if _,ok:=This.ReplicateIgnoreDb[db];ok{
-				delete(This.ReplicateIgnoreDb[db],table)
-			}
-		}
-	}
-	if This.replicateIgnoreDbTableCount > 0{
-		This.replicateIgnoreDbTableCount--
-	}
-	This.Unlock()
-}
-
-func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
-	This.RLock()
-	if This.ReplicateDoDb == nil && This.ReplicateIgnoreDb == nil{
-		This.RUnlock()
-		return true
-	}
-	var ok bool
-	if This.replicateDoDbTableCount > 0{
-		if 	_,ok = This.ReplicateDoDb["*"];ok{
-			This.RUnlock()
-			return true
-		}
-		if 	_,ok = This.ReplicateDoDb[db];ok{
-			if 	_,ok = This.ReplicateDoDb[db][table];ok{
-				This.RUnlock()
-				return true
-			}
-			if 	_,ok = This.ReplicateDoDb[db]["*"];ok{
-				This.RUnlock()
-				return true
-			}
-		}
-		This.RUnlock()
-		return false
-	}
-	if This.replicateIgnoreDbTableCount > 0{
-		if 	_,ok = This.ReplicateIgnoreDb[db];!ok{
-			This.RUnlock()
-			return true
-		}
-		if 	_,ok = This.ReplicateIgnoreDb[db][table];!ok{
-			This.RUnlock()
-			return true
-		}
-		if 	_,ok = This.ReplicateIgnoreDb[db]["*"];!ok{
-			This.RUnlock()
-			return true
-		}
-		This.RUnlock()
-		return false
-	}
-	This.RUnlock()
-	return true
-}
-
 
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error,maxFileName string,maxPosition uint32) {
@@ -823,14 +703,17 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 func (This *BinlogDump) checksum_enabled() {
 	sql := "SHOW GLOBAL VARIABLES LIKE 'BINLOG_CHECKSUM'"
 	stmt, err := This.mysqlConn.Prepare(sql)
+	if err != nil{
+		return
+	}
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
-	defer rows.Close()
 	if err != nil {
 		log.Println("checksum_enabled sql query err:",err)
 		return
 	}
+	defer rows.Close()
 	dest := make([]driver.Value, 2, 2)
 	err = rows.Next(dest)
 	if err != nil {
@@ -873,6 +756,9 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 	}
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
+	if err != nil {
+		return
+	}
 	var connectionId string
 	for {
 		dest := make([]driver.Value, 1, 1)
@@ -883,6 +769,7 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 		connectionId = fmt.Sprint(dest[0])
 		break
 	}
+	rows.Close()
 	stmt.Close()
 
 	if connectionId == ""{

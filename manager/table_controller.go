@@ -162,9 +162,23 @@ func table_toserverlist_controller(w http.ResponseWriter,req *http.Request) {
 	tablename = tansferTableName(tablename)
 
 	t1:=server.GetDBObj(dbname)
-	tableObj:=t1.GetTable(schema,tablename)
-	//tableObj := server.GetDBObj(dbname).GetTable(schema,tablename)
-	b,_:=json.Marshal(tableObj.ToServerList)
+	t :=t1.GetTableSelf(schema,tablename)
+	b,_:=json.Marshal(t.ToServerList)
+	w.Write(b)
+}
+
+func table_toserverlist_all_controller(w http.ResponseWriter,req *http.Request) {
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
+	t1:=server.GetDBObj(dbname)
+	t :=t1.GetTableSelf(schema,tablename)
+	b,_:=json.Marshal(t.ToServerList)
 	w.Write(b)
 }
 
@@ -179,8 +193,9 @@ func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
 
 	ToServerID := GetFormInt(req,"to_server_id")
 	index :=  GetFormInt(req,"index")
-	ToServerInfo := server.GetDBObj(dbname).GetTable(schema,tablename).ToServerList[index]
-	if ToServerInfo.ToServerID == ToServerID{
+	t := server.GetDBObj(dbname).GetTableSelf(schema,tablename)
+	ToServerInfo := t.ToServerList[index]
+	if ToServerInfo != nil && ToServerInfo.ToServerID == ToServerID{
 		ToServerInfo.DealWaitError()
 	}
 	w.Write(returnResult(true,"success"))

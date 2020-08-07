@@ -1,0 +1,258 @@
+{{define "db.detail.history.add"}}
+<!--add hisotry start-->
+<div class="modal inmodal fade" id="addHistoryDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Add New History</h3>
+            </div>
+            <div class="modal-body">
+                <table width="100%" border="0">
+                    <tr>
+                        <td align="right" height="50" width="20%">DB : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="dbname" id="addHisotryDbName" class="form-control" placeholder="Database" value="{{.DbName}}" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Schema : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="schema" class="form-control" placeholder="Database" value="" id="addHisotrySchema" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">TableName : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addHisotryTableName" disabled>
+                            <input type="hidden" name="table_name_old" class="form-control" placeholder="TableName" value="" id="addHisotryTableNameOld">
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Where : </td>
+                        <td style="text-indent:10px; padding-bottom: 5px;" >
+                            <textarea type="text" name="where" class="form-control" placeholder="例如: update_time >= '2019-10-10'; 如果有 OR 等条件的话，请用 ( ) 包起来" value="" id="addHisotryWhere"></textarea>
+                        </td>
+
+                    </tr>
+                    <tr>
+                        <td align="right" height="50" width="20%" valign="top">分页方式 : </td>
+                        <td style="text-indent:10px; padding-bottom: 5px;" >
+                            <select class="form-control" name="LimitOptimize" id="addHisotryLimitOptimize">
+                                <option value="1">BETWEEN</option>
+                                <option value="0">LIMIT</option>
+                            </select>
+                            <p>BETWEEN : 主键是自增自段的时候生效</p>
+                            <p>LIMIT   ：常规分页读取方式 </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Select ThreadNum : </td>
+                        <td style="text-indent:10px;">
+                            <input type="text" name="ThreadCount" class="form-control" placeholder="ThreadNum" value="1" id="addHisotryThreadNum">
+                            <span>开启多少个连接并发查询</span>
+
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Sync ThreadNum : </td>
+                        <td style="text-indent:10px;">
+                            <input type="text" name="SyncThreadNum" class="form-control" placeholder="SyncThreadNum" value="1" id="addHisotrySyncThreadNum">
+                            <span>开启多少个同步协程</span>
+
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">ThreadCountPer : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="ThreadCountPer" class="form-control" placeholder="ThreadCountPer" value="1000" id="addHisotryThreadCountPer">
+                            <span>每次查询读取多少条数据</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" height="50">ToServer :  </td>
+                        <td style="text-indent:10px" id="addHisotryToServer">
+
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn-sm btn-primary" id="AddHistoryBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--add hisotry over-->
+
+<script type="text/javascript">
+
+    $("#historyAddBtn").click(
+            function () {
+                var url = "/table/toserverlist";
+                var dbname = $("#dbname").val();
+                var schema_name = $("#tableToServerListContair").attr("schema");
+                var table_name = $("#tableToServerListContair").attr("table_name");
+                if( schema_name == "AllDataBases" ){
+                    alert("当前不支持配置 全量所有库表 ！");
+                    return;
+                }
+
+                $.post(url,
+                        {dbname:dbname,schema_name:schema_name,table_name:table_name},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            var Html = "";
+                            $.each(data,function(index,v){
+                                Html += "<p><input style='height: 20px; width: 20px;' type='checkbox' name='addHistoryToServerID' value='"+ v.ToServerID + "' />"+v.PluginName +"-"+v.ToServerKey+"</p>";
+                            });
+
+                            $("#addHisotryToServer").html(Html);
+                        },
+                        'json');
+
+                var table_names = "";
+
+                if ( table_name == "AllTables" || table_name.indexOf("*") != -1 ){
+                    var reg;
+                    if (table_name == "AllTables") {
+                        reg = new RegExp(".*");
+                    }else{
+                        reg = new RegExp(table_name);
+                    }
+                    $('#TableListContair').find(":input[name=table_check_name]").each(function(){
+                        if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
+                            var regResult = $(this).val().match(reg);
+                            if ( regResult != null && regResult != undefined){
+                                table_names += $(this).val()+";";
+                            }
+                        }
+                    });
+                    if( table_names == "" ){
+                        alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！");
+                        return false;
+                    }
+                }else{
+                    table_names = table_name
+                }
+
+                $("#addHisotrySchema").val(schema_name);
+                $("#addHisotryTableName").val(table_names);
+                if( table_names != table_names ){
+                    $("#addHisotryTableName").removeAttr("disabled");
+                }
+                $("#addHisotryTableNameOld").val(table_name);
+                $("#addHistoryDiv").modal('show');
+            }
+    );
+
+    $("#AddHistoryBtn").click(
+            function () {
+                var ThreadNum       = $("#addHisotryThreadNum").val();
+                var ThreadCountPer  = $("#addHisotryThreadCountPer").val();
+                var dbname          = $("#addHisotryDbName").val();
+                var schema_name     = $("#addHisotrySchema").val();
+                var table_names     = $("#addHisotryTableName").val();
+                var table_name      = $("#addHisotryTableNameOld").val();
+                var where           = $("#addHisotryWhere").val();
+                var LimitOptimize   = $("#addHisotryLimitOptimize").val();
+                var SyncThreadNum   = $("#addHisotrySyncThreadNum").val();
+
+                var ToServerIds = [];
+                $.each($("#addHisotryToServer input:checkbox:checked"),function(){
+                    ToServerIds.push(parseInt($(this).val()));
+                });
+                if (ToServerIds.length == 0){
+                    alert("请选择 ToServer");
+                    return false;
+                }
+                if (isNaN(ThreadNum)){
+                    alert("ThreadNum must be int!");
+                    return false;
+                }
+                if (isNaN(SyncThreadNum) || ( parseInt(SyncThreadNum) * ToServerIds.length > 16384 ) ){
+                    alert("SyncThreadNum must be int,and SyncThreadNum * ToServerIds.length <= 16384 ! ");
+                    return false;
+                }
+                if (isNaN(ThreadCountPer)){
+                    alert("ThreadCountPer must be int!");
+                    return false;
+                }
+                if ( table_name != table_names ){
+                    var reg;
+                    if (table_name == "AllTables") {
+                        reg = new RegExp(".*");
+                    }else{
+                        reg = new RegExp(table_name);
+                    }
+                    var arr = table_names.split(";");
+                    for( var i in arr) {
+                        var tmp_name = arr[i];
+                        if (tmp_name == ""){
+                            continue;
+                        }
+                        if ( tmp_name.indexOf("*") != -1 ){
+                            alert(tmp_name +" 被匹配的表中不能包含 * ");
+                            return;
+                        }
+                        var regResult = tmp_name.match(reg);
+                        if ( regResult == null || regResult == undefined){
+                            alert(tmp_name +" 不符合："+table_name + " 匹配规则！");
+                            return;
+                        }
+                    }
+                }
+
+                var Property = {};
+                Property["ThreadNum"]       = parseInt(ThreadNum);
+                Property["ThreadCountPer"]  = parseInt(ThreadCountPer);
+                Property["Where"]           = $.trim(where);
+                Property["LimitOptimize"]   = parseInt(LimitOptimize);
+                Property["SyncThreadNum"]   = parseInt(SyncThreadNum);
+
+                var url = "/history/add";
+                $.post(url,
+                        {dbname:dbname,schema_name:schema_name,table_name:table_name,table_names:table_names,property:JSON.stringify(Property),ToserverIds:JSON.stringify(ToServerIds)},
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(data.status) {
+                                alert("success,请点击开始按钮进行开启 初始化操作")
+                                window.location.href = "/history/list?dbname=" + dbname + "&schema_name=" + schema_name + "&table_name=" + table_name;
+                            }else{
+                                alert(data.msg);
+                            }
+                        },
+                        'json');
+
+            }
+    );
+
+    $("#addHisotryWhere").change(
+            function () {
+                if ( $(this).val() == "" ) {
+                    $("#addHisotryLimitOptimize").val(1);
+                }else{
+                    $("#addHisotryLimitOptimize").val(0);
+                }
+            }
+    );
+
+
+</script>
+
+
+{{end}}

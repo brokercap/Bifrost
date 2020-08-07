@@ -89,6 +89,7 @@ func main() {
 			os.Remove(*BifrostPid)
 		}
 		if err := recover();err != nil{
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			return
 		}

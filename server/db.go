@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"fmt"
 	"runtime/debug"
+	"regexp"
 )
 
 var dbAndTableSplitChars = "_-"
@@ -528,20 +529,23 @@ func (db *db) saveBinlog(){
 
 func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastToServerID int) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
+	db.Lock()
+	defer db.Unlock()
 	if _, ok := db.tableMap[key]; !ok {
 		db.tableMap[key] = &Table{
+			key:			key,
 			Name:         	tableName,
 			ChannelKey:   	ChannelKey,
 			ToServerList: 	make([]*ToServer, 0),
 			LastToServerID: LastToServerID,
+			likeTableList:  make([]*Table,0),
 		}
+		db.addLikeTable(db.tableMap[key],key,tableName)
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
-		log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
-		db.Lock()
-		db.tableMap[key].ChannelKey = ChannelKey
-		db.Unlock()
+		//log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
+		//db.tableMap[key].ChannelKey = ChannelKey
 	}
 	if db.binlogDump != nil{
 		db.binlogDump.AddReplicateDoDb(schemaName,tableName)
@@ -549,13 +553,79 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 	return true
 }
 
+func (db *db) addLikeTable(t *Table ,key,tableName string) {
+	if tableName == "*" || strings.Index(tableName, "*") == -1 {
+		return
+	}
+	reqTagAll,err := regexp.Compile(key)
+	if err != nil{
+		log.Println(db.Name," addLikeTable :",key," reqTagAll err:",err)
+		return
+	}
+	for k,v := range db.tableMap {
+		if strings.Index(k, "*") >= 0 {
+			continue
+		}
+		// 假如匹配的表
+		if len(reqTagAll.FindString(k)) > 0 {
+			v.likeTableList = append(v.likeTableList,t)
+		}
+	}
+}
+
+
 func (db *db) GetTable(schemaName string, tableName string) *Table {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
+	return db.GetTableByKey(key)
+}
+
+func (db *db) GetTableByKey(key string) *Table {
+	db.RLock()
 	if _, ok := db.tableMap[key]; !ok {
+		db.RUnlock()
+		//这里判断 > 0 ，假如 == 0 说明是所有表了了，如果是 == * 的情况下，是有 所有表的逻辑，已经存到map中了
+		db.Lock()
+		defer db.Unlock()
+		schemaName,_ := GetSchemaAndTableBySplit(key)
+		key0 := GetSchemaAndTableJoin(schemaName,"*")
+		for k,v := range db.tableMap {
+			if k == key0 {
+				continue
+			}
+			if strings.Index(k, "*") <= 0 {
+				continue
+			}
+			if v.regexpErr {
+				continue
+			}
+			reqTagAll,err := regexp.Compile(k)
+			if err != nil{
+				v.regexpErr = true
+				log.Println(db.Name," GetTable :",k," reqTagAll err:",err)
+				continue
+			}
+			if len(reqTagAll.FindString(key)) > 0 {
+				if _,ok := db.tableMap[key];!ok {
+					db.tableMap[key] = &Table{
+						key:			key,
+						ChannelKey:   	v.ChannelKey,
+						ToServerList: 	make([]*ToServer, 0),
+						likeTableList:	make([]*Table, 0),
+					}
+				}
+				db.tableMap[key].likeTableList = append(db.tableMap[key].likeTableList,v)
+				return db.tableMap[key]
+			}
+		}
 		return  nil
 	} else {
+		defer db.RUnlock()
 		return db.tableMap[key]
 	}
+}
+
+func (db *db) GetTableSelf(schemaName string, tableName string) *Table {
+	return db.GetTable(schemaName,tableName)
 }
 
 func (db *db) GetTables() map[string]*Table {
@@ -574,19 +644,28 @@ func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap m
 
 func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
+	db.Lock()
+	defer db.Unlock()
 	if _, ok := db.tableMap[key]; !ok {
 		return true
 	} else {
-		db.Lock()
-		for _,toServerInfo := range db.tableMap[key].ToServerList{
-			//toServerInfo.Lock()
+		t := db.tableMap[key]
+		for _,toServerInfo := range t.ToServerList {
 			if toServerInfo.Status == "running"{
 				toServerInfo.Status = "deling"
 			}
-			//toServerInfo.Unlock()
 		}
 		delete(db.tableMap,key)
-		db.Unlock()
+		if tableName != "*" && strings.Index(tableName,"*") >= 0 {
+			for _,v := range db.tableMap{
+				for index,v0 := range v.likeTableList {
+					if  v0 == t {
+						v.ToServerList = append(v.ToServerList[:index], v.ToServerList[index+1:]...)
+						break
+					}
+				}
+			}
+		}
 		count.DelTable(db.Name,key)
 		log.Println("DelTable",db.Name,schemaName,tableName)
 	}
@@ -628,9 +707,12 @@ func (db *db) GetChannel(channelID int) *Channel {
 
 type Table struct {
 	sync.Mutex
+	key				string			// schema+table 组成的key
 	Name         	string
 	ChannelKey   	int
 	LastToServerID  int
 	ToServerList 	[]*ToServer
+	likeTableList	[]*Table  		// 关联了哪些 模糊匹配的配置
+	regexpErr	    bool
 }
 

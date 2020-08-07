@@ -20,9 +20,9 @@ import (
 
 func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	defer wg.Done()
-	log.Println("history select threadStart start:",i,This.DbName,This.SchemaName,This.TableName)
+	log.Println("history select threadStart start:",i,This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
 	defer func() {
-		log.Println("history select threadStart over:",i,This.DbName,This.SchemaName,This.TableName)
+		log.Println("history select threadStart over:",i,This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
 		if err :=recover();err!=nil{
 			This.ThreadPool[i].Error = fmt.Errorf( fmt.Sprint(err) + string(debug.Stack()) )
 			log.Println("history select threadStart:",fmt.Sprint(err) + string(debug.Stack()))
@@ -47,45 +47,24 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	db.Exec("SET NAMES UTF8",[]driver.Value{})
 	This.initMetaInfo(db)
 	if len(This.Fields) == 0{
-		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName)
-		log.Println("history select Fields empty",This.DbName,This.SchemaName,This.TableName)
+		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
+		log.Println("history select Fields empty",This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
 		return
 	}
 	dbSouceInfo := server.GetDBObj(This.DbName)
 	This.InitToServer()
-	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTable(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
-	CountKey := This.SchemaName + "_-" + This.TableName
-	var sendToServerResult = func(ToServerInfo *server.ToServer,pluginData *pluginDriver.PluginDataType)  {
-		ToServerInfo.Lock()
-		status := ToServerInfo.Status
-		if status == "deling" || status == "deled"{
-			ToServerInfo.Unlock()
-			return
-		}
-		ToServerInfo.QueueMsgCount++
-		if ToServerInfo.ToServerChan == nil{
-			// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
-			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是直阻塞在那吗?
-			This.SyncWaitToServerOver(This.Property.SyncThreadNum)
-			ToServerInfo.ToServerChan = &server.ToServerChan{
-				To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
-			}
-			for i := 0; i < This.Property.SyncThreadNum; i++{
-				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
-				go func() {
-					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
-					defer This.ToServerTheadGroup.Done()
-					ToServerInfo.ConsumeToServer(dbSouceInfo,pluginData.SchemaName,pluginData.TableName)
-				}()
-			}
-		}
-		ToServerInfo.Unlock()
-		ToServerInfo.ToServerChan.To <- pluginData
-	}
+	countChan := dbSouceInfo.GetChannel(dbSouceInfo.GetTableSelf(This.SchemaName,This.TableName).ChannelKey).GetCountChan()
+	CountKey := server.GetSchemaAndTableJoin(This.SchemaName,This.TableName)
 	n := len(This.Fields)
 	var start uint64
 	var sql string
 	for {
+		This.RLock()
+		if This.Status == HISTORY_STATUS_SELECT_STOPING {
+			This.RUnlock()
+			break
+		}
+		This.RUnlock()
 		sql,start = This.GetNextSql()
 		//log.Println(sql)
 		if sql == ""{
@@ -94,7 +73,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		stmt, err := db.Prepare(sql)
 		if err != nil{
 			This.ThreadPool[i].Error = err
-			log.Println("history select threadStart err:",err,"sql:",sql, This.DbName,This.SchemaName,This.TableName)
+			log.Println("history select threadStart err:",err,"sql:",sql, This.DbName,This.SchemaName,This.TableName,This.CurrentTableName)
 			return
 		}
 		This.ThreadPool[i].NowStartI = start
@@ -107,10 +86,13 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		}
 		rowCount := 0
 		for {
-			if This.Status == HISTORY_STATUS_KILLED{
+			This.RLock()
+			if This.Status == HISTORY_STATUS_KILLED {
+				This.RUnlock()
 				runtime.Goexit()
 				return
 			}
+			This.RUnlock()
 			dest := make([]driver.Value, n, n)
 			err := rows.Next(dest)
 			if err != nil {
@@ -169,9 +151,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 				Pri:			This.TablePriArr,
 			}
 
-			for _,toServerInfo := range This.ToServerList{
-				sendToServerResult(toServerInfo,d)
-			}
+			This.sendToServerResult(d)
 
 			countChan <- &count.FlowCount{
 				//Time:"",
@@ -188,6 +168,48 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		}
 	}
 	runtime.Goexit()
+}
+
+func (This *History) sendToServerResult(pluginData *pluginDriver.PluginDataType)  {
+	for _,toServer := range This.ToServerList {
+		ToServerInfo := toServer.ToServerInfo
+		ToServerInfo.Lock()
+		status := ToServerInfo.Status
+		if status == "deling" || status == "deled" {
+			ToServerInfo.Unlock()
+			return
+		}
+		ToServerInfo.QueueMsgCount++
+		if ToServerInfo.ToServerChan == nil {
+			ToServerInfo.ToServerChan = &server.ToServerChan{
+				To: make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
+			}
+		}
+		// 保证只要还有数据写入，就有最小的消费进程数量还在消费
+		toServer.Lock()
+		if toServer.threadCount < This.Property.SyncThreadNum {
+			// 为什么这里放一个协程去异步等待协程结束 ,而不是最开始初始化的时候,就启动呢
+			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是一直阻塞在那吗?
+			for i := 0; i < This.Property.SyncThreadNum-toServer.threadCount; i++ {
+				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
+				This.SyncWaitToServerOver(1)
+				toServer.threadCount++
+				go func() {
+					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
+					defer func() {
+						toServer.Lock()
+						toServer.threadCount--
+						toServer.Unlock()
+						This.ToServerTheadGroup.Done()
+					}()
+					ToServerInfo.ConsumeToServer(server.GetDBObj(This.DbName), This.SchemaName, This.TableName)
+				}()
+			}
+		}
+		toServer.Unlock()
+		ToServerInfo.Unlock()
+		ToServerInfo.ToServerChan.To <- pluginData
+	}
 }
 
 func (This *History) GetNextSql() (sql string,start uint64){
@@ -207,13 +229,13 @@ func (This *History) GetNextSql() (sql string,start uint64){
 		// 假如没有主键 或者 非 InnoDB 引擎，直接 select *from t limit x,y
 		limit = " LIMIT " + strconv.FormatUint(start,10) + "," + strconv.Itoa(This.Property.ThreadCountPer)
 		if This.TableInfo.ENGINE != "InnoDB" || This.TablePriKey == "" {
-			sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "`" + where + limit
+			sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.CurrentTableName + "`" + where + limit
 		}else{
 			// 假如有主键的情况下，采用 join 子查询的方式先分页再 通过 主键去查数据,大分页的情况下，有一定优化作用，innodb下才有效
 			// 因为分页实际是找出前面的数据再丢掉，而优先对主键分页，意思只只要优先查出主键来分页就行了，丢掉的数据会大大减少
-			sql = "SELECT a.* FROM `" + This.SchemaName + "`.`" + This.TableName + "` AS a "
+			sql = "SELECT a.* FROM `" + This.SchemaName + "`.`" + This.CurrentTableName + "` AS a "
 			sql += " INNER JOIN ("
-			sql += " SELECT `"+ This.TablePriKey +"` FROM `" + This.SchemaName + "`.`" + This.TableName + "`"+ where + limit
+			sql += " SELECT `"+ This.TablePriKey +"` FROM `" + This.SchemaName + "`.`" + This.CurrentTableName + "`"+ where + limit
 			sql += " ) AS b"
 			sql += " on a."+This.TablePriKey + " = b."+This.TablePriKey
 		}
@@ -244,7 +266,7 @@ func (This *History) GetNextSql() (sql string,start uint64){
 		}else{
 			where = " WHERE `" + This.TablePriKey + "` BETWEEN "+ strconv.FormatUint(start,10)+" AND "+ strconv.FormatUint(endI,10) + " AND " + This.Property.Where
 		}
-		sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.TableName + "` " + where
+		sql = "SELECT * FROM `" + This.SchemaName + "`.`" + This.CurrentTableName + "` " + where
 	}
 	return
 }

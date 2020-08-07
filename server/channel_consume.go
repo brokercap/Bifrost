@@ -182,29 +182,17 @@ func (This *consume_channel_obj) consume_channel() {
 		timer.Stop()
 	}()
 	var key string
-	var countNum int64 = 0
 	var AllTableKey string
-	var AllTableToServerLen int
-	var AllSchemaAndTableToServerLen int
-	var TableToServerLen int
+	var countNum int64 = 0
+	var EventSize int64 = 0
 	for {
 		select {
 		case data = <-This.c.chanName:
 			if This.db.killStatus == 1{
 				return
 			}
-			timer.Reset(5  * time.Second)
-			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
-			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
 			This.checkChannleStatus()
-			pluginData := This.transferToPluginData(&data)
-			TableToServerLen 				= This.sendToServerList(key,&pluginData)
-			AllTableToServerLen 			= This.sendToServerList(AllTableKey,&pluginData)
-			AllSchemaAndTableToServerLen	= This.sendToServerList(AllSchemaAndTablekey,&pluginData)
 
-			if This.db.killStatus == 1{
-				return
-			}
 			switch data.Header.EventType {
 			case mysql.UPDATE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv0:
 				countNum = int64(len(data.Rows)/2)
@@ -219,28 +207,20 @@ func (This *consume_channel_obj) consume_channel() {
 			if countNum == 0{
 				break
 			}
-			c.countChan <- &count.FlowCount{
-				//Time:"",
-				Count:countNum,
-				TableId:key,
-				ByteSize:int64(data.Header.EventSize)*int64(TableToServerLen),
+			EventSize = int64(data.Header.EventSize)
+
+			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
+			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
+			pluginData := This.transferToPluginData(&data)
+			This.sendToServerList(key,&pluginData,countNum,EventSize)
+			This.sendToServerList(AllTableKey,&pluginData,countNum,EventSize)
+			This.sendToServerList(AllSchemaAndTablekey,&pluginData,countNum,EventSize)
+
+			if This.db.killStatus == 1{
+				return
 			}
-			if AllTableToServerLen > 0{
-				c.countChan <- &count.FlowCount{
-					//Time:"",
-					Count:countNum,
-					TableId:AllTableKey,
-					ByteSize:int64(data.Header.EventSize)*int64(AllTableToServerLen),
-				}
-			}
-			if AllSchemaAndTableToServerLen > 0{
-				c.countChan <- &count.FlowCount{
-					//Time:"",
-					Count:countNum,
-					TableId:AllSchemaAndTablekey,
-					ByteSize:int64(data.Header.EventSize)*int64(AllSchemaAndTableToServerLen),
-				}
-			}
+
+			timer.Reset(5  * time.Second)
 		case <-timer.C:
 			timer.Reset(5 * time.Second)
 			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
@@ -260,22 +240,37 @@ func (This *consume_channel_obj) consume_channel() {
 	}
 }
 
-func (This *consume_channel_obj) sendToServerList(key string,pluginData *pluginDriver.PluginDataType) int{
-	if _,ok:=This.db.tableMap[key];!ok{
-		return 0
+func (This *consume_channel_obj) sendToServerList(key string,pluginData *pluginDriver.PluginDataType,countNum int64,EventSize int64) {
+	t := This.db.GetTableByKey(key)
+	var f = func(toServerList []*ToServer) {
+		for _, toServerInfo := range toServerList {
+			if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
+				continue
+			}
+			if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
+				continue
+			}
+			if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
+				continue
+			}
+			This.sendToServerResult(toServerInfo,pluginData)
+		}
 	}
-	toServerList := This.db.tableMap[key].ToServerList
-	for _, toServerInfo := range toServerList {
-		if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
-			continue
-		}
-		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
-			continue
-		}
-		if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
-			continue
-		}
-		This.sendToServerResult(toServerInfo,pluginData)
+	if t == nil {
+		return
 	}
-	return len(toServerList)
+	f(t.ToServerList)
+	This.c.countChan <- &count.FlowCount{
+		Count:countNum,
+		TableId:t.key,
+		ByteSize:EventSize*int64(len(t.ToServerList)),
+	}
+	for _,t0 := range t.likeTableList{
+		f(t0.ToServerList)
+		This.c.countChan <- &count.FlowCount{
+			Count:countNum,
+			TableId:t.key,
+			ByteSize:EventSize*int64(len(t0.ToServerList)),
+		}
+	}
 }

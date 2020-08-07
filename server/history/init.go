@@ -31,10 +31,12 @@ const (
 	HISTORY_STATUS_HALFWAY	HisotryStatus = "halfway"
 	HISTORY_STATUS_KILLED	HisotryStatus = "killed"
 	HISTORY_STATUS_SELECT_OVER	HisotryStatus = "selectOver"   //拉取数据结束
+	HISTORY_STATUS_SELECT_STOPING	HisotryStatus = "stoping"
+	HISTORY_STATUS_SELECT_STOPED	HisotryStatus = "stoped"
 )
 
 
-func AddHistory(dbName string,SchemaName string,TableName string,Property HistoryProperty,ToServerIDList []int) (int,error){
+func AddHistory(dbName string,SchemaName string,TableName string,TableNames string,Property HistoryProperty,ToServerIDList []int) (int,error){
 	l.Lock()
 	defer l.Unlock()
 	db := server.GetDBObj(dbName)
@@ -51,11 +53,24 @@ func AddHistory(dbName string,SchemaName string,TableName string,Property Histor
 		return 0,fmt.Errorf("SyncThreadNum * len(ToServerIDList) > 16384")
 	}
 	ID := lastHistoryID+1
+	TableNameArrTmp := strings.Split(TableNames,";")
+	TableNameArr := make([]string,0)
+	for _,v := range TableNameArrTmp{
+		if v == ""{
+			continue
+		}
+		TableNameArr = append(TableNameArr,strings.Trim(v,""))
+	}
 	historyMap[dbName][ID] = &History{
 		ID:ID,
 		DbName:dbName,
 		SchemaName:SchemaName,
 		TableName:TableName,
+		TableNames:TableNames,
+		TableNameArr:TableNameArr,
+		TableCount:len(TableNameArr),
+		TableCountSuccess:0,
+		CurrentTableName:"",
 		Status:HISTORY_STATUS_CLOSE,
 		NowStartI:0,
 		Property:Property,
@@ -91,9 +106,22 @@ func KillHistory(dbName string,ID int) error {
 		return fmt.Errorf("%s %d not exist",dbName,ID)
 	}
 	historyMap[dbName][ID].Status = HISTORY_STATUS_KILLED
-	for _,toServerInfo := range historyMap[dbName][ID].ToServerList{
-		toServerInfo.Status = "deled"
+	for _,toServer := range historyMap[dbName][ID].ToServerList{
+		toServer.ToServerInfo.Status = "deled"
 	}
+	return nil
+}
+
+func StopHistory(dbName string,ID int) error {
+	l.Lock()
+	defer l.Unlock()
+	if _,ok:=historyMap[dbName];!ok{
+		return fmt.Errorf("%s not exist",dbName)
+	}
+	if _,ok:=historyMap[dbName][ID];!ok{
+		return fmt.Errorf("%s %d not exist",dbName,ID)
+	}
+	historyMap[dbName][ID].Status = HISTORY_STATUS_SELECT_STOPING
 	return nil
 }
 
@@ -144,6 +172,12 @@ type ThreadStatus struct {
 	NowStartI			uint64     // 当前执行第几条
 }
 
+type toServer struct {
+	sync.RWMutex
+	threadCount 	int
+	ToServerInfo    *server.ToServer
+}
+
 type History struct {
 	sync.RWMutex
 	ID					int
@@ -165,10 +199,14 @@ type History struct {
 	TablePriKeyMaxId	uint64		// 假如主键是自增id的情况下 这个值是当前自增id最大值
 	TablePriKey			string		// 主键字段
 	TablePriArr			[]*string
-	ToServerList		[]*server.ToServer
+	ToServerList		[]*toServer
 	ToServerTheadCount	int16			// 实际正在运行的同步协程数
-	//toServerTheadCountChan chan int16	// 同步协程 开始或者结束,都会往这个chan里 +1,-1写数据.用于计算是不是所有同步协程都已结束
 	ToServerTheadGroup	*sync.WaitGroup
+	TableNames			string		// 用 ; 隔开的表名
+	TableNameArr		[]string	// TableNames 分割后的数组
+	CurrentTableName	string		// 正在执行全量的表名
+	TableCount			int		// 要全量的总表数量
+	TableCountSuccess	int		// 已经成功的表数量
 }
 
 func Start(dbName string,ID int) error {
@@ -184,9 +222,26 @@ func Start(dbName string,ID int) error {
 func (This *History) Start() error {
 	log.Println("history start",This.DbName,This.SchemaName,This.TableName)
 	This.Lock()
-	if This.Status == HISTORY_STATUS_RUNNING{
+	switch This.Status {
+	case HISTORY_STATUS_SELECT_STOPING:
+		return fmt.Errorf("stoping now")
+		break
+	case HISTORY_STATUS_RUNNING:
 		This.Unlock()
 		return fmt.Errorf("running had")
+		break
+	case HISTORY_STATUS_SELECT_STOPED:
+		break
+	case HISTORY_STATUS_HALFWAY:
+		This.NowStartI = 0
+		break
+	case HISTORY_STATUS_OVER,HISTORY_STATUS_SELECT_OVER:
+		This.TableCountSuccess = 0
+		This.NowStartI = 0
+		break
+	default:
+		This.NowStartI = 0
+		break
 	}
 	This.StartTime = time.Now().Format("2006-01-02 15:04:05")
 	This.Status = HISTORY_STATUS_RUNNING
@@ -195,33 +250,50 @@ func (This *History) Start() error {
 	This.Fields = make([]TableStruct,0)
 	This.ThreadPool = make([]*ThreadStatus,This.Property.ThreadNum)
 	This.threadResultChan = make(chan int,1)
-	This.ToServerList = make([]*server.ToServer,0)
+	This.ToServerList = make([]*toServer,0)
 	This.OverTime = ""
-	var wg sync.WaitGroup
-	for i:=1;i<=This.Property.ThreadNum;i++{
-		wg.Add(1)
-		go This.threadStart(i-1,&wg)
-	}
+
 	go func() {
-		wg.Wait()
-		This.Lock()
-		defer This.Unlock()
-		This.OverTime = time.Now().Format("2006-01-02 15:04:05")
-		for _,v := range This.ThreadPool{
-			if v.Error != nil{
-				This.Status = HISTORY_STATUS_HALFWAY
+		defer func() {
+			This.Lock()
+			defer This.Unlock()
+			This.OverTime = time.Now().Format("2006-01-02 15:04:05")
+			for _,v := range This.ThreadPool{
+				if v.Error != nil{
+					This.Status = HISTORY_STATUS_HALFWAY
+				}
+			}
+			if len(This.ToServerList) > 0 {
+				This.ToServerList = nil
+			}
+			if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER && This.Status != HISTORY_STATUS_SELECT_STOPING && This.Status != HISTORY_STATUS_SELECT_STOPED {
+				This.Status = HISTORY_STATUS_SELECT_OVER
+			}
+			if This.TableInfo.TABLE_ROWS == 0 {
+				This.Status = HISTORY_STATUS_OVER
+			}
+		}()
+		for {
+			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess]
+			This.RLock()
+			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED || This.Status == HISTORY_STATUS_OVER {
+				This.RUnlock()
+				break
+			}
+			This.RUnlock()
+			var selectThreadWg sync.WaitGroup
+			for i := 1; i <= This.Property.ThreadNum; i++ {
+				selectThreadWg.Add(1)
+				go This.threadStart(i-1, &selectThreadWg)
+			}
+			selectThreadWg.Wait()
+			This.TableCountSuccess++
+			if This.TableCountSuccess >= This.TableCount {
+				break
 			}
 		}
-		if len(This.ToServerList) > 0 {
-			This.ToServerList = nil
-		}
-		if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER {
-			This.Status = HISTORY_STATUS_SELECT_OVER
-		}
-		if This.TableInfo.TABLE_ROWS == 0 {
-			This.Status = HISTORY_STATUS_OVER
-		}
 	}()
+
 	return nil
 }
 
@@ -236,8 +308,8 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.Fields) > 0{
 		return
 	}
-	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.TableName)
-	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.TableName)
+	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.CurrentTableName)
+	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.CurrentTableName)
 	This.TablePriArr = make([]*string,0)
 	for _,v := range This.Fields{
 		if strings.ToUpper(*v.COLUMN_KEY) == "PRI"{
@@ -248,7 +320,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.TablePriArr) > 0{
 		for _,v := range This.Fields{
 			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.ToLower(*v.EXTRA) == "auto_increment"{
-				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.TableName,*v.COLUMN_NAME,This.Property.Where)
+				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.CurrentTableName,*v.COLUMN_NAME,This.Property.Where)
 				This.TablePriKey = *v.COLUMN_NAME
 				break
 			}
@@ -256,7 +328,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	}
 	// 当总数小于100万的时候的时候，并且自增id 最大值和最小值 差值 的分页数  是 直接 limit 分页数的 2 倍以上的时候，采用常规 limit 分页
 	if This.Property.Where == "" && This.Property.LimitOptimize == 1 && This.TableInfo.TABLE_ROWS <= 1000000 && (This.TablePriKeyMaxId - This.TablePriKeyMinId) / uint64(This.Property.ThreadCountPer) > This.TableInfo.TABLE_ROWS / uint64(This.Property.ThreadCountPer) * 2 {
-		log.Println("history",This.DbName,This.SchemaName,This.TableName,This.ID," TABLE_ROWS: ",This.TableInfo.TABLE_ROWS," <= 1000000 ,then transfer LIMIT x,y",)
+		log.Println("history",This.DbName,This.SchemaName,This.CurrentTableName,This.ID," TABLE_ROWS: ",This.TableInfo.TABLE_ROWS," <= 1000000 ,then transfer LIMIT x,y",)
 		This.Property.LimitOptimize = 0
 	}
 	return

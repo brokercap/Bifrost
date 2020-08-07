@@ -164,9 +164,11 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		var lastAllToServerNoraml bool = true
 		if len(dbInfo.TableMap) > 0 {
 			for tKey, tInfo := range dbInfo.TableMap {
+				if tInfo.ChannelKey <= 0 {
+					continue
+				}
 				schemaName,tableName := GetSchemaAndTableBySplit(tKey)
 				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
-				log.Println(tInfo.ToServerList)
 				for _, toServer := range tInfo.ToServerList {
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{

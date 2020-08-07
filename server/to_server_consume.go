@@ -29,6 +29,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
  	This.CosumerIdInrc++
 	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
+	// 因为有多个地方对 ThreadCount - 1 操作，记录是否已经扣减过
+	var ThreadCountDecrDone bool = false
 	defer func() {
 		if err := recover();err !=nil{
 			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
@@ -37,7 +39,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
 		This.Lock()
-		This.ThreadCount--
+		if ThreadCountDecrDone == false{
+			This.ThreadCount--
+		}
 		delete(This.CosumerPluginParamMap,MyConsumerId)
 		if This.ThreadCount == 0{
 			This.CosumerIdInrc = 0
@@ -352,13 +356,19 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			fileAck()
 			if PluginBinlog == nil && errs == nil{
 				This.Lock()
-				if This.QueueMsgCount == 0{
-					This.ToServerChan = nil
-					This.Status = ""
-					This.Unlock()
+				if This.QueueMsgCount == 0 {
+					// 在全量任务的时候，有可能是起多个消费者,所以这里要判断一下，是不是只剩下一个消费者，只有一个消费者的时候的时候,再将 chan 关闭
+					if This.ThreadCount == 1 {
+						This.ToServerChan = nil
+						This.Status = ""
+					}
 					//这里要执行一次fileAck ，是为了最终数据一致，将已经从文件中加载出来的数据 ack掉
-					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum,fromFileEndBinlogPosition}
+					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum, fromFileEndBinlogPosition}
 					fileAck()
+					// 这里也进宪一次 This.ThreadCount - 1,是为了防止，defer 执行延时, 其他协程  在进入这个逻辑的时候，继续获取到的值是还没被 -1 的
+					This.ThreadCount--
+					ThreadCountDecrDone = true
+					This.Unlock()
 					runtime.Goexit()
 				}
 				This.Unlock()
