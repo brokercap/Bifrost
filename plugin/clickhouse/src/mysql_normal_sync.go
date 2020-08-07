@@ -163,10 +163,10 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 		if stmt == nil {
 			goto errLoop
 		}
-		var toV interface{}
 		for _, data := range insertDataMap {
 			val := make([]dbDriver.Value, 0)
 			for _, v := range This.p.Field {
+				var toV interface{}
 				toV, This.err = CkDataTypeTransfer(This.getMySQLData(&data,0,v.MySQL), v.CK, v.CkType)
 				if This.err != nil {
 					stmt.Close()
