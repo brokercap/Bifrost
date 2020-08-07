@@ -101,7 +101,7 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.3.1-release/linux.zip
+wget https://github.com/brokercap/Bifrost/releases/download/v1.3.2-release/linux.zip
 
 unzip linux.zip
 
