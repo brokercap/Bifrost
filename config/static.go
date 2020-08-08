@@ -20,3 +20,9 @@ var FileQueueUsableCountTimeDiff int64 = 5000
 
 // 配置 FileQueueUsableCountTimeDiff 参数 使用
 var FileQueueUsableCount uint32 = 10
+
+// 在没有数据的情况下,间隔多久提交一次插件,单位 秒
+var PluginCommitTimeOut int = 5
+
+// 在同步出错的情况下,每2次重试之后 间隔多久再重试 ,单位 秒
+var PluginSyncRetrycTime int = 5

@@ -270,6 +270,26 @@ func initParam(){
 		}
 	}
 
+	tmp = config.GetConfigVal("Bifrostd","plugin_commit_timeout")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.PluginCommitTimeOut = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.plugin_commit_timeout type conversion to int err:",err)
+		}
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","plugin_sync_retry_time")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.PluginSyncRetrycTime = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.plugin_sync_retry_time type conversion to int err:",err)
+		}
+	}
+
 	initTLSParam()
 }
 
