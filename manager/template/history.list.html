@@ -56,6 +56,7 @@
                         </a>
                     </div>
 
+                    <button  style="float: right; margin-top: -10px; margin-left: 10px;" class="btn-sm btn-primary delAll" type="button" >全部删除</button>
                     <button  style="float: right; margin-top: -10px; margin-left: 10px;" class="btn-sm btn-primary startAll" type="button" >全部开始</button>
                 </div>
                 <div class="ibox-content">
@@ -165,7 +166,7 @@
 <script type="text/javascript">
     var TableName="{{.TableName}}";
     var SchemaName = "{{.SchemaName}}";
-    
+
     function DoRefresh() {
         var dbname = $("#dbname").val();
         var status = $("#status").val();
@@ -182,6 +183,32 @@
         $(".startAll").click(function (){
             document.querySelectorAll("td .startBtn").forEach(function (obj){
                 var url = "/history/start";
+                var trObj = $(obj).parent().parent().parent();
+                var dbname = trObj.children().eq(1).html();
+                var id = trObj.children().eq(0).html();
+
+                $.post(
+                    url,
+                    {dbname: dbname,id:id},
+                    function(data,status){
+                        if( status != 'success' ){
+                            alert("reqeust error, reqeust status : "+status);
+                            return false;
+                        }
+                    },
+                    'json'
+                );
+            })
+        })
+
+
+        $(".delAll").click(function (){
+            if (!confirm("确定 删除 么？删除将不能恢复")){
+                return
+            }
+
+            document.querySelectorAll("td .startBtn").forEach(function (obj){
+                var url = "/history/del";
                 var trObj = $(obj).parent().parent().parent();
                 var dbname = trObj.children().eq(1).html();
                 var id = trObj.children().eq(0).html();
