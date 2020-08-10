@@ -77,6 +77,8 @@
                             <i class="fa fa-times"></i>
                         </a>
                     </div>
+
+                    <button  style="float: right; margin-top: -10px; margin-left: 10px;" class="btn-sm btn-primary updateAll" type="button" >刷全量数据</button>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -99,7 +101,7 @@
                             <tbody>
                             {{range $i, $toServer := .SyncList}}
                             {{range $k, $v := $toServer.ToServerList}}
-                            <tr>
+                            <tr data-id="{{$v.ToServerID}}">
                                 <td>{{$i}}-{{$k}}</td>
                                 <td>{{$toServer.DbName}}</td>
                                 <td>{{$toServer.SchemaName}}</td>
@@ -157,6 +159,40 @@
             location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid+"&sync_status="+sync_status;
         }
     );
+
+    $(".updateAll").click(function () {
+
+        var Property = {};
+        Property["ThreadNum"]       = 1;
+        Property["ThreadCountPer"]  = 1;
+        Property["Where"]           = "";
+        Property["LimitOptimize"]   = 1;
+        Property["SyncThreadNum"]   = 1000;
+        let url = "/history/add";
+
+
+        $("tbody > tr").each((_,v) => {
+            let $tr = $(v);
+            let children = $tr.children()
+            let toServerId = parseInt($tr.attr("data-id"))
+            let dbName = children[1].textContent
+            let schemaName = children[2].textContent
+            let tableName = children[3].textContent
+
+
+            $.post(url,
+                {dbname:dbName,schema_name:schemaName,table_name:tableName,property:JSON.stringify(Property),ToserverIds:JSON.stringify([toServerId])},
+                function(data,status){
+                    if( status !== 'success' ){
+                        alert("reqeust error, reqeust " + "\ttable name:" + tableName + "\tid:"+ id + "\tstatus : "+ status );
+                        return false;
+                    }
+                },
+                'json');
+        })
+
+
+    })
 </script>
 
 <script src="/js/filequeue.js?v1.2.0-beta.03"></script>

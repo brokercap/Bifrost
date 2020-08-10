@@ -55,6 +55,8 @@
                             <i class="fa fa-times"></i>
                         </a>
                     </div>
+
+                    <button  style="float: right; margin-top: -10px; margin-left: 10px;" class="btn-sm btn-primary startAll" type="button" >全部开始</button>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -176,6 +178,27 @@
                     DoRefresh();
                 }
         );
+
+        $(".startAll").click(function (){
+            document.querySelectorAll("td .startBtn").forEach(function (obj){
+                var url = "/history/start";
+                var trObj = $(obj).parent().parent().parent();
+                var dbname = trObj.children().eq(1).html();
+                var id = trObj.children().eq(0).html();
+
+                $.post(
+                    url,
+                    {dbname: dbname,id:id},
+                    function(data,status){
+                        if( status != 'success' ){
+                            alert("reqeust error, reqeust status : "+status);
+                            return false;
+                        }
+                    },
+                    'json'
+                );
+            })
+        })
     });
 
     function DoChangeHistoryStatus(obj,status){
