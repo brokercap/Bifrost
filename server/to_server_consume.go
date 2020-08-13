@@ -33,10 +33,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var ThreadCountDecrDone bool = false
 	defer func() {
 		if err := recover();err !=nil{
-			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
+			log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
 		}else{
-			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
+			log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
 		This.Lock()
 		if ThreadCountDecrDone == false{
@@ -48,7 +48,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		}
 		This.Unlock()
 	}()
-	log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
+	log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	This.Lock()
 	if This.Status == ""{
@@ -192,6 +192,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					CheckStatusFun()
 					timer2 := time.NewTimer(time.Duration(config.PluginSyncRetrycTime) * time.Second)
 					<-timer2.C
+					timer2.Stop()
 					checkDoWarning()
 				}
 			}else{
@@ -261,7 +262,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					continue
 				}
 			}
-			time.NewTimer(time.Duration(config.PluginCommitTimeOut) * time.Second)
+			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 		}
 		select {
 		case data = <- c:
@@ -355,7 +356,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			}
 			if noData == false{
 				noData = true
-				log.Println("consume_to_server:",This.Notes,"MyConsumerId:",MyConsumerId,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+				log.Println("consume_to_server:",This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
 			fileAck()
 			if PluginBinlog == nil && errs == nil{
@@ -377,7 +378,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				}
 				This.Unlock()
 			}
-			time.NewTimer(time.Duration(config.PluginCommitTimeOut) * time.Second)
+			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 			SaveBinlog()
 			break
 		}

@@ -223,8 +223,6 @@ func (This *consume_channel_obj) consume_channel() {
 			timer.Reset(5  * time.Second)
 		case <-timer.C:
 			timer.Reset(5 * time.Second)
-			//log.Println(time.Now().Format("2006-01-02 15:04:05"))
-			//log.Println("count:",countNum)
 		}
 		for {
 			if c.Status == "stop" {
@@ -259,17 +257,19 @@ func (This *consume_channel_obj) sendToServerList(key string,pluginData *pluginD
 	if t == nil {
 		return
 	}
-	f(t.ToServerList)
-	This.c.countChan <- &count.FlowCount{
-		Count:countNum,
-		TableId:t.key,
-		ByteSize:EventSize*int64(len(t.ToServerList)),
+	if len(t.ToServerList) > 0 {
+		f(t.ToServerList)
+		This.c.countChan <- &count.FlowCount{
+			Count:    countNum,
+			TableId:  t.key,
+			ByteSize: EventSize * int64(len(t.ToServerList)),
+		}
 	}
 	for _,t0 := range t.likeTableList{
 		f(t0.ToServerList)
 		This.c.countChan <- &count.FlowCount{
 			Count:countNum,
-			TableId:t.key,
+			TableId:t0.key,
 			ByteSize:EventSize*int64(len(t0.ToServerList)),
 		}
 	}

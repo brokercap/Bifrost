@@ -145,7 +145,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 				Rows:           Rows,
 				Query:          "",
 				SchemaName:		This.SchemaName,
-				TableName:		This.TableName,
+				TableName:		This.CurrentTableName,
 				BinlogFileNum:	0,
 				BinlogPosition:	0,
 				Pri:			This.TablePriArr,

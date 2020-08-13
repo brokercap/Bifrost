@@ -547,9 +547,6 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 		//log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
 		//db.tableMap[key].ChannelKey = ChannelKey
 	}
-	if db.binlogDump != nil{
-		db.binlogDump.AddReplicateDoDb(schemaName,tableName)
-	}
 	return true
 }
 
@@ -567,7 +564,7 @@ func (db *db) addLikeTable(t *Table ,key,tableName string) {
 			continue
 		}
 		// 假如匹配的表
-		if len(reqTagAll.FindString(k)) > 0 {
+		if reqTagAll.FindString(k) != "" {
 			v.likeTableList = append(v.likeTableList,t)
 		}
 	}
@@ -592,6 +589,7 @@ func (db *db) GetTableByKey(key string) *Table {
 			if k == key0 {
 				continue
 			}
+			//库名是 * 或者 table 里没有 * 的，都不匹配
 			if strings.Index(k, "*") <= 0 {
 				continue
 			}
@@ -604,7 +602,7 @@ func (db *db) GetTableByKey(key string) *Table {
 				log.Println(db.Name," GetTable :",k," reqTagAll err:",err)
 				continue
 			}
-			if len(reqTagAll.FindString(key)) > 0 {
+			if reqTagAll.FindString(key) != "" {
 				if _,ok := db.tableMap[key];!ok {
 					db.tableMap[key] = &Table{
 						key:			key,
@@ -612,10 +610,13 @@ func (db *db) GetTableByKey(key string) *Table {
 						ToServerList: 	make([]*ToServer, 0),
 						likeTableList:	make([]*Table, 0),
 					}
+					count.SetTable(db.Name,key)
 				}
 				db.tableMap[key].likeTableList = append(db.tableMap[key].likeTableList,v)
-				return db.tableMap[key]
 			}
+		}
+		if _,ok := db.tableMap[key];ok {
+			return db.tableMap[key]
 		}
 		return  nil
 	} else {
@@ -646,30 +647,36 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
 	db.Lock()
 	defer db.Unlock()
+
 	if _, ok := db.tableMap[key]; !ok {
 		return true
-	} else {
-		t := db.tableMap[key]
-		for _,toServerInfo := range t.ToServerList {
-			if toServerInfo.Status == "running"{
-				toServerInfo.Status = "deling"
-			}
+	}
+
+	t := db.tableMap[key]
+	toServerLen := len(t.ToServerList)
+	for _,toServerInfo := range t.ToServerList {
+		if toServerInfo.Status == "running"{
+			toServerInfo.Status = "deling"
 		}
-		delete(db.tableMap,key)
-		if tableName != "*" && strings.Index(tableName,"*") >= 0 {
-			for _,v := range db.tableMap{
-				for index,v0 := range v.likeTableList {
-					if  v0 == t {
-						v.ToServerList = append(v.ToServerList[:index], v.ToServerList[index+1:]...)
-						break
+	}
+	delete(db.tableMap,key)
+	if tableName != "*" && strings.Index(tableName,"*") >= 0 {
+		for _,v := range db.tableMap{
+			for index,v0 := range v.likeTableList {
+				if  v0 == t {
+					if index == len(v.likeTableList) - 1{
+						v.likeTableList = v.likeTableList[:len(v.likeTableList)-1]
+					}else{
+						v.likeTableList = append(v.likeTableList[:index], v.likeTableList[index+1:]...)
 					}
+					break
 				}
 			}
 		}
-		count.DelTable(db.Name,key)
-		log.Println("DelTable",db.Name,schemaName,tableName)
 	}
-	if db.binlogDump != nil{
+	count.DelTable(db.Name,key)
+	log.Println("DelTable",db.Name,schemaName,tableName)
+	if db.binlogDump != nil && toServerLen > 0 {
 		db.binlogDump.DelReplicateDoDb(schemaName,tableName)
 	}
 	return true

@@ -12,10 +12,12 @@ func (This *History) InitToServer()  {
 		return
 	}
 	dbSouceInfo := server.GetDBObj(This.DbName)
+	Key := server.GetSchemaAndTableJoin(This.SchemaName,This.TableName)
 	for _,toServerInfo := range dbSouceInfo.GetTableSelf(This.SchemaName,This.TableName).ToServerList{
 		for _,ID := range This.ToServerIDList{
 			if ID == toServerInfo.ToServerID{
 				toServerInfoNew := &server.ToServer{
+					Key:				&Key,
 					ToServerID			:0,
 					PluginName			:toServerInfo.PluginName,
 					MustBeSuccess 		:toServerInfo.MustBeSuccess,

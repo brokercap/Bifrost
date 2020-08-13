@@ -232,6 +232,7 @@
                                     <option value="0">No</option>
                                     <option value="1">Yes</option>
                                 </select>
+                                <p style="padding-top: 5px">Yes 可以修改表名 带 * 的模糊匹配规则,例如: binlog_field_test_*</p>
                             </td>
                         </tr>
 
@@ -507,6 +508,7 @@
                                 $("#TableListContair").append(html);
 
                                 DataBaseMap.delete(schema_name);
+                                showSchemaTableList("Schema-"+schema_name);
                             }else{
                                 var html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button>';
                                 $("#" + tableDivId + " .right .button").html(html);
@@ -628,7 +630,7 @@
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
                             others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
                             if ("QueueMsgCount" in v) {
-                                others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
+                                others += "<p title=\"内存队列堆积多少条数据待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
                             }
                             e.push({
                                 sliceid:index+"/"+v.ToServerID,

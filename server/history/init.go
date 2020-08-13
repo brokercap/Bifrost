@@ -275,12 +275,13 @@ func (This *History) Start() error {
 		}()
 		for {
 			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess]
-			This.RLock()
+			This.Lock()
 			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED || This.Status == HISTORY_STATUS_OVER {
-				This.RUnlock()
+				This.Unlock()
 				break
 			}
-			This.RUnlock()
+			This.NowStartI = 0
+			This.Unlock()
 			var selectThreadWg sync.WaitGroup
 			for i := 1; i <= This.Property.ThreadNum; i++ {
 				selectThreadWg.Add(1)
