@@ -65,7 +65,7 @@ func printLogo(IpAndPort string){
 }
 
 var BifrostConfigFile *string
-var BifrostDaemon *string
+var BifrostDaemon bool
 var BifrostPid *string
 var BifrostDataDir *string
 var Version bool
@@ -96,12 +96,12 @@ func main() {
 	}()
 	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
-	BifrostConfigFile = flag.String("config", "", "Bifrost config file path")
-	BifrostPid = flag.String("pid", "", "pid file path")
-	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
-	BifrostDataDir = flag.String("data_dir", "", "db.Bifrost data dir")
-	flag.BoolVar(&Version, "v", false, "this version")
-	flag.BoolVar(&Help, "h", false, "this help")
+	BifrostConfigFile = flag.String("config", "", "-config")
+	BifrostPid = flag.String("pid", "", "-pid")
+	flag.BoolVar(&BifrostDaemon, "d", false, "-d")
+	BifrostDataDir = flag.String("data_dir", "", "-data")
+	flag.BoolVar(&Version, "v", false, "-v")
+	flag.BoolVar(&Help, "h", false, "-h")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -125,7 +125,7 @@ func main() {
 		IpAndPort = "0.0.0.0:21036"
 	}
 
-	if *BifrostDaemon == "true"{
+	if BifrostDaemon {
 		/*
 		file := execDir+"/pid.log"
 		logFile, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0700)
@@ -138,7 +138,7 @@ func main() {
 		loger.Println("os.Getpid()：",os.Getpid())
 		 */
 		isDaemo := false
-		if os.Getppid() != 1{
+		if os.Getppid() != 1 && runtime.GOOS != "windows" {
 			// 因为有一些桌面系统,父进程开了子进程之后,父进程退出之后,并不是由 pid=1 的 systemd 进程接管,可能有些系统给每个桌面帐号重新分配了一下systemd 进程
 			// 这里每去判断 一下是不是 systemd 进程名，如果是的话，也认为是父进程被退出了
 			cmdString := "ps -ef|grep "+strconv.Itoa(os.Getppid())+" | grep systemd|grep -v grep"
@@ -294,29 +294,51 @@ func initParam(){
 }
 
 func initTLSParam(){
-	path,_ := filepath.Abs(filepath.Dir(os.Args[0]))
-	if config.GetConfigVal("Bifrostd","tls") == "true"{
-		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
-			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
-				log.Println("tls_server_key:",config.GetConfigVal("Bifrostd","tls_key_file"),err)
-				return
-			}else{
-				config.TLSServerKeyFile = path+"/"+config.GetConfigVal("Bifrostd","tls_key_file")
-			}
-		}else{
-			config.TLSServerKeyFile = config.GetConfigVal("Bifrostd","tls_key_file")
-		}
-		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
-			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
-				log.Println("tls_server_crt:",config.GetConfigVal("Bifrostd","tls_crt_file"),err)
-				return
-			}else{
-				config.TLSServerCrtFile = path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file")
-			}
-		}else{
-			config.TLSServerCrtFile = config.GetConfigVal("Bifrostd","tls_crt_file")
-		}
+	var path string
+	var tlsKeyFile string = config.GetConfigVal("Bifrostd","tls_key_file")
+	var tlsCrtFile string = config.GetConfigVal("Bifrostd","tls_crt_file")
+
+	var checkFileStat = func(pathDir,file string) error{
+		_, err := os.Stat(pathDir+"/"+file)
+		return err
+	}
+
+	var setTLSConfig = func() {
+		config.TLSServerKeyFile = path+"/"+tlsKeyFile
+		config.TLSServerCrtFile = path+"/"+tlsCrtFile
 		config.TLS = true
+	}
+
+	if config.GetConfigVal("Bifrostd","tls") == "true"{
+		for {
+			// 相对于 Bifrost 二进制可执行文件的路径
+			path,_ = filepath.Abs(filepath.Dir(os.Args[0]))
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 相对于 Bifost 二进制可执行文件的父目录的路径
+			path = filepath.Dir(path)
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 相对于 Bifrost.ini 配置文件的路径
+			path,_ = filepath.Abs(filepath.Dir(*BifrostConfigFile))
+			BifrostConfigFilePath := path
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 绝对路径
+			path = ""
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			log.Println("tls_key_file:",BifrostConfigFilePath+"/"+tlsKeyFile," or tls_crt_file: ",BifrostConfigFilePath+"/"+tlsCrtFile, " not exsit")
+			return
+		}
 	}
 }
 
@@ -384,7 +406,7 @@ func CmdShell(cmdString string)([]byte,error){
 }
 
 func doSaveDbInfo(){
-	if os.Getppid() != 1 && *BifrostDaemon == "true"{
+	if os.Getppid() != 1 && BifrostDaemon{
 		return
 	}
 	server.DoSaveSnapshotData()
