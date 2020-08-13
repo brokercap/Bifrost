@@ -4,9 +4,11 @@ package mysql
 import (
 	"regexp"
 	"strings"
+	"log"
 )
 
 func (This *BinlogDump) AddReplicateDoDb(db string,table string)  {
+	log.Println("Bristol AddReplicateDoDb,",db,table)
 	This.Lock()
 	defer This.Unlock()
 	This.replicateDoDbCheck = true
@@ -20,11 +22,20 @@ func (This *BinlogDump) AddReplicateDoDb(db string,table string)  {
 		This.ReplicateDoDbLike = make(map[string]map[string]uint8,0)
 	}
 	if db != "*" {
-		if strings.Index(table,"*") > 0 {
+		if table != "*" && strings.Index(table,"*") >= 0 {
 			if _,ok:=This.ReplicateDoDbLike[db];!ok{
 				This.ReplicateDoDbLike[db] = make(map[string]uint8,0)
 			}
-			This.addReplicateDoDb0(db,table)
+			This.ReplicateDoDbLike[db][table] = 1
+			reqTagAll,err := regexp.Compile(table)
+			if err != nil {
+				return
+			}
+			for k,_ := range This.ReplicateDoDb[db] {
+				if reqTagAll.FindString(k) != "" {
+					This.addReplicateDoDb0(db,k)
+				}
+			}
 			return
 		}
 	}
@@ -57,9 +68,10 @@ func (This *BinlogDump) delReplicateDoDb0(db string,table string)  {
 }
 
 func (This *BinlogDump) DelReplicateDoDb(db string,table string)  {
+	log.Println("Bristol DelReplicateDoDb,",db,table)
 	This.Lock()
 	defer  This.Unlock()
-	if strings.Index(table,"*") > 0 {
+	if table!= "*" && strings.Index(table,"*") >= 0 {
 		if This.ReplicateDoDbLike != nil{
 			if _,ok:=This.ReplicateDoDbLike[db];ok{
 				delete(This.ReplicateDoDbLike[db],table)
@@ -106,11 +118,20 @@ func (This *BinlogDump) AddReplicateIgnoreDb(db string,table string)  {
 		This.ReplicateIgnoreDbLike = make(map[string]map[string]uint8,0)
 	}
 	if db != "*" {
-		if strings.Index(table,"*") > 0 {
+		if table != "*" && strings.Index(table,"*") >= 0 {
 			if _,ok:=This.ReplicateIgnoreDbLike[db];!ok{
 				This.ReplicateIgnoreDbLike[db] = make(map[string]uint8,0)
 			}
-			This.addReplicateIgnoreDb0(db,table)
+			This.ReplicateIgnoreDbLike[db][table] = 1
+			reqTagAll,err := regexp.Compile(table)
+			if err != nil {
+				return
+			}
+			for k,_ := range This.ReplicateIgnoreDb[db] {
+				if reqTagAll.FindString(k) != "" {
+					This.addReplicateIgnoreDb0(db,k)
+				}
+			}
 			return
 		}
 	}
@@ -143,9 +164,10 @@ func (This *BinlogDump) delReplicateIgnoreDb0(db string,table string)  {
 }
 
 func (This *BinlogDump) DelReplicateIgnoreDb(db string,table string)  {
+	log.Println("Bristol DelReplicateIgnoreDb,",db,table)
 	This.Lock()
 	defer  This.Unlock()
-	if strings.Index(table,"*") > 0 {
+	if table != "*" && strings.Index(table,"*") >= 0 {
 		if This.ReplicateIgnoreDbLike != nil{
 			if _,ok:=This.ReplicateIgnoreDbLike[db];ok{
 				delete(This.ReplicateIgnoreDbLike[db],table)
@@ -198,9 +220,10 @@ func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
 				for k,_ := range This.ReplicateDoDbLike[db] {
 					reqTagAll,err := regexp.Compile(k)
 					if err != nil{
+						log.Println("ReplicateDoDbLike reqTagAll err:",err)
 						continue
 					}
-					if len(reqTagAll.FindString(table)) > 0 {
+					if reqTagAll.FindString(table) != "" {
 						This.addReplicateDoDb0(db,table)
 						return true
 					}
@@ -223,7 +246,7 @@ func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
 					if err != nil{
 						continue
 					}
-					if len(reqTagAll.FindString(table)) > 0 {
+					if reqTagAll.FindString(table) != "" {
 						This.addReplicateIgnoreDb0(db,table)
 						return true
 					}
