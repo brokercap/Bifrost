@@ -1,6 +1,6 @@
 module github.com/brokercap/Bifrost
 
-
+go 1.14
 
 require (
 	github.com/ClickHouse/clickhouse-go v1.3.14

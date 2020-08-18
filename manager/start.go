@@ -16,28 +16,18 @@ limitations under the License.
 package manager
 
 import (
-	"net/http"
 	"encoding/json"
-	"strconv"
-	"github.com/brokercap/Bifrost/manager/xgo"
 	"github.com/brokercap/Bifrost/config"
-	"os/exec"
-	"os"
-	"path/filepath"
-	"strings"
-	"runtime/debug"
+	"github.com/brokercap/Bifrost/manager/xgo"
 	"log"
+	"net/http"
+	"runtime/debug"
+	"strconv"
+	"strings"
 )
 
-var execDir string
-
-func init(){
-	execPath, _ := exec.LookPath(os.Args[0])
-	execDir = filepath.Dir(execPath)+"/"
-}
-
 func TemplatePath(fileName string) string{
-	return execDir+fileName
+	return config.BifrostDir+fileName
 }
 
 type TemplateHeader struct {
@@ -85,7 +75,7 @@ func addRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request)
 	xgo.AddRoute(route,callbackFUns)
 }
 
-var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update","/export","/import"}
+var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update","/export","/import","kill"}
 //判断是否为写操作
 func checkWriteRequest(uri string) bool {
 	for _,v := range writeRequestOp{

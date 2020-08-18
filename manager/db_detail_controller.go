@@ -21,6 +21,7 @@ import (
 	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
 	toserver "github.com/brokercap/Bifrost/plugin/storage"
+	"strings"
 )
 
 func init(){
@@ -51,7 +52,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	var Result dbDetail
 	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/db.detail.history.add.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
 }
 
@@ -75,7 +76,7 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	var data []ResultType
 	data = make([]ResultType,0)
 	TableList := GetSchemaTableList(dbConn,schema_name)
-	TableList = append(TableList,TableListStruct{TableName:"AllTables",TableType:""})
+	TableList = append(TableList,TableListStruct{TableName:"AllTables",TableType:"LIKE"})
 	var schema_name0 ,tableName0 string
 	schema_name0 = tansferSchemaName(schema_name)
 
@@ -93,6 +94,15 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 			}else{
 				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true,TableType:tableType})
 			}
+		}
+	}
+	if schema_name0 != "*" {
+		for _,v := range DBObj.GetTables() {
+			if strings.Index(v.Name,"*") <= 0 {
+				continue
+			}
+			t2 := DBObj.GetChannel(v.ChannelKey)
+			data = append(data,ResultType{TableName:v.Name,ChannelName:t2.Name,AddStatus:true,TableType:"LIKE"})
 		}
 	}
 	b,_:=json.Marshal(data)

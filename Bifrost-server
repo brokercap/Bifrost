@@ -16,11 +16,12 @@
 bin_dir=
 pid_file=
 config_file=
+dir_dir=
 
 mode=$1    # start or stop or restart
 
-basepath=$(cd `dirname $0`; pwd)
-
+basepath=$(cd `dirname $0`;pwd)
+basepathParent=$(dirname $basepath)
 __readINI () {
     INIFILE=$1; SECTION=$2; ITEM=$3;
     _readIni=`cat $INIFILE | awk 'BEGIN{FS="=";OFS=":";}/\'$SECTION'\]/,/\[.*[^('$SECTION')].*\]/{gsub(/[[:blank:]]*/,"",$1);if(NF==2 && $1=="'$ITEM'"){gsub(/^[[:blank:]]*/,"",$2);gsub(/[[:blank:]]*$/,"",$2);print $2;}}'`
@@ -34,7 +35,21 @@ fi
 
 if test -z "$config_file"
 then
-  config_file="$basepath/etc/Bifrost.ini"
+  config_file="$basepathParent/etc/Bifrost.ini"
+fi
+
+if test -z "$dir_dir"
+then
+  dir_dir=$(__readINI $config_file Bifrostd data_dir);
+fi
+
+if test -z "$dir_dir"
+then
+  dir_dir="$basepathParent/data"
+fi
+
+if [ ${dir_dir:0:1} != "/"  ]; then
+  dir_dir=$basepathParent"/"$dir_dir
 fi
 
 if test -z "$pid_file"
@@ -44,7 +59,7 @@ fi
 
 if test -z "$pid_file"
 then
-  pid_file="$basepath/Bifrost.pid"
+  pid_file="$dir_dir/Bifrost.pid"
 fi
 
 case "$mode" in
@@ -53,7 +68,7 @@ case "$mode" in
     #echo "Starting Bifrost"
     if test -x $bin_dir/Bifrost
     then
-      $bin_dir/Bifrost -d true -config "$config_file" -pid "$pid_file"
+      $bin_dir/Bifrost -d -config $config_file -pid $pid_file
     else
       echo "Couldn't find Bifrost server ($bin_dir/Bifrost)"
       exit 1

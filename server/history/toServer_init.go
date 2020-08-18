@@ -12,10 +12,12 @@ func (This *History) InitToServer()  {
 		return
 	}
 	dbSouceInfo := server.GetDBObj(This.DbName)
-	for _,toServerInfo := range dbSouceInfo.GetTable(This.SchemaName,This.TableName).ToServerList{
+	Key := server.GetSchemaAndTableJoin(This.SchemaName,This.TableName)
+	for _,toServerInfo := range dbSouceInfo.GetTableSelf(This.SchemaName,This.TableName).ToServerList{
 		for _,ID := range This.ToServerIDList{
 			if ID == toServerInfo.ToServerID{
 				toServerInfoNew := &server.ToServer{
+					Key:				&Key,
 					ToServerID			:0,
 					PluginName			:toServerInfo.PluginName,
 					MustBeSuccess 		:toServerInfo.MustBeSuccess,
@@ -38,7 +40,7 @@ func (This *History) InitToServer()  {
 					FileQueueStatus 	:false,					  // 是否启动文件队列
 					Notes				:"history",
 				}
-				This.ToServerList = append(This.ToServerList,toServerInfoNew)
+				This.ToServerList = append(This.ToServerList,&toServer{threadCount:0,ToServerInfo:toServerInfoNew})
 				break
 			}
 		}
@@ -60,6 +62,9 @@ func (This *History) SyncWaitToServerOver(n int)  {
 			defer This.Unlock()
 			This.ToServerTheadGroup = nil
 			switch This.Status {
+			case HISTORY_STATUS_SELECT_STOPING:
+				This.Status = HISTORY_STATUS_SELECT_STOPED
+				break
 			case HISTORY_STATUS_KILLED, HISTORY_STATUS_HALFWAY:
 				break
 			default:

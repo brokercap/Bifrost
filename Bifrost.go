@@ -64,10 +64,10 @@ func printLogo(IpAndPort string){
 	fmt.Println(logo)
 }
 
-var BifrostConfigFile *string
-var BifrostDaemon *string
-var BifrostPid *string
-var BifrostDataDir *string
+var BifrostConfigFile string
+var BifrostDaemon bool
+var BifrostPid string
+var BifrostDataDir string
 var Version bool
 var Help bool
 
@@ -85,22 +85,22 @@ func main() {
 		server.StopAllChannel()
 		doSaveDbInfo()
 		server.Close()
-		if os.Getppid() == 1 && *BifrostPid != ""{
-			os.Remove(*BifrostPid)
+		if os.Getppid() == 1 && BifrostPid != ""{
+			os.Remove(BifrostPid)
 		}
 		if err := recover();err != nil{
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
-	execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 
-	BifrostConfigFile = flag.String("config", "", "Bifrost config file path")
-	BifrostPid = flag.String("pid", "", "pid file path")
-	BifrostDaemon = flag.String("d", "false", "true|false, default(false)")
-	BifrostDataDir = flag.String("data_dir", "", "db.Bifrost data dir")
-	flag.BoolVar(&Version, "v", false, "this version")
-	flag.BoolVar(&Help, "h", false, "this help")
+	flag.StringVar(&BifrostConfigFile,"config", "", "-config")
+	flag.StringVar(&BifrostPid,"pid", "", "-pid")
+	flag.BoolVar(&BifrostDaemon, "d", false, "-d")
+	flag.StringVar(&BifrostDataDir,"data_dir", "", "-data")
+	flag.BoolVar(&Version, "v", false, "-v")
+	flag.BoolVar(&Help, "h", false, "-h")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -113,18 +113,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *BifrostConfigFile == ""{
-		*BifrostConfigFile = execDir+"/etc/Bifrost.ini"
-		log.Println("*BifrostConfigFile:",*BifrostConfigFile)
+	if BifrostConfigFile == "" {
+		BifrostConfigFile = config.BifrostDir+"/etc/Bifrost.ini"
+		log.Println("BifrostConfigFile:",BifrostConfigFile)
 	}
-	config.LoadConf(*BifrostConfigFile)
+	if BifrostConfigFile[0:1] != "/" {
+		BifrostConfigFile = config.BifrostDir+BifrostConfigFile
+	}
+	config.LoadConf(BifrostConfigFile)
 
 	IpAndPort := config.GetConfigVal("Bifrostd","listen")
 	if IpAndPort == ""{
 		IpAndPort = "0.0.0.0:21036"
 	}
 
-	if *BifrostDaemon == "true"{
+	if BifrostDaemon {
 		/*
 		file := execDir+"/pid.log"
 		logFile, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0700)
@@ -137,7 +140,7 @@ func main() {
 		loger.Println("os.Getpid()：",os.Getpid())
 		 */
 		isDaemo := false
-		if os.Getppid() != 1{
+		if os.Getppid() != 1 && runtime.GOOS != "windows" {
 			// 因为有一些桌面系统,父进程开了子进程之后,父进程退出之后,并不是由 pid=1 的 systemd 进程接管,可能有些系统给每个桌面帐号重新分配了一下systemd 进程
 			// 这里每去判断 一下是不是 systemd 进程名，如果是的话，也认为是父进程被退出了
 			cmdString := "ps -ef|grep "+strconv.Itoa(os.Getppid())+" | grep systemd|grep -v grep"
@@ -165,13 +168,18 @@ func main() {
 	}
 
 	var dataDir string
-	if *BifrostDataDir == ""{
+	if BifrostDataDir == "" {
 		dataDir = config.GetConfigVal("Bifrostd","data_dir")
 	}else{
-		dataDir = *BifrostDataDir
+		dataDir = BifrostDataDir
 	}
-	if dataDir == ""{
-		dataDir = execDir+"/data"
+
+	if dataDir == "" {
+		dataDir = config.BifrostDir+"/data"
+	}
+
+	if dataDir[0:1] != "/" {
+		dataDir = config.BifrostDir+dataDir
 	}
 
 	os.MkdirAll(dataDir, 0700)
@@ -179,11 +187,11 @@ func main() {
 	config.DataDir = dataDir
 
 	if runtime.GOOS != "windows"{
-		if *BifrostPid == ""{
+		if BifrostPid == ""{
 			if config.GetConfigVal("Bifrostd","pid") == ""{
-				*BifrostPid = dataDir+"/Bifrost.pid"
+				BifrostPid = dataDir+"/Bifrost.pid"
 			}else{
-				*BifrostPid = config.GetConfigVal("Bifrostd","pid")
+				BifrostPid = config.GetConfigVal("Bifrostd","pid")
 			}
 		}
 		WritePid()
@@ -269,44 +277,88 @@ func initParam(){
 		}
 	}
 
+	tmp = config.GetConfigVal("Bifrostd","plugin_commit_timeout")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.PluginCommitTimeOut = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.plugin_commit_timeout type conversion to int err:",err)
+		}
+	}
+
+	tmp = config.GetConfigVal("Bifrostd","plugin_sync_retry_time")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA > 0{
+			config.PluginSyncRetrycTime = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.plugin_sync_retry_time type conversion to int err:",err)
+		}
+	}
+
 	initTLSParam()
 }
 
 func initTLSParam(){
-	path,_ := filepath.Abs(filepath.Dir(os.Args[0]))
-	if config.GetConfigVal("Bifrostd","tls") == "true"{
-		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
-			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_key_file"));err != nil{
-				log.Println("tls_server_key:",config.GetConfigVal("Bifrostd","tls_key_file"),err)
-				return
-			}else{
-				config.TLSServerKeyFile = path+"/"+config.GetConfigVal("Bifrostd","tls_key_file")
-			}
-		}else{
-			config.TLSServerKeyFile = config.GetConfigVal("Bifrostd","tls_key_file")
-		}
-		if _, err := os.Stat(config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
-			if  _, err := os.Stat(path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file"));err != nil{
-				log.Println("tls_server_crt:",config.GetConfigVal("Bifrostd","tls_crt_file"),err)
-				return
-			}else{
-				config.TLSServerCrtFile = path+"/"+config.GetConfigVal("Bifrostd","tls_crt_file")
-			}
-		}else{
-			config.TLSServerCrtFile = config.GetConfigVal("Bifrostd","tls_crt_file")
-		}
+	var path string
+	var tlsKeyFile string = config.GetConfigVal("Bifrostd","tls_key_file")
+	var tlsCrtFile string = config.GetConfigVal("Bifrostd","tls_crt_file")
+
+	var checkFileStat = func(pathDir,file string) error{
+		_, err := os.Stat(pathDir+"/"+file)
+		return err
+	}
+
+	var setTLSConfig = func() {
+		config.TLSServerKeyFile = path+"/"+tlsKeyFile
+		config.TLSServerCrtFile = path+"/"+tlsCrtFile
 		config.TLS = true
+	}
+
+	if config.GetConfigVal("Bifrostd","tls") == "true"{
+		for {
+			// 相对于 Bifrost 二进制可执行文件的路径
+			path,_ = filepath.Abs(filepath.Dir(os.Args[0]))
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 相对于 Bifost 二进制可执行文件的父目录的路径
+			path = filepath.Dir(path)
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 相对于 Bifrost.ini 配置文件的路径
+			path,_ = filepath.Abs(filepath.Dir(BifrostConfigFile))
+			BifrostConfigFilePath := path
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			// 绝对路径
+			path = ""
+			if checkFileStat(path,tlsKeyFile) == nil &&  checkFileStat(path,tlsCrtFile) == nil {
+				setTLSConfig()
+				break
+			}
+			log.Println("tls_key_file:",BifrostConfigFilePath+"/"+tlsKeyFile," or tls_crt_file: ",BifrostConfigFilePath+"/"+tlsCrtFile, " not exsit")
+			return
+		}
 	}
 }
 
 
 func initLog(){
 	log_dir := config.GetConfigVal("Bifrostd","log_dir")
-	if log_dir == ""{
+	if log_dir == "" {
 		log.Println("no config [ Bifrostd log_dir ] ")
-		log_dir, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-		log_dir += "/logs"
+		log_dir = config.BifrostDir+"/logs"
 		log.Println("log_dir default:",log_dir)
+	}
+	if log_dir[0:1] != "/"{
+		log_dir = config.BifrostDir+log_dir
 	}
 	os.MkdirAll(log_dir,0700)
 	t := time.Now().Format("2006-01-02")
@@ -322,9 +374,9 @@ func initLog(){
 func WritePid(){
 	var err error
 	var pidFileFd *os.File
-	pidFileFd, err = os.OpenFile(*BifrostPid, os.O_CREATE|os.O_RDWR, 0700) //打开文件
+	pidFileFd, err = os.OpenFile(BifrostPid, os.O_CREATE|os.O_RDWR, 0700) //打开文件
 	if err !=nil{
-		log.Println("Open BifrostPid Error; File:",*BifrostPid,"; Error:",err)
+		log.Println("Open BifrostPid Error; File:",BifrostPid,"; Error:",err)
 		os.Exit(1)
 		return
 	}
@@ -341,11 +393,11 @@ func WritePid(){
 			log.Println(cmdString," result:",string(resultBytes)," err:",err,)
 		}
 		if ExitBool {
-			log.Println("Birostd server quit without updating PID file ; File:", *BifrostPid, "; Error:", err2)
+			log.Println("Birostd server quit without updating PID file ; File:", BifrostPid, "; Error:", err2)
 			os.Exit(1)
 		}
 	}
-	os.Truncate(*BifrostPid, 0)
+	os.Truncate(BifrostPid, 0)
 	pidFileFd.Seek(0,0)
 	io.WriteString(pidFileFd,fmt.Sprint(os.Getpid()))
 }
@@ -363,7 +415,7 @@ func CmdShell(cmdString string)([]byte,error){
 }
 
 func doSaveDbInfo(){
-	if os.Getppid() != 1 && *BifrostDaemon == "true"{
+	if os.Getppid() != 1 && BifrostDaemon{
 		return
 	}
 	server.DoSaveSnapshotData()
@@ -383,7 +435,7 @@ func ListenSignal(){
 		}
 		server.StopAllChannel()
 		doSaveDbInfo()
-		os.Remove(*BifrostPid)
+		os.Remove(BifrostPid)
 		server.Close()
 		os.Exit(0)
 	}

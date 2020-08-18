@@ -108,11 +108,11 @@
                                 <td>{{$v.ToServerKey}}</td>
                                 <td>
                                     <p title="最后一个成功处理的位点">BinlogNum: {{$v.BinlogFileNum}}</p>
-                                    <p>Pisition : {{$v.BinlogPosition}}</p>
+                                    <p>Position : {{$v.BinlogPosition}}</p>
                                     <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
                                     <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
-                                    <p title="已解析出来的数据,有多少条消息堆积在队列中待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
-                                    <p title="是否已启用文件队列">FileQueueStatus: {{$v.FileQueueStatus}}
+                                    <p title="内存队列堆积多少条数据待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
+                                    <p title="非极端情况下,不要手工点击启动文件队列，进行启动">FileQueueStatus: {{$v.FileQueueStatus}}
                                         {{if eq $v.FileQueueStatus false}}
                                             <button data-toggle="button" onclick="fileQueueStart(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary fileQueueStartBtn" type="button" >启用</button>
                                         {{else}}

@@ -12,6 +12,7 @@ import (
 
 type ToServer struct {
 	sync.RWMutex
+	Key					*string `json:"-"` // 上一级的key
 	ToServerID	  		int
 	PluginName    		string
 	MustBeSuccess 		bool
@@ -43,70 +44,82 @@ type ToServer struct {
 
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool,int) {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
+	db.Lock()
+	defer db.Unlock()
 	if _, ok := db.tableMap[key]; !ok {
 		return false,0
-	} else {
-		db.Lock()
-		if toserver.ToServerID <= 0{
-			db.tableMap[key].LastToServerID += 1
-			toserver.ToServerID = db.tableMap[key].LastToServerID
-		}
-		if toserver.PluginName == ""{
-			ToServerInfo := pluginStorage.GetToServerInfo(toserver.ToServerKey)
-			if ToServerInfo != nil{
-				toserver.PluginName = ToServerInfo.PluginName
-			}
-		}
-		if toserver.BinlogFileNum == 0{
-			BinlogPostion,err := getBinlogPosition(getDBBinlogkey(db))
-			if err == nil {
-				toserver.BinlogFileNum = BinlogPostion.BinlogFileNum
-				toserver.LastBinlogFileNum = BinlogPostion.BinlogFileNum
-				toserver.BinlogPosition = BinlogPostion.BinlogPosition
-				toserver.LastBinlogPosition = BinlogPostion.BinlogPosition
-			}else{
-				log.Println("AddTableToServer GetDBBinlogPostion:",err)
-			}
-		}
-		toserver.QueueMsgCount = 0
-		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
-		db.Unlock()
-		log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
 	}
+	if toserver.ToServerID <= 0{
+		db.tableMap[key].LastToServerID += 1
+		toserver.ToServerID = db.tableMap[key].LastToServerID
+	}
+	if toserver.PluginName == ""{
+		ToServerInfo := pluginStorage.GetToServerInfo(toserver.ToServerKey)
+		if ToServerInfo != nil{
+			toserver.PluginName = ToServerInfo.PluginName
+		}
+	}
+	if toserver.BinlogFileNum == 0{
+		BinlogPostion,err := getBinlogPosition(getDBBinlogkey(db))
+		if err == nil {
+			toserver.BinlogFileNum = BinlogPostion.BinlogFileNum
+			toserver.LastBinlogFileNum = BinlogPostion.BinlogFileNum
+			toserver.BinlogPosition = BinlogPostion.BinlogPosition
+			toserver.LastBinlogPosition = BinlogPostion.BinlogPosition
+		}else{
+			log.Println("AddTableToServer GetDBBinlogPostion:",err)
+		}
+	}
+	toserver.Key = &key
+	toserver.QueueMsgCount = 0
+	db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
+
+	// 在添加第一个同步的时候，通知 binlog 解析，需要同步这个表
+	if len(db.tableMap[key].ToServerList) == 1 && db.binlogDump != nil{
+		db.binlogDump.AddReplicateDoDb(schemaName,tableName)
+	}
+	log.Println("AddTableToServer",db.Name,schemaName,tableName,toserver)
 	return true,toserver.ToServerID
 }
 
 func (db *db) DelTableToServer(schemaName string, tableName string,ToServerID int) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
+	db.Lock()
+	defer db.Unlock()
 	if _, ok := db.tableMap[key]; !ok {
 		return false
-	} else {
-		var index int = -1
-		db.Lock()
-		for index1,toServerInfo2 := range db.tableMap[key].ToServerList{
-			if toServerInfo2.ToServerID == ToServerID{
-				index = index1
-				break
-			}
-		}
-		if index == -1 {
-			db.Unlock()
-			return true
-		}
-		toServerInfo := db.tableMap[key].ToServerList[index]
-		toServerPositionBinlogKey := getToServerBinlogkey(db,toServerInfo)
-		//toServerInfo.Lock()
-		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
-		if toServerInfo.Status == "running"{
-			toServerInfo.Status = "deling"
-		}else{
-			if toServerInfo.Status != "deling" {
-				delBinlogPosition(toServerPositionBinlogKey)
-			}
-		}
-		log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
-		db.Unlock()
 	}
+	var index int = -1
+	for index1,toServerInfo2 := range db.tableMap[key].ToServerList{
+		if toServerInfo2.ToServerID == ToServerID{
+			index = index1
+			break
+		}
+	}
+	if index == -1 {
+		return true
+	}
+	toServerInfo := db.tableMap[key].ToServerList[index]
+	toServerPositionBinlogKey := getToServerBinlogkey(db,toServerInfo)
+	if index == len(db.tableMap[key].ToServerList) - 1{
+		db.tableMap[key].ToServerList = db.tableMap[key].ToServerList[:len(db.tableMap[key].ToServerList)-1]
+	}else{
+		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
+	}
+
+	if toServerInfo.Status == "running"{
+		toServerInfo.Status = "deling"
+	}else{
+		if toServerInfo.Status != "deling" {
+			delBinlogPosition(toServerPositionBinlogKey)
+		}
+	}
+	// 当前这个表都没有同步配置了，则通知 binlog 解析，不再需要解析这个表的数据了
+	if len(db.tableMap[key].ToServerList) == 0 && db.binlogDump != nil{
+		db.binlogDump.DelReplicateDoDb(schemaName,tableName)
+	}
+	log.Println("DelTableToServer",db.Name,schemaName,tableName,"toServerInfo:",toServerInfo)
+
 	//将文件队列的路径也相应的删除掉
 	filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(ToServerID)))
 	return true
