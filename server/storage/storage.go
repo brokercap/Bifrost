@@ -1,15 +1,14 @@
 package storage
 
 import (
-	"os"
 	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/xdb"
-	"strings"
-	"log"
-	"time"
-	"path/filepath"
 	"io"
 	"io/ioutil"
+	"log"
+	"os"
+	"strings"
+	"time"
 )
 
 var xdbClient *xdb.Client
@@ -35,12 +34,7 @@ func InitStorage(){
 		break
 	default:
 		metaStorageType = "leveldb"
-		dataDir := config.GetConfigVal("Bifrostd","data_dir")
-		if dataDir == ""{
-			execDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-			dataDir = execDir+"/data"
-		}
-		path = dataDir+"/leveldb"
+		path = config.DataDir+"/leveldb"
 		break
 	}
 	xdbClient,xdbErr = xdb.NewClient(metaStorageType,path)

@@ -26,3 +26,6 @@ var PluginCommitTimeOut int = 5
 
 // 在同步出错的情况下,每2次重试之后 间隔多久再重试 ,单位 秒
 var PluginSyncRetrycTime int = 5
+
+// Bifrost 根目录文件夹绝对路径
+var BifrostDir string = ""

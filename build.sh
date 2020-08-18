@@ -1,9 +1,30 @@
 #/bin/bash
 
+if [[ "$1" == "all" ]];then
+  $0 linux
+  $0 windows
+  $0 darwin
+  $0 freebsd
+  exit 0
+fi
+
 echo "假如下载依懒包慢,编译失败,请尝试修改 GOPROXY 代理"
 
 echo "例如：export GOPROXY=https://goproxy.cn"
 echo ""
+
+if type zip >/dev/null 2>&1; then
+  echo ""
+else
+  yum install -y zip
+fi
+
+if type tar >/dev/null 2>&1; then
+  echo ""
+else
+  yum install -y tar
+fi
+
 
 # 插件包的地址,:之后是版本号,假如本地调试的话,写上local,将会成$GOPATH里查找
 PLUGINS=(
@@ -199,8 +220,12 @@ build()
     tagDir=$2
     bifrostVersion=$3
 
+    echo "mkdir " $tagDir/manager
+    echo "mkdir " $tagDir/plugin
+    echo "mkdir " $tagDir/bin
     mkdir -p $tagDir/manager
     mkdir -p $tagDir/plugin
+    mkdir -p $tagDir/bin
 
     echo "$mode build starting "
     CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
@@ -211,14 +236,16 @@ build()
             echo "build error"
             exit 1
         fi
-        mv Bifrost.exe ./$tagDir
+        mv Bifrost.exe ./$tagDir/bin
     else
         if [ ! -f "./Bifrost" ]; then
             echo "build error"
             exit 1
         fi
-        mv ./Bifrost ./$tagDir
-        cp -f ./Bifrost-server ./$tagDir
+        echo "copy ./Bifrost ==> " ./$tagDir/bin
+        echo "copy ./Bifrost-server ==> " ./$tagDir/bin
+        mv ./Bifrost ./$tagDir/bin
+        cp -f ./Bifrost-server ./$tagDir/bin
     fi
 
     echo $bifrostVersion > $tagDir/VERSION
@@ -311,6 +338,16 @@ build()
         fi
     done
 
+    tagDirName="${tagDir##*/}"
+    cd $tagDir && cd ../
+    case "$mode" in
+        'windows')
+        zip -r "$tagDirName".zip ./$tagDirName
+        ;;
+       *)
+        tar -czvf "$tagDirName".tar.gz ./$tagDirName
+        ;;
+    esac
     echo "build over"
 }
 
@@ -370,15 +407,19 @@ if [[ "$1" == "" || (( "$1" == "install" && "$3" == "" )) ]];then
        exit 1
    fi
 fi
-
+ModeName=
 case "$mode" in
     'windows')
+      ModeName="Win"
         ;;
     'linux')
+      ModeName="Linux"
         ;;
     'darwin')
+      ModeName="Darwin"
         ;;
     'freebsd')
+      ModeName="FreeBSD"
         ;;
      *)
         echo "cant't support $mode"
@@ -387,9 +428,9 @@ case "$mode" in
 esac
 
 if [ ! -n "$BifrostVersion" ] ;then
-    tagDir=tags/$mode
+    tagDir=tags/bifrost_$BifrostVersion_$ModeName-64bit-bin
 else
-    tagDir=tags/$BifrostVersion/$mode
+    tagDir=tags/$BifrostVersion/bifrost_"$BifrostVersion"_$ModeName-64bit-bin
 fi
 
 #./build install ./targetdir linux
