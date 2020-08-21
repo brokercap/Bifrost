@@ -26,7 +26,7 @@ func init()  {
 }
 
 func index_controller(w http.ResponseWriter,req *http.Request){
-	Index := TemplateHeader{Title:"Bifrost-Index"}
+	Index := TemplateHeader{Title:"Bifrost-Index",Version:config.VERSION}
 	t, _ := template.ParseFiles(TemplatePath("manager/template/index.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Index)
 }

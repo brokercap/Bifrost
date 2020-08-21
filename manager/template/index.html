@@ -111,12 +111,17 @@
                         <div class="row">
                             <div class="col-xs-6">
                                 <small class="stats-label">Bifrost Version</small>
-                                <h4 id="BifrostVersion"></h4>
+                                <h4  style="position: relative">
+                                    <span id="BifrostVersion"></span>
+                                    <div id="hadNewBifrostVersion" style="position: absolute; color: #1ab394; right: -10px; top: -10px;"></div>
+                                </h4>
+
                             </div>
 
                             <div class="col-xs-6">
                                 <small class="stats-label">Go Version</small>
                                 <h4 id="GoVersion"></h4>
+
                             </div>
                             <div class="col-xs-6">
                                 <small class="stats-label">StartTime</small>
@@ -140,95 +145,115 @@
     </div>
 
     <div class="row">
-        <div class="col-sm-12">
+        <div class="col-sm-8">
+            <div class="row">
 
-                    <div class="col-md-2">
-                        <div class="ibox float-e-margins" id="db_count">
+                <div class="col-md-3">
+                    <div class="ibox float-e-margins" id="db_count">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">个</span>
+                            <h5><a href="/db/list">数据源</a></h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="ibox float-e-margins" id="plugin_count">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">个</span>
+                            <h5><a href="/plugin/list">插件</a></h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="ibox float-e-margins" id="toserver_count">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">个</span>
+                            <h5><a href="/toserver/list">目标库</a></h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="ibox float-e-margins" id="table_count">
+                        <div class="ibox-title">
+                            <span class="label label-success pull-right unit">个</span>
+                            <h5><a href="/toserver/list">数据表</a></h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h1 class="no-margins number">0</h1>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="row">
+
+                    <div class="col-md-3">
+                        <div class="ibox float-e-margins">
                             <div class="ibox-title">
-                                <span class="label label-success pull-right unit">个</span>
-                                <h5><a href="/db/list">数据源</a></h5>
+                                <span class="label label-success pull-right unit"></span>
+                                <h5><a href="#">数据备份</a></h5>
                             </div>
                             <div class="ibox-content">
-                                <h1 class="no-margins number">0</h1>
+                                <a href="/backup/export"><button data-toggle="button" class="btn-sm btn-primary" type="button" >点击备份</button></a>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-md-2">
-                        <div class="ibox float-e-margins" id="plugin_count">
+
+                    <div class="col-md-3">
+                        <div class="ibox float-e-margins">
                             <div class="ibox-title">
-                                <span class="label label-success pull-right unit">个</span>
-                                <h5><a href="/plugin/list">插件</a></h5>
+                                <span class="label label-success pull-right unit"></span>
+                                <h5><a href="#">数据恢复</a></h5>
                             </div>
                             <div class="ibox-content">
-                                <h1 class="no-margins number">0</h1>
+                                    <input class="style_file_content" accept=".json" type="file" id="backup_file" name="backup_file"/>
+                                    <br/>
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" id="backupRecoveryBtn" >上传恢复</button>
                             </div>
                         </div>
                     </div>
 
-            <div class="col-md-2">
-                <div class="ibox float-e-margins" id="toserver_count">
-                    <div class="ibox-title">
-                        <span class="label label-success pull-right unit">个</span>
-                        <h5><a href="/toserver/list">目标库</a></h5>
-                    </div>
-                    <div class="ibox-content">
-                        <h1 class="no-margins number">0</h1>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-2">
-                <div class="ibox float-e-margins" id="table_count">
-                    <div class="ibox-title">
-                        <span class="label label-success pull-right unit">个</span>
-                        <h5><a href="/toserver/list">数据表</a></h5>
-                    </div>
-                    <div class="ibox-content">
-                        <h1 class="no-margins number">0</h1>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <div class="row">
-        <div class="col-sm-12">
-            <div class="col-md-2">
-                <div class="ibox float-e-margins">
-                    <div class="ibox-title">
-                        <span class="label label-success pull-right unit"></span>
-                        <h5><a href="#">数据备份</a></h5>
-                    </div>
-                    <div class="ibox-content">
-                        <a href="/backup/export"><button data-toggle="button" class="btn-sm btn-primary" type="button" >点击备份</button></a>
-                    </div>
-                </div>
-            </div>
-
-
-            <div class="col-md-2">
-                <div class="ibox float-e-margins">
-                    <div class="ibox-title">
-                        <span class="label label-success pull-right unit"></span>
-                        <h5><a href="#">数据恢复</a></h5>
-                    </div>
-                    <div class="ibox-content">
-                            <input class="style_file_content" accept=".json" type="file" id="backup_file" name="backup_file"/>
-                            <br/>
-                            <button data-toggle="button" class="btn-sm btn-primary" type="button" id="backupRecoveryBtn" >上传恢复</button>
-                    </div>
-                </div>
             </div>
         </div>
 
-    </div>
+
+
+        <div class="col-sm-4">
+            <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+
+                <div class="ibox-title">
+                    <span class="label label-success pull-right unit"></span>
+                    <h5><a href="http://www.xbifrost.com" target="_blank">Bifrost动态</a></h5>
+                </div>
+                <div class="ibox-content">
+                <table class="table invoice-table">
+                    <tbody id="BifrostNewsTable">
+
+
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            </div>
+        </div>
+
 </div>
-
 
 
 
@@ -368,6 +393,36 @@
                     $("#bifrost_memory_used .number").text(sizeString);
                 }, 'json');
     }
+
+    function loadNews() {
+        var version = "{{.Version}}";
+        $.ajax({
+            url: "https://www.xbifrost.com/check_news/?version="+version,
+            type: "GET",
+            dataType: "jsonp", //指定服务器返回的数据类型
+            jsonpCallback:"jsonp",
+            success: function (data) {
+               if ( version != data.version ){
+                   $("#hadNewBifrostVersion").text("发现新版本:"+data.version);
+               }
+               var html = "";
+                for(var i = 0,len=data.news.length; i < len; i++) {
+                    html += "<tr>";
+                    html += "<td>";
+                    html += "<div><strong>"+data.news[i]["title"]+"</strong></div>";
+                    if (data.news[i]["sTitle"] != "") {
+                        html += "<small>"+data.news[i]["sTitle"]+"</small>";
+                    }
+                    html += "</td>";
+                    html += "<td>"+data.news[i]["time"]+"</td>";
+                    html += "</tr>";
+                }
+                $("#BifrostNewsTable").html(html);
+            }
+        });
+    }
+
+    loadNews();
 
     var IntervalFun = function () {
         flowObj.getFlowData();
