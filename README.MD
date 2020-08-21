@@ -217,7 +217,7 @@ cluster_name=bifrostTestClusterName
 
 [参考证书生成](http://wiki.xbifrost.com/install/https_certificate/)
 
-### 感谢相关依懒包提供者
+### 感谢相关依赖包提供者
 
 - github.com/gmallard/stompngo
 - github.com/hprose/hprose-golang
