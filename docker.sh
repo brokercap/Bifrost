@@ -94,7 +94,7 @@ function dockerOnlineTestAdmin(){
     else
         v=$1
     fi
-    docker run --name BifrostOnlineTest -d -p21037:21036 -v /data/BifrostOnlineTestData:/linux/data $v
+    docker run --name BifrostOnlineTest -d -p21039:21036 -v /data/BifrostOnlineTestData/data:/linux/data -v /data/BifrostOnlineTestData/logs:/linux/logs -v /data/BifrostOnlineTestData/etc:/linux/etc $v
 }
 
 function dockerCleanRelease(){
