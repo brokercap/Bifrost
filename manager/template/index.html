@@ -233,6 +233,10 @@
 
 
 
+        <style type="text/css">
+            #BifrostNewsTable a{ color: #676a6c}
+            #BifrostNewsTable a:hover{ color: #1ab394}
+        </style>
         <div class="col-sm-4">
             <div class="col-sm-12">
             <div class="ibox float-e-margins">
@@ -242,6 +246,7 @@
                     <h5><a href="http://www.xbifrost.com" target="_blank">Bifrost动态</a></h5>
                 </div>
                 <div class="ibox-content">
+
                 <table class="table invoice-table">
                     <tbody id="BifrostNewsTable">
 
@@ -409,7 +414,7 @@
                 for(var i = 0,len=data.news.length; i < len; i++) {
                     html += "<tr>";
                     html += "<td>";
-                    html += "<div><strong>"+data.news[i]["title"]+"</strong></div>";
+                    html += "<div><a href='"+data.news[i]["href"]+"' target='_blank'><strong>"+data.news[i]["title"]+"</strong></a></div>";
                     if (data.news[i]["sTitle"] != "") {
                         html += "<small>"+data.news[i]["sTitle"]+"</small>";
                     }
