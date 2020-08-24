@@ -181,7 +181,7 @@
 
 
             $.post(url,
-                {dbname:dbName,schema_name:schemaName,table_name:tableName,property:JSON.stringify(Property),ToserverIds:JSON.stringify([toServerId])},
+                {dbname:dbName,schema_name:schemaName,table_name:tableName,table_names:tableName,property:JSON.stringify(Property),ToserverIds:JSON.stringify([toServerId])},
                 function(data,status){
                     if( status !== 'success' ){
                         alert("reqeust error, reqeust " + "\ttable name:" + tableName + "\tid:"+ id + "\tstatus : "+ status );

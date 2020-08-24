@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const VERSION = "v1.2.1"
+const VERSION = "v1.2.2"
 const BIFROST_VERION = "v1.2.2"
 
 func init() {
