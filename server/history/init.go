@@ -288,10 +288,19 @@ func (This *History) Start() error {
 				go This.threadStart(i-1, &selectThreadWg)
 			}
 			selectThreadWg.Wait()
+			for _,v := range This.ThreadPool{
+				if v.Error != nil{
+					This.Status = HISTORY_STATUS_HALFWAY
+				}
+			}
+			if This.Status == HISTORY_STATUS_HALFWAY {
+				break
+			}
 			This.TableCountSuccess++
 			if This.TableCountSuccess >= This.TableCount {
 				break
 			}
+			This.Fields = make([]TableStruct,0)
 		}
 	}()
 
@@ -310,6 +319,9 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 		return
 	}
 	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.CurrentTableName)
+	if This.TableInfo.TABLE_ROWS == 0 {
+		return
+	}
 	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.CurrentTableName)
 	This.TablePriArr = make([]*string,0)
 	for _,v := range This.Fields{
