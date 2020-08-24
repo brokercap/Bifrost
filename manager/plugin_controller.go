@@ -14,47 +14,48 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 package manager
+
 import (
-	"net/http"
-	"github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/plugin"
+	"github.com/brokercap/Bifrost/plugin/driver"
 	"html/template"
+	"net/http"
 )
 
-func init()  {
-	addRoute("/plugin/list",plugin_list_controller)
-	addRoute("/plugin/reload",plugin_reload_controller)
+func init() {
+	addRoute("/plugin/list", plugin_list_controller)
+	addRoute("/plugin/reload", plugin_reload_controller)
 }
 
-func plugin_list_controller(w http.ResponseWriter,req *http.Request){
+func plugin_list_controller(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	type PluginListInfo struct {
 		TemplateHeader
 		PluginAPIVersion string
-		Drivers map[string]driver.DriverStructure
+		Drivers          map[string]driver.DriverStructure
 	}
 	var data PluginListInfo
 	data = PluginListInfo{
-		PluginAPIVersion:driver.GetApiVersion(),
-		Drivers:driver.Drivers(),
+		PluginAPIVersion: driver.GetApiVersion(),
+		Drivers:          driver.Drivers(),
 	}
 
 	//因为plugin 加载so 插件，有可能会异常，所以这里需要你把异常的插件列表也加载进来并进行显示出来
 	errorPluginMap := plugin.GetErrorPluginList()
-	for name,v := range errorPluginMap{
+	for name, v := range errorPluginMap {
 		data.Drivers[name] = v
 	}
 
 	data.Title = "Plugin List - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/plugin.list.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t, _ := template.ParseFiles(TemplatePath("/manager/template/plugin.list.html"), TemplatePath("/manager/template/header.html"), TemplatePath("/manager/template/footer.html"))
 	t.Execute(w, data)
 }
 
-func plugin_reload_controller(w http.ResponseWriter,req *http.Request){
+func plugin_reload_controller(w http.ResponseWriter, req *http.Request) {
 	err := plugin.LoadPlugin()
-	if err != nil{
-		w.Write(returnResult(false,err.Error()))
-	}else{
-		w.Write(returnResult(true,"success"))
+	if err != nil {
+		w.Write(returnResult(false, err.Error()))
+	} else {
+		w.Write(returnResult(true, "success"))
 	}
 }

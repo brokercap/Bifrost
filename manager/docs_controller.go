@@ -16,28 +16,28 @@ limitations under the License.
 package manager
 
 import (
+	"github.com/brokercap/Bifrost/plugin/driver"
 	"net/http"
 	"text/template"
-	"github.com/brokercap/Bifrost/plugin/driver"
 )
 
-func init(){
-	addRoute("/docs",docs_controller)
+func init() {
+	addRoute("/docs", docs_controller)
 }
 
-func docs_controller(w http.ResponseWriter,req *http.Request){
+func docs_controller(w http.ResponseWriter, req *http.Request) {
 	type docs struct {
 		TemplateHeader
 		PluginKey string
-		Drivers map[string]driver.DriverStructure
+		Drivers   map[string]driver.DriverStructure
 	}
 	req.ParseForm()
 	PluginKey := req.Form.Get("plugin")
 	data := docs{
-		PluginKey:PluginKey,
-		Drivers:driver.Drivers(),
+		PluginKey: PluginKey,
+		Drivers:   driver.Drivers(),
 	}
-	data.Title =  "docs - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/docs.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	data.Title = "docs - Bifrost"
+	t, _ := template.ParseFiles(TemplatePath("/manager/template/docs.html"), TemplatePath("/manager/template/header.html"), TemplatePath("/manager/template/footer.html"))
 	t.Execute(w, data)
 }

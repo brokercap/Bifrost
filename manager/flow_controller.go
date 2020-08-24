@@ -16,25 +16,25 @@ limitations under the License.
 package manager
 
 import (
-	"net/http"
-	"github.com/brokercap/Bifrost/server/count"
-	"fmt"
 	"encoding/json"
-	"html/template"
+	"fmt"
 	"github.com/brokercap/Bifrost/server"
+	"github.com/brokercap/Bifrost/server/count"
+	"html/template"
+	"net/http"
 )
 
-func init(){
-	addRoute("/flow/get",get_flow_controller)
-	addRoute("/flow/index",index_flow_controller)
+func init() {
+	addRoute("/flow/get", get_flow_controller)
+	addRoute("/flow/index", index_flow_controller)
 }
 
-func index_flow_controller(w http.ResponseWriter,req *http.Request){
+func index_flow_controller(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
-	type flowIndex struct{
+	type flowIndex struct {
 		TemplateHeader
-		DbName string
-		Schema string
+		DbName    string
+		Schema    string
 		TableName string
 		ChannelId string
 	}
@@ -44,68 +44,68 @@ func index_flow_controller(w http.ResponseWriter,req *http.Request){
 	channelId := req.Form.Get("channelid")
 
 	FlowIndex := flowIndex{
-		DbName:dbname,
-		Schema:schema,
-		TableName:tablename,
-		ChannelId:channelId,
-		}
+		DbName:    dbname,
+		Schema:    schema,
+		TableName: tablename,
+		ChannelId: channelId,
+	}
 	FlowIndex.Title = "Flow-Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/flow.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/footer.html"))
+	t, _ := template.ParseFiles(TemplatePath("/manager/template/flow.html"), TemplatePath("/manager/template/header.html"), TemplatePath("/manager/template/footer.html"))
 	t.Execute(w, FlowIndex)
 
 }
 
-func get_flow_controller(w http.ResponseWriter,req *http.Request){
+func get_flow_controller(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema := req.Form.Get("schema")
 	tablename := req.Form.Get("table_name")
 	channelId := req.Form.Get("channelid")
 	FlowType := req.Form.Get("type")
-	if FlowType == ""{
+	if FlowType == "" {
 		FlowType = "minute"
 	}
 	schema0 := tansferSchemaName(schema)
 	tablename0 := tansferTableName(tablename)
-	dbANdTableName := server.GetSchemaAndTableJoin(schema0,tablename0)
+	dbANdTableName := server.GetSchemaAndTableJoin(schema0, tablename0)
 	var data []count.CountContent
 	switch FlowType {
 	case "minute":
-		data,_=getFlowCount(&dbname,&dbANdTableName,&channelId,"Minute")
+		data, _ = getFlowCount(&dbname, &dbANdTableName, &channelId, "Minute")
 		break
 	case "tenminute":
-		data,_=getFlowCount(&dbname,&dbANdTableName,&channelId,"TenMinute")
+		data, _ = getFlowCount(&dbname, &dbANdTableName, &channelId, "TenMinute")
 		break
 	case "hour":
-		data,_=getFlowCount(&dbname,&dbANdTableName,&channelId,"Hour")
+		data, _ = getFlowCount(&dbname, &dbANdTableName, &channelId, "Hour")
 		break
 	case "eighthour":
-		data,_=getFlowCount(&dbname,&dbANdTableName,&channelId,"EightHour")
+		data, _ = getFlowCount(&dbname, &dbANdTableName, &channelId, "EightHour")
 		break
 	case "day":
-		data,_=getFlowCount(&dbname,&dbANdTableName,&channelId,"Day")
+		data, _ = getFlowCount(&dbname, &dbANdTableName, &channelId, "Day")
 		break
 	default:
-		data = make([]count.CountContent,0)
+		data = make([]count.CountContent, 0)
 		break
 	}
-	b,_:=json.Marshal(data)
+	b, _ := json.Marshal(data)
 	w.Write(b)
 }
 
-func getFlowCount(dbname *string,dbANdTableName *string,channelId *string,FlowType string) ([]count.CountContent,error){
-	if *dbname == ""{
-		return count.GetFlowAll(FlowType),nil
+func getFlowCount(dbname *string, dbANdTableName *string, channelId *string, FlowType string) ([]count.CountContent, error) {
+	if *dbname == "" {
+		return count.GetFlowAll(FlowType), nil
 	}
-	if *dbANdTableName != server.GetSchemaAndTableJoin("",""){
-		if *dbname == ""{
-			return make([]count.CountContent,0),fmt.Errorf("param error")
+	if *dbANdTableName != server.GetSchemaAndTableJoin("", "") {
+		if *dbname == "" {
+			return make([]count.CountContent, 0), fmt.Errorf("param error")
 		}
-		return count.GetFlowByTable(*dbname,*dbANdTableName,FlowType),nil
+		return count.GetFlowByTable(*dbname, *dbANdTableName, FlowType), nil
 	}
 
-	if *channelId != ""{
-		return count.GetFlowByChannel(*dbname,*channelId,FlowType),nil
+	if *channelId != "" {
+		return count.GetFlowByChannel(*dbname, *channelId, FlowType), nil
 	}
-	return count.GetFlowByDb(*dbname,FlowType),nil
+	return count.GetFlowByDb(*dbname, FlowType), nil
 }

@@ -12,11 +12,11 @@
                 </div>
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
-                    {{range $i, $v := .DataBaseList}}
-                        <a class="list-group-item" id="Schema-{{$v}}">
-                            <h3 class="list-group-item-heading">{{$v}}</h3>
-                        </a>
-                    {{end}}
+                        {{range $i, $v := .DataBaseList}}
+                            <a class="list-group-item" id="Schema-{{$v}}">
+                                <h3 class="list-group-item-heading">{{$v}}</h3>
+                            </a>
+                        {{end}}
                     </div>
 
                 </div>
@@ -107,9 +107,9 @@
                                 <label class="col-sm-3 control-label">ToServerKey：</label>
                                 <div class="col-sm-9" style="position: relative">
                                     <select class="form-control" name="addToServerKey" id="addToServerKey">
-                                    {{range $k,$v := .ToServerList}}
-                                        <option value="{{$k}}" pluginName="{{$v.PluginName}}" pluginVersion="{{$v.PluginVersion}}">{{$v.PluginName}} -- {{$k}}</option>
-                                    {{end}}
+                                        {{range $k,$v := .ToServerList}}
+                                            <option value="{{$k}}" pluginName="{{$v.PluginName}}" pluginVersion="{{$v.PluginVersion}}">{{$v.PluginName}} -- {{$k}}</option>
+                                        {{end}}
                                     </select>
                                     <span class="help-block m-b-none"></span>
                                     <div style="position: absolute; top: 0px; right: -30px;">
@@ -142,9 +142,9 @@
                                     </select>
                                     <p class="help-block m-b-none">True: 将过滤sql 事件，不提供给插件层处理，False: 由插件层自行决定怎么处理</p>
                                 </div>
-                                
+
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">FilterUpdate：</label>
                                 <div class="col-sm-9">
@@ -154,7 +154,7 @@
                                     </select>
                                     <p class="help-block m-b-none">True: update事件，所选字段内容都没有变更情况下，不进行推送，False: 不管字段有没有更新，全部都会推送</p>
                                 </div>
-                                
+
                             </div>
 
                             <div class="form-group">
@@ -242,9 +242,9 @@
                             <td align="right" height="50">ChannelKey :  </td>
                             <td style="text-indent:10px">
                                 <select class="form-control" name="" id="AddTableChannel" >
-                                {{range $k,$v := .ChannelList}}
-                                    <option value="{{$k}}">{{$v.Name}}</option>
-                                {{end}}
+                                    {{range $k,$v := .ChannelList}}
+                                        <option value="{{$k}}">{{$v.Name}}</option>
+                                    {{end}}
                                 </select>
                             </td>
                         </tr>
@@ -371,19 +371,19 @@
             $("#addTableName").val(table_names);
             $("#addTableNameOld").val(table_names);
             $.get(url,
-                    {dbname:dbname},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                        var html = '';
-                        $.each(data,function(index,v){
-                            html += '<option value="'+index+'">'+v.Name+'</option>';
-                        });
-                        $("#AddTableChannel").html(html);
-                    },
-                    'json');
+                {dbname:dbname},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    var html = '';
+                    $.each(data,function(index,v){
+                        html += '<option value="'+index+'">'+v.Name+'</option>';
+                    });
+                    $("#AddTableChannel").html(html);
+                },
+                'json');
             if ( table_names.charAt(table_names.length - 1 ) == ";" || table_names == "AllTables"){
                 $("#AddTableIsFuzzyMatching").val("0");
                 $("#AddTableIsFuzzyMatching").attr("disabled","disabled");
@@ -404,7 +404,7 @@
                 $("#batchDelOrAddTableResultDiv").append("<p>"+content+"</p>");
             }
             if(type == -2){
-               // $("#batchDelOrAddTableResultDiv").hide();
+                // $("#batchDelOrAddTableResultDiv").hide();
             }
         }
 
@@ -421,15 +421,15 @@
         );
 
         $("#batchTableDeleteBtn").click(
-                function () {
-                    var table_names = "";
-                    $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
-                        if($(this).parent().parent().find(".button button").text()=="DEL"){
-                            table_names += $(this).val()+";"
-                        }
-                    });
-                    DelTable(table_names);
-                }
+            function () {
+                var table_names = "";
+                $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                    if($(this).parent().parent().find(".button button").text()=="DEL"){
+                        table_names += $(this).val()+";"
+                    }
+                });
+                DelTable(table_names);
+            }
         );
 
         $("#AddTableIsFuzzyMatching").change(
@@ -594,47 +594,47 @@
             ChangeTableFlowBtnHref(schema_name,table_name);
             var url = "/table/toserverlist";
             $.post(url,
-                    {dbname:dbname,schema_name:schema_name,table_name:table_name},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
+                {dbname:dbname,schema_name:schema_name,table_name:table_name},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    var e = [];
+                    $.each(data,function(index,v){
+                        var fields = '';
+                        if (v.FieldList != null) {
+                            fields = v.FieldList.toString();
                         }
-                        var e = [];
-                        $.each(data,function(index,v){
-                            var fields = '';
-                            if (v.FieldList != null) {
-                                fields = v.FieldList.toString();
-                            }
-                            var PluginHtml = "";
-                            for(var key in v.PluginParam){
-								if (typeof v.PluginParam[key] == "object"){
-									PluginHtml += "<p>"+key+":"+ JSON.stringify(v.PluginParam[key]) +"</p>";
-								}else{
-                                	PluginHtml += "<p>"+key+":"+v.PluginParam[key]+"</p>";
-								}
-                            }
-                            var ErrorHtml = "";
-                            if (v.Error != "" && v.Error != null){
-                                ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
-                            }
-                            var op = "";
-                            if(v.Status == "running" || v.Status == ""){
-                                op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                        var PluginHtml = "";
+                        for(var key in v.PluginParam){
+                            if (typeof v.PluginParam[key] == "object"){
+                                PluginHtml += "<p>"+key+":"+ JSON.stringify(v.PluginParam[key]) +"</p>";
                             }else{
-                                op = v.Status;
+                                PluginHtml += "<p>"+key+":"+v.PluginParam[key]+"</p>";
                             }
-                            var others = "";
+                        }
+                        var ErrorHtml = "";
+                        if (v.Error != "" && v.Error != null){
+                            ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
+                        }
+                        var op = "";
+                        if(v.Status == "running" || v.Status == ""){
+                            op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                        }else{
+                            op = v.Status;
+                        }
+                        var others = "";
 
-                            others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
-                            others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
-                            others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
-                            others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
-                            others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
-                            if ("QueueMsgCount" in v) {
-                                others += "<p title=\"内存队列堆积多少条数据待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
-                            }
-                            e.push({
+                        others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
+                        others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
+                        others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
+                        others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+                        others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
+                        if ("QueueMsgCount" in v) {
+                            others += "<p title=\"内存队列堆积多少条数据待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
+                        }
+                        e.push({
                                 sliceid:index+"/"+v.ToServerID,
                                 PluginName:v.PluginName,
                                 ToServerKey:v.ToServerKey,
@@ -644,34 +644,34 @@
                                 Error:ErrorHtml,
                                 op:op,
                             }
-                            );
-                        });
-                        $("#tableToServerListContair").attr("dbname",dbname);
-                        $("#tableToServerListContair").attr("schema",schema_name);
-                        $("#tableToServerListContair").attr("table_name",table_name);
-                        $("#tableToServerListContair").bootstrapTable("load",e);
+                        );
+                    });
+                    $("#tableToServerListContair").attr("dbname",dbname);
+                    $("#tableToServerListContair").attr("schema",schema_name);
+                    $("#tableToServerListContair").attr("table_name",table_name);
+                    $("#tableToServerListContair").bootstrapTable("load",e);
 
-                        var table_name_alias = "";
-                        if ( table_name.indexOf("*") != -1 ){
-                            var reg = new RegExp(table_name);
-                            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
-                                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
-                                    var regResult = $(this).val().match(reg);
-                                    if ( regResult != null && regResult != undefined){
-                                        table_name_alias = $(this).val();
-                                    }
+                    var table_name_alias = "";
+                    if ( table_name.indexOf("*") != -1 ){
+                        var reg = new RegExp(table_name);
+                        $('#TableListContair').find(":input[name=table_check_name]").each(function(){
+                            if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
+                                var regResult = $(this).val().match(reg);
+                                if ( regResult != null && regResult != undefined){
+                                    table_name_alias = $(this).val();
                                 }
-                            });
-                            if( table_name_alias == "" ){
-                                alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！")
-                                return false;
                             }
-                        }else{
-                            table_name_alias = table_name
+                        });
+                        if( table_name_alias == "" ){
+                            alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！")
+                            return false;
                         }
-                        GetTableFields(schema_name,table_name_alias);
-                    },
-                    'json');
+                    }else{
+                        table_name_alias = table_name
+                    }
+                    GetTableFields(schema_name,table_name_alias);
+                },
+                'json');
         }
 
         function DelTableToServer(obj,ToServerID){
@@ -684,20 +684,20 @@
             var table_name = $("#tableToServerListContair").attr("table_name");
             var url = "/table/deltoserver"
             $.post(url,
-                    {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                        if (!data.status){
-                            alert(data.msg);
-                            return;
-                        }
-                        $(obj).parent().parent('tr').remove();
-                        GetTableToServerList(schema_name,table_name);
-                    },
-                    'json');
+                {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    if (!data.status){
+                        alert(data.msg);
+                        return;
+                    }
+                    $(obj).parent().parent('tr').remove();
+                    GetTableToServerList(schema_name,table_name);
+                },
+                'json');
         }
 
         function GetTableFields(schema_name,table_name){
@@ -705,16 +705,16 @@
             if (!TableMap.has(key) || TableMap.get(key) == undefined){
                 var url = '/db/tablefields';
                 $.post(url,
-                        {dbname:dbname,schema_name:schema_name,table_name:table_name},
-                        function(data,status){
-                            if( status != 'success' ){
-                                alert("reqeust error, reqeust status : "+status);
-                                return false;
-                            }
-                            TableMap.set(key,data);
-                            showFieldsList(key);
-                        },
-                        'json');
+                    {dbname:dbname,schema_name:schema_name,table_name:table_name},
+                    function(data,status){
+                        if( status != 'success' ){
+                            alert("reqeust error, reqeust status : "+status);
+                            return false;
+                        }
+                        TableMap.set(key,data);
+                        showFieldsList(key);
+                    },
+                    'json');
             }else{
                 showFieldsList(key);
             }
@@ -812,9 +812,9 @@
             });
 
             $("#DatabaseListContair a").click(
-                    function(){
-                        showSchemaTableList($(this).attr("id"));
-                    }
+                function(){
+                    showSchemaTableList($(this).attr("id"));
+                }
             );
             var doChangeToServer = function(){
                 if($("#addToServerKey").val()==null){
@@ -848,168 +848,168 @@
             });
 
             $("#addToServerBtn").click(
-                    function(){
-                        if($("#addToServerKey").val()==null){
-                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
-                                window.location.href = "/toserver/list";
-                                return false;
-                            }else{
-                                return false;
-                            }
-                        }
-                        var p = doGetPluginParam(getPluginFunctionParam());;
-                        if (getTableName() == "AllTables"){
-                            if(  p.batchSupport != true){
-                                alert("当前插件配置不支持 批量 设置!")
-                                return false;
-                            }
-                        }
-                        if (p.status == false){
-                            alert(p.msg);
+                function(){
+                    if($("#addToServerKey").val()==null){
+                        if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                            window.location.href = "/toserver/list";
+                            return false;
+                        }else{
                             return false;
                         }
-                        var dbname = $("#tableToServerListContair").attr("dbname");
-                        var schema_name = $("#tableToServerListContair").attr("schema");
-                        var table_name = $("#tableToServerListContair").attr("table_name");
-                        if (table_name == ""){
-                            alert("selected table please!");
-                            return false;
-                        }
-                        var MustBeSuccess = $("#MustBeSuccess").val();
-                        var addToServerKey = $("#addToServerKey").val();
-                        var fieldlist = [];
-                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
-                            fieldlist.push($(this).val());
-                        });
-						var FilterQuery = $("#FilterQuery").val();
-						var FilterUpdate = $("#FilterUpdate").val();
-                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
-                        var data = {
-                            dbname:dbname,
-                            schema_name:schema_name,
-                            table_name:table_name,
-                            toserver_key:addToServerKey,
-                            plugin_name:pluginName,
-                            mustbe:MustBeSuccess,
-							FilterQuery:FilterQuery,
-							FilterUpdate:FilterUpdate,
-                            fieldlist:fieldlist.toString(),
-                            param:JSON.stringify(p.data),
-                        }
-                        $.post(url,
-                                data,
-                                function(data,status){
-                                    if( status != 'success' ){
-                                        alert("reqeust error, reqeust status : "+status);
-                                        return false;
-                                    }
-                                    if(!data.status){
-                                        alert(data.msg);
-                                        return false;
-                                    }
-                                    GetTableToServerList(schema_name,table_name);
-									doChangeToServer();
-                                },
-                                'json');
                     }
-            );
-
-
-            $("#batchAddToServerBtn").click(
-                    function(){
-                        if($("#addToServerKey").val()==null){
-                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
-                                window.location.href = "/toserver/list";
-                                return;
-                            }else{
-                                return;
-                            }
-                        }
-                        var obj = $(this);
-                        if ($(obj).text() == "正在提交"){
-                            return false;
-                        }
-                        var p = doGetPluginParam(getPluginFunctionParam());
+                    var p = doGetPluginParam(getPluginFunctionParam());;
+                    if (getTableName() == "AllTables"){
                         if(  p.batchSupport != true){
                             alert("当前插件配置不支持 批量 设置!")
                             return false;
                         }
-                        if (p.status == false){
-                            alert(p.msg);
-                            return false;
-                        }
-                        var dbname = $("#tableToServerListContair").attr("dbname");
-                        var schema_name = $("#tableToServerListContair").attr("schema");
-                        var tableArr = [];
+                    }
+                    if (p.status == false){
+                        alert(p.msg);
+                        return false;
+                    }
+                    var dbname = $("#tableToServerListContair").attr("dbname");
+                    var schema_name = $("#tableToServerListContair").attr("schema");
+                    var table_name = $("#tableToServerListContair").attr("table_name");
+                    if (table_name == ""){
+                        alert("selected table please!");
+                        return false;
+                    }
+                    var MustBeSuccess = $("#MustBeSuccess").val();
+                    var addToServerKey = $("#addToServerKey").val();
+                    var fieldlist = [];
+                    $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                        fieldlist.push($(this).val());
+                    });
+                    var FilterQuery = $("#FilterQuery").val();
+                    var FilterUpdate = $("#FilterUpdate").val();
+                    var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                    var url = '/table/addtoserver';
+                    var data = {
+                        dbname:dbname,
+                        schema_name:schema_name,
+                        table_name:table_name,
+                        toserver_key:addToServerKey,
+                        plugin_name:pluginName,
+                        mustbe:MustBeSuccess,
+                        FilterQuery:FilterQuery,
+                        FilterUpdate:FilterUpdate,
+                        fieldlist:fieldlist.toString(),
+                        param:JSON.stringify(p.data),
+                    }
+                    $.post(url,
+                        data,
+                        function(data,status){
+                            if( status != 'success' ){
+                                alert("reqeust error, reqeust status : "+status);
+                                return false;
+                            }
+                            if(!data.status){
+                                alert(data.msg);
+                                return false;
+                            }
+                            GetTableToServerList(schema_name,table_name);
+                            doChangeToServer();
+                        },
+                        'json');
+                }
+            );
 
-                        $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
-                            if($(this).parent().parent().find(".button button").text()=="DEL"){
-                                tableArr.push($(this).val());
+
+            $("#batchAddToServerBtn").click(
+                function(){
+                    if($("#addToServerKey").val()==null){
+                        if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                            window.location.href = "/toserver/list";
+                            return;
+                        }else{
+                            return;
+                        }
+                    }
+                    var obj = $(this);
+                    if ($(obj).text() == "正在提交"){
+                        return false;
+                    }
+                    var p = doGetPluginParam(getPluginFunctionParam());
+                    if(  p.batchSupport != true){
+                        alert("当前插件配置不支持 批量 设置!")
+                        return false;
+                    }
+                    if (p.status == false){
+                        alert(p.msg);
+                        return false;
+                    }
+                    var dbname = $("#tableToServerListContair").attr("dbname");
+                    var schema_name = $("#tableToServerListContair").attr("schema");
+                    var tableArr = [];
+
+                    $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                        if($(this).parent().parent().find(".button button").text()=="DEL"){
+                            tableArr.push($(this).val());
+                        }
+                    });
+
+                    if (tableArr.length == 0){
+                        alert("请先选择 需要同步的 表");
+                        return false;
+                    }
+                    var fieldlist = [];
+                    $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                        fieldlist.push($(this).val());
+                    });
+                    if (fieldlist.length > 0){
+                        alert("批量提交不能选择字段");
+                        return false;
+                    }
+                    var MustBeSuccess = $("#MustBeSuccess").val();
+                    var addToServerKey = $("#addToServerKey").val();
+
+                    var FilterQuery = $("#FilterQuery").val();
+                    var FilterUpdate = $("#FilterUpdate").val();
+                    var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                    var url = '/table/addtoserver';
+                    var data = {
+                        dbname: dbname,
+                        schema_name: schema_name,
+                        table_name: "",
+                        toserver_key: addToServerKey,
+                        plugin_name: pluginName,
+                        mustbe: MustBeSuccess,
+                        FilterQuery: FilterQuery,
+                        FilterUpdate: FilterUpdate,
+                        fieldlist: fieldlist.toString(),
+                        param: JSON.stringify(p.data),
+                    }
+                    $(obj).text("正在提交");
+                    $("#batchAddToServerResultDiv").html("");
+                    var resultFun = function (content) {
+                        $("#batchAddToServerResultDiv").append("<p>"+content+"</p>");
+                    }
+                    resultFun("开始提交");
+                    for(var i in tableArr) {
+                        data.table_name = tableArr[i];
+                        $.ajax({
+                            type : "post",
+                            url : url,
+                            data:data,
+                            async : false,  //同步
+                            dataType:"json",
+                            success : function(r,status){
+                                if( status != 'success' ){
+                                    resultFun(tableArr[i]+ " reqeust error, reqeust status : "+status);
+                                    return false;
+                                }
+                                if(r.status){
+                                    resultFun(tableArr[i]+" success");
+                                }else{
+                                    resultFun(tableArr[i]+ " "+ r.msg);
+                                }
                             }
                         });
-
-                        if (tableArr.length == 0){
-                            alert("请先选择 需要同步的 表");
-                            return false;
-                        }
-                        var fieldlist = [];
-                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
-                            fieldlist.push($(this).val());
-                        });
-                        if (fieldlist.length > 0){
-                            alert("批量提交不能选择字段");
-                            return false;
-                        }
-                        var MustBeSuccess = $("#MustBeSuccess").val();
-                        var addToServerKey = $("#addToServerKey").val();
-
-                        var FilterQuery = $("#FilterQuery").val();
-                        var FilterUpdate = $("#FilterUpdate").val();
-                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
-                        var data = {
-                            dbname: dbname,
-                            schema_name: schema_name,
-                            table_name: "",
-                            toserver_key: addToServerKey,
-                            plugin_name: pluginName,
-                            mustbe: MustBeSuccess,
-                            FilterQuery: FilterQuery,
-                            FilterUpdate: FilterUpdate,
-                            fieldlist: fieldlist.toString(),
-                            param: JSON.stringify(p.data),
-                        }
-                        $(obj).text("正在提交");
-                        $("#batchAddToServerResultDiv").html("");
-                        var resultFun = function (content) {
-                            $("#batchAddToServerResultDiv").append("<p>"+content+"</p>");
-                        }
-                        resultFun("开始提交");
-                        for(var i in tableArr) {
-                            data.table_name = tableArr[i];
-                            $.ajax({
-                                type : "post",
-                                url : url,
-                                data:data,
-                                async : false,  //同步
-                                dataType:"json",
-                                success : function(r,status){
-                                    if( status != 'success' ){
-                                        resultFun(tableArr[i]+ " reqeust error, reqeust status : "+status);
-                                        return false;
-                                    }
-                                    if(r.status){
-                                        resultFun(tableArr[i]+" success");
-                                    }else{
-                                        resultFun(tableArr[i]+ " "+ r.msg);
-                                    }
-                                }
-                            });
-                        }
-                        resultFun("执行完成");
-                        $(obj).text("批量提交");
                     }
+                    resultFun("执行完成");
+                    $(obj).text("批量提交");
+                }
             );
 
         });
@@ -1023,20 +1023,20 @@
             var index = index0.split("/")[0];
             var url = "/table/toserver/deal";
             $.post(
-                    url,
-                    {dbname: dbname,schema_name:schema_name,table_name:table_name,to_server_id:ToServerID,index:index},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                        if(!data.status){
-                            alert(data.msg);
-                            return false;
-                        }
-                        $(thisButton).parent().parent().html("");
-                    },
-                    'json'
+                url,
+                {dbname: dbname,schema_name:schema_name,table_name:table_name,to_server_id:ToServerID,index:index},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    if(!data.status){
+                        alert(data.msg);
+                        return false;
+                    }
+                    $(thisButton).parent().parent().html("");
+                },
+                'json'
             );
         }
 
@@ -1082,6 +1082,6 @@
 
     </script>
 
-{{template "db.detail.history.add" .}}
+    {{template "db.detail.history.add" .}}
 
-{{template "footer" .}}
+    {{template "footer" .}}

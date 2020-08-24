@@ -28,4 +28,4 @@ var PluginCommitTimeOut int = 5
 var PluginSyncRetrycTime int = 5
 
 // Bifrost 根目录文件夹绝对路径
-var BifrostDir string = ""
+var BifrostDir string = "."
