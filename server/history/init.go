@@ -300,6 +300,7 @@ func (This *History) Start() error {
 			if This.TableCountSuccess >= This.TableCount {
 				break
 			}
+			This.Fields = make([]TableStruct,0)
 		}
 	}()
 
