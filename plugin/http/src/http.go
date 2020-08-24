@@ -12,8 +12,8 @@ import (
 )
 
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.3.2"
+const BIFROST_VERION = "v1.3.2"
 
 func init(){
 	pluginDriver.Register("http",&MyConn{},VERSION,BIFROST_VERION)
@@ -43,7 +43,7 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 	if err2 != nil {
 		return err2
 	}
-	if resp.StatusCode >= 200 || resp.StatusCode<300{
+	if resp.StatusCode >= 200 && resp.StatusCode<300{
 		resp.Body.Close()
 		return nil
 	}
@@ -126,7 +126,7 @@ func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,d
 		resp.Body.Close()
 		return err2
 	}
-	if resp.StatusCode >= 200 || resp.StatusCode<300{
+	if resp.StatusCode >= 200 && resp.StatusCode<300{
 		resp.Body.Close()
 		return nil
 	}

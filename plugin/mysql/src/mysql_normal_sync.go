@@ -21,7 +21,6 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 	opMap := make(map[interface{}]*opLog, 0)
 
 	//从最后一条数据开始遍历
-	var toV dbDriver.Value
 	var stmt dbDriver.Stmt
 	n  := len(list)
 	for i := n - 1; i >= 0; i-- {
@@ -30,6 +29,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 		case "update":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
 			for i,v:=range This.p.Field{
+				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 
 				if This.err != nil{
@@ -57,6 +57,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 		case "delete":
 			where := make([]dbDriver.Value,0)
 			for _,v := range This.p.PriKey{
+				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				where = append(where,toV)
 			}
@@ -77,6 +78,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (e error)  {
 			val := make([]dbDriver.Value,0)
 			i:=0
 			for _,v:=range This.p.Field{
+				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
 					return This.err
