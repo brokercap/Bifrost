@@ -68,6 +68,7 @@
                                 <th>DbName</th>
                                 <th>SchemaName</th>
                                 <th>TableName</th>
+                                <th>Other</th>
                                 <th>Property</th>
                                 <th>NowStartI</th>
                                 <th>SelectThreadPool</th>
@@ -86,14 +87,33 @@
                                 <td>{{$v.ID}}</td>
                                 <td>{{$v.DbName}}</td>
                                 <td>{{$v.SchemaName}}</td>
-                                <td>{{$v.TableName}}</td>
+                                <td>
+                                <p>{{$v.TableName}}</p>
+                                    {{if ne $v.TableName $v.TableNames}}
+                                        {{range $k,$tableName := $v.TableNameArr}}
+                                            {{if eq $k $v.TableCountSuccess }}
+                                            <p style="color: #F00; font-weight: bold" title="current table select">{{$tableName}}</p>
+                                            {{end}}
+                                            {{if lt $k $v.TableCountSuccess }}
+                                                <p style="color: #1ab394">{{$tableName}}</p>
+                                            {{end}}
+                                            {{if gt $k $v.TableCountSuccess }}
+                                                <p>{{$tableName}}</p>
+                                            {{end}}
+                                        {{end}}
+                                    {{end}}
+                                </td>
+                                <td>
+                                    <p>CurrentTableName：{{$v.CurrentTableName}}</p>
+                                    <p>TableCount：{{$v.TableCount}}</p>
+                                    <p>SuccessCount：{{$v.TableCountSuccess}}</p>
+                                </td>
                                 <td>
                                     <p>ThreadNum: {{$v.Property.ThreadNum}}</p>
                                     <p>ThreadCountPer: {{$v.Property.ThreadCountPer}}</p>
                                     <p>LimitOptimize: {{$v.Property.LimitOptimize}}</p>
                                     <p>Where:</p>
                                     <p>{{$v.Property.Where}}</p>
-
                                 </td>
                                 <td>{{$v.NowStartI}}</td>
                                 <td>
@@ -108,13 +128,14 @@
                                 <td>{{$v.ToServerIDList}}</td>
                                 <td>{{$v.ToServerTheadCount}}</td>
                                 <td>
-                                {{range $k,$toServerInfo := $v.ToServerList}}
-                                    <p>ToServerKey:{{$toServerInfo.ToServerKey}}</p>
-                                    <p>PluginName:{{$toServerInfo.PluginName}}</p>
-                                    <p>QueueMsgCount:{{$toServerInfo.QueueMsgCount}}</p>
-                                    <p>ThreadCount:{{$toServerInfo.ThreadCount}}</p>
-                                    <p>Error:{{$toServerInfo.Error}}</p>
-                                    <p>ErrorWaitData:{{$toServerInfo.ErrorWaitData}}</p>
+                                {{range $k,$toServer := $v.ToServerList}}
+                                    <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
+                                    <p>ToServerKey:{{$toServer.ToServerInfo.ToServerKey}}</p>
+                                    <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
+                                    <p>QueueMsgCount:{{$toServer.ToServerInfo.QueueMsgCount}}</p>
+                                    <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
+                                    <p>Error:{{$toServer.ToServerInfo.Error}}</p>
+                                    <p>ErrorWaitData:{{$toServer.ToServerInfo.ErrorWaitData}}</p>
                                     <p>&nbsp;</p>
                                 {{end}}
 
@@ -125,11 +146,16 @@
                                 <td>
                                 <p>
                                     {{if eq $v.Status "running"}}
-                                        <button data-toggle="button" class="btn-sm btn-primary stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'stop')" >Stop</button>
-                                     {{else}}
+                                        <button data-toggle="button" class="btn-sm btn-warning stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'stop')" >Stop</button>
+                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                    {{else if eq $v.Status "stoping"}}
+                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                    {{else if eq $v.Status "stoped"}}
+                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                    {{else}}
                                         <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
                                         <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
-                                     {{end}}
+                                    {{end}}
                                 </p>
 
                                         <p>
@@ -230,7 +256,12 @@
 
     function DoChangeHistoryStatus(obj,status){
         if (status=="stop"){
-            if (!confirm("确定停止么？停止后后再开始不会断点继续，而是继续从0开始")){
+            if (!confirm("确定停止么？暂停后，可以继续点击开始任务进行！")){
+                return
+            }
+        }
+        if (status=="kill"){
+            if (!confirm("确定强行kill当前任务？Kill任务后，当前表只能从0开始！")){
                 return
             }
         }

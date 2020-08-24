@@ -29,22 +29,26 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
  	This.CosumerIdInrc++
 	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
+	// 因为有多个地方对 ThreadCount - 1 操作，记录是否已经扣减过
+	var ThreadCountDecrDone bool = false
 	defer func() {
 		if err := recover();err !=nil{
-			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
+			log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over;err:",err,"debug",string(debug.Stack()))
 			return
 		}else{
-			log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
+			log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server over")
 		}
 		This.Lock()
-		This.ThreadCount--
+		if ThreadCountDecrDone == false{
+			This.ThreadCount--
+		}
 		delete(This.CosumerPluginParamMap,MyConsumerId)
 		if This.ThreadCount == 0{
 			This.CosumerIdInrc = 0
 		}
 		This.Unlock()
 	}()
-	log.Println(db.Name,This.Notes,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
+	log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	This.Lock()
 	if This.Status == ""{
@@ -52,7 +56,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	}
 	This.Unlock()
 	var data *pluginDriver.PluginDataType
-	CheckStatusFun := func(){
+	var CheckStatusFun = func(){
 		if db.killStatus == 1{
 			runtime.Goexit()
 		}
@@ -66,7 +70,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	var errs error
 	binlogKey := getToServerBinlogkey(db,This)
 
-	SaveBinlog := func(){
+	var SaveBinlog = func(){
 		if PluginBinlog != nil {
 			if PluginBinlog.BinlogFileNum == 0{
 				return
@@ -78,12 +82,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			saveBinlogPositionByCache(binlogKey, PluginBinlog.BinlogFileNum, PluginBinlog.BinlogPosition)
 		}
 	}
-	var fordo int = 0
-	var lastErrId int = 0
+	var fordo int8 = 0
+	var lastErrTime int64 = 0
 	var warningStatus bool = false
 
 	//告警方法
-	doWarningFun := func(warningType warning.WarningType,body string) {
+	var doWarningFun = func(warningType warning.WarningType,body string) {
 		if warningType == warning.WARNINGNORMAL && warningStatus != true {
 			return
 		}
@@ -97,8 +101,6 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		})
 	}
 	var noData bool = true
-	var commitErrorCount int = 0
-
 
 	var unack int = 0      // 在一次遍历中从文件队列中加载出来的数量，需要
 	var tmpUnack int = 0   // 在一次遍历中从文件队列中加载出来 但是实际位点是被成功处理过后的 数量
@@ -140,47 +142,58 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			return
 		}
 	}
+	var checkDoWarning = func() {
+		// lastErrTime 是指第一次错误的时间,假如报警过后,将 lastErrTime 修改为1小时后,这样就可以实现最近一小时,同一个错误不会重复报警了
+		if time.Now().Unix() - lastErrTime >= 30 {
+			lastErrTime = time.Now().Unix()+3600
+			doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
+		}
+	}
 	var forSendData = func(data *pluginDriver.PluginDataType) {
 		for {
 			errs = nil
 			PluginBinlog,errs = This.sendToServer(data,MyConsumerId)
 			if This.MustBeSuccess == true {
 				if errs == nil{
-					if lastErrId > 0 {
+					if lastErrTime > 0 {
 						This.DelWaitError()
-						lastErrId = 0
+						lastErrTime = 0
 						//自动恢复
 						doWarningFun(warning.WARNINGNORMAL,"Automatically return to normal")
 					}
 					fileAck()
 					break
-				} else {
-					if lastErrId > 0{
-						dealStatus := This.GetWaitErrorDeal()
-						if dealStatus == -1{
-							lastErrId = 0
-							break
-						}
-						if dealStatus == 1{
-							This.DelWaitError()
-							lastErrId = 0
-							//人工处理恢复
-							doWarningFun(warning.WARNINGNORMAL,"Return to normal by user")
-							break
-						}
-					}else{
-						This.AddWaitError(errs,data)
-						lastErrId = 1
+				}
+				// err != ni 逻辑
+				// 假如 lastErrTime == 0 代表已经是第一次循环尝试,则需要记录 错误时间
+				if lastErrTime == 0{
+					fordo = 0
+					This.AddWaitError(errs,data)
+					lastErrTime = time.Now().Unix()
+				}else{
+					// 假如不是第一次循环,尝试 获取 错误信息,是否要被过滤掉,如果要被过滤掉,则退出循环
+					dealStatus := This.GetWaitErrorDeal()
+					if dealStatus == -1 {
+						lastErrTime = 0
+						break
+					}
+					if dealStatus == 1 {
+						This.DelWaitError()
+						lastErrTime = 0
+						//人工处理恢复
+						doWarningFun(warning.WARNINGNORMAL, "Return to normal by user")
+						break
 					}
 				}
 				fordo++
-				if fordo % 3 == 0{
+				// 每重试2次,进行阻塞休眠一次
+				if fordo == 2 {
+					fordo = 0
 					CheckStatusFun()
-					//连续15次发送都是失败的,则报警
-					if fordo == 15 {
-						doWarningFun(warning.WARNINGERROR,"PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
-					}
-					time.Sleep(2 * time.Second)
+					timer2 := time.NewTimer(time.Duration(config.PluginSyncRetrycTime) * time.Second)
+					<-timer2.C
+					timer2.Stop()
+					checkDoWarning()
 				}
 			}else{
 				PluginBinlog = &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition}
@@ -189,11 +202,12 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			}
 		}
 	}
+
 	var n1 int = 0
 	var n0 int = 0
-	timer := time.NewTimer(5 * time.Second)
+	var timer *time.Timer
+	timer = time.NewTimer(time.Duration(config.PluginCommitTimeOut) * time.Second)
 	defer timer.Stop()
-	//time.Sleep(20 * time.Second)
 	for {
 		CheckStatusFun()
 		if This.FileQueueStatus && This.QueueMsgCount == 0{
@@ -248,7 +262,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					continue
 				}
 			}
-			timer.Reset(5  * time.Second)
+			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 		}
 		select {
 		case data = <- c:
@@ -257,10 +271,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			This.Unlock()
 			noData = false
 			CheckStatusFun()
-			fordo = 0
-			lastErrId = 0
 			warningStatus = false
-			timer.Reset(5  * time.Second)
 			switch data.EventType {
 			case "sql":
 				forSendData(data)
@@ -330,40 +341,44 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		case <-timer.C:
 			PluginBinlog, errs = This.commit(MyConsumerId)
 			if errs == nil {
-				if commitErrorCount > 0 {
-					commitErrorCount = 0
+				if lastErrTime > 0 {
 					This.DelWaitError()
-					lastErrId = 0
+					lastErrTime = 0
 					//自动恢复
 					doWarningFun(warning.WARNINGNORMAL, "Commit Automatically return to normal")
 				}
 			} else {
-				This.AddWaitError(errs, data)
-				commitErrorCount++
-				//连续6次发送都是失败的,则报警
-				if commitErrorCount == 6 {
-					doWarningFun(warning.WARNINGERROR, "Commit PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
+				if This.MustBeSuccess && lastErrTime == 0 {
+					This.AddWaitError(errs, data)
+					lastErrTime = time.Now().Unix()
+					checkDoWarning()
 				}
 			}
 			if noData == false{
 				noData = true
-				log.Println("consume_to_server:",This.Notes,"MyConsumerId:",MyConsumerId,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
+				log.Println("consume_to_server:",This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,This.PluginName,This.ToServerKey,This.ToServerID," start no data")
 			}
 			fileAck()
 			if PluginBinlog == nil && errs == nil{
 				This.Lock()
-				if This.QueueMsgCount == 0{
-					This.ToServerChan = nil
-					This.Status = ""
-					This.Unlock()
+				if This.QueueMsgCount == 0 {
+					// 在全量任务的时候，有可能是起多个消费者,所以这里要判断一下，是不是只剩下一个消费者，只有一个消费者的时候的时候,再将 chan 关闭
+					if This.ThreadCount == 1 {
+						This.ToServerChan = nil
+						This.Status = ""
+					}
 					//这里要执行一次fileAck ，是为了最终数据一致，将已经从文件中加载出来的数据 ack掉
-					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum,fromFileEndBinlogPosition}
+					PluginBinlog = &pluginDriver.PluginBinlog{fromFileEndBinlogNum, fromFileEndBinlogPosition}
 					fileAck()
+					// 这里先减一次 This.ThreadCount - 1,是为了防止，defer 执行延时, 其他协程  在进入这个逻辑的时候，继续获取到的值是还没被 -1 的
+					This.ThreadCount--
+					ThreadCountDecrDone = true
+					This.Unlock()
 					runtime.Goexit()
 				}
 				This.Unlock()
 			}
-			timer.Reset(5 * time.Second)
+			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 			SaveBinlog()
 			break
 		}

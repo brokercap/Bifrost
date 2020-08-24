@@ -21,157 +21,146 @@ import (
 	"github.com/brokercap/Bifrost/manager/xgo"
 	"log"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
 )
 
-var execDir string
-
-func init() {
-	execPath, _ := exec.LookPath(os.Args[0])
-	execDir = filepath.Dir(execPath) + "/"
-}
-
-func TemplatePath(fileName string) string {
-	return execDir + fileName
+func TemplatePath(fileName string) string{
+	return config.BifrostDir+fileName
 }
 
 type TemplateHeader struct {
 	Title string
 }
 
-func (TemplateHeader *TemplateHeader) setTile(title string) {
+func (TemplateHeader *TemplateHeader) setTile(title string){
 	TemplateHeader.Title = title
 }
 
 type resultStruct struct {
-	Status bool   `json:"status"`
-	Msg    string `json:"msg"`
+	Status bool `json:"status"`
+	Msg string `json:"msg"`
 }
 
 type resultDataStruct struct {
-	Status bool        `json:"status"`
-	Msg    string      `json:"msg"`
-	Data   interface{} `json:"data"`
+	Status bool `json:"status"`
+	Msg string `json:"msg"`
+	Data interface{} `json:"data"`
 }
 
 var sessionMgr *xgo.SessionMgr = nil //session管理器
 
-func returnResult(r bool, msg string) []byte {
-	b, _ := json.Marshal(resultStruct{Status: r, Msg: msg})
-	return b
+func returnResult(r bool,msg string)[]byte{
+	b,_:=json.Marshal(resultStruct{Status:r,Msg:msg})
+	return  b
 }
 
-func returnDataResult(r bool, msg string, data interface{}) []byte {
-	b, _ := json.Marshal(resultDataStruct{Status: r, Msg: msg, Data: data})
-	return b
+func returnDataResult(r bool,msg string,data interface{})[]byte{
+	b,_:=json.Marshal(resultDataStruct{Status:r,Msg:msg,Data:data})
+	return  b
 }
 
-func GetFormInt(req *http.Request, key string) int {
-	v := strings.Trim(req.Form.Get(key), "")
-	intv, err := strconv.Atoi(v)
-	if err != nil {
+func GetFormInt(req *http.Request,key string) int{
+	v := strings.Trim(req.Form.Get(key),"")
+	intv,err:=strconv.Atoi(v)
+	if err != nil{
 		return 0
-	} else {
+	}else{
 		return intv
 	}
 }
 
-func addRoute(route string, callbackFUns func(http.ResponseWriter, *http.Request)) {
-	xgo.AddRoute(route, callbackFUns)
+func addRoute(route string, callbackFUns func(http.ResponseWriter,*http.Request) ){
+	xgo.AddRoute(route,callbackFUns)
 }
 
-var writeRequestOp = []string{"/add", "/del", "/start", "/stop", "/close", "/deal", "/update", "/export", "/import"}
-
+var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update","/export","/import","kill"}
 //判断是否为写操作
 func checkWriteRequest(uri string) bool {
-	for _, v := range writeRequestOp {
-		if strings.Contains(uri, v) {
+	for _,v := range writeRequestOp{
+		if strings.Contains(uri,v){
 			return true
 		}
 	}
 	return false
 }
 
-func controller_FirstCallback(w http.ResponseWriter, req *http.Request) bool {
-	if req.Header.Get("Authorization") != "" {
-		return basicAuthor(w, req)
-	} else {
-		return normalAuthor(w, req)
+func controller_FirstCallback(w http.ResponseWriter,req *http.Request) bool {
+	if req.Header.Get("Authorization") != ""{
+		return basicAuthor(w,req)
+	}else{
+		return normalAuthor(w,req)
 	}
 }
 
-func basicAuthor(w http.ResponseWriter, req *http.Request) bool {
-	UserName, Password, ok := req.BasicAuth()
-	if !ok || UserName == "" {
-		w.Write(returnDataResult(false, "Author error", ""))
+func basicAuthor(w http.ResponseWriter,req *http.Request) bool{
+	UserName,Password,ok := req.BasicAuth()
+	if !ok || UserName == ""{
+		w.Write(returnDataResult(false,"Author error",""))
 		return false
 	}
-	pwd := config.GetConfigVal("user", UserName)
-	if pwd == Password {
-		GroupName := config.GetConfigVal("groups", UserName)
-		if GroupName != "administrator" && checkWriteRequest(req.RequestURI) {
-			w.Write(returnDataResult(false, "user group : [ "+GroupName+" ] no authority", ""))
+	pwd := config.GetConfigVal("user",UserName)
+	if pwd == Password{
+		GroupName := config.GetConfigVal("groups",UserName)
+		if GroupName != "administrator" && checkWriteRequest(req.RequestURI){
+			w.Write(returnDataResult(false,"user group : [ "+GroupName+" ] no authority",""))
 			return false
 		}
 		return true
-	} else {
-		w.Write(returnDataResult(false, "Password error", ""))
+	}else{
+		w.Write(returnDataResult(false,"Password error",""))
 	}
 	return false
 }
 
-func normalAuthor(w http.ResponseWriter, req *http.Request) bool {
-	var sessionID = sessionMgr.CheckCookieValid(w, req)
+func normalAuthor(w http.ResponseWriter,req *http.Request) bool{
+	var sessionID= sessionMgr.CheckCookieValid(w, req)
 
 	if sessionID != "" {
-		if _, ok := sessionMgr.GetSessionVal(sessionID, "UserName"); ok {
+		if _,ok:=sessionMgr.GetSessionVal(sessionID,"UserName");ok{
 			//非administrator用户 用户，没有写操作权限
-			Group, _ := sessionMgr.GetSessionVal(sessionID, "Group")
-			if Group.(string) != "administrator" && checkWriteRequest(req.RequestURI) {
-				w.Write(returnDataResult(false, "user group : [ "+Group.(string)+" ] no authority", ""))
+			Group,_ := sessionMgr.GetSessionVal(sessionID,"Group")
+			if Group.(string) != "administrator" && checkWriteRequest(req.RequestURI){
+				w.Write(returnDataResult(false,"user group : [ "+Group.(string)+" ] no authority",""))
 				return false
 			}
 			return true
-		} else {
+		}else{
 			goto toLogin
 		}
-	} else {
+	}else{
 		goto toLogin
 	}
 
-toLogin:
-	if req.RequestURI != "/login" && req.RequestURI != "/dologin" && req.RequestURI != "/logout" {
+	toLogin:
+	if req.RequestURI != "/login" && req.RequestURI != "/dologin" && req.RequestURI != "/logout"{
 		http.Redirect(w, req, "/login", http.StatusFound)
 		return false
 	}
 	return true
 }
 
-func Start(IpAndPort string) {
+func Start(IpAndPort string){
 	defer func() {
-		if err := recover(); err != nil {
+		if err:=recover(); err!= nil{
 			debug.PrintStack()
 		}
 	}()
-	sessionMgr = xgo.NewSessionMgr("xgo_cookie", 3600*6)
-	xgo.AddStaticRoute("/css/", TemplatePath("manager/public/"))
-	xgo.AddStaticRoute("/js/", TemplatePath("manager/public/"))
-	xgo.AddStaticRoute("/fonts/", TemplatePath("manager/public/"))
-	xgo.AddStaticRoute("/img/", TemplatePath("manager/public/"))
-	xgo.AddStaticRoute("/plugin/", TemplatePath("/"))
+	sessionMgr = xgo.NewSessionMgr("xgo_cookie", 3600)
+	xgo.AddStaticRoute("/css/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/js/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/fonts/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/img/",TemplatePath("manager/public/"))
+	xgo.AddStaticRoute("/plugin/",TemplatePath("/"))
 	xgo.SetFirstCallBack(controller_FirstCallback)
 	var err error
-	if config.TLS {
-		err = xgo.StartTLS(IpAndPort, config.TLSServerKeyFile, config.TLSServerCrtFile)
-	} else {
+	if config.TLS{
+		err = xgo.StartTLS(IpAndPort,config.TLSServerKeyFile,config.TLSServerCrtFile)
+	}else{
 		err = xgo.Start(IpAndPort)
 	}
-	if err != nil {
-		log.Println("Manager Start Err:", err)
+	if err != nil{
+		log.Println("Manager Start Err:",err)
 	}
 }

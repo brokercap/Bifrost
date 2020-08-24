@@ -1,6 +1,6 @@
 ## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.3.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.4.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
@@ -17,8 +17,8 @@
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.3.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.3.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.4.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.4.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -57,12 +57,12 @@ http://www.xbifrost.com/demo/goto.html
 
 密码  :  Bifrost123
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.3.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.4.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.3.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.4.x/diagram.png)
 
 
 
@@ -217,7 +217,7 @@ cluster_name=bifrostTestClusterName
 
 [参考证书生成](http://wiki.xbifrost.com/install/https_certificate/)
 
-### 感谢相关依懒包提供者
+### 感谢相关依赖包提供者
 
 - github.com/gmallard/stompngo
 - github.com/hprose/hprose-golang
@@ -230,4 +230,14 @@ cluster_name=bifrostTestClusterName
 - github.com/ClickHouse/clickhouse-go
 
 ### QQ群号： 70331601
-<img src="https://github.com/brokercap/Bifrost/blob/master/qq.jpg" width="250" alt="qq群"/>
+
+<img src="https://github.com/brokercap/Bifrost/blob/master/qq.jpg" width="200" alt="qq群"/>
+
+### 捐赠
+
+<table>
+    <tr>
+        <td><img src="http://wiki.xbifrost.com/images/donate/weixin.jpeg" width="200"></td>
+        <td><img src="http://wiki.xbifrost.com/images/donate/alipay.jpeg" width="200"></td>
+    </tr>
+</table>

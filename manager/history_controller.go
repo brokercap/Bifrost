@@ -7,11 +7,13 @@ import (
 	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
 	"log"
+	"strings"
 )
 func init(){
 	addRoute("/history/list",history_list_controller)
 	addRoute("/history/add",history_add_controller)
-	addRoute("/history/stop",history_kill_controller)
+	addRoute("/history/stop",history_stop_controller)
+	addRoute("/history/kill",history_kill_controller)
 	addRoute("/history/del",history_del_controller)
 	addRoute("/history/start",history_start_controller)
 	addRoute("/history/checkwhere",history_check_where_controller)
@@ -41,6 +43,9 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		break
 	case "killed":
 		status = history.HISTORY_STATUS_KILLED
+		break
+	case "stoping":
+		status = history.HISTORY_STATUS_SELECT_STOPING
 		break
 	default:
 		status = history.HISTORY_STATUS_ALL
@@ -75,6 +80,8 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 			history.HISTORY_STATUS_ALL,
 			history.HISTORY_STATUS_CLOSE,
 			history.HISTORY_STATUS_RUNNING,
+			history.HISTORY_STATUS_SELECT_STOPING,
+			history.HISTORY_STATUS_SELECT_STOPED,
 			history.HISTORY_STATUS_HALFWAY,
 			history.HISTORY_STATUS_SELECT_OVER,
 			history.HISTORY_STATUS_OVER,
@@ -95,11 +102,16 @@ func history_add_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
+	tablenames := req.Form.Get("table_names")
 	schema := req.Form.Get("schema_name")
 	property := req.Form.Get("property")
 	ToServerIDList := req.Form.Get("ToserverIds")
-	if tansferTableName(tablename) == "*"{
-		w.Write(returnDataResult(false,"不能给 AllTables 添加全量任务!",0))
+	if tansferTableName(schema) == "*"{
+		w.Write(returnDataResult(false,"不能给 AllDataBases 添加全量任务!",0))
+		return
+	}
+	if tablenames == ""{
+		w.Write(returnDataResult(false, "table_names not be empty!", 0))
 		return
 	}
 	var err error
@@ -119,14 +131,27 @@ func history_add_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnDataResult(false, "ToserverIds error", 0))
 		return
 	}
-	err = history.CheckWhere(dbname,schema,tablename,Property.Where)
+
+	tablenameArr := strings.Split(tablenames,";")
+	tableNameTest := ""
+	for _,v := range tablenameArr{
+		if v != ""{
+			tableNameTest = v
+			break
+		}
+	}
+	if tableNameTest == ""{
+		w.Write(returnDataResult(false, "table_names error", 0))
+		return
+	}
+	err = history.CheckWhere(dbname,schema,tableNameTest,Property.Where)
 	if err != nil{
 		w.Write(returnDataResult(false,err.Error(),0))
 		return
 	}
 
 	var ID int
-	ID,err = history.AddHistory(dbname,schema,tablename,Property,ToserverIds)
+	ID,err = history.AddHistory(dbname,schema,tablename,tablenames,Property,ToserverIds)
 	if err != nil{
 		w.Write(returnDataResult(false,err.Error(),0))
 	}else{
@@ -177,6 +202,21 @@ func history_kill_controller(w http.ResponseWriter,req *http.Request){
 		w.Write(returnResult(false,"id error not be int"))
 	}
 	err := history.KillHistory(dbname,id)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+	}else{
+		w.Write(returnResult(true,"success"))
+	}
+}
+
+func history_stop_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	id := GetFormInt(req,"id")
+	if id == 0{
+		w.Write(returnResult(false,"id error not be int"))
+	}
+	err := history.StopHistory(dbname,id)
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{

@@ -27,31 +27,28 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if len(data.Rows) == 0 && data.Query == ""{
 		return
 	}
-	var ok bool
 	var ChannelKey int
-	var key string
-	var getChannelKey = func() bool{
-		if _, ok = db.tableMap[key]; ok {
-			ChannelKey = db.tableMap[key].ChannelKey
-			return true
+	var t *Table
+	var getChannelKey = func(SchemaName,tableName string) bool{
+		t = db.GetTable(SchemaName,tableName)
+		if t == nil {
+			return false
 		}
-		return false
+		ChannelKey = t.ChannelKey
+		return true
 	}
 	//优先判断 全局 *.* 绑定的 channel
 	//再判断 schema.* 绑定的 channel
 	//最后再判断 schema.table 绑定的 channel
 	//这样一样顺序是为了 防止  *.* 绑了的之后,某个表又独立的去绑了其他 channel,防目数据不一致的情况
 	for{
-		key = AllSchemaAndTablekey
-		if getChannelKey() == true{
+		if getChannelKey("*","*") {
 			break
 		}
-		key = GetSchemaAndTableJoin(data.SchemaName,"*")
-		if getChannelKey() == true{
+		if getChannelKey(data.SchemaName,"*") {
 			break
 		}
-		key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
-		if getChannelKey() == true{
+		if getChannelKey(data.SchemaName,data.TableName) {
 			break
 		}
 		//假如没一个获取成功的,直接退出函数
@@ -79,10 +76,6 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if chanName != nil {
 		chanName <- *data
 	} else {
-		log.Printf("key:%s , ChannelKey:%s chan is nil , data:%s \r\n , ", key, ChannelKey, data)
+		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%s chan is nil , data:%s \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
 	}
-}
-
-func (db *db) sendToChannel(key string,data *mysql.EventReslut) {
-
 }

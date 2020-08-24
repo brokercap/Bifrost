@@ -1,21 +1,20 @@
 module github.com/brokercap/Bifrost
 
+go 1.14
+
 require (
 	github.com/ClickHouse/clickhouse-go v1.3.14
-	github.com/DataDog/zstd v1.3.6-0.20190409195224-796139022798 // indirect
-	github.com/Shopify/sarama v1.25.0
+	github.com/Shopify/sarama v1.23.0
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
-	github.com/brokercap/Bristol v0.0.0-20200118032415-5211116d53c7
 	github.com/garyburd/redigo v1.6.0
 	github.com/gmallard/stompngo v1.0.11
 	github.com/go-redis/redis v6.15.5+incompatible
+	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/hprose/hprose-golang v2.0.4+incompatible
-	github.com/jc3wish/Bristol v0.0.0-20200118032415-5211116d53c7
-	github.com/jinzhu/gorm v1.9.15 // indirect
-	github.com/micro/go-plugins/broker/kafka/v2 v2.9.1 // indirect
-	github.com/pkg/profile v1.2.1 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
+	golang.org/x/text v0.3.2 // indirect
+	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )
 
@@ -38,5 +37,3 @@ replace (
 	gopkg.in/vmihailenco/msgpack.v2 => github.com/vmihailenco/msgpack v2.9.1+incompatible
 	gopkg.in/yaml.v2 => github.com/go-yaml/yaml v0.0.0-20181115110504-51d6538a90f8
 )
-
-go 1.13

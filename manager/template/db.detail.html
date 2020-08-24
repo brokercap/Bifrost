@@ -223,8 +223,21 @@
                             <td align="right" height="50" width="20%">TableName : </td>
                             <td style="text-indent:10px" >
                                 <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
+                                <input type="hidden" name="table_name_old" class="form-control"  value="" id="addTableNameOld">
                             </td>
                         </tr>
+
+                        <tr>
+                            <td align="right" height="50" width="20%">FuzzyMatching : </td>
+                            <td style="text-indent:10px" >
+                                <select class="form-control" name="" id="AddTableIsFuzzyMatching" >
+                                    <option value="0">No</option>
+                                    <option value="1">Yes</option>
+                                </select>
+                                <p style="padding-top: 5px">Yes 可以修改表名 带 * 的模糊匹配规则,例如: binlog_field_test_*</p>
+                            </td>
+                        </tr>
+
                         <tr>
                             <td align="right" height="50">ChannelKey :  </td>
                             <td style="text-indent:10px">
@@ -249,101 +262,9 @@
 
 
 
-    <!--add hisotry start-->
-    <div class="modal inmodal fade" id="addHistoryDiv" tabindex="-1" role="dialog"  aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                    <h3 class="modal-title">Add New History</h3>
-                </div>
-                <div class="modal-body">
-                    <table width="100%" border="0">
-                        <tr>
-                            <td align="right" height="50" width="20%">DB : </td>
-                            <td style="text-indent:10px" >
-                                <input type="text" name="dbname" id="addHisotryDbName" class="form-control" placeholder="Database" value="{{.DbName}}" disabled>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">Schema : </td>
-                            <td style="text-indent:10px" >
-                                <input type="text" name="schema" class="form-control" placeholder="Database" value="" id="addHisotrySchema" disabled>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">TableName : </td>
-                            <td style="text-indent:10px" >
-                                <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addHisotryTableName" disabled>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">Where : </td>
-                            <td style="text-indent:10px; padding-bottom: 5px;" >
-                                <textarea type="text" name="where" class="form-control" placeholder="例如: update_time >= '2019-10-10'; 如果有 OR 等条件的话，请用 ( ) 包起来" value="" id="addHisotryWhere"></textarea>
-                            </td>
-
-                        </tr>
-                        <tr>
-                            <td align="right" height="50" width="20%" valign="top">分页方式 : </td>
-                            <td style="text-indent:10px; padding-bottom: 5px;" >
-                                <select class="form-control" name="LimitOptimize" id="addHisotryLimitOptimize">
-                                    <option value="1">BETWEEN</option>
-                                    <option value="0">LIMIT</option>
-                                </select>
-                                <p>BETWEEN : 主键是自增自段的时候生效</p>
-                                <p>LIMIT   ：常规分页读取方式 </p>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">Select ThreadNum : </td>
-                            <td style="text-indent:10px;">
-                                <input type="text" name="ThreadCount" class="form-control" placeholder="ThreadNum" value="1" id="addHisotryThreadNum">
-                                <span>开启多少个连接并发查询</span>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">Sync ThreadNum : </td>
-                            <td style="text-indent:10px;">
-                                <input type="text" name="SyncThreadNum" class="form-control" placeholder="SyncThreadNum" value="1" id="addHisotrySyncThreadNum">
-                                <span>开启多少个同步协程</span>
-
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td align="right" height="50" width="20%">ThreadCountPer : </td>
-                            <td style="text-indent:10px" >
-                                <input type="text" name="ThreadCountPer" class="form-control" placeholder="ThreadCountPer" value="1000" id="addHisotryThreadCountPer">
-                                <span>每次查询读取多少条数据</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td align="right" height="50">ToServer :  </td>
-                            <td style="text-indent:10px" id="addHisotryToServer">
-
-                            </td>
-                        </tr>
-                    </table>
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
-                    <button type="button" class="btn-sm btn-primary" id="AddHistoryBtn">保存</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!--add hisotry over-->
-
     <script src="/js/bootstrap.min.js?v=3.3.6"></script>
     <script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
+    <script src="/js/md5.min.js"></script>
     <script type="text/javascript">
 
         var dbname = "{{.DbName}}";
@@ -351,6 +272,8 @@
         var TableName = ""
         var OnFoucsInputId = "";
         var tableDataTypeMap = {};
+        var TableMap = new Map();
+        var DataBaseMap = new Map();
 
         function getDbName() {
             return dbname;
@@ -446,6 +369,7 @@
             var dbname = $("#dbname").val();
             var url = "/channel/list";
             $("#addTableName").val(table_names);
+            $("#addTableNameOld").val(table_names);
             $.get(url,
                     {dbname:dbname},
                     function(data,status){
@@ -460,6 +384,13 @@
                         $("#AddTableChannel").html(html);
                     },
                     'json');
+            if ( table_names.charAt(table_names.length - 1 ) == ";" || table_names == "AllTables"){
+                $("#AddTableIsFuzzyMatching").val("0");
+                $("#AddTableIsFuzzyMatching").attr("disabled","disabled");
+                $("#addTableName").attr("disabled","disabled");
+            }else{
+                $('#AddTableIsFuzzyMatching').removeAttr("disabled");
+            }
             $("#addTableDiv").modal('show');
         }
 
@@ -501,16 +432,37 @@
                 }
         );
 
+        $("#AddTableIsFuzzyMatching").change(
+            function () {
+                if( $(this).val() == 1 ){
+                    $('#addTableName').removeAttr("disabled");
+                }else{
+                    $("#addTableName").val($("#addTableNameOld").val());
+                    $("#addTableName").attr("disable","disable");
+                }
+            }
+        );
+
         function AddTable(obj){
             if($(obj).text()=="正在执行"){
                 return false;
             }
             var dbname = $("#dbname").val();
             var table_names = $("#addTableName").val();
+            //var table_names_old = $("#addTableNameOld").val();
             var schema_name = $("#addTableSchema").val();
             var channelid = $("#AddTableChannel").val();
             if ( table_names == "" ){
                 return false;
+            }
+            if ( table_names == "*" ){
+                return false;
+            }
+            if ( $("#AddTableIsFuzzyMatching").val() == 1 ){
+                if (table_names.indexOf("*") == -1){
+                    alert("选择了模糊匹配,但 TableName 匹配规则有问题，没有 *，请参考文档后再进行设置 ！");
+                    return false;
+                }
             }
             $(obj).text("正在执行");
             var url = "/table/add";
@@ -520,6 +472,9 @@
             for( var i in arr) {
                 var table_name = arr[i];
                 if ( table_name == "" ){
+                    continue;
+                }
+                if ( table_name == "*" ){
                     continue;
                 }
                 $.ajax({
@@ -534,9 +489,34 @@
                             return false;
                         }
                         if(data.status){
-                            html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button>';
-                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
-                            $("#" + schema_name + "_-" + table_name + " .right .input input").prop("checked",false);
+                            var tableDivId = md5(schema_name + "_-" + table_name);
+                            if (table_name.indexOf("*") != -1){
+
+                                // 往表列表末尾新增一条记录
+                                var html = "";
+                                var title = "";
+                                title = " title='Bind Channel : " + channelid + "' ";
+                                html += '<a class="list-group-item"><div class="tableDiv" title="' + table_name + '" id="' + tableDivId + '">';
+                                html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + table_name + '\')">' + table_name + '</h5>';
+                                html += '<div class="right1">';
+                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
+                                html += '</div>';
+                                html += '<div class="right">';
+                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button></div>';
+
+                                html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+table_name+"' style='width: 20px; height: 20px;' /></div>";
+                                html += '</div>';
+                                html +=	'</div></a>';
+                                $("#TableListContair").append(html);
+
+                                DataBaseMap.delete(schema_name);
+                                showSchemaTableList("Schema-"+schema_name);
+                            }else{
+                                var html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button>';
+                                $("#" + tableDivId + " .right .button").html(html);
+                                $("#" + tableDivId + " .right .input input").prop("checked",false);
+                            }
+
                         }
                         batchDelOrAddTableResultFun(table_name +" ADD Result:"+data.msg,1);
                     }
@@ -575,8 +555,10 @@
                             return false;
                         }
                         if (data.status) {
-                            html = '<button data-toggle="button" class="btn-warning btn-sm" type="button" onClick="showAddTable(\'' + table_name + '\')">ADD</button>';
-                            $("#" + schema_name + "_-" + table_name + " .right .button").html(html);
+                            var tableDivId = md5(schema_name + "_-" + table_name);
+                            var html = '<button data-toggle="button" class="btn-warning btn-sm" type="button" onClick="showAddTable(\'' + table_name + '\')">ADD</button>';
+                            $("#" + tableDivId + " .right .button").html(html);
+                            DataBaseMap.delete(schema_name);
                         }
                         batchDelOrAddTableResultFun(table_name +" DEL Result:"+data.msg,1);
                     }
@@ -601,7 +583,7 @@
         }
 
         function GetTableToServerList(schema_name,table_name){
-            var key = schema_name+"_-"+table_name;
+            var key = md5(schema_name+"_-"+table_name);
             if ($("#"+key+" .right button").text() == "ADD"){
                 table_check_input(key);
                 return  false;
@@ -610,7 +592,7 @@
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
-            var url = "/table/toserverlist"
+            var url = "/table/toserverlist";
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name},
                     function(data,status){
@@ -650,7 +632,7 @@
                             others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
                             others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
                             if ("QueueMsgCount" in v) {
-                                others += "<p title=\"已解析出来的数据,有多少条消息堆积在队列中待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
+                                others += "<p title=\"内存队列堆积多少条数据待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";
                             }
                             e.push({
                                 sliceid:index+"/"+v.ToServerID,
@@ -668,7 +650,26 @@
                         $("#tableToServerListContair").attr("schema",schema_name);
                         $("#tableToServerListContair").attr("table_name",table_name);
                         $("#tableToServerListContair").bootstrapTable("load",e);
-                        GetTableFields(schema_name,table_name);
+
+                        var table_name_alias = "";
+                        if ( table_name.indexOf("*") != -1 ){
+                            var reg = new RegExp(table_name);
+                            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
+                                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
+                                    var regResult = $(this).val().match(reg);
+                                    if ( regResult != null && regResult != undefined){
+                                        table_name_alias = $(this).val();
+                                    }
+                                }
+                            });
+                            if( table_name_alias == "" ){
+                                alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！")
+                                return false;
+                            }
+                        }else{
+                            table_name_alias = table_name
+                        }
+                        GetTableFields(schema_name,table_name_alias);
                     },
                     'json');
         }
@@ -698,7 +699,7 @@
                     },
                     'json');
         }
-        var TableMap = new Map();
+
         function GetTableFields(schema_name,table_name){
             var key = schema_name+"_-"+table_name;
             if (!TableMap.has(key) || TableMap.get(key) == undefined){
@@ -733,7 +734,6 @@
             });
             $("#TableFieldsContair").html(html);
         }
-        var DataBaseMap = new Map();
 
         function showSchemaTableList(id){
             $("#DatabaseListContair a").removeClass("active");
@@ -750,11 +750,17 @@
                     if (v.ChannelName != "") {
                         title = " title='Bind Channel : " + v.ChannelName + "' ";
                     }
-                    html += '<a class="list-group-item"><div class="tableDiv" title="' + v.TableName + '" id="' + schema_name + '_-' + v.TableName + '">';
+                    var tableDivId =  md5(schema_name + '_-' + v.TableName);
+                    html += '<a class="list-group-item"><div class="tableDiv" title="' + v.TableName + '" id="' + tableDivId + '">';
                     html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + v.TableName + '\')">' + v.TableName + '</h5>';
                     if (v.TableType.toUpperCase().indexOf("VIEW") != -1) {
                         html += '<div class="right1">';
                         html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">视图</button></div>';
+                        html += '</div>';
+                    }
+                    if (v.TableType.toUpperCase().indexOf("LIKE") != -1) {
+                        html += '<div class="right1">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
                         html += '</div>';
                     }
                     html += '<div class="right">';
@@ -1102,7 +1108,7 @@
                 $("#addHistoryDiv").modal('show');
             }
         );
-        
+
         $("#AddHistoryBtn").click(
             function () {
                 var ThreadNum       = $("#addHisotryThreadNum").val();
@@ -1176,5 +1182,7 @@
         );
 
     </script>
+
+{{template "db.detail.history.add" .}}
 
 {{template "footer" .}}
