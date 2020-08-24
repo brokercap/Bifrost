@@ -101,9 +101,9 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.4.0-release/bifrost_v1.4.0-beta.03_Linux-64bit-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.4.0-release/bifrost_v1.4.0-release_Linux-64bit-bin.tar.gz
 
-tar -zxvf bifrost_v1.4.0-beta.03_Linux-64bit-bin.tar.gz
+tar -zxvf bifrost_v1.4.0-release_Linux-64bit-bin.tar.gz
 
 cd bifrost_v1.4.0-beta.03_Linux-64bit-bin/bin && chmod a+x ./Bifrost*
 
