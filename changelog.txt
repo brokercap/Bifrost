@@ -1,3 +1,12 @@
+v1.4.0-release   2020-08-24
+===========================
+1.支持模糊匹配横拆表的同步配置，比如 binlog_field_test_* 的方式匹配 binlog_field_test_1,binlog_field_test_2
+2.新增版本更新提示及最新动态显示
+3.新增plugin_commit_timeout,plugin_sync_retry_time 参数配置(对同步报警配置可能存在影响)
+4.编译目录新增bin文件侠
+5.配置文件路径新增以etc目录和Bifrost文件夹根目录 为相对路径功能
+6.没有配置同步的表，将不再做数据恢复
+
 v1.3.2-release   2020-08-07
 ===========================
 1.http插件 同步失败也不重试的bug修复
