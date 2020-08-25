@@ -7,13 +7,11 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"bytes"
-	"net/url"
 )
 
 
-const VERSION  = "v1.3.2"
-const BIFROST_VERION = "v1.3.2"
+const VERSION  = "v1.4.1"
+const BIFROST_VERION = "v1.4.1"
 
 func init(){
 	pluginDriver.Register("http",&MyConn{},VERSION,BIFROST_VERION)
@@ -57,6 +55,19 @@ type Conn struct {
 	pwd 	string
 	status  string
 	err     error
+	p		*PluginParam
+}
+
+type ContentType string
+
+const (
+	HTTP_CONTENT_TYPE_JSON_RAW 		ContentType = "application/json-raw"
+)
+
+
+type PluginParam struct {
+	Timeout	int
+	ContentType
 }
 
 func getUriParam(uri string)(string,string,string){
@@ -98,38 +109,70 @@ func (This *Conn) SetConnStatus(status string) {
 	This.status = status
 }
 
-
-func (This *Conn) SetParam(p interface{}) (interface{},error){
-	return nil,nil
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
+	s,err := json.Marshal(p)
+	if err != nil{
+		return nil,err
+	}
+	var param PluginParam
+	err2 := json.Unmarshal(s,&param)
+	if err2 != nil{
+		return nil,err2
+	}
+	if param.Timeout == 0 {
+		param.Timeout = 10
+	}
+	if param.ContentType != HTTP_CONTENT_TYPE_JSON_RAW {
+		return nil,fmt.Errorf("only support application/json(raw)")
+	}
+	return &param,nil
 }
 
-func (This *Conn) httpPost(EventType string,SchemaName string,TableName string,data string) error {
-	form := url.Values{
-		"SchemaName": {SchemaName},
-		"TableName":  {TableName},
-		"EventType":  {EventType},
-		"Data":     {data},
+
+func (This *Conn) SetParam(p interface{}) (interface{},error){
+	if p == nil{
+		return nil,fmt.Errorf("param is nil")
 	}
-	body := bytes.NewBufferString(form.Encode())
-	//pstring := "EventType="+EventType+"&SchemaName="+SchemaName+"&TableName="+TableName+"&data="+data
-	client := &http.Client{Timeout:10 * time.Second}
-	req, err := http.NewRequest("POST", This.uri, body)
+	switch p.(type) {
+	case *PluginParam:
+		This.p = p.(*PluginParam)
+		return p,nil
+	default:
+		return This.GetParam(p)
+	}
+}
+
+func (This *Conn) httpPost(data *pluginDriver.PluginDataType) error {
+	var req *http.Request
+	var client *http.Client
+	var err error
+	switch This.p.ContentType {
+	case HTTP_CONTENT_TYPE_JSON_RAW:
+		c,_:=json.Marshal(data)
+		body := strings.NewReader("\n"+string(c))
+		req, err = http.NewRequest("POST", This.uri, body)
+		req.Header.Set("Content-Type", "application/json")
+		break
+	default:
+		return fmt.Errorf("only support application/json(raw)")
+	}
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client = &http.Client{Timeout:time.Duration(This.p.Timeout) * time.Second}
 	if This.user != ""{
 		req.SetBasicAuth(This.user,This.pwd)
 	}
-	resp, err2 := client.Do(req)
-	if err2 != nil {
-		resp.Body.Close()
-		return err2
+	var resp *http.Response
+	resp, err = client.Do(req)
+	if err != nil {
+		return err
 	}
-	if resp.StatusCode >= 200 && resp.StatusCode<300{
+	if resp.StatusCode == 200 || (resp.StatusCode > 200 && resp.StatusCode<300) {
 		resp.Body.Close()
 		return nil
 	}
+	resp.Body.Close()
 	return fmt.Errorf("http code:%d",resp.StatusCode)
 }
 
@@ -151,8 +194,7 @@ func (This *Conn) Close() bool {
 }
 
 func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	b,_ := json.Marshal(data.Rows[0])
-	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
+	err := This.httpPost(data)
 	if err != nil{
 		return nil,err
 	}
@@ -160,8 +202,7 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 }
 
 func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	b,_ := json.Marshal(data.Rows)
-	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
+	err := This.httpPost(data)
 	if err != nil{
 		return nil,err
 	}
@@ -169,8 +210,7 @@ func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.Plugi
 }
 
 func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	b,_ := json.Marshal(data.Rows[0])
-	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,string(b))
+	err := This.httpPost(data)
 	if err != nil{
 		return nil,err
 	}
@@ -178,7 +218,7 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBi
 }
 
 func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	err := This.httpPost(data.EventType,data.SchemaName,data.TableName,data.Query)
+	err := This.httpPost(data)
 	if err != nil{
 		This.err = err
 		return nil,err
