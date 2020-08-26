@@ -590,7 +590,7 @@
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
-            var url = "/table/toserverlist";
+            var url = "/table/toserver/list";
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name},
                     function(data,status){
@@ -616,9 +616,13 @@
                             if (v.Error != "" && v.Error != null){
                                 ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
                             }
-                            var op = "";
-                            if(v.Status == "running" || v.Status == ""){
-                                op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                            var op = "<p>"+v.Status+"</p>";
+                            if (v.Status == "stopped"){
+                                op += '<p><button data-toggle="button" class="btn-sm btn-primary btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'start\')">START</button></p>';
+                                op += '<p><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'del\')">DEL</button></p>';
+                            }else if (v.Status == "running" || v.Status == ""){
+                                op += '<p><button data-toggle="button" class="btn-sm btn-warning btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'stop\')">STOP</button></p>';
+                                op += '<p><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'del\')">DEL</button></p>';
                             }else{
                                 op = v.Status;
                             }
@@ -672,15 +676,34 @@
                     'json');
         }
 
-        function DelTableToServer(obj,ToServerID){
-            var index = $(obj).parent().parent().children().eq(0).text();
-            if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
-                return false;
+        function UpdateTableToServerStatus(obj,ToServerID,index,status){
+            var url = "";
+            var opName = "";
+            switch (status){
+                case "stop":
+                    if (!confirm("确定暂停第 [ "+ index +" ] 条记录？")){
+                        return false;
+                    }
+                    url = "/table/toserver/stop";
+                    opName = "暂停";
+                    break;
+                case "del":
+                    if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
+                        return false;
+                    }
+                    url = "/table/toserver/del";
+                    opName = "删除";
+                    break;
+                case "start":
+                    url = "/table/toserver/start";
+                    opName = "启动";
+                    break;
+                default:
+                    return;
             }
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
-            var url = "/table/deltoserver"
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
                     function(data,status){
@@ -692,7 +715,7 @@
                             alert(data.msg);
                             return;
                         }
-                        $(obj).parent().parent('tr').remove();
+                        alert(opName+"成功!");
                         GetTableToServerList(schema_name,table_name);
                     },
                     'json');
@@ -882,7 +905,7 @@
 						var FilterQuery = $("#FilterQuery").val();
 						var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname:dbname,
                             schema_name:schema_name,
@@ -965,7 +988,7 @@
                         var FilterQuery = $("#FilterQuery").val();
                         var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname: dbname,
                             schema_name: schema_name,

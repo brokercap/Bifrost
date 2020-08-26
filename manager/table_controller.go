@@ -25,10 +25,12 @@ import (
 func init(){
 	addRoute("/table/del",table_del_controller)
 	addRoute("/table/add",table_add_controller)
-	addRoute("/table/toserverlist",table_toserverlist_controller)
-	addRoute("/table/deltoserver",table_delToServer_controller)
-	addRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/toserver/list",table_toserverlist_controller)
+	addRoute("/table/toserver/del",table_delToServer_controller)
+	addRoute("/table/toserver/add",table_addToServer_controller)
 	addRoute("/table/toserver/deal",table_toserver_deal_controller)
+	addRoute("/table/toserver/stop",table_toserver_stop_controller)
+	addRoute("/table/toserver/start",table_toserver_start_controller)
 }
 
 func table_add_controller(w http.ResponseWriter,req *http.Request){
@@ -167,21 +169,6 @@ func table_toserverlist_controller(w http.ResponseWriter,req *http.Request) {
 	w.Write(b)
 }
 
-func table_toserverlist_all_controller(w http.ResponseWriter,req *http.Request) {
-	req.ParseForm()
-	dbname := req.Form.Get("dbname")
-	tablename := req.Form.Get("table_name")
-	schema := req.Form.Get("schema_name")
-
-	schema = tansferSchemaName(schema)
-	tablename = tansferTableName(tablename)
-
-	t1:=server.GetDBObj(dbname)
-	t :=t1.GetTableSelf(schema,tablename)
-	b,_:=json.Marshal(t.ToServerList)
-	w.Write(b)
-}
-
 func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
@@ -197,6 +184,44 @@ func table_toserver_deal_controller(w http.ResponseWriter,req *http.Request) {
 	ToServerInfo := t.ToServerList[index]
 	if ToServerInfo != nil && ToServerInfo.ToServerID == ToServerID{
 		ToServerInfo.DealWaitError()
+	}
+	w.Write(returnResult(true,"success"))
+}
+
+func table_toserver_stop_controller(w http.ResponseWriter,req *http.Request) {
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
+	ToServerID := GetFormInt(req,"to_server_id")
+	index :=  GetFormInt(req,"index")
+	t := server.GetDBObj(dbname).GetTable(schema,tablename)
+	ToServerInfo := t.ToServerList[index]
+	if ToServerInfo != nil && ToServerInfo.ToServerID == ToServerID{
+		ToServerInfo.Stop()
+	}
+	w.Write(returnResult(true,"success"))
+}
+
+func table_toserver_start_controller(w http.ResponseWriter,req *http.Request) {
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+
+	ToServerID := GetFormInt(req,"to_server_id")
+	index :=  GetFormInt(req,"index")
+	t := server.GetDBObj(dbname).GetTable(schema,tablename)
+	ToServerInfo := t.ToServerList[index]
+	if ToServerInfo != nil && ToServerInfo.ToServerID == ToServerID{
+		ToServerInfo.Start()
 	}
 	w.Write(returnResult(true,"success"))
 }

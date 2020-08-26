@@ -13,6 +13,36 @@ import (
 	"github.com/brokercap/Bifrost/config"
 )
 
+// 暂停操作
+func (This *ToServer) Stop() {
+	This.Lock()
+	defer This.Unlock()
+	if This.Status == "" {
+		log.Println("ToServer ",*This.Key,This.ToServerKey,This.ToServerID," stopped")
+		This.Status = "stopped"
+		return
+	}
+	if This.Status == "running" {
+		log.Println("ToServer ",*This.Key,This.ToServerKey,This.ToServerID," stopping")
+		This.Status = "stopping"
+		return
+	}
+}
+
+// 暂停后,重新启动操作
+func (This *ToServer) Start() {
+	This.Lock()
+	defer This.Unlock()
+	if This.Status == "stopped" {
+		if This.ThreadCount == 0 {
+			This.Status = ""
+		}else{
+			This.statusChan <- true
+		}
+		log.Println("ToServer ",*This.Key,This.ToServerKey,This.ToServerID," start")
+	}
+}
+
 func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)  {
 	This.consume_to_server(db,SchemaName,TableName)
 }
@@ -51,19 +81,44 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 	log.Println(db.Name,This.Notes,"toServerKey:",*This.Key,"MyConsumerId:",MyConsumerId,"SchemaName:",SchemaName,"TableName:",TableName, This.PluginName,This.ToServerKey,"ToServer consume_to_server  start")
 	c := This.ToServerChan.To
 	This.Lock()
-	if This.Status == ""{
+	if This.Status == "" {
 		This.Status = "running"
 	}
 	This.Unlock()
 	var data *pluginDriver.PluginDataType
 	var CheckStatusFun = func(){
-		if db.killStatus == 1{
-			runtime.Goexit()
-		}
-		if This.Status == "deling"{
-			This.Status = "deled"
-			delBinlogPosition(toServerPositionBinlogKey)
-			runtime.Goexit()
+		for{
+			if db.killStatus == 1{
+				runtime.Goexit()
+			}
+			This.Lock()
+			switch This.Status {
+			case "deling":
+				This.Status = "deled"
+				delBinlogPosition(toServerPositionBinlogKey)
+				This.Unlock()
+				runtime.Goexit()
+				break
+			case "stopping","stopped":
+				if This.Status == "stopping" {
+					//检测是否需要在暂停操作，如果是暂停操作，则修改为已暂停状态，并且等待开启
+					This.Status = "stopped"
+					log.Println("ToServer ", *This.Key, This.ToServerKey, This.ToServerID, " stopped")
+				}
+				This.Unlock()
+				select {
+				case <- This.statusChan:
+					This.Lock()
+					This.Status = "running"
+					This.Unlock()
+					return
+				case <- time.NewTimer(5 * time.Second).C:
+					break
+				}
+			default:
+				This.Unlock()
+				return
+			}
 		}
 	}
 	var PluginBinlog *pluginDriver.PluginBinlog
@@ -262,8 +317,8 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 					continue
 				}
 			}
-			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 		}
+		timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 		select {
 		case data = <- c:
 			This.Lock()
@@ -378,7 +433,6 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				}
 				This.Unlock()
 			}
-			timer.Reset(time.Duration(config.PluginCommitTimeOut) * time.Second)
 			SaveBinlog()
 			break
 		}
@@ -507,7 +561,7 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyCons
 	defer func() {
 		if err2 := recover();err2 != nil{
 			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
-			log.Println(This.ToServerKey,"sendToServer err:",err)
+			log.Println(This.ToServerKey,err2,err)
 		}
 	}()
 

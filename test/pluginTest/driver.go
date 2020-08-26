@@ -306,7 +306,7 @@ func(This *BifrostManager)  AddTableToServer(dbname string,schema string,table s
 		os.Exit(1)
 	}
 	postParam["param"] = string(p)
-	d := This.getUrlRespHtml("/table/addtoserver",postParam)
+	d := This.getUrlRespHtml("/table/toserver/add",postParam)
 	data := This.JsonDecodeResult(d)
 	if data.Status == true{
 		i,_ := strconv.Atoi(fmt.Sprint(data.Data))
@@ -322,7 +322,7 @@ func(This *BifrostManager)  DelTableToServer(dbname string,schema string,table s
 	postParam["table_name"] = table
 	postParam["toserver_key"] = toserver_key
 	postParam["to_server_id"] = strconv.Itoa(to_server_id)
-	d := This.getUrlRespHtml("/table/deltoserver",postParam)
+	d := This.getUrlRespHtml("/table/toserver/del",postParam)
 	data := This.JsonDecodeResult(d)
 	return data.Status
 }

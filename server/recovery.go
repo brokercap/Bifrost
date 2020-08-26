@@ -207,7 +207,16 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					if config.FileQueueUsable == false{
 						toServer.FileQueueStatus = false
 					}
-
+					var status = ""
+					switch toServer.Status {
+					case "stopping","stopped":
+						status = "stopped"
+						break
+					case "deling","deled":
+						continue
+					default:
+						break
+					}
 					toServerObj := &ToServer{
 						ToServerID:			toServer.ToServerID,
 						MustBeSuccess:  	toServer.MustBeSuccess,
@@ -222,6 +231,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						LastBinlogPosition:	toServer.LastBinlogPosition,
 						LastBinlogFileNum: 	toServer.LastBinlogFileNum,
 						FileQueueStatus:    toServer.FileQueueStatus,
+						Status:				status,
 					}
 					if toServerObj.FileQueueStatus {
 						lastDataEvent,err := toServerObj.InitFileQueue(db.Name,schemaName,tableName).ReadLastFromFileQueue()
