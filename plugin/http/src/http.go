@@ -58,16 +58,16 @@ type Conn struct {
 	p		*PluginParam
 }
 
-type ContentType string
+type HttpContentType string
 
 const (
-	HTTP_CONTENT_TYPE_JSON_RAW 		ContentType = "application/json-raw"
+	HTTP_CONTENT_TYPE_JSON_RAW 	HttpContentType = "application/json-raw"
 )
 
 
 type PluginParam struct {
 	Timeout	int
-	ContentType
+	ContentType HttpContentType
 }
 
 func getUriParam(uri string)(string,string,string){
@@ -125,6 +125,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	if param.ContentType != HTTP_CONTENT_TYPE_JSON_RAW {
 		return nil,fmt.Errorf("only support application/json(raw)")
 	}
+	This.p = &param
 	return &param,nil
 }
 
