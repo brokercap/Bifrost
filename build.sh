@@ -110,6 +110,23 @@ function checkGoVersion(){
     fi
 }
 
+function checkOrDownloadGoEnv(){
+   SYSTEM=`uname -s`
+   if [ $SYSTEM = "Linux" ];then
+        source /etc/profile
+        if type go >/dev/null 2>&1; then
+            echo ""
+        else
+            # 假如 go 环境不存在则自动安装
+            yum install -y golang
+            echo "export GOROOT=/usr/lib/golang/" >> /etc/profile
+            source /etc/profile
+        fi
+   fi
+}
+
+checkOrDownloadGoEnv
+
 checkGoVersion
 
 cd `dirname $0`
@@ -352,7 +369,7 @@ build()
 }
 
 function buildHelp(){
-    echo " golang version 1.12+ need "
+    echo " golang version 1.13+ need "
     echo ""
     echo "./build.sh init"
     echo "--- go mod vendor"
