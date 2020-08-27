@@ -283,17 +283,23 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						lastAllToServerNoraml = false
 					}
 					if lastAllToServerNoraml == false {
-						//假如有一个同步不太正常的情况下，取小值
-						//这里用判断 BinlogFileNum == 0 是因为 绝对不会出现，因为绝对 第一次循环 lastAllToServerNoraml == true
-						BinlogFileNum1,BinlogPosition1  := CompareBinlogPositionAndReturnLess(
-							BinlogFileNum,BinlogPosition,
-							toServer.BinlogFileNum,toServer.BinlogPosition)
-						if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
+						//假如同步异常的情况下，取小值
+						//假如 BinlogFileNum = 0 的情况下，则用当前最小的同步位点
+						if BinlogFileNum == 0 {
+							BinlogFileNum = toServer.BinlogFileNum
+							BinlogPosition = toServer.BinlogPosition
+							log.Println("recovery binlog change3:", dbInfo.Name, " old:", 0, " ", 0, " new:", BinlogFileNum, " ", BinlogPosition)
+						}else {
+							BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnLess(
+								BinlogFileNum, BinlogPosition,
+								toServer.BinlogFileNum, toServer.BinlogPosition)
+							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition {
 
-						}else{
-							log.Println("recovery binlog change1:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
-							BinlogFileNum = BinlogFileNum1
-							BinlogPosition = BinlogPosition1
+							} else {
+								log.Println("recovery binlog change1:", dbInfo.Name, " old:", BinlogFileNum, " ", BinlogPosition, " new:", BinlogFileNum1, " ", BinlogPosition1)
+								BinlogFileNum = BinlogFileNum1
+								BinlogPosition = BinlogPosition1
+							}
 						}
 					}
 					if toServer.LastBinlogFileNum == 0 && toServer.BinlogFileNum > 0{
