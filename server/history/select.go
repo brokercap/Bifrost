@@ -62,7 +62,14 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	n := len(This.Fields)
 	var start uint64
 	var sql string
+	var rowCount int
+	// 每次循环之前先累加一次，再清空统计,待协程退出的时候 ，再累加一次，这样可以避免中途退出的情况
+	defer func() {
+		This.AddSelectDataCount(uint64(rowCount))
+	}()
 	for {
+		This.AddSelectDataCount(uint64(rowCount))
+		rowCount = 0
 		This.RLock()
 		if This.Status == HISTORY_STATUS_SELECT_STOPING {
 			This.RUnlock()
@@ -88,7 +95,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 			runtime.Goexit()
 			return
 		}
-		rowCount := 0
+
 		for {
 			This.RLock()
 			if This.Status == HISTORY_STATUS_KILLED {
@@ -172,6 +179,13 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		}
 	}
 	runtime.Goexit()
+}
+
+func  (This *History) AddSelectDataCount(n uint64) {
+	This.Lock()
+	This.SelectRowsCount += n
+	This.TableNameArr[This.TableCountSuccess].SelectCount += n
+	This.Unlock()
 }
 
 func (This *History) sendToServerResult(pluginData *pluginDriver.PluginDataType)  {
