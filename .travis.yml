@@ -21,7 +21,7 @@ install:
 
 script:
     - go test -v -covermode=count -coverprofile=coverage.out
-    - ./build.sh
+    - ./build.sh travis
 
 
 after_success:
