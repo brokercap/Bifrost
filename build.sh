@@ -428,7 +428,7 @@ if [[ "$1" == "install" ]];then
     fi
 fi
 
-if [[ "$1" == "" || (( "$1" == "install" && "$3" == "" )) ]];then
+if [[ "$1" == "" || "$1" == "travis" || (( "$1" == "install" && "$3" == "" )) ]];then
    SYSTEM=`uname -s`
    if [ $SYSTEM = "Linux" ];then
        mode="linux"
