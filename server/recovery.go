@@ -109,11 +109,15 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			ch.Status = "close"
 			channelIDMap[oldChannelId] = ChannelID
 			if cInfo.Status != "stop" && cInfo.Status != "close" {
-				if dbInfo.ConnStatus != "close" || dbInfo.ConnStatus != "stop" {
+				switch dbInfo.ConnStatus {
+				case "close","stop":
+					break
+				default:
 					if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 						ch.Start()
 						continue
 					}
+					break
 				}
 			}
 			//db close,channel must be close
@@ -260,7 +264,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
 					filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(toServerObj.ToServerID)))
 					db.AddTableToServer(schemaName, tableName,toServerObj)
-					log.Println(toServer.ToServerKey,toServer.ToServerID,toServer.BinlogFileNum,toServer.BinlogPosition)
+					log.Printf("dbname:%s,schemaName:%s,tableName:%s ToServerKey:%s,ToServerID:%d,BinlogFileNum:%d,BinlogPosition:%d",db.Name,schemaName,tableName,toServer.ToServerKey,toServer.ToServerID,toServer.BinlogFileNum,toServer.BinlogPosition)
 
 					//假如当前同步配置 最后输入的 位点 等于 最后成功的位点，说明当前这个 同步配置的位点是没有问题的
 					if toServer.LastBinlogFileNum > 0 && toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{

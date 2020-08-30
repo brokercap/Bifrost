@@ -100,7 +100,7 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 	index := strings.IndexAny(binlogFileName,".")
 	if index == -1{
-		return fmt.Errorf("binlogFileName:",binlogFileName," error")
+		return fmt.Errorf("binlogFileName:%s error",binlogFileName)
 	}
 	dbObj := DbList[Name]
 	dbObj.Lock()
@@ -253,6 +253,9 @@ func GetDbInfo(dbname string) *DbListStruct {
 		}
 }
 
+func NewDbByNull() *db {
+	return &db{}
+}
 
 func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
 	return &db{
@@ -363,9 +366,15 @@ func (db *db) TransferLikeTableReq(tableName string) string {
 		if strings.Index(reqTableName, "(.*)") != 0 && reqTableName[0:1] != "^" {
 			reqTableName = "^" + reqTableName
 		}
-		// 最后一个字符如果不是 * 的情况下,则自动替换面 $,代表后面没有数据了
-		var reqTableLastIndex = len(reqTableName) - 1
-		if reqTableName[reqTableLastIndex:] != "*" && reqTableName[reqTableLastIndex:] != "$" {
+		var reqTablelen = len(reqTableName)
+		// 假如末尾是 *，则替换面 (.*)
+		// binlog_field_test_*  会匹配 出 binlog_field_test ，但是  binlog_field_test_（.*） 不会匹配 binlog_field_test 出来
+		if reqTableName[reqTablelen-1:] == "*" {
+			reqTableName = reqTableName[0:reqTablelen-1]+"(.*)"
+		}
+		// 字符串如果不是 (.*) 结尾,则自动替换面 $,代表后面没有数据了
+		reqTablelen = len(reqTableName)
+		if reqTablelen >= 4 && reqTableName[reqTablelen-4:] != "(.*)" && reqTableName[reqTablelen:] != "$" {
 			reqTableName += "$"
 		}
 	}
@@ -422,7 +431,7 @@ func (db *db) Start() (b bool) {
 	case "close":
 		db.ConnStatus = "starting"
 		var newPosition uint32 = 0
-		log.Println(db.Name," starting "," getRightBinlogPosition")
+		log.Println(db.Name,"Start(),and starting "," getRightBinlogPosition")
 		for i:=0;i<3;i++{
 			if db.ConnStatus == "closing"{
 				break

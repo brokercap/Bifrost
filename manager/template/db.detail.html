@@ -497,8 +497,14 @@
                 if ((reqTableName.indexOf("(.*)") != 0) && reqTableName.charAt(0) != "^") {
                     reqTableName = "^"+reqTableName
                 }
-                // 最后一个字符如果不是 * 的情况下,则自动替换面 $,代表后面没有数据了
-                if (reqTableName.charAt(reqTableName.length-1) != "*" && reqTableName.charAt(reqTableName.length-1) != "$"){
+                // 假如末尾是 *，则替换面 (.*)
+                // binlog_field_test_*  会匹配 出 binlog_field_test ，但是  binlog_field_test_（.*） 不会匹配 binlog_field_test 出来
+                if (reqTableName.charAt(reqTableName.length-1) == "*"){
+                    reqTableName = reqTableName.substr(0,reqTableName.length-1)+"(.*)";
+
+                }
+                // 字符串如果不是 (.*) 结尾,则自动替换面 $,代表后面没有数据了
+                if (reqTableName.length >= 4 && reqTableName.substr(reqTableName.length-4,reqTableName.length) != "(.*)" && reqTableName.charAt(reqTableName.length-1) != "$"){
                     reqTableName = reqTableName + "$";
                 }
                 reg = new RegExp(reqTableName);
