@@ -589,7 +589,7 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 			LastToServerID: LastToServerID,
 			likeTableList:  make([]*Table,0),
 		}
-		db.addLikeTable(db.tableMap[key],key,tableName)
+		db.addLikeTable(db.tableMap[key],schemaName,tableName)
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
@@ -599,21 +599,27 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 	return true
 }
 
-func (db *db) addLikeTable(t *Table ,key,tableName string) {
+func (db *db) addLikeTable(t *Table ,schemaName,tableName string) {
 	if tableName == "*" || strings.Index(tableName, "*") == -1 {
 		return
 	}
-	reqTagAll,err := regexp.Compile(key)
+	key := GetSchemaAndTableJoin(schemaName,tableName)
+	reqTableName := db.TransferLikeTableReq(tableName)
+	reqTagAll,err := regexp.Compile(reqTableName)
 	if err != nil{
-		log.Println(db.Name," addLikeTable :",key," reqTagAll err:",err)
+		log.Println(db.Name," addLikeTable :",key,"reqTableName:",reqTableName," reqTagAll err:",err)
 		return
 	}
 	for k,v := range db.tableMap {
 		if strings.Index(k, "*") >= 0 {
 			continue
 		}
+		schemaName0,TableName0 := GetSchemaAndTableBySplit(k)
+		if schemaName0 != schemaName{
+			continue
+		}
 		// 假如匹配的表
-		if reqTagAll.FindString(k) != "" {
+		if reqTagAll.FindString(TableName0) != "" {
 			v.likeTableList = append(v.likeTableList,t)
 		}
 	}
