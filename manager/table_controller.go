@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 package manager
+
 import (
-	"net/http"
-	"github.com/brokercap/Bifrost/server"
-	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
-	"strings"
 	"encoding/json"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
+	"github.com/brokercap/Bifrost/server"
+	"net/http"
+	"strings"
 )
 
 func init(){

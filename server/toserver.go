@@ -44,7 +44,10 @@ type ToServer struct {
 	CosumerIdInrc                 uint16                 // 消费者自增id
 	statusChan                    chan bool
 }
-
+/**
+新增表的同步配置
+假如是第一次添加的表同步配置，则需要通知 binlog 解析库，解析当前表的binlog
+*/
 func (db *db) AddTableToServer(schemaName string, tableName string, toserver *ToServer) (bool, int) {
 	key := GetSchemaAndTableJoin(schemaName, tableName)
 	db.Lock()
@@ -80,12 +83,16 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 
 	// 在添加第一个同步的时候，通知 binlog 解析，需要同步这个表
 	if len(db.tableMap[key].ToServerList) == 1 && db.binlogDump != nil {
-		db.binlogDump.AddReplicateDoDb(schemaName, tableName)
+		db.AddReplicateDoDb(schemaName, tableName,false)
 	}
 	log.Println("AddTableToServer", db.Name, schemaName, tableName, toserver)
 	return true, toserver.ToServerID
 }
 
+/**
+删除表的同步配置
+假如当前表没有其他同步配置了，则需要从 binlog 解析中删除掉，不再需要 解析这个表的数据
+*/
 func (db *db) DelTableToServer(schemaName string, tableName string, ToServerID int) bool {
 	key := GetSchemaAndTableJoin(schemaName, tableName)
 	db.Lock()
@@ -120,7 +127,7 @@ func (db *db) DelTableToServer(schemaName string, tableName string, ToServerID i
 	}
 	// 当前这个表都没有同步配置了，则通知 binlog 解析，不再需要解析这个表的数据了
 	if len(db.tableMap[key].ToServerList) == 0 && db.binlogDump != nil {
-		db.binlogDump.DelReplicateDoDb(schemaName, tableName)
+		db.DelReplicateDoDb(schemaName, tableName,false)
 	}
 	log.Println("DelTableToServer", db.Name, schemaName, tableName, "toServerInfo:", toServerInfo)
 

@@ -16,11 +16,11 @@ limitations under the License.
 package manager
 
 import (
-	"net/http"
-	"html/template"
-	"github.com/brokercap/Bifrost/server"
 	"encoding/json"
 	toserver "github.com/brokercap/Bifrost/plugin/storage"
+	"github.com/brokercap/Bifrost/server"
+	"html/template"
+	"net/http"
 	"strings"
 )
 
@@ -96,9 +96,18 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 			}
 		}
 	}
+	// 将 带 * 等模糊匹配的表配置 往 list 追加
+	// 只有是当前数据库的数据才能被追加进去
 	if schema_name0 != "*" {
-		for _,v := range DBObj.GetTables() {
-			if strings.Index(v.Name,"*") <= 0 {
+		for k,v := range DBObj.GetTables() {
+			schema_name1 ,tableName1 := server.GetSchemaAndTableBySplit(k)
+			if tableName1 == "*" {
+				continue
+			}
+			if schema_name1 != schema_name0 {
+				continue
+			}
+			if strings.Index(v.Name,"*") < 0 {
 				continue
 			}
 			t2 := DBObj.GetChannel(v.ChannelKey)

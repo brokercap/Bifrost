@@ -103,7 +103,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		for schemaName,_:= range dbInfo.ReplicateDoDb{
 			m = append(m, schemaName)
 		}
-		db.SetReplicateDoDb(m)
+		//db.SetReplicateDoDb(m)
 		for oldChannelId,cInfo := range dbInfo.ChannelMap{
 			ch,ChannelID := db.AddChannel(cInfo.Name,cInfo.MaxThreadNum)
 			ch.Status = "close"

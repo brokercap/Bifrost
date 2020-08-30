@@ -314,13 +314,62 @@ func (db *db) SetReplicateDoDb(dbArr []string) bool {
 	return false
 }
 
-func (db *db) AddReplicateDoDb(dbName string) bool {
-	db.Lock()
-	defer db.Unlock()
-	if _,ok:=db.replicateDoDb[dbName];!ok{
-		db.replicateDoDb[dbName] = 1
+func (db *db) AddReplicateDoDb(schemaName,tableName string,doLock bool) bool {
+	if doLock {
+		db.Lock()
+		defer db.Unlock()
+	}
+	if tableName == ""{
+		return false
+	}
+	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
+	if db.binlogDump != nil {
+		db.binlogDump.AddReplicateDoDb(schemaName, TransferLikeTableReqName)
+		log.Printf("AddReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
+	}
+	if _,ok:=db.replicateDoDb[schemaName];!ok{
+		db.replicateDoDb[schemaName] = 1
 	}
 	return true
+}
+
+func (db *db) DelReplicateDoDb(schemaName,tableName string,doLock bool) bool {
+	if doLock {
+		db.Lock()
+		defer db.Unlock()
+	}
+	if tableName == ""{
+		return false
+	}
+	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
+	if db.binlogDump != nil {
+		db.binlogDump.DelReplicateDoDb(schemaName, TransferLikeTableReqName)
+		log.Printf("DelReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
+
+	}
+	return true
+}
+
+func (db *db) TransferLikeTableReq(tableName string) string {
+	if tableName == ""{
+		return ""
+	}
+	var reqTableName string = tableName
+	if tableName != "*" && strings.Index(tableName,"*") > -1 {
+		if tableName[0:1] == "*" {
+			reqTableName = "(.*)" + tableName[1:]
+		}
+		// 只要前面不是 （.*）,则自动替换面 ^ 开头，代表前面没数据了
+		if strings.Index(reqTableName, "(.*)") != 0 && reqTableName[0:1] != "^" {
+			reqTableName = "^" + reqTableName
+		}
+		// 最后一个字符如果不是 * 的情况下,则自动替换面 $,代表后面没有数据了
+		var reqTableLastIndex = len(reqTableName) - 1
+		if reqTableName[reqTableLastIndex:] != "*" && reqTableName[reqTableLastIndex:] != "$" {
+			reqTableName += "$"
+		}
+	}
+	return reqTableName
 }
 
 func (db *db) getRightBinlogPosition() (newPosition uint32) {
@@ -404,7 +453,7 @@ func (db *db) Start() (b bool) {
 		db.binlogDump.CallbackFun = db.Callback
 		for key,_ := range db.tableMap{
 			schemaName,TableName := GetSchemaAndTableBySplit(key)
-			db.binlogDump.AddReplicateDoDb(schemaName,TableName)
+			db.AddReplicateDoDb(schemaName,TableName,false)
 		}
 		go	db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
 
@@ -583,26 +632,30 @@ func (db *db) GetTableByKey(key string) *Table {
 		//这里判断 > 0 ，假如 == 0 说明是所有表了了，如果是 == * 的情况下，是有 所有表的逻辑，已经存到map中了
 		db.Lock()
 		defer db.Unlock()
-		schemaName,_ := GetSchemaAndTableBySplit(key)
+		schemaName,TableName := GetSchemaAndTableBySplit(key)
 		key0 := GetSchemaAndTableJoin(schemaName,"*")
 		for k,v := range db.tableMap {
 			if k == key0 {
 				continue
 			}
 			//库名是 * 或者 table 里没有 * 的，都不匹配
-			if strings.Index(k, "*") <= 0 {
+			if strings.Index(k, "*") == -1 {
 				continue
 			}
 			if v.regexpErr {
 				continue
 			}
-			reqTagAll,err := regexp.Compile(k)
-			if err != nil{
-				v.regexpErr = true
-				log.Println(db.Name," GetTable :",k," reqTagAll err:",err)
+			schemaName0,TableName0 := GetSchemaAndTableBySplit(k)
+			if schemaName0 != schemaName {
 				continue
 			}
-			if reqTagAll.FindString(key) != "" {
+			reqTagAll,err := regexp.Compile(db.TransferLikeTableReq(TableName0))
+			if err != nil{
+				v.regexpErr = true
+				log.Println(db.Name," GetTable :",k,"TransferLikeTableReq:",db.TransferLikeTableReq(TableName0), "reqTagAll err:",err)
+				continue
+			}
+			if reqTagAll.FindString(TableName) != "" {
 				if _,ok := db.tableMap[key];!ok {
 					db.tableMap[key] = &Table{
 						key:			key,
@@ -643,6 +696,10 @@ func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap m
 	return
 }
 
+/**
+删除表和通道的绑定关系
+假如存在表和同步关系，则需要将这个表从 binlog 解析中也去删除掉
+*/
 func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
 	db.Lock()
@@ -677,7 +734,7 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	count.DelTable(db.Name,key)
 	log.Println("DelTable",db.Name,schemaName,tableName)
 	if db.binlogDump != nil && toServerLen > 0 {
-		db.binlogDump.DelReplicateDoDb(schemaName,tableName)
+		db.DelReplicateDoDb(schemaName,tableName,false)
 	}
 	return true
 }

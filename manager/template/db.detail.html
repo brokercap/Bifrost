@@ -25,9 +25,10 @@
         </div>
         <div class="col-sm-3" style=" padding-left: 0px;" id="MyWebLeft_2">
             <div class="ibox float-e-margins">
-                <div class="ibox-title">
+                <div class="ibox-title" style="position: relative">
                     <h5>Table List</h5>
-                    <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="float:right; font-size:14px; font-weight:600; color:#666; cursor:pointer">Hide</div>
+                    <div  style="margin-left: 70px; margin-top:-10px; width: 50%" ><input type="text" class="form-control" placeholder="search" id="TableSearchName"></div>
+                    <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="position: absolute;right: 20px; top: 15px; font-weight:600; color:#666; cursor:pointer">Hide</div>
                 </div>
                 <style type="text/css">
                     .tableDiv{display:block; width:100%; height: 25px; position: relative}
@@ -222,6 +223,7 @@
                             <td style="text-indent:10px" >
                                 <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
                                 <input type="hidden" name="table_name_old" class="form-control"  value="" id="addTableNameOld">
+                                <p id="FuzzyMatchingTableNames"></p>
                             </td>
                         </tr>
 
@@ -258,7 +260,36 @@
     </div>
     <!--add table over-->
 
+<!--显示模糊匹配表 匹配所有表 start-->
+<div class="modal inmodal fade" id="showLikeTable" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title" id="showLikeTable_Title"></h3>
+            </div>
+            <div class="modal-body" id="showLikeTable_Body">
 
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    function ShowLikeTableNames(tableName) {
+        var tableNames = getTablesByLikeName(tableName);
+        $("#showLikeTable_Title").text(tableName);
+        var html = "";
+        for (var name of tableNames.split(";")) {
+            html += "<p>"+name+"</p>";
+        }
+        $("#showLikeTable_Body").html(html);
+        $("#showLikeTable").modal('show');
+    }
+</script>
+<!--显示模糊匹配表 匹配所有表 over-->
 
     <script src="/js/bootstrap.min.js?v=3.3.6"></script>
     <script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
@@ -441,6 +472,48 @@
             }
         );
 
+        $("#addTableName").change(
+            function () {
+                var tableNames = getTablesByLikeName($(this).val());
+                $("#FuzzyMatchingTableNames").html(tableNames);
+            }
+        );
+
+        function getTablesByLikeName(table_name) {
+            var table_names = "";
+            var reg;
+            if ( table_name != "AllTables" && table_name.indexOf("*") == -1 ){
+                return "";
+            }
+            if (table_name == "AllTables") {
+                reg = new RegExp(".*");
+            }else{
+                var reqTableName = table_name;
+                // 第一个字符如果是 * 的情况下,则自动替换成 (.*), 因为第一个字符是 * 的情况下,正则是错误的
+                if (reqTableName.charAt(0) == "*"){
+                    reqTableName = "(.*)"+reqTableName.substr(1,reqTableName.length-1);
+                }
+                // 只要前面不是 （.*）,则自动替换面 ^ 开头，代表前面没数据了
+                if ((reqTableName.indexOf("(.*)") != 0) && reqTableName.charAt(0) != "^") {
+                    reqTableName = "^"+reqTableName
+                }
+                // 最后一个字符如果不是 * 的情况下,则自动替换面 $,代表后面没有数据了
+                if (reqTableName.charAt(reqTableName.length-1) != "*" && reqTableName.charAt(reqTableName.length-1) != "$"){
+                    reqTableName = reqTableName + "$";
+                }
+                reg = new RegExp(reqTableName);
+            }
+            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
+                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
+                    var regResult = $(this).val().match(reg);
+                    if ( regResult != null && regResult != undefined){
+                        table_names += $(this).val()+";";
+                    }
+                }
+            });
+            return table_names;
+        }
+
         function AddTable(obj){
             if($(obj).text()=="正在执行"){
                 return false;
@@ -459,6 +532,14 @@
             if ( $("#AddTableIsFuzzyMatching").val() == 1 ){
                 if (table_names.indexOf("*") == -1){
                     alert("选择了模糊匹配,但 TableName 匹配规则有问题，没有 *，请参考文档后再进行设置 ！");
+                    return false;
+                }
+                var tableNames = getTablesByLikeName(table_names)
+                if (tableNames == ""){
+                    alert("匹配规则 设置有问题，请参考文档后再进行设置 ！");
+                    return false;
+                }
+                if( !confirm("请确认是否匹配正确："+tableNames ) ) {
                     return false;
                 }
             }
@@ -497,7 +578,7 @@
                                 html += '<a class="list-group-item"><div class="tableDiv" title="' + table_name + '" id="' + tableDivId + '">';
                                 html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + table_name + '\')">' + table_name + '</h5>';
                                 html += '<div class="right1">';
-                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
+                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+table_name+'\')">多表</button></div>';
                                 html += '</div>';
                                 html += '<div class="right">';
                                 html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button></div>';
@@ -655,15 +736,10 @@
 
                         var table_name_alias = "";
                         if ( table_name.indexOf("*") != -1 ){
-                            var reg = new RegExp(table_name);
-                            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
-                                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
-                                    var regResult = $(this).val().match(reg);
-                                    if ( regResult != null && regResult != undefined){
-                                        table_name_alias = $(this).val();
-                                    }
-                                }
-                            });
+                            var tableNames = getTablesByLikeName(table_name);
+                            if ( tableNames != "" ) {
+                                table_name_alias = tableNames.split(";")[0];
+                            }
                             if( table_name_alias == "" ){
                                 alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！")
                                 return false;
@@ -781,7 +857,7 @@
                     }
                     if (v.TableType.toUpperCase().indexOf("LIKE") != -1) {
                         html += '<div class="right1">';
-                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\')">多表</button></div>';
                         html += '</div>';
                     }
                     html += '<div class="right">';
@@ -834,6 +910,7 @@
 
             $("#DatabaseListContair a").click(
                     function(){
+                        $("#TableSearchName").val("");
                         showSchemaTableList($(this).attr("id"));
                     }
             );
@@ -1100,6 +1177,20 @@
         }
 
         init();
+
+        $("#TableSearchName").keyup(function(event){
+            if(event.keyCode ==13){
+                var TableSearchName = $("#TableSearchName").val();
+                $('#TableListContair a').each(function(){
+                    var tmpName = $(this).find(":input[name=table_check_name]").val();
+                    if( TableSearchName == "" || tmpName.indexOf(TableSearchName) > -1 ){
+                        $(this).show();
+                    }else{
+                        $(this).hide();
+                    }
+                });
+            }
+        });
 
     </script>
 

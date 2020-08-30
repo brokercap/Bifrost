@@ -23,7 +23,6 @@ func AddTable(db string,schema string,tableName string,channelId int) error{
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+" not exsit")
 	}
-	DbList[db].AddReplicateDoDb(schema)
 	if DbList[db].AddTable(schema,tableName,channelId,0) == true{
 		return nil
 	}

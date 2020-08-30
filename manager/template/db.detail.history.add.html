@@ -26,7 +26,8 @@
                     <tr>
                         <td align="right" height="50" width="20%">TableName : </td>
                         <td style="text-indent:10px" >
-                            <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addHisotryTableName" disabled>
+                            <textarea type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addHisotryTableName" disabled></textarea>
+
                             <input type="hidden" name="table_name_old" class="form-control" placeholder="TableName" value="" id="addHisotryTableNameOld">
                         </td>
                     </tr>
@@ -125,21 +126,8 @@
                 var table_names = "";
 
                 if ( table_name == "AllTables" || table_name.indexOf("*") != -1 ){
-                    var reg;
-                    if (table_name == "AllTables") {
-                        reg = new RegExp(".*");
-                    }else{
-                        reg = new RegExp(table_name);
-                    }
-                    $('#TableListContair').find(":input[name=table_check_name]").each(function(){
-                        if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
-                            var regResult = $(this).val().match(reg);
-                            if ( regResult != null && regResult != undefined){
-                                table_names += $(this).val()+";";
-                            }
-                        }
-                    });
-                    if( table_names == "" ){
+                    table_names = getTablesByLikeName(table_name);
+                    if ( table_names == "" ) {
                         alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！");
                         return false;
                     }
