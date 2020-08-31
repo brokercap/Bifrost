@@ -286,6 +286,7 @@ func (This *History) Start() error {
 		}()
 		for {
 			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess].TableName
+			This.TableNameArr[This.TableCountSuccess].SelectCount = 0
 			This.Lock()
 			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED  || This.Status == HISTORY_STATUS_SELECT_STOPED {
 				This.Unlock()
