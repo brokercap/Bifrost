@@ -756,7 +756,7 @@ $(function(){
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
-            var url = "/table/toserverlist"
+            var url = "/table/toserver/list"
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name},
                     function(data,status){
@@ -826,7 +826,7 @@ $(function(){
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
-            var url = "/table/deltoserver"
+            var url = "/table/toserver/del"
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
                     function(data,status){
@@ -1023,7 +1023,7 @@ $(function(){
 						var FilterQuery = $("#FilterQuery").val();
 						var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname:dbname,
                             schema_name:schema_name,
@@ -1106,7 +1106,7 @@ $(function(){
                         var FilterQuery = $("#FilterQuery").val();
                         var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname: dbname,
                             schema_name: schema_name,
@@ -1222,7 +1222,7 @@ $(function(){
 
         $("#historyAddBtn").click(
             function () {
-                var url = "/table/toserverlist";
+                var url = "/table/toserver/list";
                 var dbname = $("#dbname").val();
                 var schema_name = $("#tableToServerListContair").attr("schema");
                 var table_name = $("#tableToServerListContair").attr("table_name");

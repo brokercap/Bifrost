@@ -64,7 +64,7 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		}
 		if db.channelMap[ChannelKey].Status != "running" {
 			if i%600 == 0 {
-				log.Printf("ChannelKey:%s , status:%s , data:%s \r\n , ", ChannelKey, db.channelMap[ChannelKey].Status, data)
+				log.Printf("ChannelKey:%T , status:%s , data:%T \r\n , ", ChannelKey, db.channelMap[ChannelKey].Status, data)
 			}
 			time.Sleep(1 * time.Second)
 			i++
@@ -76,6 +76,6 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if chanName != nil {
 		chanName <- *data
 	} else {
-		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%s chan is nil , data:%s \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
+		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
 	}
 }

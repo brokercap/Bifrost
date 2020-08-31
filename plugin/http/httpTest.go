@@ -2,15 +2,17 @@ package main
 
 import "time"
 import (
-"flag"
-"log"
-"github.com/brokercap/Bifrost/test/pluginTest"
-"net/http"
-"strconv"
-"os"
-"syscall"
-"os/signal"
+	"flag"
+	"log"
+	"github.com/brokercap/Bifrost/test/pluginTest"
+	"net/http"
+	"strconv"
+	"os"
+	"syscall"
+	"os/signal"
 	"encoding/json"
+	"io/ioutil"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func init() {}
@@ -216,32 +218,15 @@ func check_uri()  {
 }
 
 func post(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	log.Println("EventType",req.Form.Get("EventType"))
-	log.Println("SchemaName",req.Form.Get("SchemaName"))
-	log.Println("TableName",req.Form.Get("TableName"))
-	var err error
-	switch req.Form.Get("EventType") {
-	case "insert":
-		err = insert(req.Form.Get("data"))
-		break
-	case "update":
-		err = update(req.Form.Get("data"))
-		break
-	case "delete":
-		err = delete(req.Form.Get("data"))
-		break
-	case "sql":
-		err = query(req.Form.Get("data"))
-		break
-	default:
-		log.Println("Data",req.Form.Get("data"))
-		break
+	body,err := ioutil.ReadAll(req.Body)
+	var data pluginDriver.PluginDataType
+	err = json.Unmarshal(body,&data)
+	if err != nil {
+		w.WriteHeader(501)
+		log.Println("body err:",string(body))
+		return
 	}
-
-	if err != nil{
-		log.Println(err)
-	}
+	log.Println("body:",body)
 	return
 }
 

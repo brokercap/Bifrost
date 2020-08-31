@@ -54,12 +54,12 @@ func AddHistory(dbName string,SchemaName string,TableName string,TableNames stri
 	}
 	ID := lastHistoryID+1
 	TableNameArrTmp := strings.Split(TableNames,";")
-	TableNameArr := make([]string,0)
+	TableNameArr := make([]*TableStatus,0)
 	for _,v := range TableNameArrTmp{
 		if v == ""{
 			continue
 		}
-		TableNameArr = append(TableNameArr,strings.Trim(v,""))
+		TableNameArr = append(TableNameArr,&TableStatus{RowsCount:0,SelectCount:0,TableName:strings.Trim(v,"")})
 	}
 	historyMap[dbName][ID] = &History{
 		ID:ID,
@@ -178,6 +178,13 @@ type toServer struct {
 	ToServerInfo    *server.ToServer
 }
 
+type TableStatus struct {
+	sync.RWMutex
+	RowsCount	uint64
+	SelectCount uint64
+	TableName	string
+}
+
 type History struct {
 	sync.RWMutex
 	ID					int
@@ -203,10 +210,12 @@ type History struct {
 	ToServerTheadCount	int16			// 实际正在运行的同步协程数
 	ToServerTheadGroup	*sync.WaitGroup
 	TableNames			string		// 用 ; 隔开的表名
-	TableNameArr		[]string	// TableNames 分割后的数组
+	TableNameArr		[]*TableStatus	// TableNames 分割后的数组
 	CurrentTableName	string		// 正在执行全量的表名
 	TableCount			int		// 要全量的总表数量
 	TableCountSuccess	int		// 已经成功的表数量
+	selectStatus		bool	// 拉数据协程状态，true 为已拉完
+	SelectRowsCount		uint64	// 成功拉取多少条数据
 }
 
 func Start(dbName string,ID int) error {
@@ -222,6 +231,7 @@ func Start(dbName string,ID int) error {
 func (This *History) Start() error {
 	log.Println("history start",This.DbName,This.SchemaName,This.TableName)
 	This.Lock()
+	This.selectStatus = false
 	switch This.Status {
 	case HISTORY_STATUS_SELECT_STOPING:
 		return fmt.Errorf("stoping now")
@@ -269,14 +279,18 @@ func (This *History) Start() error {
 			if This.Status != HISTORY_STATUS_HALFWAY && This.Status != HISTORY_STATUS_OVER && This.Status != HISTORY_STATUS_SELECT_STOPING && This.Status != HISTORY_STATUS_SELECT_STOPED {
 				This.Status = HISTORY_STATUS_SELECT_OVER
 			}
-			if This.TableInfo.TABLE_ROWS == 0 {
+			if This.SelectRowsCount == 0 {
 				This.Status = HISTORY_STATUS_OVER
 			}
+			This.selectStatus = true
 		}()
+		for i,_ := range This.TableNameArr{
+			This.TableNameArr[i].SelectCount = 0
+		}
 		for {
-			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess]
+			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess].TableName
 			This.Lock()
-			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED || This.Status == HISTORY_STATUS_OVER {
+			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED  || This.Status == HISTORY_STATUS_SELECT_STOPED {
 				This.Unlock()
 				break
 			}
@@ -296,7 +310,9 @@ func (This *History) Start() error {
 			if This.Status == HISTORY_STATUS_HALFWAY {
 				break
 			}
+			This.Lock()
 			This.TableCountSuccess++
+			This.Unlock()
 			if This.TableCountSuccess >= This.TableCount {
 				break
 			}
@@ -322,6 +338,9 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if This.TableInfo.TABLE_ROWS == 0 {
 		return
 	}
+	//修改表记录总数，用于界面显示
+	This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableInfo.TABLE_ROWS
+
 	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.CurrentTableName)
 	This.TablePriArr = make([]*string,0)
 	for _,v := range This.Fields{

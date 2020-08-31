@@ -202,9 +202,9 @@ func other()  {
 
 	addRoute("/table/del",otherController)
 	addRoute("/table/add",otherController)
-	addRoute("/table/toserverlist",table_toserverlist_controller)
-	addRoute("/table/deltoserver",otherController)
-	addRoute("/table/addtoserver",table_addToServer_controller)
+	addRoute("/table/toserver/list",table_toserverlist_controller)
+	addRoute("/table/toserver/del",otherController)
+	addRoute("/table/toserver/add",table_addToServer_controller)
 	addRoute("/table/toserver/deal",otherController)
 
 	addRoute("/synclist",otherController)

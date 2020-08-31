@@ -407,9 +407,26 @@
             dataType: "jsonp", //指定服务器返回的数据类型
             jsonpCallback:"jsonp",
             success: function (data) {
+                //将 v1.4.0-release 版本号 转换成 10400
+                var versionToInt = function (version) {
+                    version = version.substring(0,version.indexOf("-"));
+                    version = version.replace("v","");
+                    version = version.replace("V","");
+                    var tmpArr = version.split(".");
+                    var versionInt = 0;
+                    var len = tmpArr.length;
+                    for(var i = 0; i < len; i++) {
+                        var tv = parseInt(tmpArr[i]);
+                        tv = tv * (10 ** ((len-i-1)*2));
+                        versionInt += tv;
+                    }
+                    return versionInt;
+                }
                if ( version != data.version ){
-                   $("#hadNewBifrostVersion").text("发现新版本:"+data.version);
-               }
+                   if ( versionToInt(version) <= versionToInt(data.version) ){
+                       $("#hadNewBifrostVersion").text("发现新版本:"+data.version);
+                   }
+               };
                var html = "";
                 for(var i = 0,len=data.news.length; i < len; i++) {
                     html += "<tr>";

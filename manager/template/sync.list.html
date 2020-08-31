@@ -127,9 +127,19 @@
                                 <td>{{$v.Error}}</td>
                                 <td>{{$v.ErrorWaitData}}</td>
                                 <td>
-                                    <a href="/db/detail?dbname={{$toServer.DbName}}&schema={{$toServer.SchemaName}}&table_name={{$toServer.TableName}}">
+                                    <p><a href="/db/detail?dbname={{$toServer.DbName}}&schema={{$toServer.SchemaName}}&table_name={{$toServer.TableName}}">
                                     <button data-toggle="button" class="btn-sm btn-primary" type="button" >Detail</button>
                                     </a>
+                                    </p>
+                                    {{if eq $v.Status "stopped"}}
+                                        <p><button data-toggle="button" class="btn-sm btn-primary" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'start')">Start</button></p>
+                                    {{end}}
+                                    {{if or (eq $v.Status "running") (eq $v.Status "") }}
+                                        <p><button data-toggle="button" class="btn-sm btn-warning" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'stop')">Stop</button></p>
+                                    {{end}}
+
+                                    <p><button data-toggle="button" class="btn-sm btn-danger" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'del')">Del</button></p>
+
                                 </td>
                             </tr>
                             {{end}}
@@ -150,13 +160,64 @@
     var SchemaName = "{{.SchemaName}}";
     $("#dbname,#channelid,#ToServerKey,#sync_status").change(
         function () {
-            var dbname      = $("#dbname").val();
-            var channelid   = $("#channelid").val();
-            var ToServerKey = $("#ToServerKey").val();
-            var sync_status = $("#sync_status").val();
-            location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid+"&sync_status="+sync_status;
+            GetTableToServerList();
         }
     );
+
+    function GetTableToServerList(){
+        var dbname      = $("#dbname").val();
+        var channelid   = $("#channelid").val();
+        var ToServerKey = $("#ToServerKey").val();
+        var sync_status = $("#sync_status").val();
+        location.href = "/synclist?dbname="+dbname+"&schema_name="+SchemaName+"&table_name="+TableName+"&toserverkey="+ToServerKey+"&channelid="+channelid+"&sync_status="+sync_status;
+
+    }
+
+    function UpdateTableToServerStatus(obj,ToServerID,index,status){
+        var trObjChildren = $(obj).parent().parent().parent().children();
+        var dbname = trObjChildren.eq(1).text();
+        var schema_name = trObjChildren.eq(2).text();
+        var table_name = trObjChildren.eq(3).text();
+        var url = "";
+        var opName = "";
+        switch (status){
+            case "stop":
+                if (!confirm("确定暂停第 [ "+ index +" ] 条记录？")){
+                    return false;
+                }
+                url = "/table/toserver/stop";
+                opName = "暂停";
+                break;
+            case "del":
+                if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
+                    return false;
+                }
+                url = "/table/toserver/del";
+                opName = "删除";
+                break;
+            case "start":
+                url = "/table/toserver/start";
+                opName = "启动";
+                break;
+            default:
+                return;
+        }
+        $.post(url,
+                {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    if (!data.status){
+                        alert(data.msg);
+                        return;
+                    }
+                    alert(opName+"成功!");
+                    GetTableToServerList(schema_name,table_name);
+                },
+                'json');
+    }
 </script>
 
 <script src="/js/filequeue.js?v1.2.0-beta.03"></script>

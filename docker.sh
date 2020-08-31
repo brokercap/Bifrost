@@ -94,6 +94,7 @@ function dockerOnlineTestAdmin(){
     else
         v=$1
     fi
+    rm -f /data/BifrostOnlineTestData/data/*.pid
     docker run --name BifrostOnlineTest -d -p21039:21036 -v /data/BifrostOnlineTestData/data:/linux/data -v /data/BifrostOnlineTestData/logs:/linux/logs -v /data/BifrostOnlineTestData/etc:/linux/etc $v
 }
 
@@ -122,6 +123,14 @@ function dockerClean(){
     docker images|grep none|awk '{print $3}'|xargs docker rmi
 }
 
+function getIp(){
+    docker inspect --format '{{ .NetworkSettings.IPAddress }}' $1
+}
+
+function dockerStartAll(){
+    docker start $(docker ps -a | awk '{ print $1}' | tail -n +2)
+}
+
 function dockerHelp(){
     echo "dev_build"
     echo "dev_clean"
@@ -135,8 +144,9 @@ function dockerHelp(){
     echo "push"
     echo "clean    -- clean all exit and none images"
     echo "online_test_run jc3wish/bifrost:1.1.0   -- clean all exit and none images"
+    echo "getip dockerName "
+    echo "start_all "
 }
-
 
 case "$1" in
     'dev_build')
@@ -184,10 +194,16 @@ case "$1" in
         dockerPushRelease
         ;;
      'online_test_run')
-	dockerOnlineTestAdmin $2
-	;;
+	      dockerOnlineTestAdmin $2
+	      ;;
      'clean')
         dockerClean
+        ;;
+     'getip')
+        getIp $2
+        ;;
+     'start_all')
+        dockerStartAll
         ;;
      *)
         dockerHelp

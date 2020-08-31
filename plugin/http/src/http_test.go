@@ -11,21 +11,13 @@ import (
 	"net/http"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	"time"
+	"io/ioutil"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"encoding/json"
 )
 
-
-var lastEventData string
-var lastSchemaName string
-var lastTableNamee string
-
-type lastEventDataStruct struct {
-	SchemaName string
-	TableName string
-	EventType string
-	Data string
-}
-
-var lastEvent lastEventDataStruct
+var lastEvent pluginDriver.PluginDataType
+var lastBody string
 
 func handel_data(w http.ResponseWriter,req *http.Request){
 	switch req.Method {
@@ -48,19 +40,19 @@ func check_uri()  {
 }
 
 func post(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-
-	lastEvent = lastEventDataStruct{
-		SchemaName:req.Form.Get("SchemaName"),
-		TableName:req.Form.Get("TableName"),
-		EventType:req.Form.Get("EventType"),
-		Data:req.Form.Get("Data"),
+	body,err := ioutil.ReadAll(req.Body)
+	var data pluginDriver.PluginDataType
+	err = json.Unmarshal(body,&data)
+	if err != nil {
+		w.WriteHeader(501)
+		log.Println("body err:",string(body))
+		return
 	}
-
-	//log.Println("EventType",req.Form.Get("EventType"))
-	//log.Println("SchemaName",req.Form.Get("SchemaName"))
-	//log.Println("TableName",req.Form.Get("TableName"))
+	lastEvent = data
+	lastBody = string(body)
+	log.Println("body:",string(body))
 	return
+
 }
 
 
@@ -83,7 +75,10 @@ func TestChechUri(t *testing.T){
 }
 
 func getParam() map[string]interface{} {
-	return nil
+	p := make(map[string]interface{},2)
+	p["ContentType"] = "application/json-raw"
+	p["Timeout"] = 10
+	return p
 }
 
 func TestSetParam(t *testing.T){
@@ -117,9 +112,9 @@ func TestAndCheckData(t *testing.T)  {
 
 	var err error
 
-	checkResult,err = e.CheckData(eventData.Rows[len(eventData.Rows)-1],lastEvent.Data)
+	checkResult,err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1],lastBody)
 	if err != nil{
-		t.Log(lastEvent.Data)
+		t.Log(lastBody)
 		t.Fatal(err)
 	}
 
@@ -153,7 +148,7 @@ func TestAndCheckData(t *testing.T)  {
 	conn.Del(eventData)
 
 
-	checkResult,err = e.CheckData(eventData.Rows[len(eventData.Rows)-1],lastEvent.Data)
+	checkResult,err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1],lastBody)
 	if err != nil{
 		t.Log(lastEvent)
 		t.Fatal(err)

@@ -88,27 +88,61 @@ function getJsonValuesByAwk() {
     }'
 }
 
+function showGoDownload(){
+    echo ""
+    echo "https://golang.org/dl/"
+    echo ""
+}
+
 function checkGoVersion(){
     GoVersionResult=`go version`
     echo $GoVersionResult
+    #$GoVersionResult:  go version go1.14.4 linux/amd64
 
     if [[ $GoVersionResult != *version* ]];then
         echo "go version error"
         #echo go version must go1.12+
         exit 1
     fi
-
-    GoVersion0=${GoVersionResult:13}
+    arr=($GoVersionResult)
+    #arr:  (go version go1.14.4 linux/amd64)
+    GoVersion0=${arr[2]}
+    #GoVersion0:  go1.14.4
+    GoVersion0=${GoVersion0:2}
+    #GoVersion0: 1.14.4
     GoVersion1=${GoVersion0%%.*}
+    #GoVersion1: 1
     GoVersion2=${GoVersion0#*.}
+    #GoVersion2: 14.4
     GoVersion2=${GoVersion2%%.*}
-
-    GoVersion3=$(( $GoVersion1*100+$GoVersion2 ))
+    #GoVersion2: 14
+    GoVersion3=$(( $GoVersion1*100+$GoVersion2*1 ))
     if [[ $GoVersion3 -lt 113 ]];then
         echo "go version must be go1.12+"
         exit 1
     fi
 }
+
+function checkOrDownloadGoEnv(){
+   SYSTEM=`uname -s`
+   if [ $SYSTEM = "Linux" ];then
+        source /etc/profile
+        GoVersionResult=`go version`
+        if [[ $GoVersionResult != *version* ]];then
+            # 假如 go 环境不存在则自动安装
+            echo "yum install -y golang    start"
+            yum install -y golang
+            echo "export GOROOT=/usr/lib/golang/" >> /etc/profile
+            source /etc/profile
+            echo "yum install -y golang    over"
+        fi
+   fi
+}
+
+# 兼容 travis 自动编译测试, travis 不需要自动判断是否存在 go 环境
+if [[ "$1" != "travis" ]];then
+  checkOrDownloadGoEnv
+fi
 
 checkGoVersion
 
@@ -352,7 +386,7 @@ build()
 }
 
 function buildHelp(){
-    echo " golang version 1.12+ need "
+    echo " golang version 1.13+ need "
     echo ""
     echo "./build.sh init"
     echo "--- go mod vendor"
@@ -394,7 +428,7 @@ if [[ "$1" == "install" ]];then
     fi
 fi
 
-if [[ "$1" == "" || (( "$1" == "install" && "$3" == "" )) ]];then
+if [[ "$1" == "" || "$1" == "travis" || (( "$1" == "install" && "$3" == "" )) ]];then
    SYSTEM=`uname -s`
    if [ $SYSTEM = "Linux" ];then
        mode="linux"

@@ -25,9 +25,10 @@
         </div>
         <div class="col-sm-3" style=" padding-left: 0px;" id="MyWebLeft_2">
             <div class="ibox float-e-margins">
-                <div class="ibox-title">
+                <div class="ibox-title" style="position: relative">
                     <h5>Table List</h5>
-                    <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="float:right; font-size:14px; font-weight:600; color:#666; cursor:pointer">Hide</div>
+                    <div  style="margin-left: 70px; margin-top:-10px; width: 50%" ><input type="text" class="form-control" placeholder="search" id="TableSearchName"></div>
+                    <div id="MyWebHideBtn" onclick="showOrHideMyWeb();" style="position: absolute;right: 20px; top: 15px; font-weight:600; color:#666; cursor:pointer">Hide</div>
                 </div>
                 <style type="text/css">
                     .tableDiv{display:block; width:100%; height: 25px; position: relative}
@@ -222,6 +223,7 @@
                             <td style="text-indent:10px" >
                                 <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
                                 <input type="hidden" name="table_name_old" class="form-control"  value="" id="addTableNameOld">
+                                <div id="FuzzyMatchingTableNames" style="word-wrap: break-word;word-break: normal; width: auto;"></div>
                             </td>
                         </tr>
 
@@ -233,6 +235,7 @@
                                     <option value="1">Yes</option>
                                 </select>
                                 <p style="padding-top: 5px">Yes 可以修改表名 带 * 的模糊匹配规则,例如: binlog_field_test_*</p>
+                                <p><a href="/docs#FuzzyMatching" target="_blank">模糊匹配文档</a></p>
                             </td>
                         </tr>
 
@@ -258,7 +261,36 @@
     </div>
     <!--add table over-->
 
+<!--显示模糊匹配表 匹配所有表 start-->
+<div class="modal inmodal fade" id="showLikeTable" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title" id="showLikeTable_Title"></h3>
+            </div>
+            <div class="modal-body" id="showLikeTable_Body">
 
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    function ShowLikeTableNames(tableName) {
+        var tableNames = getTablesByLikeName(tableName);
+        $("#showLikeTable_Title").text(tableName);
+        var html = "";
+        for (var name of tableNames.split(";")) {
+            html += "<p>"+name+"</p>";
+        }
+        $("#showLikeTable_Body").html(html);
+        $("#showLikeTable").modal('show');
+    }
+</script>
+<!--显示模糊匹配表 匹配所有表 over-->
 
     <script src="/js/bootstrap.min.js?v=3.3.6"></script>
     <script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
@@ -441,6 +473,59 @@
             }
         );
 
+        $("#addTableName").change(
+            function () {
+                var tableNames = getTablesByLikeName($(this).val());
+                $("#FuzzyMatchingTableNames").width($("#AddTableIsFuzzyMatching").width());
+                $("#FuzzyMatchingTableNames").text(tableNames);
+            }
+        );
+
+        function TransferLikeTableReq(table_name) {
+            if (table_name == "AllTables") {
+                return ".*";
+            }else{
+                var reqTableName = table_name;
+                // 第一个字符如果是 * 的情况下,则自动替换成 (.*), 因为第一个字符是 * 的情况下,正则是错误的
+                if (reqTableName.charAt(0) == "*"){
+                    reqTableName = "(.*)"+reqTableName.substr(1,reqTableName.length-1);
+                }
+                // 只要前面不是 （.*）,则自动替换面 ^ 开头，代表前面没数据了
+                if ((reqTableName.indexOf("(.*)") != 0) && reqTableName.charAt(0) != "^") {
+                    reqTableName = "^"+reqTableName
+                }
+                // 假如末尾是 *，则替换面 (.*)
+                // binlog_field_test_*  会匹配 出 binlog_field_test ，但是  binlog_field_test_（.*） 不会匹配 binlog_field_test 出来
+                if (reqTableName.charAt(reqTableName.length-1) == "*"){
+                    reqTableName = reqTableName.substr(0,reqTableName.length-1)+"(.*)";
+
+                }
+                // 字符串如果不是 (.*) 结尾,则自动替换面 $,代表后面没有数据了
+                if (reqTableName.length >= 4 && reqTableName.substr(reqTableName.length-4,reqTableName.length) != "(.*)" && reqTableName.charAt(reqTableName.length-1) != "$"){
+                    reqTableName = reqTableName + "$";
+                }
+                return reqTableName;
+            }
+        }
+
+        function getTablesByLikeName(table_name) {
+            var table_names = "";
+            var reg;
+            if ( table_name != "AllTables" && table_name.indexOf("*") == -1 ){
+                return "";
+            }
+            reg = new RegExp(TransferLikeTableReq(table_name));
+            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
+                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
+                    var regResult = $(this).val().match(reg);
+                    if ( regResult != null && regResult != undefined){
+                        table_names += $(this).val()+";";
+                    }
+                }
+            });
+            return table_names;
+        }
+
         function AddTable(obj){
             if($(obj).text()=="正在执行"){
                 return false;
@@ -459,6 +544,14 @@
             if ( $("#AddTableIsFuzzyMatching").val() == 1 ){
                 if (table_names.indexOf("*") == -1){
                     alert("选择了模糊匹配,但 TableName 匹配规则有问题，没有 *，请参考文档后再进行设置 ！");
+                    return false;
+                }
+                var tableNames = getTablesByLikeName(table_names)
+                if (tableNames == ""){
+                    alert("匹配规则 设置有问题，请参考文档后再进行设置 ！");
+                    return false;
+                }
+                if( !confirm("请确认是否匹配正确："+tableNames ) ) {
                     return false;
                 }
             }
@@ -497,7 +590,7 @@
                                 html += '<a class="list-group-item"><div class="tableDiv" title="' + table_name + '" id="' + tableDivId + '">';
                                 html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + schema_name + '\',\'' + table_name + '\')">' + table_name + '</h5>';
                                 html += '<div class="right1">';
-                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
+                                html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+table_name+'\')">多表</button></div>';
                                 html += '</div>';
                                 html += '<div class="right">';
                                 html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+table_name+'\')">DEL</button></div>';
@@ -590,7 +683,7 @@
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(schema_name,table_name);
-            var url = "/table/toserverlist";
+            var url = "/table/toserver/list";
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name},
                     function(data,status){
@@ -616,9 +709,13 @@
                             if (v.Error != "" && v.Error != null){
                                 ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
                             }
-                            var op = "";
-                            if(v.Status == "running" || v.Status == ""){
-                                op = '<button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="DelTableToServer(this,'+v.ToServerID+')">DEL</button>';
+                            var op = "<p>"+v.Status+"</p>";
+                            if (v.Status == "stopped"){
+                                op += '<p><button data-toggle="button" class="btn-sm btn-primary btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'start\')">START</button></p>';
+                                op += '<p><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'del\')">DEL</button></p>';
+                            }else if (v.Status == "running" || v.Status == ""){
+                                op += '<p><button data-toggle="button" class="btn-sm btn-warning btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'stop\')">STOP</button></p>';
+                                op += '<p><button data-toggle="button" class="btn-sm btn-danger btn-sm" type="button" onClick="UpdateTableToServerStatus(this,'+v.ToServerID+','+index+',\'del\')">DEL</button></p>';
                             }else{
                                 op = v.Status;
                             }
@@ -651,15 +748,10 @@
 
                         var table_name_alias = "";
                         if ( table_name.indexOf("*") != -1 ){
-                            var reg = new RegExp(table_name);
-                            $('#TableListContair').find(":input[name=table_check_name]").each(function(){
-                                if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
-                                    var regResult = $(this).val().match(reg);
-                                    if ( regResult != null && regResult != undefined){
-                                        table_name_alias = $(this).val();
-                                    }
-                                }
-                            });
+                            var tableNames = getTablesByLikeName(table_name);
+                            if ( tableNames != "" ) {
+                                table_name_alias = tableNames.split(";")[0];
+                            }
                             if( table_name_alias == "" ){
                                 alert("没有匹配到表名！请检查配置是否正确，或者创建一个符合当前规则表，再进行选择配置！")
                                 return false;
@@ -672,15 +764,34 @@
                     'json');
         }
 
-        function DelTableToServer(obj,ToServerID){
-            var index = $(obj).parent().parent().children().eq(0).text();
-            if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
-                return false;
+        function UpdateTableToServerStatus(obj,ToServerID,index,status){
+            var url = "";
+            var opName = "";
+            switch (status){
+                case "stop":
+                    if (!confirm("确定暂停第 [ "+ index +" ] 条记录？")){
+                        return false;
+                    }
+                    url = "/table/toserver/stop";
+                    opName = "暂停";
+                    break;
+                case "del":
+                    if (!confirm("确定删除第 [ "+ index +" ] 条记录？删除将不能恢复？！！！")){
+                        return false;
+                    }
+                    url = "/table/toserver/del";
+                    opName = "删除";
+                    break;
+                case "start":
+                    url = "/table/toserver/start";
+                    opName = "启动";
+                    break;
+                default:
+                    return;
             }
             var dbname = $("#tableToServerListContair").attr("dbname");
             var schema_name = $("#tableToServerListContair").attr("schema");
             var table_name = $("#tableToServerListContair").attr("table_name");
-            var url = "/table/deltoserver"
             $.post(url,
                     {dbname:dbname,schema_name:schema_name,table_name:table_name,index:index,to_server_id:ToServerID},
                     function(data,status){
@@ -692,7 +803,7 @@
                             alert(data.msg);
                             return;
                         }
-                        $(obj).parent().parent('tr').remove();
+                        alert(opName+"成功!");
                         GetTableToServerList(schema_name,table_name);
                     },
                     'json');
@@ -758,7 +869,7 @@
                     }
                     if (v.TableType.toUpperCase().indexOf("LIKE") != -1) {
                         html += '<div class="right1">';
-                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button">多表</button></div>';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\')">多表</button></div>';
                         html += '</div>';
                     }
                     html += '<div class="right">';
@@ -811,6 +922,7 @@
 
             $("#DatabaseListContair a").click(
                     function(){
+                        $("#TableSearchName").val("");
                         showSchemaTableList($(this).attr("id"));
                     }
             );
@@ -882,7 +994,7 @@
 						var FilterQuery = $("#FilterQuery").val();
 						var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname:dbname,
                             schema_name:schema_name,
@@ -965,7 +1077,7 @@
                         var FilterQuery = $("#FilterQuery").val();
                         var FilterUpdate = $("#FilterUpdate").val();
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/addtoserver';
+                        var url = '/table/toserver/add';
                         var data = {
                             dbname: dbname,
                             schema_name: schema_name,
@@ -1077,6 +1189,20 @@
         }
 
         init();
+
+        $("#TableSearchName").keyup(function(event){
+            if(event.keyCode ==13){
+                var TableSearchName = $("#TableSearchName").val();
+                $('#TableListContair a').each(function(){
+                    var tmpName = $(this).find(":input[name=table_check_name]").val();
+                    if( TableSearchName == "" || tmpName.indexOf(TableSearchName) > -1 ){
+                        $(this).show();
+                    }else{
+                        $(this).hide();
+                    }
+                });
+            }
+        });
 
     </script>
 

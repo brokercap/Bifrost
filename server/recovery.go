@@ -103,17 +103,21 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		for schemaName,_:= range dbInfo.ReplicateDoDb{
 			m = append(m, schemaName)
 		}
-		db.SetReplicateDoDb(m)
+		//db.SetReplicateDoDb(m)
 		for oldChannelId,cInfo := range dbInfo.ChannelMap{
 			ch,ChannelID := db.AddChannel(cInfo.Name,cInfo.MaxThreadNum)
 			ch.Status = "close"
 			channelIDMap[oldChannelId] = ChannelID
 			if cInfo.Status != "stop" && cInfo.Status != "close" {
-				if dbInfo.ConnStatus != "close" || dbInfo.ConnStatus != "stop" {
+				switch dbInfo.ConnStatus {
+				case "close","stop":
+					break
+				default:
 					if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 						ch.Start()
 						continue
 					}
+					break
 				}
 			}
 			//db close,channel must be close
@@ -129,35 +133,48 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		var PerformanceTestingPosition uint32 = 0
 		//假如在性能测试的配置文件中找到这个 找这个DbName，则直接加载配置文件中的位点
 		//并且只有配置合法，才可以通过
-		if PerformanceTestingParam := config.GetConfigVal("PerformanceTesting",dbInfo.Name);PerformanceTestingParam != ""{
-			log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam)
-			t := strings.Split(PerformanceTestingParam,",")
-			if len(t) == 2{
+
+		func() {
+			if PerformanceTestingParam := config.GetConfigVal("PerformanceTesting",dbInfo.Name);PerformanceTestingParam != ""{
+				log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam)
+				t := strings.Split(PerformanceTestingParam,",")
 				var err error
+				defer func() {
+					if err != nil {
+						log.Println("PerformanceTesting",dbInfo.Name, err)
+					}
+				}()
+				if len(t) != 2{
+					err = fmt.Errorf("PerformanceTestingParam:%s split error",PerformanceTestingParam)
+					return
+				}
+
 				index := strings.IndexAny(t[0], ".")
 				binlogPrefix2 := t[0][0:index]
 				PerformanceTestingFileNum,err = strconv.Atoi(t[0][index+1:])
-				if err == nil {
-					//配置文件 和  原有DbName里设置的binlog 前缀必须一致
-					if binlogPrefix2 == binlogPrefix {
-						//位点也必须是数字
-						position, err := strconv.Atoi(t[1])
-						if err == nil && position >= 4 {
-							PerformanceTestingFileName = t[0]
-							PerformanceTestingPosition = uint32(position)
-						}else{
-							log.Println("PerformanceTesting",dbInfo.Name,err)
-						}
-					}else{
-						log.Println("PerformanceTesting",dbInfo.Name,"binlog prefix:",binlogPrefix2," not ==",binlogPrefix)
-					}
-				}else{
-					log.Println("PerformanceTesting",dbInfo.Name,t[0][index+1:],"not int",err)
+				if err != nil {
+					return
 				}
-			}else{
-				log.Println("PerformanceTesting",dbInfo.Name,"PerformanceTestingParam:",PerformanceTestingParam,"split error")
+				//配置文件 和  原有DbName里设置的binlog 前缀必须一致
+				if binlogPrefix2 != binlogPrefix {
+					err = fmt.Errorf("binlog prefix:%s != %s",binlogPrefix2,binlogPrefix)
+					return
+				}
+				//位点也必须是数字
+				var position int
+				position, err = strconv.Atoi(t[1])
+				if err != nil {
+					return
+				}
+				if position < 4 {
+					err = fmt.Errorf("position:%d < 4", position)
+					return
+				}
+				PerformanceTestingFileName = t[0]
+				PerformanceTestingPosition = uint32(position)
 			}
-		}
+		}()
+
 
 		var BinlogFileNum int = 0
 		var BinlogPosition uint32 = 0
@@ -207,7 +224,16 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					if config.FileQueueUsable == false{
 						toServer.FileQueueStatus = false
 					}
-
+					var status = ""
+					switch toServer.Status {
+					case "stopping","stopped":
+						status = "stopped"
+						break
+					case "deling","deled":
+						continue
+					default:
+						break
+					}
 					toServerObj := &ToServer{
 						ToServerID:			toServer.ToServerID,
 						MustBeSuccess:  	toServer.MustBeSuccess,
@@ -222,6 +248,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						LastBinlogPosition:	toServer.LastBinlogPosition,
 						LastBinlogFileNum: 	toServer.LastBinlogFileNum,
 						FileQueueStatus:    toServer.FileQueueStatus,
+						Status:				status,
 					}
 					if toServerObj.FileQueueStatus {
 						lastDataEvent,err := toServerObj.InitFileQueue(db.Name,schemaName,tableName).ReadLastFromFileQueue()
@@ -237,24 +264,11 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
 					filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(toServerObj.ToServerID)))
 					db.AddTableToServer(schemaName, tableName,toServerObj)
+					log.Printf("dbname:%s,schemaName:%s,tableName:%s ToServerKey:%s,ToServerID:%d,BinlogFileNum:%d,BinlogPosition:%d",db.Name,schemaName,tableName,toServer.ToServerKey,toServer.ToServerID,toServer.BinlogFileNum,toServer.BinlogPosition)
 
 					//假如当前同步配置 最后输入的 位点 等于 最后成功的位点，说明当前这个 同步配置的位点是没有问题的
-					if toServer.LastBinlogFileNum >0 && toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
-						if lastAllToServerNoraml == false{
-							//假如有一个同步不太正常的情况下，取小值
-							//这里用判断 BinlogFileNum == 0 是因为 绝对不会出现，因为绝对 第一次循环 lastAllToServerNoraml == true
-							BinlogFileNum1,BinlogPosition1  := CompareBinlogPositionAndReturnLess(
-								BinlogFileNum,BinlogPosition,
-								toServer.BinlogFileNum,toServer.BinlogPosition)
-							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
-
-							}else{
-								log.Println("recovery binlog change1:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
-								BinlogFileNum = BinlogFileNum1
-								BinlogPosition = BinlogPosition1
-							}
-
-						}else{
+					if toServer.LastBinlogFileNum > 0 && toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
+						if lastAllToServerNoraml {
 							//假如所有表都还是正常同步的情况下，取大值
 							BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnGreater(
 								BinlogFileNum, BinlogPosition,
@@ -272,22 +286,28 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					}else{
 						lastAllToServerNoraml = false
 					}
+					if lastAllToServerNoraml == false {
+						//假如同步异常的情况下，取小值
+						//假如 BinlogFileNum = 0 的情况下，则用当前最小的同步位点
+						if BinlogFileNum == 0 {
+							BinlogFileNum = toServer.BinlogFileNum
+							BinlogPosition = toServer.BinlogPosition
+							log.Println("recovery binlog change3:", dbInfo.Name, " old:", 0, " ", 0, " new:", BinlogFileNum, " ", BinlogPosition)
+						}else {
+							BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnLess(
+								BinlogFileNum, BinlogPosition,
+								toServer.BinlogFileNum, toServer.BinlogPosition)
+							if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition {
 
+							} else {
+								log.Println("recovery binlog change1:", dbInfo.Name, " old:", BinlogFileNum, " ", BinlogPosition, " new:", BinlogFileNum1, " ", BinlogPosition1)
+								BinlogFileNum = BinlogFileNum1
+								BinlogPosition = BinlogPosition1
+							}
+						}
+					}
 					if toServer.LastBinlogFileNum == 0 && toServer.BinlogFileNum > 0{
 						saveBinlogPosition(getToServerLastBinlogkey(db,toServer),toServer.BinlogFileNum,toServer.BinlogPosition)
-					}
-
-					//取大值
-					BinlogFileNum1, BinlogPosition1 := CompareBinlogPositionAndReturnGreater(
-						BinlogFileNum, BinlogPosition,
-						toServer.BinlogFileNum, toServer.BinlogPosition)
-
-					if BinlogFileNum1 == BinlogFileNum && BinlogPosition1 == BinlogPosition{
-
-					}else{
-						log.Println("recovery binlog change3:",dbInfo.Name, " old:",BinlogFileNum," ",BinlogPosition, " new:",BinlogFileNum1," ",BinlogPosition1)
-						BinlogFileNum = BinlogFileNum1
-						BinlogPosition = BinlogPosition1
 					}
 				}
 			}

@@ -3,6 +3,7 @@ package history
 import (
 	"github.com/brokercap/Bifrost/server"
 	"sync"
+	"time"
 )
 
 func (This *History) InitToServer()  {
@@ -72,6 +73,16 @@ func (This *History) SyncWaitToServerOver(n int)  {
 				break
 			}
 		}()
-		This.ToServerTheadGroup.Wait()
+		for{
+			This.ToServerTheadGroup.Wait()
+			This.Lock()
+			if This.selectStatus == true {
+				This.Unlock()
+				break
+			}
+			This.Unlock()
+			<- time.NewTimer(time.Duration(1) * time.Second).C
+		}
+
 	}()
 }
