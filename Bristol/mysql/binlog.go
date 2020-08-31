@@ -406,6 +406,7 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 	if err != nil {
 		return nil,err
 	}
+	defer stmt.Close()
 	m = make(map[string]string,2)
 	for {
 		dest := make([]driver.Value, 2, 2)
@@ -722,7 +723,7 @@ func (This *BinlogDump) checksum_enabled() {
 		}
 		return
 	}
-	if dest[1].(string) != ""{
+	if dest[1].(string) != "" {
 		This.mysqlConn.Exec("set @master_binlog_checksum= @@global.binlog_checksum",p)
 		This.parser.binlog_checksum = true
 	}
