@@ -223,7 +223,7 @@
                             <td style="text-indent:10px" >
                                 <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
                                 <input type="hidden" name="table_name_old" class="form-control"  value="" id="addTableNameOld">
-                                <p id="FuzzyMatchingTableNames" style="word-wrap: break-word;word-break: normal;"></p>
+                                <div id="FuzzyMatchingTableNames" style="word-wrap: break-word;word-break: normal; width: auto;"></div>
                             </td>
                         </tr>
 
@@ -235,6 +235,7 @@
                                     <option value="1">Yes</option>
                                 </select>
                                 <p style="padding-top: 5px">Yes 可以修改表名 带 * 的模糊匹配规则,例如: binlog_field_test_*</p>
+                                <p><a href="/docs#FuzzyMatching" target="_blank">模糊匹配文档</a></p>
                             </td>
                         </tr>
 
@@ -475,7 +476,8 @@
         $("#addTableName").change(
             function () {
                 var tableNames = getTablesByLikeName($(this).val());
-                $("#FuzzyMatchingTableNames").html(tableNames);
+                $("#FuzzyMatchingTableNames").width($("#AddTableIsFuzzyMatching").width());
+                $("#FuzzyMatchingTableNames").text(tableNames);
             }
         );
 
