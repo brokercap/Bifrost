@@ -223,7 +223,7 @@
                             <td style="text-indent:10px" >
                                 <input type="text" name="table_name" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
                                 <input type="hidden" name="table_name_old" class="form-control"  value="" id="addTableNameOld">
-                                <p id="FuzzyMatchingTableNames"></p>
+                                <p id="FuzzyMatchingTableNames" style="word-wrap: break-word;word-break: normal;"></p>
                             </td>
                         </tr>
 
@@ -479,14 +479,9 @@
             }
         );
 
-        function getTablesByLikeName(table_name) {
-            var table_names = "";
-            var reg;
-            if ( table_name != "AllTables" && table_name.indexOf("*") == -1 ){
-                return "";
-            }
+        function TransferLikeTableReq(table_name) {
             if (table_name == "AllTables") {
-                reg = new RegExp(".*");
+                return ".*";
             }else{
                 var reqTableName = table_name;
                 // 第一个字符如果是 * 的情况下,则自动替换成 (.*), 因为第一个字符是 * 的情况下,正则是错误的
@@ -507,8 +502,17 @@
                 if (reqTableName.length >= 4 && reqTableName.substr(reqTableName.length-4,reqTableName.length) != "(.*)" && reqTableName.charAt(reqTableName.length-1) != "$"){
                     reqTableName = reqTableName + "$";
                 }
-                reg = new RegExp(reqTableName);
+                return reqTableName;
             }
+        }
+
+        function getTablesByLikeName(table_name) {
+            var table_names = "";
+            var reg;
+            if ( table_name != "AllTables" && table_name.indexOf("*") == -1 ){
+                return "";
+            }
+            reg = new RegExp(TransferLikeTableReq(table_name));
             $('#TableListContair').find(":input[name=table_check_name]").each(function(){
                 if( $(this).val() != "AllTables" && $(this).val().indexOf("*") == -1 ){
                     var regResult = $(this).val().match(reg);

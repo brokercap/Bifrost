@@ -177,12 +177,16 @@
                     alert("ThreadCountPer must be int!");
                     return false;
                 }
+                if ( table_names == "" ){
+                    alert("没有匹配到数据表!");
+                    return false;
+                }
                 if ( table_name != table_names ){
                     var reg;
                     if (table_name == "AllTables") {
                         reg = new RegExp(".*");
                     }else{
-                        reg = new RegExp(table_name);
+                        reg = new RegExp(TransferLikeTableReq(table_name));
                     }
                     var arr = table_names.split(";");
                     for( var i in arr) {
