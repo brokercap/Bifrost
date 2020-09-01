@@ -723,7 +723,7 @@ func (This *BinlogDump) checksum_enabled() {
 		}
 		return
 	}
-	if dest[1].(string) != "" {
+	if dest[1].(string) != "" && strings.ToLower(dest[1].(string)) != "none"{
 		This.mysqlConn.Exec("set @master_binlog_checksum= @@global.binlog_checksum",p)
 		This.parser.binlog_checksum = true
 	}
