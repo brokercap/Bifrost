@@ -312,6 +312,7 @@ func (This *History) Start() error {
 				break
 			}
 			This.Lock()
+			This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableNameArr[This.TableCountSuccess].SelectCount
 			This.TableCountSuccess++
 			This.Unlock()
 			if This.TableCountSuccess >= This.TableCount {

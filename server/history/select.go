@@ -236,9 +236,6 @@ func (This *History) GetNextSql() (sql string,start uint64){
 	defer This.Unlock()
 	var where string = ""
 	if This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId  == 0 {
-		if This.NowStartI > This.TableInfo.TABLE_ROWS{
-			return
-		}
 		if This.Property.Where != "" {
 			where = " WHERE " + This.Property.Where
 		}
