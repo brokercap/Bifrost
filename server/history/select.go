@@ -64,12 +64,20 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	var sql string
 	var rowCount int
 	// 每次循环之前先累加一次，再清空统计,待协程退出的时候 ，再累加一次，这样可以避免中途退出的情况
-	defer func() {
-		This.AddSelectDataCount(uint64(rowCount))
-	}()
-	for {
-		This.AddSelectDataCount(uint64(rowCount))
+	// 这里为什么用 闭合函数,假如放在 history 对象里，每次通过 This.TableNameArr[This.TableCountSuccess] 去获取 Table ,可能存在问题的，因为 defer 存在一定概率是在下一个表查询的时候执行呢
+	StatusTable := This.TableNameArr[This.TableCountSuccess]
+	var AddSelectDataCount = func() {
+		StatusTable.Lock()
+		StatusTable.SelectCount += uint64(rowCount)
+		StatusTable.Unlock()
+		This.Lock()
+		This.SelectRowsCount += uint64(rowCount)
+		This.Unlock()
 		rowCount = 0
+	}
+	defer AddSelectDataCount()
+	for {
+		AddSelectDataCount()
 		This.RLock()
 		if This.Status == HISTORY_STATUS_SELECT_STOPING {
 			This.RUnlock()
@@ -179,13 +187,6 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 		}
 	}
 	runtime.Goexit()
-}
-
-func  (This *History) AddSelectDataCount(n uint64) {
-	This.Lock()
-	This.SelectRowsCount += n
-	This.TableNameArr[This.TableCountSuccess].SelectCount += n
-	This.Unlock()
 }
 
 func (This *History) sendToServerResult(pluginData *pluginDriver.PluginDataType)  {
