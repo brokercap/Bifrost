@@ -1,3 +1,17 @@
+v1.4.1-release   2020-08-31
+===========================
+1. 修复获取连接id，stmt未关闭的bug
+2. 修复 binlog_field_test_*  会匹配 出 binlog_field_test,all_binlog_field_test 的bug，自动转成  ^binlog_field_test_（.*） 不会匹配 binlog_field_test 出来
+3. 全量任务执行部分表之后不再执行的bug修复
+4. 全量任务列表显示正在执行的表的条数及已拉取的条数
+5. 位点恢复的过程中，第一个同步就是同步异常，恢复位点错误的bug
+6. 新增表同步的暂停和启动功能
+7. http 插件 推送方式变更为json raw 格式
+8. 配置界面新增表搜索功能
+9. linux 环境编译在没有go环境的情况下自动yum安装golang
+10. 首页版本判断逻辑更新
+11. 部门 api 接口变更
+
 v1.4.0-release   2020-08-24
 ===========================
 1.支持模糊匹配横拆表的同步配置，比如 binlog_field_test_* 的方式匹配 binlog_field_test_1,binlog_field_test_2

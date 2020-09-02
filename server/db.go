@@ -100,7 +100,7 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 	index := strings.IndexAny(binlogFileName,".")
 	if index == -1{
-		return fmt.Errorf("binlogFileName:",binlogFileName," error")
+		return fmt.Errorf("binlogFileName:%s error",binlogFileName)
 	}
 	dbObj := DbList[Name]
 	dbObj.Lock()
@@ -253,6 +253,9 @@ func GetDbInfo(dbname string) *DbListStruct {
 		}
 }
 
+func NewDbByNull() *db {
+	return &db{}
+}
 
 func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
 	return &db{
@@ -314,13 +317,68 @@ func (db *db) SetReplicateDoDb(dbArr []string) bool {
 	return false
 }
 
-func (db *db) AddReplicateDoDb(dbName string) bool {
-	db.Lock()
-	defer db.Unlock()
-	if _,ok:=db.replicateDoDb[dbName];!ok{
-		db.replicateDoDb[dbName] = 1
+func (db *db) AddReplicateDoDb(schemaName,tableName string,doLock bool) bool {
+	if doLock {
+		db.Lock()
+		defer db.Unlock()
+	}
+	if tableName == ""{
+		return false
+	}
+	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
+	if db.binlogDump != nil {
+		db.binlogDump.AddReplicateDoDb(schemaName, TransferLikeTableReqName)
+		log.Printf("AddReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
+	}
+	if _,ok:=db.replicateDoDb[schemaName];!ok{
+		db.replicateDoDb[schemaName] = 1
 	}
 	return true
+}
+
+func (db *db) DelReplicateDoDb(schemaName,tableName string,doLock bool) bool {
+	if doLock {
+		db.Lock()
+		defer db.Unlock()
+	}
+	if tableName == ""{
+		return false
+	}
+	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
+	if db.binlogDump != nil {
+		db.binlogDump.DelReplicateDoDb(schemaName, TransferLikeTableReqName)
+		log.Printf("DelReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
+
+	}
+	return true
+}
+
+func (db *db) TransferLikeTableReq(tableName string) string {
+	if tableName == ""{
+		return ""
+	}
+	var reqTableName string = tableName
+	if tableName != "*" && strings.Index(tableName,"*") > -1 {
+		if tableName[0:1] == "*" {
+			reqTableName = "(.*)" + tableName[1:]
+		}
+		// 只要前面不是 （.*）,则自动替换面 ^ 开头，代表前面没数据了
+		if strings.Index(reqTableName, "(.*)") != 0 && reqTableName[0:1] != "^" {
+			reqTableName = "^" + reqTableName
+		}
+		var reqTablelen = len(reqTableName)
+		// 假如末尾是 *，则替换面 (.*)
+		// binlog_field_test_*  会匹配 出 binlog_field_test ，但是  binlog_field_test_（.*） 不会匹配 binlog_field_test 出来
+		if reqTableName[reqTablelen-1:] == "*" {
+			reqTableName = reqTableName[0:reqTablelen-1]+"(.*)"
+		}
+		// 字符串如果不是 (.*) 结尾,则自动替换面 $,代表后面没有数据了
+		reqTablelen = len(reqTableName)
+		if reqTablelen >= 4 && reqTableName[reqTablelen-4:] != "(.*)" && reqTableName[reqTablelen:] != "$" {
+			reqTableName += "$"
+		}
+	}
+	return reqTableName
 }
 
 func (db *db) getRightBinlogPosition() (newPosition uint32) {
@@ -373,7 +431,7 @@ func (db *db) Start() (b bool) {
 	case "close":
 		db.ConnStatus = "starting"
 		var newPosition uint32 = 0
-		log.Println(db.Name," starting "," getRightBinlogPosition")
+		log.Println(db.Name,"Start(),and starting "," getRightBinlogPosition")
 		for i:=0;i<3;i++{
 			if db.ConnStatus == "closing"{
 				break
@@ -404,7 +462,7 @@ func (db *db) Start() (b bool) {
 		db.binlogDump.CallbackFun = db.Callback
 		for key,_ := range db.tableMap{
 			schemaName,TableName := GetSchemaAndTableBySplit(key)
-			db.binlogDump.AddReplicateDoDb(schemaName,TableName)
+			db.AddReplicateDoDb(schemaName,TableName,false)
 		}
 		go	db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
 
@@ -540,7 +598,7 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 			LastToServerID: LastToServerID,
 			likeTableList:  make([]*Table,0),
 		}
-		db.addLikeTable(db.tableMap[key],key,tableName)
+		db.addLikeTable(db.tableMap[key],schemaName,tableName)
 		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
 		count.SetTable(db.Name,key)
 	} else {
@@ -550,21 +608,27 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 	return true
 }
 
-func (db *db) addLikeTable(t *Table ,key,tableName string) {
+func (db *db) addLikeTable(t *Table ,schemaName,tableName string) {
 	if tableName == "*" || strings.Index(tableName, "*") == -1 {
 		return
 	}
-	reqTagAll,err := regexp.Compile(key)
+	key := GetSchemaAndTableJoin(schemaName,tableName)
+	reqTableName := db.TransferLikeTableReq(tableName)
+	reqTagAll,err := regexp.Compile(reqTableName)
 	if err != nil{
-		log.Println(db.Name," addLikeTable :",key," reqTagAll err:",err)
+		log.Println(db.Name," addLikeTable :",key,"reqTableName:",reqTableName," reqTagAll err:",err)
 		return
 	}
 	for k,v := range db.tableMap {
 		if strings.Index(k, "*") >= 0 {
 			continue
 		}
+		schemaName0,TableName0 := GetSchemaAndTableBySplit(k)
+		if schemaName0 != schemaName{
+			continue
+		}
 		// 假如匹配的表
-		if reqTagAll.FindString(k) != "" {
+		if reqTagAll.FindString(TableName0) != "" {
 			v.likeTableList = append(v.likeTableList,t)
 		}
 	}
@@ -583,26 +647,30 @@ func (db *db) GetTableByKey(key string) *Table {
 		//这里判断 > 0 ，假如 == 0 说明是所有表了了，如果是 == * 的情况下，是有 所有表的逻辑，已经存到map中了
 		db.Lock()
 		defer db.Unlock()
-		schemaName,_ := GetSchemaAndTableBySplit(key)
+		schemaName,TableName := GetSchemaAndTableBySplit(key)
 		key0 := GetSchemaAndTableJoin(schemaName,"*")
 		for k,v := range db.tableMap {
 			if k == key0 {
 				continue
 			}
 			//库名是 * 或者 table 里没有 * 的，都不匹配
-			if strings.Index(k, "*") <= 0 {
+			if strings.Index(k, "*") == -1 {
 				continue
 			}
 			if v.regexpErr {
 				continue
 			}
-			reqTagAll,err := regexp.Compile(k)
-			if err != nil{
-				v.regexpErr = true
-				log.Println(db.Name," GetTable :",k," reqTagAll err:",err)
+			schemaName0,TableName0 := GetSchemaAndTableBySplit(k)
+			if schemaName0 != schemaName {
 				continue
 			}
-			if reqTagAll.FindString(key) != "" {
+			reqTagAll,err := regexp.Compile(db.TransferLikeTableReq(TableName0))
+			if err != nil{
+				v.regexpErr = true
+				log.Println(db.Name," GetTable :",k,"TransferLikeTableReq:",db.TransferLikeTableReq(TableName0), "reqTagAll err:",err)
+				continue
+			}
+			if reqTagAll.FindString(TableName) != "" {
 				if _,ok := db.tableMap[key];!ok {
 					db.tableMap[key] = &Table{
 						key:			key,
@@ -643,6 +711,10 @@ func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap m
 	return
 }
 
+/**
+删除表和通道的绑定关系
+假如存在表和同步关系，则需要将这个表从 binlog 解析中也去删除掉
+*/
 func (db *db) DelTable(schemaName string, tableName string) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
 	db.Lock()
@@ -677,7 +749,7 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	count.DelTable(db.Name,key)
 	log.Println("DelTable",db.Name,schemaName,tableName)
 	if db.binlogDump != nil && toServerLen > 0 {
-		db.binlogDump.DelReplicateDoDb(schemaName,tableName)
+		db.DelReplicateDoDb(schemaName,tableName,false)
 	}
 	return true
 }

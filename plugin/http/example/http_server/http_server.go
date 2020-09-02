@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	"log"
+	"io/ioutil"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"encoding/json"
 )
 
 var i int
@@ -27,11 +30,15 @@ func check_uri()  {
 }
 
 func post(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	//log.Println("EventType",req.Form.Get("EventType"))
-	//log.Println("SchemaName",req.Form.Get("SchemaName"))
-	//log.Println("TableName",req.Form.Get("TableName"))
-	log.Println(i,req.Form.Get("EventType"),req.Form.Get("SchemaName"),req.Form.Get("TableName"),"Data",req.Form.Get("Data"))
+	body,err := ioutil.ReadAll(req.Body)
+	var data pluginDriver.PluginDataType
+	err = json.Unmarshal(body,&data)
+	if err != nil {
+		w.WriteHeader(501)
+		log.Println("body err:",string(body))
+		return
+	}
+	log.Println("i:",i,"body:",string(body))
 	i++
 	return
 }

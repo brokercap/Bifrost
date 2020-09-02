@@ -90,15 +90,15 @@
                                 <td>
                                 <p>{{$v.TableName}}</p>
                                     {{if ne $v.TableName $v.TableNames}}
-                                        {{range $k,$tableName := $v.TableNameArr}}
+                                        {{range $k,$tableInfo := $v.TableNameArr}}
                                             {{if eq $k $v.TableCountSuccess }}
-                                            <p style="color: #F00; font-weight: bold" title="current table select">{{$tableName}}</p>
+                                            <p style="color: #F00; font-weight: bold" title="current table select ( RowsCount / SelectedCount )">{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}})</p>
                                             {{end}}
                                             {{if lt $k $v.TableCountSuccess }}
-                                                <p style="color: #1ab394">{{$tableName}}</p>
+                                                <p style="color: #1ab394" title="select over ( RowsCount / SelectedCount )" >{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}}) </p>
                                             {{end}}
                                             {{if gt $k $v.TableCountSuccess }}
-                                                <p>{{$tableName}}</p>
+                                                <p>{{$tableInfo.TableName}}</p>
                                             {{end}}
                                         {{end}}
                                     {{end}}
@@ -107,6 +107,7 @@
                                     <p>CurrentTableName：{{$v.CurrentTableName}}</p>
                                     <p>TableCount：{{$v.TableCount}}</p>
                                     <p>SuccessCount：{{$v.TableCountSuccess}}</p>
+                                    <p title="已经成功拉取条数">SelectRowsCount：{{$v.SelectRowsCount}}</p>
                                 </td>
                                 <td>
                                     <p>ThreadNum: {{$v.Property.ThreadNum}}</p>
@@ -125,7 +126,19 @@
                                     {{end}}
 
                                 </td>
-                                <td>{{$v.ToServerIDList}}</td>
+                                <td>
+                                {{ $len := len $v.ToServerList }}
+                                {{if eq $len 0}}
+                                    {{$v.ToServerIDList}}
+                                {{else}}
+                                    {{range $k,$toServer := $v.ToServerList}}
+                                        <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
+                                        <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
+                                        <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
+                                        <p>Error:{{$toServer.ToServerInfo.Error}}</p>
+                                    {{end}}
+                                {{end}}
+                                </td>
                                 <td>{{$v.ToServerTheadCount}}</td>
                                 <td>
                                 {{range $k,$toServer := $v.ToServerList}}
@@ -151,7 +164,8 @@
                                     {{else if eq $v.Status "stoping"}}
                                         <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
                                     {{else if eq $v.Status "stoped"}}
-                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                        <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
+                                        <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
                                     {{else}}
                                         <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
                                         <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
