@@ -7,8 +7,8 @@ services:
     ports:
       - "21036:21036"
     volumes:
-      - ./tags/v1.4.0-beta.03/:/sync
-    working_dir: /sync/bifrost_v1.4.0-beta.03_Linux-64bit-bin/bin
+      - ./tags/v1.4.0-release/:/sync
+    working_dir: /sync/bifrost_v1.4.0-release_Linux-64bit-bin/bin
     entrypoint: ./Bifrost
   redis-sync:
     image: redis
@@ -18,7 +18,6 @@ services:
       - "6380:6379"
     networks:
       - share
-    restart: always
     entrypoint: redis-server /usr/local/etc/redis/redis.conf
 networks:
   share:
