@@ -24,4 +24,28 @@
     </div>
 </div>
 
+<div class="form-group">
+    <label class="col-sm-3 control-label">Timeout：</label>
+    <div class="col-sm-9">
+        <input type="text"  name="Kafka_Timeout" id="Kafka_Timeout" class="form-control" value="10" placeholder="10">
+        <span class="help-block m-b-none"> 写入超时,假如想设置不超时，请设置 -1，单位/秒 </span>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-sm-3 control-label">RequiredAcks：</label>
+    <div class="col-sm-9">
+        <select class="form-control" name="Kafka_RequiredAcks" id="Kafka_RequiredAcks">
+            <option value="1" selected="selected">1</option>
+            <option value="-1">-1</option>
+            <option value="0">0</option>
+        </select>
+        <span class="help-block m-b-none">
+            <p><strong>1：</strong> 主写主副本就返回成功</p>
+            <p><strong>-1：</strong> 等待所有副本写完再返回成功</p>
+            <p><strong>0：</strong> 只管提交，不等待kafka服务器返回</p>
+        </span>
+    </div>
+</div>
+
 </div>
