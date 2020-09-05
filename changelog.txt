@@ -1,3 +1,12 @@
+v1.4.2-release   2020-09-05
+===========================
+1. 新复mysql binlog_checksum=none解析错误bug
+2. 修复全量任务查询数据显示数据错误bug
+3. plugin clickhouse 主键支持 标签使用
+4. 修复部分stmt,rows close 先后逻辑问题
+5. plugin kafka 新增 Timeout,RequiredAcks 配置参数
+6. 修复全量任务非between优化查询,总数对不上的bug
+
 v1.4.1-release   2020-08-31
 ===========================
 1. 修复获取连接id，stmt未关闭的bug
