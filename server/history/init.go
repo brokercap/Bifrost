@@ -256,12 +256,13 @@ func (This *History) Start() error {
 	This.StartTime = time.Now().Format("2006-01-02 15:04:05")
 	This.Status = HISTORY_STATUS_RUNNING
 	This.NowStartI = 0
-	This.Unlock()
+	This.SelectRowsCount = 0
 	This.Fields = make([]TableStruct,0)
 	This.ThreadPool = make([]*ThreadStatus,This.Property.ThreadNum)
 	This.threadResultChan = make(chan int,1)
 	This.ToServerList = make([]*toServer,0)
 	This.OverTime = ""
+	This.Unlock()
 
 	go func() {
 		defer func() {
@@ -311,6 +312,7 @@ func (This *History) Start() error {
 				break
 			}
 			This.Lock()
+			This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableNameArr[This.TableCountSuccess].SelectCount
 			This.TableCountSuccess++
 			This.Unlock()
 			if This.TableCountSuccess >= This.TableCount {
@@ -324,7 +326,9 @@ func (This *History) Start() error {
 }
 
 func (This *History) Stop() error {
+	This.Lock()
 	This.Status = "killed"
+	This.Unlock()
 	return nil
 }
 

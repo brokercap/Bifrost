@@ -22,8 +22,8 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 	var normalFun = func(v *pluginDriver.PluginDataType) {
 		switch v.EventType {
 		case "insert":
-			for _,row := range v.Rows{
-				key := row[This.p.mysqlPriKey]
+			for i,row := range v.Rows{
+				key := This.getMySQLData(v,i,This.p.mysqlPriKey)
 				if _,ok=deleteDataMap[key];!ok {
 					if _, ok = insertDataMap[key]; !ok {
 						insertDataMap[key] = pluginDriver.PluginDataType{
@@ -44,7 +44,8 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 		case "update":
 			for k := len(v.Rows)-1; k >= 0;k--{
 				row := v.Rows[k]
-				key := row[This.p.mysqlPriKey]
+				//key := row[This.p.mysqlPriKey]
+				key := This.getMySQLData(v,k,This.p.mysqlPriKey)
 				if k%2 == 0{
 					if _,ok:=deleteDataMap[key];!ok{
 						deleteDataMap[key] = pluginDriver.PluginDataType{
@@ -80,8 +81,9 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 			break
 		case "delete":
 			if This.p.SyncType == SYNCMODE_LOG_UPDATE{
-				for _,row := range v.Rows{
-					key := row[This.p.mysqlPriKey]
+				for i,row := range v.Rows{
+					key := This.getMySQLData(v,i,This.p.mysqlPriKey)
+					//key := row[This.p.mysqlPriKey]
 					if _,ok=deleteDataMap[key];!ok {
 						if _, ok = insertDataMap[key]; !ok {
 							insertDataMap[key] = pluginDriver.PluginDataType{
@@ -99,8 +101,9 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 					}
 				}
 			}else{
-				for _,row := range v.Rows{
-					key := row[This.p.mysqlPriKey]
+				for i,row := range v.Rows{
+					key := This.getMySQLData(v,i,This.p.mysqlPriKey)
+					//key := row[This.p.mysqlPriKey]
 					if _,ok:=deleteDataMap[key];!ok{
 						deleteDataMap[key] = pluginDriver.PluginDataType{
 							Timestamp: 		v.Timestamp,
@@ -129,8 +132,8 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 	// delete 的话，将多条数据，where id in (1,2) 方式合并
 	if len(deleteDataMap) > 0 {
 		keys := make([]dbDriver.Value,0)
-		for _, v := range deleteDataMap {
-			keys = append(keys,v.Rows[0][This.p.mysqlPriKey])
+		for key, _ := range deleteDataMap {
+			keys = append(keys,key)
 		}
 		if len(keys) > 0{
 			var where string

@@ -37,6 +37,8 @@
 
 * 同时支持 **增量** 及 **全量** 数据同步
 
+* 一个Binlog解析线程,多个目标库**并行同步**
+
 * 宕机后重启自动恢复配置,位点精确控制
 
 * 支持自定义插件开发，动态加载
@@ -44,8 +46,6 @@
 * 支持 Email 及 微信企业号等**监控报警**功能
 
 * 提供第三方监控平台访问接口(Http Basic验证)
-
-* 一个Binlog解析线程,多个目标库**并行同步**
 
 * 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
 
@@ -84,7 +84,7 @@ http://www.xbifrost.com/demo/goto.html
 
 * 5.7.18
 
-* 8.0.11 (用户密码验证需要采用 mysql_native_password 方式)
+* 8.0.21 (用户密码验证需要采用 mysql_native_password 方式)
 
 
 #### 安装
@@ -101,7 +101,7 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.4.0-release/bifrost_v1.4.1-release_Linux-64bit-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.4.2-release/bifrost_v1.4.2-release_Linux-64bit-bin.tar.gz
 
 tar -zxvf bifrost_v1.4.1-release_Linux-64bit-bin.tar.gz
 
@@ -157,7 +157,7 @@ vim Bifrost.ini
 [user]
 #登入用户名和密码
 #用户名在前，= 号后面是密码
-Bifrost=Bifrost123
+Bifrost=Bifrost
 BifrostMonitor=Bifrost123
 
 [groups]

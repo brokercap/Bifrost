@@ -3,10 +3,12 @@ package src
 
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"strings"
+	"github.com/Shopify/sarama"
 )
 
-const VERSION  = "v1.3.0"
-const BIFROST_VERION = "v1.3.0"
+const VERSION  = "v1.4.2"
+const BIFROST_VERION = "v1.4.2"
 
 func init(){
 	pluginDriver.Register("kafka",&MyConn{},VERSION,BIFROST_VERION)
@@ -22,10 +24,11 @@ func (MyConn *MyConn) GetUriExample() string{
 }
 
 func (MyConn *MyConn) CheckUri(uri string) error{
-	c:= newConn(uri)
-	if c.err != nil{
-		return c.err
+	producer, err := sarama.NewSyncProducer(strings.Split(uri, ","), nil)
+	if err == nil {
+		return err
+	}else {
+		producer.Close()
+		return nil
 	}
-	c.Close()
-	return nil
 }

@@ -401,12 +401,16 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 	}
 	sql := "select TIME,STATE from `information_schema`.`PROCESSLIST` WHERE ID='"+connectionId+"'"
 	stmt, err := parser.conn.Prepare(sql)
+	if err != nil {
+		return nil,nil
+	}
+	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
 		return nil,err
 	}
-	defer stmt.Close()
+	defer rows.Close()
 	m = make(map[string]string,2)
 	for {
 		dest := make([]driver.Value, 2, 2)
@@ -723,7 +727,7 @@ func (This *BinlogDump) checksum_enabled() {
 		}
 		return
 	}
-	if dest[1].(string) != "" {
+	if dest[1].(string) != "" && strings.ToLower(dest[1].(string)) != "none"{
 		This.mysqlConn.Exec("set @master_binlog_checksum= @@global.binlog_checksum",p)
 		This.parser.binlog_checksum = true
 	}
@@ -758,6 +762,7 @@ func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
+		stmt.Close()
 		return
 	}
 	var connectionId string

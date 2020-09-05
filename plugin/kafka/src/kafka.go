@@ -9,18 +9,25 @@ import (
 	"fmt"
 )
 
+const (
+	RUNNING int8 = 1
+	CLOSED int8 = 0
+)
+
 type Conn struct {
 	Uri    			string
-	status 			string
-	conn   			sarama.SyncProducer
+	status 			int8
 	err    			error
 	p      			*PluginParam
+	producer		sarama.SyncProducer
 }
 
 type PluginParam struct {
 	Topic 			string
 	Key   			string
 	BatchSize 		int
+	Timeout			int
+	RequiredAcks	sarama.RequiredAcks
 	dataList		[]*sarama.ProducerMessage
 	binlogList 		[]pluginDriver.PluginBinlog
 	dataCurrentCount int
@@ -35,52 +42,76 @@ func newConn(uri string) *Conn{
 }
 
 func (This *Conn) GetConnStatus() string {
-	return This.status
+	if This.status == RUNNING{
+		return "running"
+	}
+	return "close"
 }
 
 func (This *Conn) SetConnStatus(status string) {
-	This.status = status
+	if status == "running" {
+		This.status = RUNNING
+	}else{
+		This.status = CLOSED
+	}
+}
+
+func (This *Conn) newProducer() bool {
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.RequiredAcks = This.p.RequiredAcks
+	config.Producer.Timeout = time.Duration(This.p.Timeout) * time.Second
+	config.Producer.Partitioner = sarama.NewRandomPartitioner
+	This.producer, This.err = sarama.NewSyncProducer(strings.Split(This.Uri, ","), config)
+	if This.err == nil {
+		This.status = RUNNING
+		return true
+	}else {
+
+		return false
+	}
 }
 
 func (This *Conn) Connect() bool {
-	var err error
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.Timeout = 10 * time.Second
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Partitioner = sarama.NewRandomPartitioner
-	This.conn, err = sarama.NewSyncProducer(strings.Split(This.Uri, ","), config)
-	if err != nil{
-		This.err = err
-		This.status = "close"
-		return false
-	}
-	This.err = nil
-	This.status = "running"
+	This.err = fmt.Errorf("no producer")
+	This.status = CLOSED
 	return true
 }
-
 
 func (This *Conn) GetParam(p interface{}) (interface{},error){
 	s,err := json.Marshal(p)
 	if err != nil{
 		return nil,err
 	}
-	var param PluginParam
-	err2 := json.Unmarshal(s,&param)
+	//var param *PluginParam
+	param := &PluginParam{RequiredAcks: -1, Timeout: 10}
+	err2 := json.Unmarshal(s,param)
 	if err2 != nil{
 		return nil,err2
 	}
 	if param.BatchSize <= 0{
 		param.BatchSize = 1
 	}
+	if param.Timeout == 0 {
+		param.Timeout = 10
+	}
+	if param.Timeout < 0 {
+		param.Timeout = 0
+	}
+	switch param.RequiredAcks {
+	case sarama.NoResponse,sarama.WaitForAll,sarama.WaitForLocal:
+		break
+	default:
+		param.RequiredAcks = sarama.WaitForAll
+		break
+	}
 	if len(param.dataList) == 0{
 		param.dataList = make([]*sarama.ProducerMessage,0)
 		param.binlogList = make([]pluginDriver.PluginBinlog,0)
 		param.dataCurrentCount = 0
 	}
-	This.p = &param
-	return &param,nil
+	This.p = param
+	return param,nil
 }
 
 func (This *Conn) SetParam(p interface{}) (interface{},error){
@@ -103,9 +134,11 @@ func (This *Conn) ReConnect() bool {
 				return
 			}
 		}()
-		This.conn.Close()
+		if This.producer != nil {
+			This.producer.Close()
+		}
 	}()
-	r := This.Connect()
+	r := This.newProducer()
 	if r == true{
 		return  true
 	}else{
@@ -118,18 +151,18 @@ func (This *Conn) HeartCheck() {
 }
 
 func (This *Conn) Close() bool {
-	if This.conn != nil {
+	if This.producer != nil {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
 					return
 				}
 			}()
-			This.conn.Close()
+			This.producer.Close()
 		}()
 	}
-	This.conn = nil
-	This.status = "close"
+	This.producer = nil
+	This.status = CLOSED
 	return true
 }
 
@@ -151,12 +184,6 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.Plugin
 
 
 func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	if This.status != "running"{
-		This.ReConnect()
-		if This.status != "running"{
-			return nil,This.err
-		}
-	}
 	Topic := fmt.Sprint(pluginDriver.TransfeResult(This.p.Topic,data,len(data.Rows)-1))
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = Topic
@@ -179,24 +206,36 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 		}
 		return nil,nil
 	}else{
-		_, _, err = This.conn.SendMessage(msg)
+		if This.status != RUNNING{
+			This.ReConnect()
+			if This.status != RUNNING{
+				return nil,This.err
+			}
+		}
+		_, _, err = This.producer.SendMessage(msg)
 	}
 
 	if err != nil{
 		This.err = err
-		This.status = "close"
+		This.status = CLOSED
 		return nil,err
 	}
 	return nil,nil
 }
 
 func (This *Conn) sendToKafka() (binlog *pluginDriver.PluginBinlog, err error) {
+	if This.status != RUNNING{
+		This.ReConnect()
+		if This.status != RUNNING{
+			return nil,This.err
+		}
+	}
 	if This.p.dataCurrentCount == 0{
 		return nil,nil
 	}
 	if This.p.dataCurrentCount > This.p.BatchSize{
 		list := This.p.dataList[:This.p.BatchSize]
-		err = This.conn.SendMessages(list)
+		err = This.producer.SendMessages(list)
 		if err == nil{
 			This.p.dataList = This.p.dataList[This.p.BatchSize:]
 			binlogInfo := This.p.binlogList[This.p.BatchSize]
@@ -205,7 +244,7 @@ func (This *Conn) sendToKafka() (binlog *pluginDriver.PluginBinlog, err error) {
 			binlog = &binlogInfo
 		}
 	}else{
-		err = This.conn.SendMessages(This.p.dataList)
+		err = This.producer.SendMessages(This.p.dataList)
 		if err == nil{
 			This.p.dataList = make([]*sarama.ProducerMessage,0)
 			This.p.dataCurrentCount = 0
