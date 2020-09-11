@@ -189,6 +189,7 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 		BinlogPosition int
 		ServerId int
 		BinlogFormat string
+		BinlogRowImage string
 	}
 	dbInfo := &dbInfoStruct{}
 	err := func(dbUri string) (e error){
@@ -222,8 +223,12 @@ func check_db_connect_Action(w http.ResponseWriter,req *http.Request){
 			dbInfo.BinlogPosition = MasterBinlogInfo.Position
 			dbInfo.ServerId = GetServerId(dbconn)
 			variablesMap := GetVariables(dbconn,"binlog_format")
+			BinlogRowImageMap := GetVariables(dbconn,"binlog_row_image")
 			if _,ok := variablesMap["binlog_format"];ok{
 				dbInfo.BinlogFormat = variablesMap["binlog_format"]
+			}
+			if _,ok := BinlogRowImageMap["binlog_row_image"];ok{
+				dbInfo.BinlogRowImage = BinlogRowImageMap["binlog_row_image"]
 			}
 		}else{
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
