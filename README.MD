@@ -51,7 +51,7 @@
 
 #### Bifrost在线界面体验
 
-http://www.xbifrost.com/demo/goto.html
+https://www.xbifrost.com/demo/goto.html
 
 用户名： Bifrost
 
@@ -101,11 +101,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.4.2-release/bifrost_v1.4.2-release_Linux-64bit-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.4.3-release/bifrost_v1.4.3-release_Linux-64bit-bin.tar.gz
 
-tar -zxvf bifrost_v1.4.1-release_Linux-64bit-bin.tar.gz
+tar -zxvf bifrost_v1.4.3-release_Linux-64bit-bin.tar.gz
 
-cd bifrost_v1.4.1-release_Linux-64bit-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.4.3-release_Linux-64bit-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
@@ -157,7 +157,7 @@ vim Bifrost.ini
 [user]
 #登入用户名和密码
 #用户名在前，= 号后面是密码
-Bifrost=Bifrost
+Bifrost=Bifrost123
 BifrostMonitor=Bifrost123
 
 [groups]
