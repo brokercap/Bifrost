@@ -66,7 +66,7 @@ func CompareBinlogPositionAndReturnGreater(BinlogFileNum1 int, BinlogPosition1 u
 }
 
 func CompareBinlogPositionAndReturnLess(BinlogFileNum1 int, BinlogPosition1 uint32,BinlogFileNum2 int,BinlogPosition2 uint32)(int,uint32){
-	if BinlogFileNum1 > BinlogFileNum2{
+	if BinlogFileNum1 > BinlogFileNum2 && BinlogFileNum2 > 0 {
 		return BinlogFileNum2,BinlogPosition2
 	}else if BinlogFileNum1 == BinlogFileNum2{
 		if BinlogPosition1 >= BinlogPosition2 {
@@ -75,7 +75,11 @@ func CompareBinlogPositionAndReturnLess(BinlogFileNum1 int, BinlogPosition1 uint
 			return BinlogFileNum1, BinlogPosition1
 		}
 	}else{
-		return BinlogFileNum1, BinlogPosition1
+		if BinlogFileNum1 >  0 {
+			return BinlogFileNum1, BinlogPosition1
+		}else{
+			return BinlogFileNum2,BinlogPosition2
+		}
 	}
 }
 
@@ -191,7 +195,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 				}
 			}
 			ToServerList1 = append(ToServerList1,ToServerList2...)
-			for _, tInfo := range ToServerList2 {
+			for _, tInfo := range ToServerList1 {
 				if tInfo.ChannelKey <= 0 || len(tInfo.ToServerList) == 0{
 					continue
 				}
@@ -266,6 +270,10 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					db.AddTableToServer(schemaName, tableName,toServerObj)
 					log.Printf("dbname:%s,schemaName:%s,tableName:%s ToServerKey:%s,ToServerID:%d,BinlogFileNum:%d,BinlogPosition:%d",db.Name,schemaName,tableName,toServer.ToServerKey,toServer.ToServerID,toServer.BinlogFileNum,toServer.BinlogPosition)
 
+					// 假如当前同步配置 最后输入的 位点 等于 最后成功的位点为0,则认为这个同步，压根就没有数据进来过,位点是没有问题的
+					if  toServer.LastBinlogFileNum == 0 {
+						continue
+					}
 					//假如当前同步配置 最后输入的 位点 等于 最后成功的位点，说明当前这个 同步配置的位点是没有问题的
 					if toServer.LastBinlogFileNum > 0 && toServer.BinlogFileNum == toServer.LastBinlogFileNum && toServer.BinlogPosition == toServer.LastBinlogPosition{
 						if lastAllToServerNoraml {
@@ -336,9 +344,12 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 
 		//假如所有表数据同步都是正常的，则取 db 里的位点配置，否则取 同步表里最小位点
 		//假如有一个表的数据同步位点不正常,则取不正常位点的最小值,否则取和当前db最后保存的位 及表位点的最大值
-		if lastAllToServerNoraml == false{
-			db.binlogDumpFileName = binlogPrefix+"."+fmt.Sprintf("%06d",BinlogFileNum)
-			db.binlogDumpPosition = BinlogPosition
+		if lastAllToServerNoraml == false {
+			// 这里要 判断 BinlogFileNum 是否 >0 , 是防止其他未知bug，造成数据错乱，造成的位点错误问题
+			if BinlogFileNum > 0 {
+				db.binlogDumpFileName = binlogPrefix + "." + fmt.Sprintf("%06d", BinlogFileNum)
+				db.binlogDumpPosition = BinlogPosition
+			}
 		}else{
 			//这里为什么要取大值,是因为位点是定时刷盘的,有可能在哪些特殊情况下,表位点成功了,db位点没保存成功
 			LastDBBinlogFileNum1, binlogDumpPosition1 := CompareBinlogPositionAndReturnGreater(
