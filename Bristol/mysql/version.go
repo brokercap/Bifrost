@@ -1,3 +1,3 @@
 package mysql
 
-const VERSION  = "v1.4.2"
+const VERSION  = "v1.4.3"

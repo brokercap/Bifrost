@@ -57,9 +57,11 @@ func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
 func (parser *eventParser) saveBinlog(event *EventReslut){
 	switch event.Header.EventType {
 	case QUERY_EVENT:
+		parser.Lock()
 		parser.binlogFileName = event.BinlogFileName
 		parser.binlogPosition = event.Header.LogPos
 		parser.binlogTimestamp = event.Header.Timestamp
+		parser.Unlock()
 		break
 	default:
 		break
@@ -661,6 +663,8 @@ func NewBinlogDump(DataSource string,CallbackFun callback, OnlyEvent []EventType
 }
 
 func (This *BinlogDump) GetBinlog()(string,uint32,uint32){
+	This.parser.RLock()
+	defer This.parser.RUnlock()
 	return This.parser.binlogFileName,This.parser.binlogPosition,This.parser.binlogTimestamp
 }
 
