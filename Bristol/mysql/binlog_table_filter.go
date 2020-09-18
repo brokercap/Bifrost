@@ -70,7 +70,7 @@ func (This *BinlogDump) delReplicateDoDb0(db string,table string)  {
 func (This *BinlogDump) DelReplicateDoDb(db string,table string)  {
 	log.Println("Bristol DelReplicateDoDb,",db,table)
 	This.Lock()
-	defer  This.Unlock()
+	defer This.Unlock()
 	if table!= "*" && strings.Index(table,"*") >= 0 {
 		if This.ReplicateDoDbLike != nil{
 			if _,ok:=This.ReplicateDoDbLike[db];ok{
@@ -166,7 +166,7 @@ func (This *BinlogDump) delReplicateIgnoreDb0(db string,table string)  {
 func (This *BinlogDump) DelReplicateIgnoreDb(db string,table string)  {
 	log.Println("Bristol DelReplicateIgnoreDb,",db,table)
 	This.Lock()
-	defer  This.Unlock()
+	defer This.Unlock()
 	if table != "*" && strings.Index(table,"*") >= 0 {
 		if This.ReplicateIgnoreDbLike != nil{
 			if _,ok:=This.ReplicateIgnoreDbLike[db];ok{
@@ -199,8 +199,8 @@ func (This *BinlogDump) DelReplicateIgnoreDb(db string,table string)  {
 }
 
 func (This *BinlogDump) CheckReplicateDb(db string,table string) bool  {
-	This.RLock()
-	defer This.RUnlock()
+	This.Lock()
+	defer This.Unlock()
 	if This.ReplicateDoDb == nil && This.ReplicateIgnoreDb == nil{
 		return true
 	}

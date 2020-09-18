@@ -191,3 +191,14 @@ const (
 	BINLOG_DUMP_STOP BinlogDumpStatus = 2
 	BINLOG_DUMP_RUNNING BinlogDumpStatus = 3
 )
+
+type StatusFlag int8
+const (
+	STATUS_CLOSED 	StatusFlag = 0
+	STATUS_CLOSING 	StatusFlag = 1
+	STATUS_STARTING StatusFlag = 10
+	STATUS_RUNNING 	StatusFlag = 11
+	STATUS_STOPING 	StatusFlag = 12
+	STATUS_STOPED 	StatusFlag = 13
+	STATUS_KILLED 	StatusFlag = 3
+)
