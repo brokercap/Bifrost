@@ -217,7 +217,7 @@ func (parser *eventParser) initConn() {
 	if err != nil {
 		panic(err)
 	} else {
-		parser.connStatus = STATUS_CLOSED
+		parser.connStatus = STATUS_RUNNING
 	}
 	parser.conn = conn.(MysqlConnection)
 }
@@ -277,6 +277,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	stmt, err := parser.conn.Prepare(sql)
 	if err != nil {
 		errs = err
+		parser.ParserConnClose(false)
 		return
 	}
 	defer stmt.Close()
@@ -284,6 +285,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	rows, err := stmt.Query(p)
 	if err != nil {
 		errs = err
+		parser.ParserConnClose(false)
 		return
 	}
 	defer rows.Close()
@@ -434,12 +436,14 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 	sql := "select TIME,STATE from `information_schema`.`PROCESSLIST` WHERE ID='" + connectionId + "'"
 	stmt, err := parser.conn.Prepare(sql)
 	if err != nil {
+		parser.ParserConnClose(false)
 		return nil, nil
 	}
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	rows, err := stmt.Query(p)
 	if err != nil {
+		parser.ParserConnClose(false)
 		return nil, err
 	}
 	defer rows.Close()
@@ -476,6 +480,7 @@ func (parser *eventParser) KillConnect(connectionId string) (b bool) {
 	sql := "kill " + connectionId
 	_, err := parser.conn.Exec(sql, []driver.Value{})
 	if err != nil {
+		parser.ParserConnClose(false)
 		return false
 	}
 	return true
