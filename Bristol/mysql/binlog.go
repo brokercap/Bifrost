@@ -42,6 +42,7 @@ type eventParser struct {
 	conn               MysqlConnection
 	dumpBinLogStatus   StatusFlag
 	binlogFileName     string
+	currentBinlogFileName string
 	binlogPosition     uint32
 	binlogTimestamp    uint32
 	maxBinlogFileName  string
@@ -82,6 +83,10 @@ func (parser *eventParser) saveBinlog(event *EventReslut) {
 		parser.binlogTimestamp = event.Header.Timestamp
 		parser.binlogDump.Unlock()
 		break
+	case ROTATE_EVENT:
+		parser.binlogDump.Lock()
+		parser.currentBinlogFileName = event.BinlogFileName
+		parser.binlogDump.Unlock()
 	default:
 		break
 	}
@@ -129,7 +134,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		event = &EventReslut{
 			Header:         queryEvent.header,
 			SchemaName:     queryEvent.schema,
-			BinlogFileName: parser.binlogFileName,
+			BinlogFileName: parser.currentBinlogFileName,
 			TableName:      "",
 			Query:          queryEvent.query,
 			BinlogPosition: queryEvent.header.LogPos,
@@ -146,6 +151,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		for _,v := range parser.tableSchemaMap {
 			v.needReload = true
 		}
+		parser.saveBinlog(event)
 		log.Println(*parser.dataSource," ROTATE_EVENT ",event.BinlogFileName,event.BinlogPosition)
 		break
 	case TABLE_MAP_EVENT:
@@ -164,7 +170,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		}
 		event = &EventReslut{
 			Header:         table_map_event.header,
-			BinlogFileName: parser.binlogFileName,
+			BinlogFileName: parser.currentBinlogFileName,
 			BinlogPosition: table_map_event.header.LogPos,
 			SchemaName:     parser.tableMap[table_map_event.tableId].schemaName,
 			TableName:      parser.tableMap[table_map_event.tableId].tableName,
@@ -179,7 +185,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		if _, ok := parser.tableSchemaMap[rowsEvent.tableId]; ok {
 			event = &EventReslut{
 				Header:         rowsEvent.header,
-				BinlogFileName: parser.binlogFileName,
+				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
 				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
 				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
@@ -189,7 +195,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		} else {
 			event = &EventReslut{
 				Header:         rowsEvent.header,
-				BinlogFileName: parser.binlogFileName,
+				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
 				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
 				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
@@ -204,7 +210,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		event = &EventReslut{
 			Header: genericEvent.header,
 		}
-		event.BinlogFileName = parser.binlogFileName
+		event.BinlogFileName = parser.currentBinlogFileName
 		event.BinlogPosition = genericEvent.header.LogPos
 	}
 	return
@@ -528,6 +534,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 	parser.binlogDump.Lock()
 	parser.binlogFileName = filename
 	parser.binlogPosition = position
+	parser.currentBinlogFileName = filename
 	parser.binlogDump.Unlock()
 	ServerId := uint32(parser.ServerId) // Must be non-zero to avoid getting EOF packet
 	flags := uint16(0)
@@ -783,7 +790,22 @@ func (This *BinlogDump) BinlogConnCLose(lock bool) {
 		}()
 		This.mysqlConn = nil
 	}
+}
 
+// 只用于发起 close 信号，不管其他的
+func (This *BinlogDump) BinlogConnCLose0(lock bool) {
+	if lock == true {
+		This.Lock()
+		defer This.Unlock()
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			return
+		}
+	}()
+	if This.mysqlConn != nil {
+		This.mysqlConn.Close()
+	}
 }
 
 func (This *BinlogDump) startConnAndDumpBinlog(result chan error) {
@@ -897,7 +919,7 @@ func (This *BinlogDump) checkDumpConnection() {
 		if m != nil  {
 			if _,ok = m["TIME"];!ok {
 				log.Println("This.mysqlConn close ,connectionId: ", connectionId)
-				This.parser.KillConnect(connectionId)
+				This.BinlogConnCLose0(true)
 				break
 			}
 		}
