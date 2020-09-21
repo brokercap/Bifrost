@@ -221,6 +221,10 @@
         );
 
         $(".startAll").click(function (){
+            let totalTask = $("td .startBtn").length
+            let failedTask = 0
+            let doTask = 0
+
             document.querySelectorAll("td .startBtn").forEach(function (obj){
                 var url = "/history/start";
                 var trObj = $(obj).parent().parent().parent();
@@ -230,14 +234,20 @@
                 $.post(
                     url,
                     {dbname: dbname,id:id},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                    },
+                    function(d,s){ if (s !== "success" || d.msg !== "success") failedTask++ },
                     'json'
-                );
+                )
+                    .fail(function () { failedTask++ })
+                    .always(function () {
+                        doTask++ ;
+                        if (doTask === totalTask - 1) {
+                            if (failedTask === 0) {
+                                alert("reqeust all succeed");
+                            }else{
+                                alert(`reqeust failed ${failedTask}`);
+                            }
+                        }
+                    })
             })
         })
 
@@ -246,6 +256,10 @@
             if (!confirm("确定 删除 么？删除将不能恢复")){
                 return
             }
+
+            let totalTask = $("td .startBtn").length
+            let failedTask = 0
+            let doTask = 0
 
             document.querySelectorAll("td .startBtn").forEach(function (obj){
                 var url = "/history/del";
@@ -256,14 +270,20 @@
                 $.post(
                     url,
                     {dbname: dbname,id:id},
-                    function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
+                    function(d,s){ if (s !== "success" || d.msg !== "success") failedTask++ },
+                    'json',
+                )
+                    .fail(function () { failedTask++ })
+                    .always(function () {
+                        doTask++ ;
+                        if (doTask === totalTask - 1) {
+                            if (failedTask === 0) {
+                                alert("reqeust all succeed");
+                            }else{
+                                alert(`reqeust failed ${failedTask}`);
+                            }
                         }
-                    },
-                    'json'
-                );
+                    })
             })
         })
     });

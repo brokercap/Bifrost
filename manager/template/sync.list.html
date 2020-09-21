@@ -231,6 +231,9 @@
         Property["SyncThreadNum"]   = 1;
         let url = "/history/add";
 
+        let totalTask = $("tbody > tr").length
+        let failedTask = 0
+        let doTask = 0
 
         $("tbody > tr").each((_,v) => {
             let $tr = $(v);
@@ -243,13 +246,20 @@
 
             $.post(url,
                 {dbname:dbName,schema_name:schemaName,table_name:tableName,table_names:tableName,property:JSON.stringify(Property),ToserverIds:JSON.stringify([toServerId])},
-                function(data,status){
-                    if( status !== 'success' ){
-                        alert("reqeust error, reqeust " + "\ttable name:" + tableName + "\tid:"+ id + "\tstatus : "+ status );
-                        return false;
+                function(d,s){ if (s !== "success" || d.msg !== "success") failedTask++ },
+                'json'
+            )
+                .fail(function () { failedTask++ })
+                .always(function () {
+                    doTask++ ;
+                    if (doTask === totalTask - 1) {
+                        if (failedTask === 0) {
+                            alert("reqeust all succeed");
+                        }else{
+                            alert(`reqeust failed ${failedTask}`);
+                        }
                     }
-                },
-                'json');
+                })
         })
 
 

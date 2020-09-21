@@ -31,7 +31,7 @@ func TemplatePath(fileName string) string {
 }
 
 type TemplateHeader struct {
-	Title string
+	Title   string
 	Version string
 }
 
@@ -39,10 +39,9 @@ func (TemplateHeader *TemplateHeader) setTile(title string) {
 	TemplateHeader.Title = title
 }
 
-func (TemplateHeader *TemplateHeader) setVersion(){
+func (TemplateHeader *TemplateHeader) setVersion() {
 	TemplateHeader.Version = config.VERSION
 }
-
 
 type resultStruct struct {
 	Status bool   `json:"status"`
@@ -168,6 +167,6 @@ func Start(IpAndPort string) {
 		err = xgo.Start(IpAndPort)
 	}
 	if err != nil {
-		log.Println("Manager Start Err:", err)
+		log.Println("/manager Start Err:", err)
 	}
 }

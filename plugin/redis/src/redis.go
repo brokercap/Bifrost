@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-const VERSION = "v1.2.2"
-const BIFROST_VERION = "v1.2.2"
+const VERSION = "v1.4.3"
+const BIFROST_VERION = "v1.4.4"
 
 func init() {
 	driver.Register("redis", &MyConn{}, VERSION, BIFROST_VERION)
