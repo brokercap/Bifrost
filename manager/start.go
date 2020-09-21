@@ -167,6 +167,6 @@ func Start(IpAndPort string) {
 		err = xgo.Start(IpAndPort)
 	}
 	if err != nil {
-		log.Println("/manager Start Err:", err)
+		log.Println("Manager Start Err:", err)
 	}
 }
