@@ -15,8 +15,8 @@ import (
 )
 
 
-const VERSION  = "v1.3.2"
-const BIFROST_VERION = "v1.3.2"
+const VERSION  = "v1.4.3"
+const BIFROST_VERION = "v1.4.3"
 
 var l sync.RWMutex
 
@@ -343,6 +343,7 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key s
 		return data.BinlogPosition
 		break
 	case "{$BifrostDataVersion}":
+		This.p.nowBifrostDataVersion++
 		return This.p.nowBifrostDataVersion
 		break
 	default:
@@ -375,12 +376,15 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	if This.conn.err != nil {
 		return nil,This.conn.err
 	}
-	This.p.nowBifrostDataVersion = time.Now().UnixNano()
-
 	n := len(This.p.Data.Data)
 	if n == 0{
 		return nil,nil
 	}
+	i := time.Now().UnixNano()
+	if i >= This.p.nowBifrostDataVersion {
+		This.p.nowBifrostDataVersion = i
+	}
+
 	if n > This.p.BatchSize{
 		n = This.p.BatchSize
 	}

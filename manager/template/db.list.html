@@ -337,9 +337,16 @@ function formatDate(timestamp) {
             if($("#serverid").val() == ""){
                 $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
             }
+            var success = true;
             if(data.data.BinlogFormat.toLowerCase() != "row"){
+                success = false;
                 alert("binlog format 不是 ROW 格式, 依懒 ROW 格式数据同步将会无效，如果要修改成ROW格式，请修改 my.cnf 配置 binlog_format=ROW，再重启！");
-            }else{
+            }
+            if(data.data.BinlogRowImage.toLowerCase() != "full" && data.data.BinlogRowImage != ""){
+                success = false;
+                alert("binlog_row_image 参数 不是 full,依懒字段绑定关系的插件,数据同步将会失败，如果要修改成 binlog_row_image 参数，请修改 my.cnf 配置 binlog_row_image=FULL，再重启！");
+            }
+            if (success == true){
                 alert(data.msg);
             }
             dbUriChecked = true;

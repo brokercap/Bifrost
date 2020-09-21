@@ -59,7 +59,7 @@ func DoRecoverySnapshotData(){
 		user.RecoveryUser(data.User)
 	}
 
-	if data.DbInfo != nil && string(*data.DbInfo) != "{}"{
+	if data.Warning != nil && string(*data.Warning) != "{}"{
 		warning.RecoveryWarning(data.Warning)
 	}
 
