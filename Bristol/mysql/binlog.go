@@ -957,10 +957,16 @@ func (This *BinlogDump) KillDump() {
 			log.Println(string(debug.Stack()))
 		}
 	}()
+	var connectId string
 	This.Lock()
-	This.parser.dumpBinLogStatus = STATUS_KILLED
+	if This.parser != nil {
+		This.parser.dumpBinLogStatus = STATUS_KILLED
+		connectId = This.parser.connectionId
+	}
 	This.Unlock()
-	This.parser.KillConnect(This.parser.connectionId)
+	if connectId != "" {
+		This.parser.KillConnect(connectId)
+	}
 	This.BinlogConnCLose(true)
 
 }
