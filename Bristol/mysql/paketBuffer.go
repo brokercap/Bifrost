@@ -73,15 +73,16 @@ func (This *paket) intRead(size int) int{
 		x = int(y)
 		break
 	case 3:
-		var a,b,c int8
-		b_buf  :=  bytes.NewBuffer(This.read(1))
-		binary.Read(b_buf, binary.BigEndian, &a)
-		b_buf  =  bytes.NewBuffer(This.read(1))
-		binary.Read(b_buf, binary.BigEndian, &b)
-		b_buf  =  bytes.NewBuffer(This.read(1))
-		binary.Read(b_buf, binary.BigEndian, &c)
-
+		var a,b,c byte
+		b_buf := bytes.NewBuffer(This.read(3))
+		a,_ = b_buf.ReadByte()
+		b,_ = b_buf.ReadByte()
+		c,_ = b_buf.ReadByte()
+		//log.Println( "read_int24_be a:",a," b:",b," c:",c)
 		res := (int(a) << 16) | (int(b) << 8) | int(c)
+		//log.Println( "read_int24_be a << 16:",a << 16)
+		//log.Println( "read_int24_be b << 8:",b << 8)
+		//log.Println( "read_int24_be res:",res)
 		if res >= 0x800000{
 			res -= 0x1000000
 		}
@@ -96,11 +97,11 @@ func (This *paket) intRead(size int) int{
 		break
 	case 5:
 		var a int32
-		var b int8
+		var b byte
 		b_buf  :=  bytes.NewBuffer(This.read(4))
 		binary.Read(b_buf, binary.BigEndian, &a)
 		b_buf  =  bytes.NewBuffer(This.read(1))
-		binary.Read(b_buf, binary.BigEndian, &b)
+		b,_ = b_buf.ReadByte()
 		x = int(b) + (int(a) << 8)
 		break
 	case 8:
