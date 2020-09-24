@@ -8,6 +8,7 @@ import (
 type tableStruct struct {
 	Pri 					[]*string
 	ColumnSchemaTypeList 	[]*column_schema_type
+	needReload				bool
 }
 
 type column_schema_type struct {
@@ -108,4 +109,35 @@ func fieldTypeName(t FieldType) string {
 		return "FIELD_TYPE_GEOMETRY"
 	}
 	return fmt.Sprintf("%d", t)
+}
+
+
+func StatusFlagName(t StatusFlag) (r string) {
+	switch t {
+	case STATUS_KILLED:
+		r = "killed"
+		break
+	case STATUS_CLOSED:
+		r = "close"
+		break
+	case STATUS_CLOSING:
+		r = "closing"
+		break
+	case STATUS_STOPING:
+		r = "stoping"
+		break
+	case STATUS_STOPED:
+		r ="stop"
+		break
+	case STATUS_STARTING:
+		r = "starting"
+		break
+	case STATUS_RUNNING:
+		r = "running"
+		break
+	default:
+		r =""
+		break
+	}
+	return
 }

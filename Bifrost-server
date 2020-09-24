@@ -48,7 +48,7 @@ then
   dir_dir="$basepathParent/data"
 fi
 
-if [ ${dir_dir:0:1} != "/"  ]; then
+if [[ $dir_dir != /* ]]; then
   dir_dir=$basepathParent"/"$dir_dir
 fi
 

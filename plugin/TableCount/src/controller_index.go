@@ -1,12 +1,10 @@
 package src
 
 import (
+	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/manager/xgo"
 	"net/http"
 	"encoding/json"
-	"os/exec"
-	"os"
-	"path/filepath"
 	"html/template"
 	"strings"
 )
@@ -18,24 +16,20 @@ func init()  {
 	xgo.AddRoute("/bifrost/TableCount/flow/get",TableCountFlow_Controller)
 	xgo.AddRoute("/bifrost/TableCount/flow/schema/list",TableCountSchameList_Controller)
 	xgo.AddRoute("/bifrost/TableCount/flow/table/list",TableCountSchameTableList_Controller)
-
-	execPath, _ := exec.LookPath(os.Args[0])
-	execDir = filepath.Dir(execPath)+"/"
 }
 
 type TemplateHeader struct {
 	Title string
 }
 
+func TemplatePath(fileName string) string{
+	return config.BifrostDir+fileName
+}
 
 type resultDataStruct struct {
 	Status bool `json:"status"`
 	Msg string `json:"msg"`
 	Data interface{} `json:"data"`
-}
-
-func TemplatePath(fileName string) string{
-	return execDir+fileName
 }
 
 func TableCountIndex_Controller(w http.ResponseWriter,req *http.Request)  {

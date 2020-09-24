@@ -1,10 +1,9 @@
 package mysql
 
 import (
-	"strconv"
 	"database/sql/driver"
 	"fmt"
-	"log"
+	"strconv"
 )
 
 func CheckBinlogIsRight(dbUri string,filename string, position uint32) error{
@@ -52,13 +51,13 @@ func GetNearestRightBinlog(dbUri string,filename string, position uint32,serverI
 	var nearestPosition uint32 = 4
 	var Callback = func (data *EventReslut) {
 		nearestPosition = data.Header.LogPos
-		log.Println(data.Header.EventType," postion:",data.Header.LogPos)
+		//log.Println(data.Header.EventType," postion:",data.Header.LogPos)
 	}
 	binlogDump := NewBinlogDump(
 		dbUri,
 		Callback,
 		[]EventType{
-			QUERY_EVENT,
+			QUERY_EVENT,XID_EVENT,
 		},
 		ReplicateDoDb,
 		ReplicateIgnoreDb)
