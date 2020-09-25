@@ -210,7 +210,10 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		err = This.conn.Set(key, string(j), time.Duration(This.p.Expir)*time.Second).Err()
 	case "hash":
 		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
-		err = This.conn.HSet(key, fieldKey, string(j)).Err()
+		pipeline := This.conn.Pipeline()
+		pipeline.HDel(key, fieldKey)
+		pipeline.HSet(key, fieldKey, string(j))
+		_, err = pipeline.Exec()
 	case "zset":
 		sort, err := strconv.ParseFloat(This.getKeyVal(data, This.p.SortedConfig, index), 64)
 		if err != nil {
@@ -222,7 +225,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		}
 		pipeline := This.conn.Pipeline()
 		pipeline.ZRem(key, 1, string(jo))
-		pipeline.ZAdd(key, redis.Z{Score: sort, Member: string(j)}).Err()
+		pipeline.ZAdd(key, redis.Z{Score: sort, Member: string(j)})
 		_, err = pipeline.Exec()
 	case "list":
 		jo, err := json.Marshal(data.Rows[0])
