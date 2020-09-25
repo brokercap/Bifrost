@@ -51,7 +51,7 @@ func history_list_controller(w http.ResponseWriter,req *http.Request){
 		status = history.HISTORY_STATUS_ALL
 		break
 	}
-	HistoryList := history.GetHistoryList(dbname,schema,tablename,status)
+	HistoryList := history.GetHistoryList(dbname,schema,tansferTableName(tablename),status)
 
 	if req.Form.Get("format") == "json"{
 		b, _:= json.Marshal(HistoryList)
@@ -151,7 +151,7 @@ func history_add_controller(w http.ResponseWriter,req *http.Request){
 	}
 
 	var ID int
-	ID,err = history.AddHistory(dbname,schema,tablename,tablenames,Property,ToserverIds)
+	ID,err = history.AddHistory(dbname,schema,tansferTableName(tablename),tablenames,Property,ToserverIds)
 	if err != nil{
 		w.Write(returnDataResult(false,err.Error(),0))
 	}else{

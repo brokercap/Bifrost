@@ -46,10 +46,6 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	}()
 	db.Exec("SET NAMES UTF8",[]driver.Value{})
 	This.initMetaInfo(db)
-	if This.TableInfo.TABLE_ROWS == 0 {
-		log.Println("history select table rows 0",This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
-		return
-	}
 	if len(This.Fields) == 0{
 		This.ThreadPool[i].Error = fmt.Errorf("Fields empty,%s %s %s "+This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
 		log.Println("history select Fields empty",This.DbName,This.SchemaName,This.TableName," Current Select Table:",This.CurrentTableName)
