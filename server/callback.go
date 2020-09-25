@@ -54,7 +54,7 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		//假如没一个获取成功的,直接退出函数
 		return
 	}
-	var i uint = 0
+	var i int = 0
 	for {
 		if _, ok := db.channelMap[ChannelKey]; !ok {
 			return
