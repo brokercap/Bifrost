@@ -490,15 +490,20 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				data = append(data,fmt.Sprint(f2))
 				break
 			case "decimal":
-				Value := strconv.FormatFloat(float64(rand.Float64()),'f',2,64)
-				Value2,_ := strconv.ParseFloat(Value, 64)
-				f1 := float64(rand.Intn(999999))
-				f2 := f1+float64(Value2)
-				if randResult == 1{
-					f2 = 0-f2
+				Value := strconv.FormatFloat(float64(rand.Float64()),'f',columnType.NumbericScale,64)
+				//Value2,_ := strconv.ParseFloat(Value, 64)
+				var n int = 1
+				for i:= 0 ; i < columnType.NumbericPrecision-columnType.NumbericScale; i++ {
+					n *= 10
 				}
-				columnType.Value = fmt.Sprint(f2)
-				data = append(data,fmt.Sprint(f2))
+				f1 := rand.Intn(n)
+				if randResult == 1{
+					f1 = 0-f1
+				}
+				index := strings.Index(Value,".")
+				value2 := fmt.Sprint(f1)+"."+Value[index+1:]
+				columnType.Value = value2
+				data = append(data,value2)
 				break
 			case "set":
 				d := strings.Replace(COLUMN_TYPE, "set(", "", -1)
@@ -699,6 +704,9 @@ func main() {
 				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
 				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
 				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
 				"`testtext` text NOT NULL,"+
 				"`testblob` blob NOT NULL,"+
 				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
@@ -740,6 +748,9 @@ func main() {
 				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
 				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
 				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
+				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
 				"`testtext` text NOT NULL,"+
 				"`testblob` blob NOT NULL,"+
 				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
