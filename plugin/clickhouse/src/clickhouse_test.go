@@ -93,12 +93,12 @@ func TestGetSchemaList(t *testing.T)  {
 
 func TestGetSchemaTableList(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	t.Log(c.GetSchemaTableList("test"))
+	t.Log(c.GetSchemaTableList("bifrost_test"))
 }
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	t.Log(c.GetTableFields("test.binlog_field_test"))
+	t.Log(c.GetTableFields("bifrost_test","binlog_field_test"))
 }
 
 func getParam() map[string]interface{} {
@@ -157,8 +157,27 @@ func getParam() map[string]interface{} {
 	return param
 }
 
+func getParamAutoCreateTable() map[string]interface{} {
+	param := make(map[string]interface{},0)
+	param["CkSchema"] = ""
+	param["CkTable"] = ""
+	param["BatchSize"] = 1000
+	param["AutoCreateTable"] = true
+	return param
+}
+
 func initSyncParam() {
 	p,err := conn.SetParam(getParam())
+	if err != nil{
+		log.Println("set param fatal err")
+		log.Fatal(err)
+	}
+
+	log.Println("p:",p)
+}
+
+func initSyncParamAutoCreateTable() {
+	p,err := conn.SetParam(getParamAutoCreateTable())
 	if err != nil{
 		log.Println("set param fatal err")
 		log.Fatal(err)
@@ -776,4 +795,17 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
 	}
 
+}
+
+func TestConn_AutoCreateTableCommit(t *testing.T) {
+	TableName = "mytest"
+	testBefore()
+	initSyncParamAutoCreateTable()
+	event := pluginTestData.NewEvent()
+	eventData := event.GetTestInsertData()
+	conn.Insert(eventData)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
 }
