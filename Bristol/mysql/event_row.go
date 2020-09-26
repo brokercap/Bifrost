@@ -239,26 +239,19 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 
 			var tmp *bytes.Buffer = new(bytes.Buffer)
+			//Println("value ^ 0x80:",uint8(b) ^ 128)
 			binary.Write(tmp, binary.LittleEndian, uint8(b)^128)
-			bufPaket.unread(tmp.Next(1))
-
-			/*
-			log.Println("value ^ 0x80:",uint8(b) ^ 128)
-
-			log.Println("d:",tmp)
-
-			log.Println("first size",size)
-			*/
-
+			bufPaket.unread(tmp.Bytes())
+			//log.Println("first size",size)
 			res0 := ""
 
 			if size > 0 {
 				v1 := bufPaket.intRead(size)
-				//log.Println( "f:",v1)
+				//log.Println( "first size d value::",v1)
 				value = int(v1) ^ mask
 				res0 += strconv.Itoa(value)
 			}
-
+			//log.Println( "first res0:",res0)
 			for i := 0; i < uncomp_integral; i++ {
 				//log.Println( "uncomp_integral ssssssssss:",i)
 				s:= bufPaket.read(4)
@@ -297,7 +290,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 			row[column_name] = res
 			//log.Println("column_name:",column_name,"=",row[column_name])
-			//log.Fatal("sssssssssss")
 			break
 
 		case FIELD_TYPE_VARCHAR:

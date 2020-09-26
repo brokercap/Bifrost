@@ -339,9 +339,6 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 		return
 	}
 	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.CurrentTableName)
-	if This.TableInfo.TABLE_ROWS == 0 {
-		return
-	}
 	//修改表记录总数，用于界面显示
 	This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableInfo.TABLE_ROWS
 

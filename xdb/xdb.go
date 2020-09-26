@@ -76,20 +76,26 @@ func (This *Client) DelKeyVal(table,key string) error{
 }
 
 func (This *Client) GetListByKeyPrefix(table,key string,data interface{}) ([]driver.ListValue,error){
-	myKey := []byte(This.prefix+"-"+table+"-"+key)
+	prefix := This.prefix+"-"+table+"-"
+	prefixLen := len(prefix)
+	myKey := []byte(prefix+key)
 	s,err := This.client.GetListByKeyPrefix(myKey)
 	if err != nil{
 		return s,err
 	}
-	if data != nil {
-		val := ""
-		for _, v := range s {
+	var val = ""
+	for k, v := range s {
+		if data != nil {
 			if val == "" {
 				val = v.Value
 			} else {
 				val += "," + v.Value
 			}
 		}
+		s[k].Key = s[k].Key[prefixLen:]
+	}
+
+	if data != nil {
 		val = "[" + val + "]"
 		err = json.Unmarshal([]byte(val), &data)
 	}

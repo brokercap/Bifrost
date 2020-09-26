@@ -178,8 +178,10 @@ func main() {
 		dataDir = config.BifrostDir+"/data"
 	}
 
-	if dataDir[0:1] != "/" {
-		dataDir = config.BifrostDir+dataDir
+	if runtime.GOOS != "windows"{
+		if dataDir[0:1] != "/" {
+			dataDir = config.BifrostDir+dataDir
+		}
 	}
 
 	os.MkdirAll(dataDir, 0700)
