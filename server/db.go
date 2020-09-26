@@ -585,7 +585,21 @@ func (db *db) saveBinlog(){
 	saveBinlogPosition(db.DBBinlogKey,BinlogFileNum,db.binlogDumpPosition)
 }
 
-func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastToServerID int) bool {
+func (db *db) IgnoreTableToMap(IgnoreTable string) map[string]bool{
+	if IgnoreTable == "" {
+		return nil
+	}
+	m := make(map[string]bool,0)
+	for _,tableName := range strings.Split(IgnoreTable,","){
+		if tableName == "" {
+			continue
+		}
+		m[tableName] = true
+	}
+	return m
+}
+
+func (db *db) AddTable(schemaName string, tableName string,IgnoreTable string, ChannelKey int,LastToServerID int) bool {
 	key := GetSchemaAndTableJoin(schemaName,tableName)
 	db.Lock()
 	defer db.Unlock()
@@ -597,14 +611,28 @@ func (db *db) AddTable(schemaName string, tableName string, ChannelKey int,LastT
 			ToServerList: 	make([]*ToServer, 0),
 			LastToServerID: LastToServerID,
 			likeTableList:  make([]*Table,0),
+			IgnoreTable:	IgnoreTable,
+			ignoreTableMap: db.IgnoreTableToMap(IgnoreTable),
 		}
 		db.addLikeTable(db.tableMap[key],schemaName,tableName)
-		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name)
+		log.Println("AddTable",db.Name,schemaName,tableName,db.channelMap[ChannelKey].Name," IgnoreTable:",IgnoreTable)
 		count.SetTable(db.Name,key)
-	} else {
-		//log.Println("AddTable key:",key,"db.tableMap[key]：",db.tableMap[key])
-		//db.tableMap[key].ChannelKey = ChannelKey
 	}
+	return true
+}
+
+// 修改 模糊匹配的表规则 需要过滤哪些表不进行匹配
+func (db *db) UpdateTable(schemaName string, tableName string, IgnoreTable string) bool {
+	key := GetSchemaAndTableJoin(schemaName,tableName)
+	db.Lock()
+	defer db.Unlock()
+	if _, ok := db.tableMap[key]; !ok {
+		log.Println("UpdateTable ",db.Name,schemaName,tableName," not exsit ")
+		return false
+	}
+	db.tableMap[key].IgnoreTable 	= IgnoreTable
+	db.tableMap[key].ignoreTableMap =  db.IgnoreTableToMap(IgnoreTable)
+	log.Println("UpdateTable",db.Name,schemaName,tableName,"IgnoreTable:",IgnoreTable)
 	return true
 }
 
@@ -767,6 +795,7 @@ func (db *db) AddChannel(Name string,MaxThreadNum int) (*Channel,int) {
 	ch := count.SetChannel(db.Name,Name)
 	db.channelMap[ChannelID].SetFlowCountChan(ch)
 	db.Unlock()
+
 	log.Println("AddChannel",db.Name,Name,"MaxThreadNum:",MaxThreadNum)
 	return db.channelMap[ChannelID],ChannelID
 }
@@ -783,15 +812,3 @@ func (db *db) GetChannel(channelID int) *Channel {
 	}
 	return db.channelMap[channelID]
 }
-
-type Table struct {
-	sync.Mutex
-	key				string			// schema+table 组成的key
-	Name         	string
-	ChannelKey   	int
-	LastToServerID  int
-	ToServerList 	[]*ToServer
-	likeTableList	[]*Table  		// 关联了哪些 模糊匹配的配置
-	regexpErr	    bool
-}
-

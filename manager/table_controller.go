@@ -26,6 +26,7 @@ import (
 func init(){
 	addRoute("/table/del",table_del_controller)
 	addRoute("/table/add",table_add_controller)
+	addRoute("/table/update",table_update_controller)
 	addRoute("/table/toserver/list",table_toserverlist_controller)
 	addRoute("/table/toserver/del",table_delToServer_controller)
 	addRoute("/table/toserver/add",table_addToServer_controller)
@@ -39,10 +40,28 @@ func table_add_controller(w http.ResponseWriter,req *http.Request){
 	dbname := req.Form.Get("dbname")
 	tablename := req.Form.Get("table_name")
 	schema := req.Form.Get("schema_name")
+	IgnoreTable := req.Form.Get("ignore_table")
 	channelId := GetFormInt(req,"channelid")
 	schema = tansferSchemaName(schema)
 	tablename = tansferTableName(tablename)
-	err := server.AddTable(dbname,schema,tablename,channelId)
+	err := server.AddTable(dbname,schema,tablename,IgnoreTable,channelId)
+	if err != nil{
+		w.Write(returnResult(false,err.Error()))
+	}else{
+		defer server.SaveDBConfigInfo()
+		w.Write(returnResult(true,"success"))
+	}
+}
+
+func table_update_controller(w http.ResponseWriter,req *http.Request){
+	req.ParseForm()
+	dbname := req.Form.Get("dbname")
+	tablename := req.Form.Get("table_name")
+	schema := req.Form.Get("schema_name")
+	IgnoreTable := req.Form.Get("ignore_table")
+	schema = tansferSchemaName(schema)
+	tablename = tansferTableName(tablename)
+	err := server.UpdateTable(dbname,schema,tablename,IgnoreTable)
 	if err != nil{
 		w.Write(returnResult(false,err.Error()))
 	}else{
