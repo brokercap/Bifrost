@@ -209,9 +209,10 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 	case "string":
 		err = This.conn.Set(key, string(j), time.Duration(This.p.Expir)*time.Second).Err()
 	case "hash":
+		oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
 		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
 		pipeline := This.conn.Pipeline()
-		pipeline.HDel(key, fieldKey)
+		pipeline.HDel(key, oldKey)
 		pipeline.HSet(key, fieldKey, string(j))
 		_, err = pipeline.Exec()
 	case "zset":
