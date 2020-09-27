@@ -225,9 +225,11 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 				oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
 				oldFiledKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
 				pipeline.HDel(oldKey, oldFiledKey)
+				println(fmt.Sprintf("old keys %v, filed %v", oldKey, oldFiledKey))
 			}
 			fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
 			pipeline.HSet(key, fieldKey, string(j))
+			println(fmt.Sprintf("keys %v, filed %v", key, fieldKey))
 			_, err = pipeline.Exec()
 		}
 	case "zset":
