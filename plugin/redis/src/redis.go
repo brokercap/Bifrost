@@ -210,7 +210,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		{
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
-				oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 				pipeline.Del(oldKey)
 			}
 			pipeline.Set(key, string(j), time.Duration(This.p.Expir)*time.Second)
@@ -218,18 +218,14 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		}
 	case "hash":
 		{
-			marshal, _ := json.Marshal(data.Rows)
-			println(fmt.Sprintf("%v, %v", data.Rows, string(marshal)))
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
-				oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 				oldFiledKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
 				pipeline.HDel(oldKey, oldFiledKey)
-				println(fmt.Sprintf("old keys %v, filed %v", oldKey, oldFiledKey))
 			}
 			fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
 			pipeline.HSet(key, fieldKey, string(j))
-			println(fmt.Sprintf("keys %v, filed %v", key, fieldKey))
 			_, err = pipeline.Exec()
 		}
 	case "zset":
@@ -241,7 +237,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
-				oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 				if jo, err := json.Marshal(data.Rows[0]); err == nil {
 					pipeline.ZRem(oldKey, 1, string(jo))
 				}
@@ -254,7 +250,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
 				if jo, err := json.Marshal(data.Rows[0]); err == nil {
-					oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+					oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 					pipeline.LRem(oldKey, 1, string(jo))
 				}
 			}
@@ -266,7 +262,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
 				if jo, err := json.Marshal(data.Rows[0]); err == nil {
-					oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+					oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 					pipeline.SRem(oldKey, 1, string(jo))
 				}
 			}
