@@ -218,7 +218,7 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 		}
 	case "hash":
 		{
-			println("%v", data.Rows)
+			println(fmt.Sprintf("%v", data.Rows))
 			pipeline := This.conn.Pipeline()
 			if len(data.Rows) >= 2 {
 				oldKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
