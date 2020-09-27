@@ -223,8 +223,10 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
 				oldFiledKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
 				pipeline.HDel(oldKey, oldFiledKey)
+				println("old key ", oldKey, "filed ", oldFiledKey)
 			}
 			fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
+			println("old key ", key, "filed ", fieldKey)
 			pipeline.HSet(key, fieldKey, string(j))
 			_, err = pipeline.Exec()
 		}
