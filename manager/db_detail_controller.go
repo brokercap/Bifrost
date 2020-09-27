@@ -52,7 +52,7 @@ func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	var Result dbDetail
 	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/db.detail.history.add.html"),TemplatePath("manager/template/footer.html"))
+	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/db.detail.table.add.html"),TemplatePath("manager/template/db.detail.history.add.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
 }
 
@@ -72,6 +72,7 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 		ChannelName string
 		AddStatus 	bool
 		TableType	string
+		IgnoreTable string
 	}
 	var data []ResultType
 	data = make([]ResultType,0)
@@ -92,7 +93,7 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 			if t2 == nil{
 				data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
 			}else{
-				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true,TableType:tableType})
+				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true,TableType:tableType,IgnoreTable:t.IgnoreTable})
 			}
 		}
 	}
@@ -111,7 +112,7 @@ func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 				continue
 			}
 			t2 := DBObj.GetChannel(v.ChannelKey)
-			data = append(data,ResultType{TableName:v.Name,ChannelName:t2.Name,AddStatus:true,TableType:"LIKE"})
+			data = append(data,ResultType{TableName:v.Name,ChannelName:t2.Name,AddStatus:true,TableType:"LIKE",IgnoreTable:v.IgnoreTable})
 		}
 	}
 	b,_:=json.Marshal(data)

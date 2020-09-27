@@ -17,20 +17,47 @@ package server
 
 import (
 	"fmt"
+	"sync"
 )
 
-func AddTable(db string,schema string,tableName string,channelId int) error{
+
+type Table struct {
+	sync.RWMutex
+	key				string			// schema+table 组成的key
+	Name         	string
+	ChannelKey   	int
+	LastToServerID  int
+	ToServerList 	[]*ToServer
+	likeTableList	[]*Table  		// 关联了哪些 模糊匹配的配置
+	regexpErr	    bool			// 是否执行正则表达式错误，如果 true，则下一次不会再执行，直接错过
+	IgnoreTable		string			// 假如是模糊匹配的时候，指定某些表不进行匹配，逗号隔开
+	ignoreTableMap	map[string]bool	// 指定某些表不进行匹配的表数据 map 格式
+}
+
+
+func AddTable(db ,schema ,tableName ,IgnoreTable string,channelId int) error{
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+" not exsit")
 	}
-	if DbList[db].AddTable(schema,tableName,channelId,0) == true{
+	if DbList[db].AddTable(schema,tableName,IgnoreTable,channelId,0) == true{
+		return nil
+	}
+	return fmt.Errorf("unkown error")
+}
+
+func UpdateTable(db ,schema ,tableName ,IgnoreTable string) error{
+	if _,ok:=DbList[db];!ok{
+		return fmt.Errorf(db+" not exsit")
+	}
+	if DbList[db].UpdateTable(schema,tableName,IgnoreTable) == true{
 		return nil
 	}
 	return fmt.Errorf("unkown error")
 }
 
 
-func DelTable(db string,schema string,tableName string) error{
+
+func DelTable(db, schema, tableName string) error{
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+"not exsit")
 	}
@@ -38,7 +65,7 @@ func DelTable(db string,schema string,tableName string) error{
 	return nil
 }
 
-func AddTableToServer(db string,schemaName string,tableName string,ToServerInfo ToServer) error{
+func AddTableToServer(db ,schemaName ,tableName string,ToServerInfo ToServer) error{
 	if _,ok:=DbList[db];!ok{
 		return fmt.Errorf(db+"not exsit")
 	}

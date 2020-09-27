@@ -170,7 +170,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 			val := make([]dbDriver.Value, 0)
 			for _, v := range This.p.Field {
 				var toV interface{}
-				toV, This.err = CkDataTypeTransfer(This.getMySQLData(&data,0,v.MySQL), v.CK, v.CkType)
+				toV, This.err = CkDataTypeTransfer(This.getMySQLData(&data,0,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
 				if This.err != nil {
 					stmt.Close()
 					goto errLoop

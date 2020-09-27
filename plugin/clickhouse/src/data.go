@@ -40,15 +40,17 @@ func (This *ClickhouseDB) GetTableDataList(schema string,table string,where stri
 
 func (This *ClickhouseDB) Exec(sql string,value []driver.Value) error {
 	This.conn.Begin()
-	defer This.conn.Commit()
 	stmt,e:=This.conn.Prepare(sql)
 	if e != nil{
+		This.conn.Commit()
 		return e
 	}
 	defer stmt.Close()
-	_,e1:= stmt.Exec(value)
+	_,e = stmt.Exec(value)
 	if e != nil{
-		return e1
+		This.conn.Commit()
+		return e
 	}
+	This.conn.Commit()
 	return nil
 }

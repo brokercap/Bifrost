@@ -1,10 +1,11 @@
 #/bin/bash
 
 if [[ "$1" == "all" ]];then
-  $0 linux
-  $0 windows
-  $0 darwin
-  $0 freebsd
+  $0 linux amd64
+  $0 linux arm64
+  $0 windows amd64
+  $0 darwin amd64
+  $0 freebsd amd64
   exit 0
 fi
 
@@ -13,16 +14,55 @@ echo "假如下载依懒包慢,编译失败,请尝试修改 GOPROXY 代理"
 echo "例如：export GOPROXY=https://goproxy.cn"
 echo ""
 
+function getInstallPmName()
+{
+    if grep -Eqii "CentOS" /etc/issue || grep -Eq "CentOS" /etc/*-release; then
+        PM='yum'
+    elif grep -Eqi "Red Hat Enterprise Linux Server" /etc/issue || grep -Eq "Red Hat Enterprise Linux Server" /etc/*-release; then
+        PM='yum'
+    elif grep -Eqi "Aliyun" /etc/issue || grep -Eq "Aliyun" /etc/*-release; then
+        PM='yum'
+    elif grep -Eqi "Fedora" /etc/issue || grep -Eq "Fedora" /etc/*-release; then
+        PM='yum'
+    elif grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/*-release; then
+        PM='apt'
+    elif grep -Eqi "Ubuntu" /etc/issue || grep -Eq "Ubuntu" /etc/*-release; then
+        DISTRO='Ubuntu'
+        PM='apt'
+    elif grep -Eqi "Raspbian" /etc/issue || grep -Eq "Raspbian" /etc/*-release; then
+        PM='apt'
+    else
+        PM = ""
+    fi
+    echo $PM;
+}
+
+function installommand() {
+    pm=$(getInstallPmName)
+    case "$pm" in
+      'yum')
+        yum install -y $1
+          ;;
+      'apt')
+        apt install -y $1
+          ;;
+       *)
+          echo "install $1 please!!!"
+          exit 1
+          ;;
+    esac
+}
+
 if type zip >/dev/null 2>&1; then
   echo ""
 else
-  yum install -y zip
+  installommand "zip"
 fi
 
 if type tar >/dev/null 2>&1; then
   echo ""
 else
-  yum install -y tar
+  installommand "tar"
 fi
 
 
@@ -130,11 +170,11 @@ function checkOrDownloadGoEnv(){
         GoVersionResult=`go version`
         if [[ $GoVersionResult != *version* ]];then
             # 假如 go 环境不存在则自动安装
-            echo "yum install -y golang    start"
-            yum install -y golang
+            #echo "yum install -y golang    start"
+            installommand "golang"
             echo "export GOROOT=/usr/lib/golang/" >> /etc/profile
             source /etc/profile
-            echo "yum install -y golang    over"
+            #echo "yum install -y golang    over"
         fi
    fi
 }
@@ -251,8 +291,9 @@ build()
     copyLocalTtovVendor
 
     mode=$1
-    tagDir=$2
-    bifrostVersion=$3
+    goarch=$2
+    tagDir=$3
+    bifrostVersion=$4
 
     echo "mkdir " $tagDir/manager
     echo "mkdir " $tagDir/plugin
@@ -262,7 +303,12 @@ build()
     mkdir -p $tagDir/bin
 
     echo "$mode build starting "
-    CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
+    if [[ $goarch != "none" ]];then
+        CGO_ENABLED=0 GOOS=$mode GOARCH=$goarch go build ./Bifrost.go
+    else
+        CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
+    fi
+
     echo "$mode build over "
 
     if [[ "$mode" == "windows" ]];then
@@ -285,6 +331,9 @@ build()
     echo $bifrostVersion > $tagDir/VERSION
     cp -rf ./README.MD ./$tagDir/README.MD
     cp -rf ./LICENSE ./$tagDir/LICENSE
+    cp -rf ./LICENSE ./$tagDir/LICENSE
+    cp -rf ./go.mod ./$tagDir/go.mod
+    cp -rf ./go.sum ./$tagDir/go.sum
     
     echo "copy ./manager/template ==> " ./$tagDir/manager/template
 
@@ -422,12 +471,18 @@ fi
 
 BifrostVersion=`cat ./config/version.go | awk -F'=' '{print $2}' | sed 's/"//g' | tr '\n' ' ' | sed s/[[:space:]]//g`
 
+
+GOARCH="none"
 if [[ "$1" == "install" ]];then
     if [[ "$3" != "" ]];then
         mode=$3
     fi
+    if [[ "$4" != "" ]];then
+        GOARCH=$4
+    fi
 fi
 
+#./build install $target linux amd64
 if [[ "$1" == "" || "$1" == "travis" || (( "$1" == "install" && "$3" == "" )) ]];then
    SYSTEM=`uname -s`
    if [ $SYSTEM = "Linux" ];then
@@ -461,29 +516,38 @@ case "$mode" in
         ;;
 esac
 
-if [ ! -n "$BifrostVersion" ] ;then
-    tagDir=tags/bifrost_$BifrostVersion_$ModeName-64bit-bin
-else
-    tagDir=tags/$BifrostVersion/bifrost_"$BifrostVersion"_$ModeName-64bit-bin
-fi
 
-#./build install ./targetdir linux
+#./build install ./targetdir linux amd64
 if [[ "$1" == "install" ]];then
     if [[ "$2" == "" ]];then
         echo "prefix dir is empty"
         exit 1
     fi
     mkdir -p $2
-    if [ ! -d "$tagDir" ];then
-        build $mode $2 $BifrostVersion
-    else
-        cp -rf $tagDir/* $2
-    fi
+    build $mode $GOARCH $2 $BifrostVersion
     exit 0
 fi
 
-rm -rf $tagDir
-build $mode $tagDir $BifrostVersion
+if [[ $GOARCH == "none" || $GOARCH == "" ]];then
+    if [[ $2 != "" ]]; then
+        GOARCH=$2
+    else
+        # go version go1.14.4 linux/amd64
+        # 获取 amd64
+        GoVersionResult=`go version`
+        GOARCH=${GoVersionResult#*\/}
+    fi
+fi
+
+
+if [ ! -n "$BifrostVersion" ] ;then
+    tagDir=tags/bifrost_$BifrostVersion_$ModeName-$GOARCH-bin
+else
+    tagDir=tags/$BifrostVersion/bifrost_"$BifrostVersion"_$ModeName-$GOARCH-bin
+fi
+
+rm -rf $tagDir0
+build $mode $GOARCH $tagDir $BifrostVersion
 
 echo "target:" $tagDir
 echo ""

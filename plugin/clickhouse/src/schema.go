@@ -70,7 +70,7 @@ func getClickHouseTableFields(w http.ResponseWriter,req *http.Request)  {
 	TableName := req.Form.Get("table_name")
 	c := NewClickHouseDBConn(toServerInfo.ConnUri)
 	defer c.Close()
-	m := c.GetTableFields(schema+"."+TableName)
+	m := c.GetTableFields(schema,TableName)
 	b,_:=json.Marshal(m)
 	w.Write(b)
 	return
@@ -88,6 +88,10 @@ type ClickhouseDB struct {
 	uri 	string
 	conn 	clickhouse.Clickhouse
 	err 	error
+}
+
+func(This *ClickhouseDB) GetConn() clickhouse.Clickhouse{
+	return This.conn
 }
 
 func(This *ClickhouseDB) Open() bool{
@@ -159,15 +163,16 @@ func (This *ClickhouseDB) GetSchemaTableList(schema string) (data []string) {
 }
 
 
-func (This *ClickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct) {
+func (This *ClickhouseDB) GetTableFields(SchemaName,TableName string) (data []ckFieldStruct) {
 	This.conn.Begin()
-	stmt, err := This.conn.Prepare("DESC TABLE "+TableName)
+	stmt, err := This.conn.Prepare("SELECT `name`,`type`,`default_kind`,`default_expression` FROM  system.columns where  `database` = '"+SchemaName+"' and `table` = '"+TableName+"'")
 	if err == nil{
 		defer stmt.Close()
 	}
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
+		This.conn.Commit()
 		return
 	}
 
@@ -190,3 +195,4 @@ func (This *ClickhouseDB) GetTableFields(TableName string) (data []ckFieldStruct
 	This.err = This.conn.Commit()
 	return
 }
+

@@ -238,39 +238,55 @@ func (This *consume_channel_obj) consume_channel() {
 	}
 }
 
+func (This *consume_channel_obj) checkIgnoreTable(t *Table,TableName string) bool{
+	This.db.RLock()
+	if _,ok := t.ignoreTableMap[TableName];ok {
+		This.db.RUnlock()
+		return true
+	}
+	This.db.RUnlock()
+	return false
+}
+
 func (This *consume_channel_obj) sendToServerList(key string,pluginData *pluginDriver.PluginDataType,countNum int64,EventSize int64) {
 	t := This.db.GetTableByKey(key)
-	var f = func(toServerList []*ToServer) {
-		for _, toServerInfo := range toServerList {
-			if toServerInfo.FilterQuery && pluginData.EventType == "sql"{
-				continue
-			}
-			if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum{
-				continue
-			}
-			if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition{
-				continue
-			}
-			This.sendToServerResult(toServerInfo,pluginData)
-		}
-	}
 	if t == nil {
 		return
 	}
-	if len(t.ToServerList) > 0 {
-		f(t.ToServerList)
-		This.c.countChan <- &count.FlowCount{
-			Count:    countNum,
-			TableId:  t.key,
-			ByteSize: EventSize * int64(len(t.ToServerList)),
+	if This.checkIgnoreTable(t,pluginData.TableName) == false {
+		if len(t.ToServerList) > 0 {
+			This.sendToServerList0(t.ToServerList,pluginData)
+			This.c.countChan <- &count.FlowCount{
+				Count:    countNum,
+				TableId:  t.key,
+				ByteSize: EventSize * int64(len(t.ToServerList)),
+			}
 		}
 	}
 	for _,t0 := range t.likeTableList{
-		f(t0.ToServerList)
+		if This.checkIgnoreTable(t0,pluginData.TableName) == true {
+			continue
+		}
+		This.sendToServerList0(t0.ToServerList,pluginData)
 		This.c.countChan <- &count.FlowCount{
 			Count:countNum,
 			TableId:t0.key,
-			ByteSize:EventSize*int64(len(t0.ToServerList)),
+			ByteSize:EventSize * int64(len(t0.ToServerList)),
 		}
+	}
+}
+
+func (This *consume_channel_obj) sendToServerList0(toServerList []*ToServer,pluginData *pluginDriver.PluginDataType)  {
+	for _, toServerInfo := range toServerList {
+		if toServerInfo.FilterQuery && pluginData.EventType == "sql" {
+			continue
+		}
+		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum {
+			continue
+		}
+		if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition {
+			continue
+		}
+		This.sendToServerResult(toServerInfo,pluginData)
 	}
 }
