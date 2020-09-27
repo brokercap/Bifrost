@@ -90,6 +90,10 @@ type ClickhouseDB struct {
 	err 	error
 }
 
+func(This *ClickhouseDB) GetConn() clickhouse.Clickhouse{
+	return This.conn
+}
+
 func(This *ClickhouseDB) Open() bool{
 	This.conn, This.err = clickhouse.OpenDirect(This.uri)
 	return true

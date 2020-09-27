@@ -6,6 +6,7 @@ function doGetPluginParam(){
     var CkSchema = $("#clickhouse_schema").val();
     var BatchSize = $("#CK_BatchSize").val();
     var SyncType = $("#clickhouse_sync_type").val();
+    var NullNotTransferDefault = $("#clickhouse_NullNotTransferDefault").val();
     var AutoCreateTable = false;
     if (CkTable == ""){
         AutoCreateTable = true;
@@ -90,7 +91,11 @@ function doGetPluginParam(){
     result.data["BatchSize"]        = parseInt(BatchSize);
     result.data["SyncType"]         = SyncType;
     result.data["AutoCreateTable"]  = AutoCreateTable;
-
+    if (NullNotTransferDefault == "true"){
+        result.data["NullNotTransferDefault"] = true;
+    }else{
+        result.data["NullNotTransferDefault"] = false;
+    }
 	return result;
 }
 

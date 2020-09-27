@@ -115,6 +115,7 @@ type PluginParam struct {
 	tableMap                map[string]*PluginParam0		// 需要自动创建ck表结构 创建之后表基本信息
 	ckDatabaseMap			map[string]bool
 	AutoCreateTable         bool
+	NullNotTransferDefault 	bool  //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
 }
 
 type PluginParam0 struct {
@@ -219,9 +220,15 @@ func (This *Conn) getCktFieldType() {
 		}
 	}
 
+	// 有一种可能，就是目标库，把某一个字段删除了，但是绑定的字段中，还存在这个字段，为了避免报错，以ck表中有的字段，并且配置了绑定的字段为准
+	Fields := make([]fieldStruct,0)
 	for k, v := range This.p.Field {
-		This.p.Field[k].CkType = ckFieldsMap[v.CK]
+		if _,ok := ckFieldsMap[v.CK];ok {
+			This.p.Field[k].CkType = ckFieldsMap[v.CK]
+			Fields = append(Fields,This.p.Field[k])
+		}
 	}
+	This.p.Field = Fields
 }
 
 

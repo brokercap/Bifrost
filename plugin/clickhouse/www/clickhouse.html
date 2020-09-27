@@ -21,6 +21,19 @@
             </span>
         </div>
     </div>
+    <div class="form-group">
+        <label class="col-sm-3 control-label">不将Null转成默认值：</label>
+        <div class="col-sm-9">
+            <select class="form-control" name="clickhouse_NullNotTransferDefault" id="clickhouse_NullNotTransferDefault">
+                <option value="true">不转</option>
+                <option value="false">强转</option>
+            </select>
+            <span class="help-block m-b-none">
+                <p><strong>不转(true)：</strong> 只对 Nullable 字段有效</p>
+                <p><strong>强转(false)：</strong> 所有 null 值将强转成 对应的 0 或者 空字符串 或者 默认时间值</p>
+            </span>
+        </div>
+    </div>
     <div>&nbsp;</div>
 
     <div class="form-group">

@@ -7,8 +7,130 @@ import (
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	"database/sql/driver"
 	"time"
+	"reflect"
+	"os"
+	"math"
+	"strconv"
+	"fmt"
 )
 
+
+func TestAllTypeToInt64(t *testing.T)  {
+	data := "2019"
+	i64,err := MyPlugin.AllTypeToInt64(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(i64)
+
+
+	ui64,err2 := MyPlugin.AllTypeToUInt64(data)
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+
+	t.Log(ui64)
+}
+
+func TestFloat(t *testing.T)  {
+	v := float64(0.3)
+	v2 := "0.30"
+	floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
+	floatSource,_ := strconv.ParseFloat(fmt.Sprint(v2),64)
+	if math.Abs(floatDest - floatSource) < 0.05{
+		t.Log("test success")
+	}else{
+		t.Error("test failed")
+	}
+}
+
+
+func TestCkDataTypeTransfer(t *testing.T){
+	var data string = "132423　"
+	var fieldName string
+	var toDataType string
+	fieldName = "testField"
+	toDataType = "Int64"
+	t.Log("test start")
+	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "int64"{
+		if result.(int64) == int64(132423){
+			t.Log("result(int64):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "UInt32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "uint32"{
+		if result.(uint32) == uint32(132423){
+			t.Log("result(uint32):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+
+	data = "42342.224 "
+	toDataType = "Float32"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "float32"{
+		if result.(float32) == float32(42342.224){
+			t.Log("result(float32):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "Float64"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "float64"{
+		if result.(float64) == float64(42342.224){
+			t.Log("result(float32):",result)
+			os.Exit(0)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+	toDataType = "Decimal(18, 2)"
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
+	if err != nil{
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(result).String() == "float64"{
+		if result.(float64) == float64(42342.224){
+			t.Log("result(float64):",result)
+		}else{
+			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+		}
+	}else{
+		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
+	}
+
+}
 
 func TestTransferToCreateTableSql(t *testing.T) {
 	data := pluginTestData.NewEvent().GetTestInsertData()

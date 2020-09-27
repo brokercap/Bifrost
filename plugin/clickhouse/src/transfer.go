@@ -30,7 +30,11 @@ func AllTypeToUInt64(s interface{}) (uint64, error) {
 	return ui64, nil
 }
 
-func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string) (v interface{}, e error) {
+func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,NullNotTransferDefault bool) (v interface{}, e error) {
+	// 假如字段允许是 Nullable() ，允许为 null 的情况下，并设置的强制转成默认值，则直接写入 nil 值
+	if NullNotTransferDefault == true && data == nil && toDataType[0:3] == "Nul" {
+		return nil,nil
+	}
 	defer func() {
 		if err := recover(); err != nil {
 			e = fmt.Errorf(fieldName + " " + fmt.Sprint(err))
@@ -472,10 +476,11 @@ func TransferToCreateTableSql(SchemaName, TableName string, data map[string]inte
 			continue
 		}
 		toCkType = getToCkType(v)
+		toCkType = "Nullable("+toCkType+")"
 		addCkField(fileName,fileName,toCkType)
 	}
-	addCkField("bifrost_data_version","{$BifrostDataVersion}","String")
-	addCkField("binlog_event_type","{$EventType}","String")
+	addCkField("bifrost_data_version","{$BifrostDataVersion}","Nullable(Int64)")
+	addCkField("binlog_event_type","{$EventType}","Nullable(String)")
 	sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
 	return
 }

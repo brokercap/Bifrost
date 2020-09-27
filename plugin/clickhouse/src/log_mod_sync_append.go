@@ -25,7 +25,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			for k := 0; k < l ;k++{
 				for _, v := range This.p.Field {
 					var toV interface{}
-					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
+					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
 					if This.err != nil {
 						goto errLoop
 					}
@@ -38,7 +38,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 				if k%2 != 0 {
 					for _, v := range This.p.Field {
 						var toV interface{}
-						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType)
+						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
 						if This.err != nil {
 							goto errLoop
 						}
