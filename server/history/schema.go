@@ -47,11 +47,11 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 	p = append(p,schema)
 	p = append(p,table)
 	rows, err := stmt.Query(p)
-	defer rows.Close()
 	if err != nil {
 		log.Printf("%v\n", err)
 		return FieldList
 	}
+	defer rows.Close()
 
 	for {
 		dest := make([]driver.Value, 10, 10)

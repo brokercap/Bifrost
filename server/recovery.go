@@ -112,16 +112,11 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			ch,ChannelID := db.AddChannel(cInfo.Name,cInfo.MaxThreadNum)
 			ch.Status = "close"
 			channelIDMap[oldChannelId] = ChannelID
-			if cInfo.Status != "stop" && cInfo.Status != "close" {
-				switch dbInfo.ConnStatus {
-				case "close","stop":
-					break
-				default:
-					if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
-						ch.Start()
-						continue
-					}
-					break
+			// 只要不是 close 状态，就启动
+			if cInfo.Status != "close" {
+				if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
+					ch.Start()
+					continue
 				}
 			}
 			//db close,channel must be close
@@ -202,6 +197,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 
 				schemaName,tableName := GetSchemaAndTableBySplit(tInfo.key)
 				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
+				//db.AddTable(schemaName, tableName, tInfo.IgnoreTable,channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
 				for _, toServer := range tInfo.ToServerList {
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{

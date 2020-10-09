@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
-	"strings"
 	"time"
+	"log"
+	"strings"
 )
 
 type RowsEvent struct {
@@ -41,10 +41,10 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 
 	err = binary.Read(buf, binary.LittleEndian, &event.flags)
 	switch event.header.EventType {
-	case UPDATE_ROWS_EVENTv2, WRITE_ROWS_EVENTv2, DELETE_ROWS_EVENTv2:
+	case UPDATE_ROWS_EVENTv2,WRITE_ROWS_EVENTv2,DELETE_ROWS_EVENTv2:
 		//err = binary.Read(buf, binary.LittleEndian, &event.flags)
-		extraDataLength, _ := readFixedLengthInteger(buf, 2)
-		buf.Next(int(extraDataLength / 8))
+		extraDataLength,_:=readFixedLengthInteger(buf,2)
+		buf.Next(int(extraDataLength/8))
 		break
 	}
 
@@ -56,7 +56,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		event.columnsPresentBitmap2 = Bitfield(buf.Next(int((columnCount + 7) / 8)))
 	}
 	//假如 map event 已经过滤了当前库，则直接不再解析
-	if parser.filterNextRowEvent == true {
+	if parser.filterNextRowEvent == true{
 		return
 	}
 	event.tableMap = parser.tableMap[event.tableId]
@@ -64,7 +64,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		var row map[string]interface{}
 		row, err = parser.parseEventRow(buf, event.tableMap, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
 		if err != nil {
-			log.Println("event row parser err:", err)
+			log.Println("event row parser err:",err)
 			return
 		}
 		event.rows = append(event.rows, row)
@@ -78,8 +78,8 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 	row = make(map[string]interface{})
 	bitfieldSize := (columnsCount + 7) / 8
 	nullBitMap := Bitfield(buf.Next(bitfieldSize))
-	if columnsCount > len(tableSchemaMap) {
-		log.Println("parseEventRow len(tableSchemaMap)=", len(tableSchemaMap), " < ", "columnsCount:", columnsCount, " tableMap:", *tableMap)
+	if columnsCount > len(tableSchemaMap){
+		log.Println("parseEventRow len(tableSchemaMap)=",len(tableSchemaMap)," < ","columnsCount:",columnsCount," tableMap:",*tableMap)
 	}
 	for i := 0; i < columnsCount; i++ {
 		column_name := tableSchemaMap[i].COLUMN_NAME
@@ -96,34 +96,32 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_TINY:
 			var b byte
 			b, e = buf.ReadByte()
-			if tableSchemaMap[i].is_bool == true {
+			if tableSchemaMap[i].is_bool == true{
 				switch int(b) {
-				case 1:
-					row[column_name] = true
-				case 0:
-					row[column_name] = false
+				case 1:row[column_name] = true
+				case 0:row[column_name] = false
 				default:
-					if tableSchemaMap[i].unsigned == true {
+					if tableSchemaMap[i].unsigned == true{
 						row[column_name] = uint8(b)
-					} else {
+					}else{
 						row[column_name] = int8(b)
 					}
 				}
-			} else {
-				if tableSchemaMap[i].unsigned == true {
+			}else{
+				if tableSchemaMap[i].unsigned == true{
 					row[column_name] = uint8(b)
-				} else {
+				}else{
 					row[column_name] = int8(b)
 				}
 			}
 			break
 
 		case FIELD_TYPE_SHORT:
-			if tableSchemaMap[i].unsigned {
+			if tableSchemaMap[i].unsigned{
 				var short uint16
 				e = binary.Read(buf, binary.LittleEndian, &short)
 				row[column_name] = short
-			} else {
+			}else{
 				var short int16
 				e = binary.Read(buf, binary.LittleEndian, &short)
 				row[column_name] = short
@@ -144,15 +142,15 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				var bint uint64
 				bint, e = readFixedLengthInteger(buf, 3)
 				row[column_name] = uint32(bint)
-			} else {
-				var a, b, c uint8
+			}else{
+				var a,b,c uint8
 
 				var tmp byte
-				tmp, e = buf.ReadByte()
+				tmp,e = buf.ReadByte()
 				a = uint8(tmp)
-				tmp, e = buf.ReadByte()
+				tmp,e = buf.ReadByte()
 				b = uint8(tmp)
-				tmp, e = buf.ReadByte()
+				tmp,e = buf.ReadByte()
 				c = uint8(tmp)
 				res := int32(a) | (int32(b) << 8) | (int32(c) << 16)
 				if res >= 0x800000 {
@@ -162,12 +160,13 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 			break
 
+
 		case FIELD_TYPE_LONG:
 			if tableSchemaMap[i].unsigned {
 				var long uint32
 				e = binary.Read(buf, binary.LittleEndian, &long)
 				row[column_name] = long
-			} else {
+			}else{
 				var long int32
 				e = binary.Read(buf, binary.LittleEndian, &long)
 				row[column_name] = long
@@ -175,11 +174,11 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			break
 
 		case FIELD_TYPE_LONGLONG:
-			if tableSchemaMap[i].unsigned {
+			if tableSchemaMap[i].unsigned{
 				var longlong uint64
 				e = binary.Read(buf, binary.LittleEndian, &longlong)
 				row[column_name] = longlong
-			} else {
+			}else {
 				var longlong int64
 				e = binary.Read(buf, binary.LittleEndian, &longlong)
 				row[column_name] = longlong
@@ -204,19 +203,19 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_NEWDECIMAL:
 			digits_per_integer := 9
 			compressed_bytes := [10]int{0, 1, 1, 2, 2, 3, 3, 4, 4, 4}
-			integral := tableMap.columnMetaData[i].precision - tableMap.columnMetaData[i].decimals
+			integral := (tableMap.columnMetaData[i].precision - tableMap.columnMetaData[i].decimals)
 			uncomp_integral := int(int(integral) / digits_per_integer)
 			uncomp_fractional := int(int(tableMap.columnMetaData[i].decimals) / digits_per_integer)
 			comp_integral := integral - (uncomp_integral * digits_per_integer)
 			comp_fractional := tableMap.columnMetaData[i].decimals - (uncomp_fractional * digits_per_integer)
 
 			/*
-				log.Println( "column.precision",tableMap.columnMetaData[i].precision)
-				log.Println( "column.decimals",tableMap.columnMetaData[i].decimals)
-				log.Println( "uncomp_integral",uncomp_integral)
-				log.Println( "uncomp_fractional",uncomp_fractional)
-				log.Println( "comp_integral",comp_integral)
-				log.Println( "comp_fractional",comp_fractional)
+			log.Println( "column.precision",tableMap.columnMetaData[i].precision)
+			log.Println( "column.decimals",tableMap.columnMetaData[i].decimals)
+			log.Println( "uncomp_integral",uncomp_integral)
+			log.Println( "uncomp_fractional",uncomp_fractional)
+			log.Println( "comp_integral",comp_integral)
+			log.Println( "comp_fractional",comp_fractional)
 			*/
 
 			var value int
@@ -239,32 +238,25 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				res = "-"
 			}
 
-			var tmp = new(bytes.Buffer)
+			var tmp *bytes.Buffer = new(bytes.Buffer)
+			//Println("value ^ 0x80:",uint8(b) ^ 128)
 			binary.Write(tmp, binary.LittleEndian, uint8(b)^128)
-			bufPaket.unread(tmp.Next(1))
-
-			/*
-				log.Println("value ^ 0x80:",uint8(b) ^ 128)
-
-				log.Println("d:",tmp)
-
-				log.Println("first size",size)
-			*/
-
+			bufPaket.unread(tmp.Bytes())
+			//log.Println("first size",size)
 			res0 := ""
 
 			if size > 0 {
 				v1 := bufPaket.intRead(size)
-				//log.Println( "f:",v1)
+				//log.Println( "first size d value::",v1)
 				value = int(v1) ^ mask
 				res0 += strconv.Itoa(value)
 			}
-
+			//log.Println( "first res0:",res0)
 			for i := 0; i < uncomp_integral; i++ {
 				//log.Println( "uncomp_integral ssssssssss:",i)
-				s := bufPaket.read(4)
+				s:= bufPaket.read(4)
 				//log.Println("s:",s,"slen:",len(s))
-				b_buf := bytes.NewBuffer(s)
+				b_buf  :=  bytes.NewBuffer(s)
 				var x int32
 				e = binary.Read(b_buf, binary.BigEndian, &x)
 				//log.Println("x:",x)
@@ -273,15 +265,15 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 			//log.Println("first res",res)
 
-			res0 = strings.TrimLeft(res0, "0")
-			if res0 == "" {
+			res0 = strings.TrimLeft(res0,"0")
+			if res0 == ""{
 				res += "0."
-			} else {
-				res += res0 + "."
+			}else{
+				res += res0+"."
 			}
 
 			for i := 0; i < uncomp_fractional; i++ {
-				b_buf := bytes.NewBuffer(bufPaket.read(4))
+				b_buf  :=  bytes.NewBuffer(bufPaket.read(4))
 				var x int32
 				e = binary.Read(b_buf, binary.BigEndian, &x)
 				value = int(x) ^ mask
@@ -298,7 +290,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 			row[column_name] = res
 			//log.Println("column_name:",column_name,"=",row[column_name])
-			//log.Fatal("sssssssssss")
 			break
 
 		case FIELD_TYPE_VARCHAR:
@@ -317,28 +308,28 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			if buf.Len() < length {
 				e = io.EOF
 				/*
-					log.Println(*tableSchemaMap[i])
-					log.Println("schemaName:",tableMap.schemaName)
-					log.Println("tableName:",tableMap.tableName)
-					log.Println("tableId:",tableMap.tableId)
-					log.Println("column length:",len(tableMap.columnMetaData))
-					log.Println("tableMap.columnTypeNames():",tableMap.columnTypeNames())
+				log.Println(*tableSchemaMap[i])
+				log.Println("schemaName:",tableMap.schemaName)
+				log.Println("tableName:",tableMap.tableName)
+				log.Println("tableId:",tableMap.tableId)
+				log.Println("column length:",len(tableMap.columnMetaData))
+				log.Println("tableMap.columnTypeNames():",tableMap.columnTypeNames())
 
-					log.Println("name",tableMap.columnMetaData[i].name)
-					log.Println("column_type",tableMap.columnMetaData[i].column_type)
-					log.Println("unsigned",tableMap.columnMetaData[i].unsigned)
-					log.Println("size",tableMap.columnMetaData[i].size)
-					log.Println("bits",tableMap.columnMetaData[i].bits)
-					log.Println("bytes",tableMap.columnMetaData[i].bytes)
-					log.Println("decimals",tableMap.columnMetaData[i].decimals)
-					log.Println("fsp",tableMap.columnMetaData[i].fsp)
-					log.Println("length_size",tableMap.columnMetaData[i].length_size)
-					log.Println("max_length",tableMap.columnMetaData[i].max_length)
-					log.Println("precision",tableMap.columnMetaData[i].precision)
-					for k,v := range row{
-						log.Println("key:",k,"val:",v)
-					}
-					log.Fatal("FIELD_TYPE_VARCHAR buf len err:",buf.Len(),"<",length," max_length:",max_length," column_name:",column_name)
+				log.Println("name",tableMap.columnMetaData[i].name)
+				log.Println("column_type",tableMap.columnMetaData[i].column_type)
+				log.Println("unsigned",tableMap.columnMetaData[i].unsigned)
+				log.Println("size",tableMap.columnMetaData[i].size)
+				log.Println("bits",tableMap.columnMetaData[i].bits)
+				log.Println("bytes",tableMap.columnMetaData[i].bytes)
+				log.Println("decimals",tableMap.columnMetaData[i].decimals)
+				log.Println("fsp",tableMap.columnMetaData[i].fsp)
+				log.Println("length_size",tableMap.columnMetaData[i].length_size)
+				log.Println("max_length",tableMap.columnMetaData[i].max_length)
+				log.Println("precision",tableMap.columnMetaData[i].precision)
+				for k,v := range row{
+					log.Println("key:",k,"val:",v)
+				}
+				log.Fatal("FIELD_TYPE_VARCHAR buf len err:",buf.Len(),"<",length," max_length:",max_length," column_name:",column_name)
 				*/
 			}
 			row[column_name] = string(buf.Next(length))
@@ -350,25 +341,25 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				var short uint16
 				e = binary.Read(buf, binary.LittleEndian, &short)
 				length = int(short)
-			} else {
+			}else{
 				var b byte
 				b, e = buf.ReadByte()
 				length = int(b)
 			}
 			//row[column_name] = string(buf.Next(length+1))
 			/*
-				log.Println("======================")
-				log.Println("column_name:", column_name," length:",length)
-				//log.Println("name:",tableMap.columnMetaData[i].name)
-				log.Println("size:",tableMap.columnMetaData[i].size)
-				log.Println("precision:",tableMap.columnMetaData[i].precision)
-				log.Println("max_length:",tableMap.columnMetaData[i].max_length)
-				log.Println("length_size:",tableMap.columnMetaData[i].length_size)
-				log.Println("fsp:",tableMap.columnMetaData[i].fsp)
-				log.Println("decimals:",tableMap.columnMetaData[i].decimals)
-				log.Println("unsigned:",tableMap.columnMetaData[i].unsigned)
-				log.Println("column_type:",tableMap.columnMetaData[i].column_type)
-				log.Println("tableMap.columnMetaData[i]:",tableMap.columnMetaData[i])
+			log.Println("======================")
+			log.Println("column_name:", column_name," length:",length)
+			//log.Println("name:",tableMap.columnMetaData[i].name)
+			log.Println("size:",tableMap.columnMetaData[i].size)
+			log.Println("precision:",tableMap.columnMetaData[i].precision)
+			log.Println("max_length:",tableMap.columnMetaData[i].max_length)
+			log.Println("length_size:",tableMap.columnMetaData[i].length_size)
+			log.Println("fsp:",tableMap.columnMetaData[i].fsp)
+			log.Println("decimals:",tableMap.columnMetaData[i].decimals)
+			log.Println("unsigned:",tableMap.columnMetaData[i].unsigned)
+			log.Println("column_type:",tableMap.columnMetaData[i].column_type)
+			log.Println("tableMap.columnMetaData[i]:",tableMap.columnMetaData[i])
 			*/
 			row[column_name] = string(buf.Next(length))
 			//log.Println("column_name: ",column_name," == ",row[column_name])
@@ -410,40 +401,40 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			}
 
 			//result := make(map[string]int, 0)
-			result := make([]string, 0)
-			var mathPower = func(x int, n int) int {
-				ans := 1
-				for n != 0 {
-					ans *= x
-					n--
-				}
-				return ans
-			}
+			result := make([]string,0)
+			var mathPower = func (x int, n int) int {
+					ans := 1
+					for n != 0 {
+						ans *= x
+						n--
+					}
+					return ans
+					}
 
 			for i, val := range tableSchemaMap[i].set_values {
-				s := index & mathPower(2, i)
+				s := index & mathPower(2,i)
 				if s > 0 {
-					result = append(result, val)
+					result = append(result,val)
 					//result[val] = 1
 				}
 			}
 			/*
-				f := make([]string, 0)
-				for key, _ := range result {
-					f = append(f, key)
-				}
+			f := make([]string, 0)
+			for key, _ := range result {
+				f = append(f, key)
+			}
 			*/
 			row[column_name] = result
 			break
 
-		case FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+		case FIELD_TYPE_BLOB,FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
 			FIELD_TYPE_LONG_BLOB, FIELD_TYPE_VAR_STRING:
 			var length uint64
 			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
 			row[column_name] = string(buf.Next(int(length)))
 			break
 		case FIELD_TYPE_BIT:
-			var resp = ""
+			var resp string = ""
 			for k := 0; k < tableMap.columnMetaData[i].bytes; k++ {
 				//var current_byte = ""
 				var current_byte []string
@@ -490,16 +481,16 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			data = buf.Next(3)
 			timeInt := int(int(data[0]) + (int(data[1]) << 8) + (int(data[2]) << 16))
 			if timeInt == 0 {
-				if tableSchemaMap[i].COLUMN_DEFAULT != "" {
+				if tableSchemaMap[i].COLUMN_DEFAULT != ""{
 					row[column_name] = tableSchemaMap[i].COLUMN_DEFAULT
-				} else {
+				}else{
 					row[column_name] = nil
 				}
 			} else {
 				year := (timeInt & (((1 << 15) - 1) << 9)) >> 9
 				month := (timeInt & (((1 << 4) - 1) << 5)) >> 5
-				day := timeInt & ((1 << 5) - 1)
-				t := fmt.Sprintf("%4d-%02d-%02d", year, month, day)
+				day := (timeInt & ((1 << 5) - 1))
+				t := fmt.Sprintf("%4d-%02d-%02d", year,month,day)
 				row[column_name] = t
 			}
 			break
@@ -509,16 +500,16 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			data = buf.Next(3)
 			timeInt := int(int(data[0]) + (int(data[1]) << 8) + (int(data[2]) << 16))
 			if timeInt == 0 {
-				if tableSchemaMap[i].COLUMN_DEFAULT != "" {
+				if tableSchemaMap[i].COLUMN_DEFAULT != ""{
 					row[column_name] = tableSchemaMap[i].COLUMN_DEFAULT
-				} else {
+				}else{
 					row[column_name] = nil
 				}
 			} else {
 				hour := int(timeInt / 10000)
 				minute := int((timeInt % 10000) / 100)
 				second := int(timeInt % 100)
-				t := fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
+				t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
 				//row[column_name] = tm.Format("15:04:05")
 				row[column_name] = t
 			}
@@ -528,17 +519,17 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			var a byte
 			var b byte
 			var c byte
-			binary.Read(buf, binary.BigEndian, &a)
-			binary.Read(buf, binary.BigEndian, &b)
-			binary.Read(buf, binary.BigEndian, &c)
+			binary.Read(buf,binary.BigEndian,&a)
+			binary.Read(buf,binary.BigEndian,&b)
+			binary.Read(buf,binary.BigEndian,&c)
 			timeInt := uint64((int(a) << 16) | (int(b) << 8) | int(c))
-			if timeInt >= 0x800000 {
+			if timeInt >= 0x800000{
 				timeInt -= 0x1000000
 			}
-			hour := read_binary_slice(timeInt, 2, 10, 24)
-			minute := read_binary_slice(timeInt, 12, 6, 24)
-			second := read_binary_slice(timeInt, 18, 6, 24)
-			t := fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
+			hour := read_binary_slice(timeInt,2,10,24)
+			minute := read_binary_slice(timeInt,12,6,24)
+			second := read_binary_slice(timeInt,18,6,24)
+			t := fmt.Sprintf("%02d:%02d:%02d", hour,minute,second)
 			row[column_name] = t
 			break
 
@@ -550,7 +541,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 		case FIELD_TYPE_TIMESTAMP2:
 			var timestamp int32
-			binary.Read(buf, binary.BigEndian, &timestamp)
+			binary.Read(buf,binary.BigEndian,&timestamp)
 			tm := time.Unix(int64(timestamp), 0)
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break
@@ -569,26 +560,26 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			year := d / 10000
 
 			row[column_name] = time.Date(year, month, day, hour, minute, second, 0, time.UTC).Format(TIME_FORMAT)
-			if row[column_name] == "-0001-11-30 00:00:00" {
+			if row[column_name] == "-0001-11-30 00:00:00"{
 				row[column_name] = "0000:00:00 00:00:00"
 			}
 			break
 
 		case FIELD_TYPE_DATETIME2:
-			row[column_name], e = read_datetime2(buf)
+			row[column_name],e = read_datetime2(buf)
 			break
 		case FIELD_TYPE_JSON:
 			var length uint64
 			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
 			data := buf.Next(int(length))
-			row[column_name], e = get_field_json_data(data, int64(length))
+			row[column_name],e = get_field_json_data(data,int64(length))
 			break
 		default:
-			return nil, fmt.Errorf("schemaName:%s tableName:%s columnName:%s Unknown FieldType %d", tableMap.schemaName, tableMap.tableName, column_name, tableMap.columnTypes[i])
+			return nil, fmt.Errorf("schemaName:%s tableName:%s columnName:%s Unknown FieldType %d",tableMap.schemaName,tableMap.tableName, column_name,tableMap.columnTypes[i])
 		}
 		//log.Println("column_name:",column_name," row[column_name]:",row[column_name])
 		if e != nil {
-			log.Printf("lastField schemaName:%s tableName:%s columnName:%s Unknown FieldType %d err:%s", tableMap.schemaName, tableMap.tableName, column_name, tableMap.columnTypes[i], e)
+			log.Printf("lastField schemaName:%s tableName:%s columnName:%s Unknown FieldType %d err:%s",tableMap.schemaName,tableMap.tableName, column_name,tableMap.columnTypes[i],e)
 			return nil, e
 		}
 		//log.Println("column_name:",column_name,"=",row[column_name])
@@ -609,6 +600,7 @@ func read_binary_slice(binary uint64, start uint64, size uint64, data_length uin
 	return binary & uint64(mask)
 }
 
+
 /*
 DATETIME
 
@@ -621,9 +613,9 @@ DATETIME
 ---------------------------
 40 bits = 5 bytes
 */
-func read_datetime2(buf *bytes.Buffer) (data string, err error) {
-	defer func() {
-		if errs := recover(); errs != nil {
+func read_datetime2(buf *bytes.Buffer)(data string,err error) {
+	defer func(){
+		if errs:=recover();errs!=nil{
 			err = fmt.Errorf(fmt.Sprint(errs))
 			return
 		}
@@ -633,18 +625,18 @@ func read_datetime2(buf *bytes.Buffer) (data string, err error) {
 	binary.Read(buf, binary.BigEndian, &a)
 	binary.Read(buf, binary.BigEndian, &b)
 	/*
-		log.Println("read_datetime2 a:",a)
-		log.Println("read_datetime2 b:",b)
-		log.Println("a << 8:",uint(a) << 8)
+	log.Println("read_datetime2 a:",a)
+	log.Println("read_datetime2 b:",b)
+	log.Println("a << 8:",uint(a) << 8)
 	*/
-	dataInt := uint64(b) + uint64(uint(a)<<8)
+	dataInt := uint64(b) + uint64((uint(a) << 8))
 	year_month := read_binary_slice(dataInt, 1, 17, 40)
 	year := int(year_month / 13)
 	month := time.Month(year_month % 13)
 	days := read_binary_slice(dataInt, 18, 5, 40)
-	hours := read_binary_slice(dataInt, 23, 5, 40)
-	minute := read_binary_slice(dataInt, 28, 6, 40)
-	second := read_binary_slice(dataInt, 34, 6, 40)
+	hours:= read_binary_slice(dataInt, 23, 5, 40)
+	minute :=read_binary_slice(dataInt, 28, 6, 40)
+	second :=read_binary_slice(dataInt, 34, 6, 40)
 	data = time.Date(year, month, int(days), int(hours), int(minute), int(second), 0, time.UTC).Format(TIME_FORMAT)
 	return
 }

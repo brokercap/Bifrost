@@ -101,11 +101,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.4.3-release/bifrost_v1.4.3-release_Linux-64bit-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.4.5-release/bifrost_v1.4.5-release_Linux-64bit-bin.tar.gz
 
-tar -zxvf bifrost_v1.4.3-release_Linux-64bit-bin.tar.gz
+tar -zxvf bifrost_v1.4.5-release_Linux-64bit-bin.tar.gz
 
-cd bifrost_v1.4.3-release_Linux-64bit-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.4.5-release_Linux-64bit-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
@@ -252,7 +252,7 @@ plugin_sync_retry_time=5
 
 <table>
     <tr>
-        <td><img src="https://wiki.xbifrost.com/images/donate/weixin.jpeg" width="200"></td>
         <td><img src="https://wiki.xbifrost.com/images/donate/alipay.jpeg" width="200"></td>
+        <td><img src="https://wiki.xbifrost.com/images/donate/weixin.jpeg" width="200"></td>
     </tr>
 </table>

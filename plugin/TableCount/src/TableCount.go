@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-const VERSION  = "v1.1.0"
-const BIFROST_VERION = "v1.1.0"
+const VERSION  = "v1.4.4"
+const BIFROST_VERION = "v1.4.4"
 
 func init(){
 	driver.Register("TableCount",&MyConn{},VERSION,BIFROST_VERION)

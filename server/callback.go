@@ -54,25 +54,31 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		//假如没一个获取成功的,直接退出函数
 		return
 	}
-	var i uint = 0
+	var i int = 0
+	var c *Channel
 	for {
 		if _, ok := db.channelMap[ChannelKey]; !ok {
 			return
 		}
-		if db.channelMap[ChannelKey].Status == "close"{
+		c = db.channelMap[ChannelKey]
+		c.RLock()
+		if c.Status == "close"{
+			c.RUnlock()
 			return
 		}
-		if db.channelMap[ChannelKey].Status != "running" {
+		if c.Status != "running" {
+			c.RUnlock()
 			if i%600 == 0 {
-				log.Printf("ChannelKey:%T , status:%s , data:%T \r\n , ", ChannelKey, db.channelMap[ChannelKey].Status, data)
+				log.Printf("ChannelKey:%T , status:%s , data:%T \r\n , ", ChannelKey, c.Status, data)
 			}
 			time.Sleep(1 * time.Second)
 			i++
 		} else {
+			c.RUnlock()
 			break
 		}
 	}
-	chanName := db.channelMap[ChannelKey].GetChannel()
+	chanName := c.GetChannel()
 	if chanName != nil {
 		chanName <- *data
 	} else {

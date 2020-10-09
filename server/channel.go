@@ -26,7 +26,7 @@ import (
 )
 
 type Channel struct {
-	sync.Mutex
+	sync.RWMutex
 	Name string
 	chanName         chan mysql.EventReslut
 	MaxThreadNum     int // 消费通道的最大线程数
@@ -80,6 +80,8 @@ func (Channel *Channel) GetCountChan() chan *count.FlowCount {
 }
 
 func (Channel *Channel) Start() chan mysql.EventReslut {
+	Channel.Lock()
+	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
 	if Channel.Status == "running"{
 		return Channel.chanName
@@ -97,20 +99,28 @@ func (Channel *Channel) GetChannel() chan mysql.EventReslut {
 }
 
 func (Channel *Channel) Stop() {
+	Channel.Lock()
+	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"stop")
 	Channel.Status = "stop"
 }
 
 func (Channel *Channel) Close() {
+	Channel.Lock()
+	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"close")
 	Channel.Status = "close"
 }
 
 func (This *Channel) SetChannelMaxThreadNum(n int) {
+	This.Lock()
+	defer This.Unlock()
 	This.MaxThreadNum = n
 }
 
 func (This *Channel) GetChannelMaxThreadNum() int {
+	This.Lock()
+	defer This.Unlock()
 	return This.MaxThreadNum
 }
 
