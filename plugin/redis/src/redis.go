@@ -207,44 +207,68 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog, err
 
 	switch This.p.Type {
 	case "string":
-		err = This.conn.Set(key, string(j), time.Duration(This.p.Expir)*time.Second).Err()
+		{
+			pipeline := This.conn.Pipeline()
+			if len(data.Rows) >= 2 {
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
+				pipeline.Del(oldKey)
+			}
+			pipeline.Set(key, string(j), time.Duration(This.p.Expir)*time.Second)
+			_, err = pipeline.Exec()
+		}
 	case "hash":
-		fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
-		pipeline := This.conn.Pipeline()
-		pipeline.HDel(key, fieldKey)
-		pipeline.HSet(key, fieldKey, string(j))
-		_, err = pipeline.Exec()
+		{
+			pipeline := This.conn.Pipeline()
+			if len(data.Rows) >= 2 {
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
+				oldFiledKey := This.getKeyVal(data, This.p.FieldKeyConfig, 0)
+				pipeline.HDel(oldKey, oldFiledKey)
+			}
+			fieldKey := This.getKeyVal(data, This.p.FieldKeyConfig, index)
+			pipeline.HSet(key, fieldKey, string(j))
+			_, err = pipeline.Exec()
+		}
 	case "zset":
-		sort, err := strconv.ParseFloat(This.getKeyVal(data, This.p.SortedConfig, index), 64)
-		if err != nil {
-			return nil, err
+		{
+			sort, err := strconv.ParseFloat(This.getKeyVal(data, This.p.SortedConfig, index), 64)
+			if err != nil {
+				sort = 0
+			}
+
+			pipeline := This.conn.Pipeline()
+			if len(data.Rows) >= 2 {
+				oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
+				if jo, err := json.Marshal(data.Rows[0]); err == nil {
+					pipeline.ZRem(oldKey, 1, string(jo))
+				}
+			}
+			pipeline.ZAdd(key, redis.Z{Score: sort, Member: string(j)})
+			_, err = pipeline.Exec()
 		}
-		jo, err := json.Marshal(data.Rows[0])
-		if err != nil {
-			return nil, err
-		}
-		pipeline := This.conn.Pipeline()
-		pipeline.ZRem(key, 1, string(jo))
-		pipeline.ZAdd(key, redis.Z{Score: sort, Member: string(j)})
-		_, err = pipeline.Exec()
 	case "list":
-		jo, err := json.Marshal(data.Rows[0])
-		if err != nil {
-			return nil, err
+		{
+			pipeline := This.conn.Pipeline()
+			if len(data.Rows) >= 2 {
+				if jo, err := json.Marshal(data.Rows[0]); err == nil {
+					oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
+					pipeline.LRem(oldKey, 1, string(jo))
+				}
+			}
+			pipeline.LPush(key, string(j))
+			_, err = pipeline.Exec()
 		}
-		pipeline := This.conn.Pipeline()
-		pipeline.LRem(key, 1, string(jo))
-		pipeline.LPush(key, string(j))
-		_, err = pipeline.Exec()
 	case "set":
-		jo, err := json.Marshal(data.Rows[0])
-		if err != nil {
-			return nil, err
+		{
+			pipeline := This.conn.Pipeline()
+			if len(data.Rows) >= 2 {
+				if jo, err := json.Marshal(data.Rows[0]); err == nil {
+					oldKey := This.getKeyVal(data, This.p.KeyConfig, 0)
+					pipeline.SRem(oldKey, 1, string(jo))
+				}
+			}
+			pipeline.SAdd(key, string(j))
+			_, err = pipeline.Exec()
 		}
-		pipeline := This.conn.Pipeline()
-		pipeline.SRem(key, 1, string(jo))
-		pipeline.SAdd(key, string(j))
-		_, err = pipeline.Exec()
 	default:
 		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
