@@ -195,7 +195,6 @@ func (This *WaitGroup) Add(n int)  {
 }
 
 func (This *WaitGroup) Wait()  {
-	log.Println("This.newAddCount:",This.newAddCount)
 	if This.newAddCount > 0 {
 		This.waitGroup.Add(This.newAddCount)
 		This.newAddCount = 0
