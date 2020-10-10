@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 	"encoding/json"
-	"log"
 )
 
 func AllTypeToInt64(s interface{}) (int64, error) {
@@ -368,8 +367,6 @@ func interfaceToFloat64(data interface{}) float64 {
 
 func TransferToCreateTableSql(SchemaName, TableName string, data map[string]interface{}, Pri []*string) (sql string, ckField []fieldStruct) {
 	if data == nil || len(data) == 0 || len(Pri) == 0 {
-		log.Println("data:",data)
-		log.Println("pri:",Pri)
 		return "", nil
 	}
 	sql = "CREATE TABLE IF NOT EXISTS `" + SchemaName + "`.`" + TableName + "` ("
