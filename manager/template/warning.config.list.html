@@ -256,7 +256,7 @@ function GetWarningParamEmail(){
     var To          = $("#Email_TO").val();
     var Password    = $("#Email_Password").val();
 
-    var emreg=/^\w{3,}(\.\w+)*@[A-z0-9]+(\.[A-z]{2,5}){1,2}$/;
+    var emreg = /^([a-zA-Z0-9]+[_|\_|\.]?)*[a-zA-Z0-9]+@([a-zA-Z0-9]+[-|\-|_|\_|\.]?)*[a-zA-Z0-9]+\.[a-zA-Z]{2,3}$/;
     if(emreg.test(From)==false) {
         result.msg = "FROM:" + From + " 邮箱不合法";
         return result;
