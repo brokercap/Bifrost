@@ -178,6 +178,35 @@ type toServer struct {
 	ToServerInfo    *server.ToServer
 }
 
+type WaitGroup struct {
+	newAddCount   	int					// 需要新 add 的数量
+	waitGroup    	*sync.WaitGroup		// waitGroup
+}
+
+func NewWaitGroup() *WaitGroup {
+	waitGroup := new(WaitGroup)
+	waitGroup.newAddCount = 0
+	waitGroup.waitGroup = &sync.WaitGroup{}
+	return waitGroup
+}
+
+func (This *WaitGroup) Add(n int)  {
+	This.newAddCount += n
+}
+
+func (This *WaitGroup) Wait()  {
+	log.Println("This.newAddCount:",This.newAddCount)
+	if This.newAddCount > 0 {
+		This.waitGroup.Add(This.newAddCount)
+		This.newAddCount = 0
+	}
+	This.waitGroup.Wait()
+}
+
+func (This *WaitGroup) Done()  {
+	This.waitGroup.Done()
+}
+
 type TableStatus struct {
 	sync.RWMutex
 	RowsCount	uint64
@@ -208,7 +237,7 @@ type History struct {
 	TablePriArr			[]*string
 	ToServerList		[]*toServer
 	ToServerTheadCount	int16			// 实际正在运行的同步协程数
-	ToServerTheadGroup	*sync.WaitGroup
+	ToServerTheadGroup	*WaitGroup
 	TableNames			string		// 用 ; 隔开的表名
 	TableNameArr		[]*TableStatus	// TableNames 分割后的数组
 	CurrentTableName	string		// 正在执行全量的表名

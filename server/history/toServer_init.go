@@ -2,7 +2,6 @@ package history
 
 import (
 	"github.com/brokercap/Bifrost/server"
-	"sync"
 	"time"
 )
 
@@ -55,7 +54,7 @@ func (This *History) SyncWaitToServerOver(n int)  {
 		This.ToServerTheadGroup.Add(n)
 		return
 	}
-	This.ToServerTheadGroup = &sync.WaitGroup{}
+	This.ToServerTheadGroup = NewWaitGroup()
 	This.ToServerTheadGroup.Add(n)
 	go func() {
 		defer func() {
