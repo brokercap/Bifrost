@@ -179,30 +179,40 @@ type toServer struct {
 }
 
 type WaitGroup struct {
+	sync.RWMutex
 	newAddCount   	int					// 需要新 add 的数量
-	waitGroup    	*sync.WaitGroup		// waitGroup
+	waitGroup    	sync.WaitGroup		// waitGroup
 }
 
-func NewWaitGroup() *WaitGroup {
-	waitGroup := new(WaitGroup)
-	waitGroup.newAddCount = 0
-	waitGroup.waitGroup = &sync.WaitGroup{}
-	return waitGroup
+func NewWaitGroup(n int) *WaitGroup {
+	w := &WaitGroup{newAddCount: 0,waitGroup: sync.WaitGroup{}}
+	w.waitGroup.Add(n)
+	return w
 }
 
 func (This *WaitGroup) Add(n int)  {
+	This.Lock()
 	This.newAddCount += n
+	This.Unlock()
 }
 
 func (This *WaitGroup) Wait()  {
+	This.Lock()
 	if This.newAddCount > 0 {
 		This.waitGroup.Add(This.newAddCount)
 		This.newAddCount = 0
 	}
+	This.Unlock()
 	This.waitGroup.Wait()
 }
 
 func (This *WaitGroup) Done()  {
+	This.Lock()
+	defer This.Unlock()
+	if This.newAddCount > 0 {
+		This.newAddCount -= 1
+		return
+	}
 	This.waitGroup.Done()
 }
 
