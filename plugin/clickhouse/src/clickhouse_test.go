@@ -14,7 +14,6 @@ import (
 	"math"
 	"database/sql/driver"
 	"math/rand"
-	"os"
 )
 
 var url string = "tcp://192.168.126.140:9000?Database=test&debug=true&compress=1"
@@ -93,15 +92,15 @@ func TestGetSchemaList(t *testing.T)  {
 
 func TestGetSchemaTableList(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	t.Log(c.GetSchemaTableList("test"))
+	t.Log(c.GetSchemaTableList("bifrost_test"))
 }
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	t.Log(c.GetTableFields("test.binlog_field_test"))
+	t.Log(c.GetTableFields("bifrost_test","binlog_field_test"))
 }
 
-func getParam() map[string]interface{} {
+func getParam(args ...bool) map[string]interface{} {
 	type fieldStruct struct {
 		CK 		string
 		MySQL 	string
@@ -154,11 +153,35 @@ func getParam() map[string]interface{} {
 	param["CkSchema"] = SchemaName
 	param["CkTable"] = TableName
 	param["BatchSize"] = 5000
+	if len(args) > 0 {
+		param["NullNotTransferDefault"] = args[0]
+	}else{
+		param["NullNotTransferDefault"] = false
+	}
+	return param
+}
+
+func getParamAutoCreateTable() map[string]interface{} {
+	param := make(map[string]interface{},0)
+	param["CkSchema"] = ""
+	param["CkTable"] = ""
+	param["BatchSize"] = 1000
+	param["AutoCreateTable"] = true
 	return param
 }
 
 func initSyncParam() {
 	p,err := conn.SetParam(getParam())
+	if err != nil{
+		log.Println("set param fatal err")
+		log.Fatal(err)
+	}
+
+	log.Println("p:",p)
+}
+
+func initSyncParamAutoCreateTable() {
+	p,err := conn.SetParam(getParamAutoCreateTable())
 	if err != nil{
 		log.Println("set param fatal err")
 		log.Fatal(err)
@@ -409,17 +432,6 @@ func checkDataRight(m map[string]interface{},destMap map[string]driver.Value,res
 	}
 }
 
-func TestFloat(t *testing.T)  {
-	v := float64(0.3)
-	v2 := "0.30"
-	floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
-	floatSource,_ := strconv.ParseFloat(fmt.Sprint(v2),64)
-	if math.Abs(floatDest - floatSource) < 0.05{
-		t.Log("test success")
-	}else{
-		t.Error("test failed")
-	}
-}
 
 func TestRandDataAndCheck(t *testing.T){
 
@@ -518,111 +530,6 @@ func TestSyncLikeProduct(t *testing.T)  {
 	}
 }
 
-func TestAllTypeToInt64(t *testing.T)  {
-	data := "2019"
-	i64,err := MyPlugin.AllTypeToInt64(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Log(i64)
-
-
-	ui64,err2 := MyPlugin.AllTypeToUInt64(data)
-	if err2 != nil {
-		t.Fatal(err2)
-	}
-
-	t.Log(ui64)
-}
-
-func TestCkDataTypeTransfer(t *testing.T){
-	var data string = "132423　"
-	var fieldName string
-	var toDataType string
-	fieldName = "testField"
-	toDataType = "Int64"
-	t.Log("test start")
-	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
-	if err != nil{
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "int64"{
-		if result.(int64) == int64(132423){
-			t.Log("result(int64):",result)
-		}else{
-			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-		}
-	}else{
-		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-	}
-
-	toDataType = "UInt32"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
-	if err != nil{
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "uint32"{
-		if result.(uint32) == uint32(132423){
-			t.Log("result(uint32):",result)
-		}else{
-			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-		}
-	}else{
-		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-	}
-
-
-	data = "42342.224 "
-	toDataType = "Float32"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
-	if err != nil{
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float32"{
-		if result.(float32) == float32(42342.224){
-			t.Log("result(float32):",result)
-		}else{
-			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-		}
-	}else{
-		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-	}
-
-	toDataType = "Float64"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
-	if err != nil{
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float64"{
-		if result.(float64) == float64(42342.224){
-			t.Log("result(float32):",result)
-			os.Exit(0)
-		}else{
-			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-		}
-	}else{
-		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-	}
-
-	toDataType = "Decimal(18, 2)"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
-	if err != nil{
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float64"{
-		if result.(float64) == float64(42342.224){
-			t.Log("result(float64):",result)
-		}else{
-			t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-		}
-	}else{
-		t.Fatal("result:",result,"(",reflect.TypeOf(result),")")
-	}
-
-}
-
-
 func TestCommitAndCheckData2(t *testing.T){
 	testBefore()
 	initDBTable(true)
@@ -669,14 +576,14 @@ func TestCommitAndCheckData2(t *testing.T){
 
 
 
-func TestCkDataTypeTransferToInt(t *testing.T){
+func TestConn_CkDataTypeTransfer(t *testing.T){
 	var data int64 = 9223372036854775807
 	var fieldName string
 	var toDataType string
 	fieldName = "testField"
 	toDataType = "UInt8"
 	t.Log("test start")
-	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err := MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -691,7 +598,7 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 	}
 
 	toDataType = "UInt8"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -708,7 +615,7 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 
 
 	toDataType = "Int16"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -726,7 +633,7 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 
 
 	toDataType = "UInt16"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -743,7 +650,7 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 
 
 	toDataType = "Int32"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -761,7 +668,7 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 
 
 	toDataType = "UInt32"
-	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType)
+	result,err = MyPlugin.CkDataTypeTransfer(data,fieldName,toDataType,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -777,3 +684,84 @@ func TestCkDataTypeTransferToInt(t *testing.T){
 	}
 
 }
+
+func TestConn_AutoCreateTableCommit(t *testing.T) {
+	TableName = "mytest"
+	testBefore()
+	initSyncParamAutoCreateTable()
+	event := pluginTestData.NewEvent()
+	eventData := event.GetTestInsertData()
+	conn.Insert(eventData)
+	_,err2 := conn.Commit()
+	if err2 != nil{
+		t.Fatal(err2)
+	}
+}
+
+func initDBTableDefaultNullVal(delTable bool) {
+	c := MyPlugin.NewClickHouseDBConn(url)
+	sql1:= "CREATE DATABASE IF NOT EXISTS  `"+SchemaName+"`"
+	c.Exec(sql1,[]driver.Value{})
+	engine=" ReplacingMergeTree(id)"
+	sql2:="CREATE TABLE IF NOT EXISTS "+SchemaName+"."+TableName+"(id UInt32,testtinyint Nullable(Int8),testsmallint Nullable(Int16),testmediumint Nullable(Int32),testint Nullable(Int32),testbigint Nullable(Int64),testvarchar Nullable(String),testchar Nullable(String),test_unsinged_tinyint Nullable(UInt8),test_unsinged_smallint Nullable(UInt16),test_unsinged_mediumint Nullable(UInt32),test_unsinged_int Nullable(UInt32),test_unsinged_bigint Nullable(UInt64),bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = "+engine+" ORDER BY (id);"
+	if delTable == false{
+		c.Exec(sql2,[]driver.Value{})
+	}else{
+		sql3 := "DROP TABLE "+SchemaName+"."+TableName
+		c.Exec(sql3,[]driver.Value{})
+		err := c.Exec(sql2,[]driver.Value{})
+		if err != nil{
+			log.Fatal(err)
+		}
+		log.Println(sql2)
+	}
+	c.Close()
+}
+
+func TestConn_NullNotTransferDefault_CommitAndCheck(t *testing.T)  {
+	TableName = "write_nil_test"
+	testBefore()
+	event.SetIsNull(true)
+	event.SetTable(TableName)
+	initDBTableDefaultNullVal(true)
+	conn.SetParam(getParam(true))
+	eventData := event.GetTestInsertData()
+	conn.Insert(eventData)
+	_,err := conn.Commit()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(eventData)
+	time.Sleep(1 * time.Second)
+	c := MyPlugin.NewClickHouseDBConn(url)
+	dataList := c.GetTableDataList(eventData.SchemaName,eventData.TableName,"id="+fmt.Sprint(eventData.Rows[0]["id"]))
+	if len(dataList) == 0{
+		t.Fatal("select data len == 0")
+	}
+
+	for k,v := range dataList[0]{
+		if k == "id"{
+			if fmt.Sprint(v) != fmt.Sprint(eventData.Rows[0]["id"]){
+				t.Fatal("id: ",eventData.Rows[0]["id"] ," != ",v ,"(must)")
+			}
+			continue
+		}
+		if k == "bifrost_event_type" || k == "bifrost_data_version" {
+			continue
+		}
+		// testjson 设置是 String ，不是Nullable(String)，
+		if k == "testjson" {
+			if v.(string) != "" {
+				t.Fatal("testjson: "," !=","''","(must)")
+			}
+			continue
+		}
+		if v != nil {
+			t.Fatal(k, "!= nil", " data:",v)
+		}
+	}
+
+	t.Log("success")
+
+}
+

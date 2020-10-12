@@ -24,101 +24,103 @@ import (
 	"strings"
 )
 
-func init() {
-	addRoute("/db/detail", db_detail_controller)
-	addRoute("/db/tablelist", get_table_List_controller)
-	addRoute("/db/tablefields", get_table_fields_controller)
-	addRoute("/db/table/createsql", get_table_create_sql_controller)
+func init(){
+	addRoute("/db/detail",db_detail_controller)
+	addRoute("/db/tablelist",get_table_List_controller)
+	addRoute("/db/tablefields",get_table_fields_controller)
+	addRoute("/db/table/createsql",get_table_create_sql_controller)
 }
 
-func db_detail_controller(w http.ResponseWriter, req *http.Request) {
+func db_detail_controller(w http.ResponseWriter,req *http.Request){
 	type dbDetail struct {
 		TemplateHeader
-		DbName       string
+		DbName string
 		DataBaseList []string
-		ToServerList map[string]*toserver.ToServer
-		ChannelList  map[int]*server.Channel
+		ToServerList  map[string]*toserver.ToServer
+		ChannelList map[int]*server.Channel
 	}
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	dbUri := server.GetDBObj(dbname).ConnectUri
 	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
+	if dbConn == nil{
 		return
 	}
 	defer dbConn.Close()
 	DataBaseList := GetSchemaList(dbConn)
-	DataBaseList = append(DataBaseList, "AllDataBases")
+	DataBaseList = append(DataBaseList,"AllDataBases")
 	var Result dbDetail
-	Result = dbDetail{DataBaseList: DataBaseList, DbName: dbname, ToServerList: toserver.GetToServerMap(), ChannelList: server.GetDBObj(dbname).ListChannel()}
+	Result = dbDetail{DataBaseList:DataBaseList,DbName:dbname,ToServerList: toserver.GetToServerMap(),ChannelList:server.GetDBObj(dbname).ListChannel()}
 	Result.Title = dbname + " - Detail - Bifrost"
-	t, _ := template.ParseFiles(TemplatePath("/manager/template/db.detail.html"), TemplatePath("/manager/template/header.html"), TemplatePath("/manager/template/db.detail.history.add.html"), TemplatePath("/manager/template/footer.html"))
+	t, _ := template.ParseFiles(TemplatePath("manager/template/db.detail.html"),TemplatePath("manager/template/header.html"),TemplatePath("manager/template/db.detail.table.add.html"),TemplatePath("manager/template/db.detail.history.add.html"),TemplatePath("manager/template/footer.html"))
 	t.Execute(w, Result)
 }
 
-func get_table_List_controller(w http.ResponseWriter, req *http.Request) {
+func get_table_List_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
 	DBObj := server.GetDBObj(dbname)
 	dbUri := DBObj.ConnectUri
 	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
+	if dbConn == nil{
 		return
 	}
 	defer dbConn.Close()
-	type ResultType struct {
-		TableName   string
+	type ResultType struct{
+		TableName 	string
 		ChannelName string
-		AddStatus   bool
-		TableType   string
+		AddStatus 	bool
+		TableType	string
+		IgnoreTable string
 	}
 	var data []ResultType
-	data = make([]ResultType, 0)
-	TableList := GetSchemaTableList(dbConn, schema_name)
-	TableList = append(TableList, TableListStruct{TableName: "AllTables", TableType: "LIKE"})
-	var schema_name0, tableName0 string
+	data = make([]ResultType,0)
+	TableList := GetSchemaTableList(dbConn,schema_name)
+	TableList = append(TableList,TableListStruct{TableName:"AllTables",TableType:"LIKE"})
+	var schema_name0 ,tableName0 string
 	schema_name0 = tansferSchemaName(schema_name)
 
-	for _, tableInfo := range TableList {
+	for _,tableInfo := range TableList{
 		tableName := tableInfo.TableName
 		tableType := tableInfo.TableType
 		tableName0 = tansferTableName(tableName)
-		t := DBObj.GetTable(schema_name0, tableName0)
-		if t == nil {
-			data = append(data, ResultType{TableName: tableName, ChannelName: "", AddStatus: false, TableType: tableType})
-		} else {
+		t := DBObj.GetTable(schema_name0,tableName0)
+		if t == nil{
+			data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
+		}else{
 			t2 := DBObj.GetChannel(t.ChannelKey)
-			if t2 == nil {
-				data = append(data, ResultType{TableName: tableName, ChannelName: "", AddStatus: false, TableType: tableType})
-			} else {
-				data = append(data, ResultType{TableName: tableName, ChannelName: t2.Name, AddStatus: true, TableType: tableType})
+			if t2 == nil{
+				data = append(data,ResultType{TableName:tableName,ChannelName:"",AddStatus:false,TableType:tableType})
+			}else{
+				data = append(data,ResultType{TableName:tableName,ChannelName:t2.Name,AddStatus:true,TableType:tableType,IgnoreTable:t.IgnoreTable})
 			}
 		}
 	}
 	// 将 带 * 等模糊匹配的表配置 往 list 追加
 	// 只有是当前数据库的数据才能被追加进去
 	if schema_name0 != "*" {
-		for k, v := range DBObj.GetTables() {
-			schema_name1, tableName1 := server.GetSchemaAndTableBySplit(k)
+		for k,v := range DBObj.GetTables() {
+			schema_name1 ,tableName1 := server.GetSchemaAndTableBySplit(k)
 			if tableName1 == "*" {
 				continue
 			}
 			if schema_name1 != schema_name0 {
 				continue
 			}
-			if strings.Index(v.Name, "*") < 0 {
+			if strings.Index(v.Name,"*") < 0 {
 				continue
 			}
 			t2 := DBObj.GetChannel(v.ChannelKey)
-			data = append(data, ResultType{TableName: v.Name, ChannelName: t2.Name, AddStatus: true, TableType: "LIKE"})
+			data = append(data,ResultType{TableName:v.Name,ChannelName:t2.Name,AddStatus:true,TableType:"LIKE",IgnoreTable:v.IgnoreTable})
 		}
 	}
-	b, _ := json.Marshal(data)
+	b,_:=json.Marshal(data)
 	w.Write(b)
 }
 
-func get_table_fields_controller(w http.ResponseWriter, req *http.Request) {
+
+func get_table_fields_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
@@ -130,16 +132,16 @@ func get_table_fields_controller(w http.ResponseWriter, req *http.Request) {
 	DBObj := server.GetDBObj(dbname)
 	dbUri := DBObj.ConnectUri
 	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
+	if dbConn == nil{
 		return
 	}
 	defer dbConn.Close()
-	TableFieldsList := GetSchemaTableFieldList(dbConn, schema_name, table_name)
-	b, _ := json.Marshal(TableFieldsList)
+	TableFieldsList := GetSchemaTableFieldList(dbConn,schema_name,table_name)
+	b,_:=json.Marshal(TableFieldsList)
 	w.Write(b)
 }
 
-func get_table_create_sql_controller(w http.ResponseWriter, req *http.Request) {
+func get_table_create_sql_controller(w http.ResponseWriter,req *http.Request){
 	req.ParseForm()
 	dbname := req.Form.Get("dbname")
 	schema_name := req.Form.Get("schema_name")
@@ -151,10 +153,10 @@ func get_table_create_sql_controller(w http.ResponseWriter, req *http.Request) {
 	DBObj := server.GetDBObj(dbname)
 	dbUri := DBObj.ConnectUri
 	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
+	if dbConn == nil{
 		return
 	}
 	defer dbConn.Close()
-	sql := ShowTableCreate(dbConn, schema_name, table_name)
+	sql := ShowTableCreate(dbConn,schema_name,table_name)
 	w.Write([]byte(sql))
 }

@@ -196,8 +196,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 				}
 
 				schemaName,tableName := GetSchemaAndTableBySplit(tInfo.key)
-				db.AddTable(schemaName, tableName, channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
-				//db.AddTable(schemaName, tableName, tInfo.IgnoreTable,channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
+				db.AddTable(schemaName, tableName, tInfo.IgnoreTable,channelIDMap[tInfo.ChannelKey],tInfo.LastToServerID)
 				for _, toServer := range tInfo.ToServerList {
 					toServerBinlogPosition,_ := getBinlogPosition(getToServerBinlogkey(db,toServer))
 					if toServerBinlogPosition != nil{

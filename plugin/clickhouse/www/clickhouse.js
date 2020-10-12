@@ -1,24 +1,21 @@
 var ckFieldDataMap = {};
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"failed"}
+	var result = {data:{},status:false,msg:"failed",batchSupport:false};
 
 	var CkTable = $("#clickohuse_table").val();
     var CkSchema = $("#clickhouse_schema").val();
     var BatchSize = $("#CK_BatchSize").val();
     var SyncType = $("#clickhouse_sync_type").val();
-
-    if (CkSchema == ""){
-        result.msg = "请选择 ClickHouse 数据库!";
-        return result;
-    }
-
+    var NullNotTransferDefault = $("#clickhouse_NullNotTransferDefault").val();
+    var AutoCreateTable = false;
     if (CkTable == ""){
-        result.msg = "请选择 ClickHouse 数据数据表!";
-        return result;
+        AutoCreateTable = true;
+        SyncType = "insertAll";
+        result.batchSupport = true;
     }
 
     if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)){
-        result.msg = "BatchSize must be int!"
+        result.msg = "BatchSize must be int!";
         return result;
     }
 
@@ -27,37 +24,40 @@ function doGetPluginParam(){
 	var eventTypeBool = false;
 	var bifrostDataVersionBool = false;
 
-    $.each($("#CKTableFieldsTable tr"),function () {
-        var ck_field_name = $(this).find("input[name=ck_field_name]").val();
-        //var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
-        var ck_field_type = ckFieldDataMap[ck_field_name];
-        console.log("ck_field_name_input_:"+ck_field_name+ " ck_field_type:"+ck_field_type);
-        var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
+	// 假如自动创建表的情况下，就不判断字段绑定关系了
+	if ( AutoCreateTable == false ) {
+        $.each($("#CKTableFieldsTable tr"), function () {
+            var ck_field_name = $(this).find("input[name=ck_field_name]").val();
+            //var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
+            var ck_field_type = ckFieldDataMap[ck_field_name];
+            console.log("ck_field_name_input_:" + ck_field_name + " ck_field_type:" + ck_field_type);
+            var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
 
-        var d       = {};
-        d["CK"]     = ck_field_name;
-        d["MySQL"]  = mysql_field_name;
-        if($(this).find("input[name=ck_pri_checkbox]").is(':checked')) {
-            if (ck_field_name == "" || mysql_field_name == "") {
-                result.msg = "PRI:" + ck_field_name + " not empty";
-                return result;
+            var d = {};
+            d["CK"] = ck_field_name;
+            d["MySQL"] = mysql_field_name;
+            if ($(this).find("input[name=ck_pri_checkbox]").is(':checked')) {
+                if (ck_field_name == "" || mysql_field_name == "") {
+                    result.msg = "PRI:" + ck_field_name + " not empty";
+                    return result;
+                }
+                PriKey.push(d);
             }
-            PriKey.push(d);
-        }
-        Field.push(d);
+            Field.push(d);
 
-        //$BifrostDataVersion 字段必须为 Int64 或者 UInt64 类型
-        if(mysql_field_name == "{$BifrostDataVersion}" && ck_field_type.indexOf("Int64") != -1){
-            bifrostDataVersionBool = true;
-        }
-        if(mysql_field_name == "{$EventType}"){
-            eventTypeBool = true;
-        }
-    });
+            //$BifrostDataVersion 字段必须为 Int64 或者 UInt64 类型
+            if (mysql_field_name == "{$BifrostDataVersion}" && ck_field_type.indexOf("Int64") != -1) {
+                bifrostDataVersionBool = true;
+            }
+            if (mysql_field_name == "{$EventType}") {
+                eventTypeBool = true;
+            }
+        });
 
-    if(PriKey.length == 0){
-        result.msg = "请选择一个字段为主键！";
-        return result;
+        if (PriKey.length == 0) {
+            result.msg = "请选择一个字段为主键！";
+            return result;
+        }
     }
 
     $.each($("#TableFieldsContair input:checkbox"),function(){
@@ -74,7 +74,7 @@ function doGetPluginParam(){
                 }
             }
         case "insertAll":
-            if(eventTypeBool == false){
+            if(AutoCreateTable == false && eventTypeBool == false){
                 if(!confirm("日志模式-追加 模式，将会把 delete,update 也转成 insert 方式，追加到ClickHouse表中，当前没有字段配置 {$EventType} 标签表示数据是什么事件类型的！建议在表中新增一个名为 [bifrost_event_type] 的字段，刷新界面再重新配置！请问是否继续提交，还是 给 ClickHouse 表中 新增字段后再配置？！！！")){
                     result.msg = "请给 ClickHouse 表，新增字段 bifrost_event_type 后刷新再配置！";
                     return result;
@@ -84,13 +84,18 @@ function doGetPluginParam(){
     }
     result.msg = "success";
     result.status = true;
-    result.data["Field"]    = Field;
-    result.data["PriKey"]   = PriKey;
-    result.data["CkSchema"] = CkSchema;
-    result.data["CkTable"]  = CkTable;
-    result.data["BatchSize"] = parseInt(BatchSize);
-    result.data["SyncType"] = SyncType;
-
+    result.data["Field"]            = Field;
+    result.data["PriKey"]           = PriKey;
+    result.data["CkSchema"]         = CkSchema;
+    result.data["CkTable"]          = CkTable;
+    result.data["BatchSize"]        = parseInt(BatchSize);
+    result.data["SyncType"]         = SyncType;
+    result.data["AutoCreateTable"]  = AutoCreateTable;
+    if (NullNotTransferDefault == "true"){
+        result.data["NullNotTransferDefault"] = true;
+    }else{
+        result.data["NullNotTransferDefault"] = false;
+    }
 	return result;
 }
 
@@ -222,8 +227,8 @@ function GetCkSchameList() {
                 console.log("/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val());
                 return false;
             }
-            var html = "<option value=''>请选择数据库</option>";
-            for(i in d){
+            var html = "<option value=''>自动创建CK库</option>";
+            for(var i in d){
                 var SchemaName = d[i];
                 html += "<option value=\""+SchemaName+"\">"+SchemaName+"</option>";
             }
@@ -245,8 +250,8 @@ function GetCkSchameTableList(schemaName) {
                 return false;
             }
 
-            var html = "<option value=''>请选择表</option>";
-            for(i in d){
+            var html = "<option value=''>自动创建CK表</option>";
+            for(var i in d){
                 var TableName = d[i];
                 html += "<option value=\""+TableName+"\">"+TableName+"</option>";
             }
