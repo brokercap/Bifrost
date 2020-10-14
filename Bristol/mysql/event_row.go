@@ -17,7 +17,6 @@ import (
 type RowsEvent struct {
 	header                EventHeader
 	tableId               uint64
-	tableMap              *TableMapEvent
 	flags                 uint16
 	columnsPresentBitmap1 Bitfield
 	columnsPresentBitmap2 Bitfield
@@ -37,7 +36,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		tableIdSize = 6
 	}
 
-	event.tableId, err = readFixedLengthInteger(buf, tableIdSize)
+	_, err = readFixedLengthInteger(buf, tableIdSize)
 
 	err = binary.Read(buf, binary.LittleEndian, &event.flags)
 	switch event.header.EventType {
@@ -59,10 +58,12 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	if parser.filterNextRowEvent == true{
 		return
 	}
-	event.tableMap = parser.tableMap[event.tableId]
+	// 这里采用 lastMapEvent.tableId ，则不采用 readFixedLengthInteger 解析出来的 tableId
+	// 实际在运行中，发现存在 readFixedLengthInteger 解析出来的tableId 并不能在 parser.tableSchemaMap 找到的情况，row event 紧随 map event 之后，所以这里采用 parser.lastMapEventTableId 应该不会有问题
+	event.tableId = parser.lastMapEvent.tableId
 	for buf.Len() > 0 {
 		var row map[string]interface{}
-		row, err = parser.parseEventRow(buf, event.tableMap, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
+		row, err = parser.parseEventRow(buf, parser.lastMapEvent, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
 		if err != nil {
 			log.Println("event row parser err:",err)
 			return
@@ -376,7 +377,11 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			} else {
 				index = int(bytesToUint16(buf.Next(int(size))))
 			}
-			row[column_name] = tableSchemaMap[i].enum_values[index-1]
+			if index < 1 || len(tableSchemaMap[i].enum_values[index]) < index{
+				row[column_name] = nil
+			}else{
+				row[column_name] = tableSchemaMap[i].enum_values[index-1]
+			}
 			break
 
 		case FIELD_TYPE_SET:

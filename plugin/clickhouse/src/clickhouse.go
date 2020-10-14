@@ -238,9 +238,7 @@ func (This *Conn) CreateCkDatabase(SchemaName string) (err error){
 		return nil
 	}
 	sql := TransferToCreateDatabaseSql(SchemaName)
-	log.Println("CreateCkDatabase sql:",sql)
 	This.conn.err = This.conn.Exec(sql,[]driver.Value{})
-	log.Println("CreateCkDatabase err:",This.conn.err)
 	if This.conn.err != nil {
 		return  This.conn.err
 	}
@@ -255,7 +253,6 @@ func (This *Conn) CreateCkTable(data *pluginDriver.PluginDataType) (ckField []fi
 		return nil,nil
 	}
 	This.conn.err = This.conn.Exec(sql,[]driver.Value{})
-	log.Println("sql2:",sql)
 	if This.conn.err != nil {
 		return  nil,This.conn.err
 	}
@@ -311,7 +308,6 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 			This.conn.err = fmt.Errorf(fmt.Sprint(err0))
 		}
 	}()
-	log.Println("initAutoCreateCkTableFieldType data:",data)
 	var err error
 	var SchemaName string
 	if This.p.CkSchema == "" {
@@ -319,13 +315,11 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	}else{
 		SchemaName = This.p.CkSchema
 	}
-	log.Println("initAutoCreateCkTableFieldType SchemaName:",SchemaName)
 	This.CreateCkDatabase(SchemaName)
 	if This.conn.err != nil {
 		return nil,This.conn.err
 	}
 	key := "`"+SchemaName + "`.`" + data.TableName+"`"
-	log.Println("key:",key)
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key],nil
 	}
@@ -338,7 +332,6 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 		return nil,err
 	}
 	if ckField == nil {
-		log.Println("ckField:",ckField)
 		return nil,nil
 	}
 	p0 := &PluginParam0{
@@ -381,11 +374,9 @@ func (This *Conn) initCkDatabaseMap() {
 		}
 	}()
 	SchemaList := This.conn.GetSchemaList()
-	log.Println("SchemaList:",SchemaList)
 	for _,Name := range SchemaList {
 		This.p.ckDatabaseMap[Name] = true
 	}
-	log.Println("This.p.ckDatabaseMap:",This.p.ckDatabaseMap)
 	return
 }
 
@@ -574,7 +565,6 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog, e error) {
 
 // 自动创建表的提交
 func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n int)  {
-	log.Println("AutoCreateTableCommit start")
 	dataMap := make(map[string][]*pluginDriver.PluginDataType,0)
 	var ok bool
 	for _,PluginData := range list {
@@ -584,8 +574,7 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n in
 		}
 		dataMap[key] = append(dataMap[key],PluginData)
 	}
-	for key1,data := range dataMap {
-		log.Println("AutoCreateTableCommit key1:",key1)
+	for _,data := range dataMap {
 		p,err := This.initAutoCreateCkTableFieldType(data[0])
 		if p == nil && err == nil{
 			continue
