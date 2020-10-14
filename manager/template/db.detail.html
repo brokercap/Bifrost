@@ -215,12 +215,15 @@
     </div>
 </div>
 <script type="text/javascript">
-    function ShowLikeTableNames(tableName) {
+    function ShowLikeTableNames(tableName,ignoreTables) {
         var tableNames = getTablesByLikeName(tableName);
+        ignoreTables = ignoreTables+",";
         $("#showLikeTable_Title").text(tableName);
         var html = "";
         for (var name of tableNames.split(";")) {
-            html += "<p>"+name+"</p>";
+            if( ignoreTables.indexOf(name+",") < 0 ){
+                html += "<p>"+name+"</p>";
+            }
         }
         $("#showLikeTable_Body").html(html);
         $("#showLikeTable").modal('show');
@@ -670,7 +673,7 @@
                             html += '</div>';
                         }
                         html += '<div class="right1">';
-                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\')">多表</button></div>';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\',\''+v.IgnoreTable+'\')">多表</button></div>';
                         html += '</div>';
                     }
                     html += '<div class="right">';
