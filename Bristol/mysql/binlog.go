@@ -132,11 +132,15 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case QUERY_EVENT:
 		var queryEvent *QueryEvent
 		queryEvent, err = parser.parseQueryEvent(buf)
+		var TableName = ""
+		if queryEvent.query == "COMMIT" {
+			TableName = parser.lastMapEvent.tableName
+		}
 		event = &EventReslut{
 			Header:         queryEvent.header,
 			SchemaName:     queryEvent.schema,
 			BinlogFileName: parser.currentBinlogFileName,
-			TableName:      "",
+			TableName:      TableName,
 			Query:          queryEvent.query,
 			BinlogPosition: queryEvent.header.LogPos,
 		}
@@ -578,7 +582,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			func() {
 				defer func() {
 					if err := recover(); err != nil {
-						e = fmt.Errorf("err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d",fmt.Sprint(err),parser.lastMapEvent,parser.binlogFileName,parser.binlogPosition)
+						e = fmt.Errorf("parseEvent err recover err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d",fmt.Sprint(err),parser.lastMapEvent,parser.binlogFileName,parser.binlogPosition)
 						log.Println(string(debug.Stack()))
 					}
 				}()
