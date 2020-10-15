@@ -191,8 +191,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				Header:         rowsEvent.header,
 				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
-				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
-				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				SchemaName:     parser.lastMapEvent.schemaName,
+				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
 				Pri:            parser.tableSchemaMap[rowsEvent.tableId].Pri,
 			}
@@ -201,8 +201,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				Header:         rowsEvent.header,
 				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
-				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
-				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				SchemaName:     parser.lastMapEvent.schemaName,
+				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
 				Pri:            make([]*string, 0),
 			}
