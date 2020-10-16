@@ -459,6 +459,7 @@ func (db *db) Start() (b bool) {
 			db.binlogDumpPosition = newPosition
 		}
 		reslut := make(chan error, 1)
+		db.binlogDump.DataSource = db.ConnectUri
 		db.binlogDump.CallbackFun = db.Callback
 		for key,_ := range db.tableMap{
 			schemaName,TableName := GetSchemaAndTableBySplit(key)

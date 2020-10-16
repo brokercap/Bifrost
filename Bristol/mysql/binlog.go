@@ -53,6 +53,7 @@ type eventParser struct {
 	binlog_checksum    bool
 	filterNextRowEvent bool
 	binlogDump         *BinlogDump
+	lastMapEvent		*TableMapEvent				// 保存最近一次 map event 解析出来的 tableId，用于接下来的 row event 解析使用，因为实际运行中发现，row event 解析出来 tableId 可能对不上。row event 紧跟在 map event 之后，row event 的时候，直接采用最后一次map event
 }
 
 func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
@@ -131,11 +132,15 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case QUERY_EVENT:
 		var queryEvent *QueryEvent
 		queryEvent, err = parser.parseQueryEvent(buf)
+		var TableName = ""
+		if queryEvent.query == "COMMIT" {
+			TableName = parser.lastMapEvent.tableName
+		}
 		event = &EventReslut{
 			Header:         queryEvent.header,
 			SchemaName:     queryEvent.schema,
 			BinlogFileName: parser.currentBinlogFileName,
-			TableName:      "",
+			TableName:      TableName,
 			Query:          queryEvent.query,
 			BinlogPosition: queryEvent.header.LogPos,
 		}
@@ -152,19 +157,21 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			v.needReload = true
 		}
 		parser.saveBinlog(event)
-		log.Println(*parser.dataSource," ROTATE_EVENT ",event.BinlogFileName,event.BinlogPosition)
+		log.Println(*parser.dataSource," ROTATE_EVENT ",event.BinlogFileName)
 		break
 	case TABLE_MAP_EVENT:
 		var table_map_event *TableMapEvent
 		table_map_event, err = parser.parseTableMapEvent(buf)
 		//log.Println("table_map_event:",table_map_event)
 		parser.tableMap[table_map_event.tableId] = table_map_event
+		parser.lastMapEvent = table_map_event
 		//log.Println("table_map_event:",*table_map_event,"tableId:",table_map_event.tableId," schemaName:",table_map_event.schemaName," tableName:",table_map_event.tableName)
 		if parser.binlogDump.CheckReplicateDb(table_map_event.schemaName, table_map_event.tableName) == false {
 			parser.filterNextRowEvent = true
 		} else {
 			parser.filterNextRowEvent = false
-			if _, ok := parser.tableSchemaMap[table_map_event.tableId]; !ok || ( parser.tableSchemaMap[table_map_event.tableId].needReload == true ) {
+			_, ok := parser.tableSchemaMap[table_map_event.tableId]
+			if  !ok || ( parser.tableSchemaMap[table_map_event.tableId].needReload == true ) {
 				parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 			}
 		}
@@ -175,6 +182,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			SchemaName:     parser.tableMap[table_map_event.tableId].schemaName,
 			TableName:      parser.tableMap[table_map_event.tableId].tableName,
 		}
+
 		break
 	case WRITE_ROWS_EVENTv0, WRITE_ROWS_EVENTv1, WRITE_ROWS_EVENTv2, UPDATE_ROWS_EVENTv0, UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2, DELETE_ROWS_EVENTv0, DELETE_ROWS_EVENTv1, DELETE_ROWS_EVENTv2:
 		var rowsEvent *RowsEvent
@@ -187,8 +195,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				Header:         rowsEvent.header,
 				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
-				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
-				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				SchemaName:     parser.lastMapEvent.schemaName,
+				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
 				Pri:            parser.tableSchemaMap[rowsEvent.tableId].Pri,
 			}
@@ -197,8 +205,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				Header:         rowsEvent.header,
 				BinlogFileName: parser.currentBinlogFileName,
 				BinlogPosition: rowsEvent.header.LogPos,
-				SchemaName:     parser.tableMap[rowsEvent.tableId].schemaName,
-				TableName:      parser.tableMap[rowsEvent.tableId].tableName,
+				SchemaName:     parser.lastMapEvent.schemaName,
+				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
 				Pri:            make([]*string, 0),
 			}
@@ -492,12 +500,12 @@ func (parser *eventParser) KillConnect(connectionId string) (b bool) {
 	return true
 }
 
-func (parser *eventParser) GetTableId(database string, tablename string) uint64 {
+func (parser *eventParser) GetTableId(database string, tablename string) (uint64,error) {
 	key := database + "." + tablename
 	if _, ok := parser.tableNameMap[key]; !ok {
-		return uint64(0)
+		return 0,fmt.Errorf("not found key:%s",key)
 	}
-	return parser.tableNameMap[key]
+	return parser.tableNameMap[key],nil
 }
 
 func (parser *eventParser) GetQueryTableName(sql string) (string, string) {
@@ -574,7 +582,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 			func() {
 				defer func() {
 					if err := recover(); err != nil {
-						e = fmt.Errorf(fmt.Sprint(err))
+						e = fmt.Errorf("parseEvent err recover err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d",fmt.Sprint(err),parser.lastMapEvent,parser.binlogFileName,parser.binlogPosition)
 						log.Println(string(debug.Stack()))
 					}
 				}()
@@ -610,7 +618,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 						parser.saveBinlog(event)
 						continue
 					}
-					if tableId := parser.GetTableId(event.SchemaName, tableName); tableId > 0 {
+					if tableId,err := parser.GetTableId(event.SchemaName, tableName); err == nil {
 						parser.GetTableSchema(tableId, event.SchemaName, tableName)
 					}
 				}

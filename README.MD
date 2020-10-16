@@ -18,7 +18,7 @@
 * ActiveMQ
 * Kafka
 * [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.5.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.4.x/hprose_server/tcp_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.5.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -101,11 +101,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.5.0-beta.01/bifrost_v1.5.0-beta.01_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.5.1-release/bifrost_v1.5.1-release_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.5.0-beta.01_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.5.1-release_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.5.0-beta.01_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.5.1-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
@@ -144,7 +144,7 @@ docker pull jc3wish/bifrost
 
 mkdir -p /data/BifrostData
 
-docker run -d -p21036:21036 -v /data/BifrostData:/linux/data jc3wish/bifrost
+docker run -d -p21036:21036 -v /etc/localtime:/etc/localtime -v /data/BifrostData:/linux/data jc3wish/bifrost
 
 `````
 
