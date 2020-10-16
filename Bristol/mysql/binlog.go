@@ -132,15 +132,11 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case QUERY_EVENT:
 		var queryEvent *QueryEvent
 		queryEvent, err = parser.parseQueryEvent(buf)
-		var TableName = ""
-		if queryEvent.query == "COMMIT" {
-			TableName = parser.lastMapEvent.tableName
-		}
 		event = &EventReslut{
 			Header:         queryEvent.header,
 			SchemaName:     queryEvent.schema,
 			BinlogFileName: parser.currentBinlogFileName,
-			TableName:      TableName,
+			TableName:      "",
 			Query:          queryEvent.query,
 			BinlogPosition: queryEvent.header.LogPos,
 		}

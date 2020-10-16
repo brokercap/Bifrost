@@ -376,7 +376,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			} else {
 				index = int(bytesToUint16(buf.Next(int(size))))
 			}
-			if index < 1 || len(tableSchemaMap[i].enum_values[index]) < index{
+			if index < 1 || len(tableSchemaMap[i].enum_values) < index{
 				row[column_name] = nil
 			}else{
 				row[column_name] = tableSchemaMap[i].enum_values[index-1]
