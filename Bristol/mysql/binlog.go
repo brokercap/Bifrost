@@ -636,6 +636,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 					break
 				default:
 					if parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
+						parser.saveBinlog(event)
 						continue
 					}
 					break
@@ -645,7 +646,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 
 			//only return EventType by set
 			if parser.eventDo[int(event.Header.EventType)] == false {
-				//parser.saveBinlog(event)
+				parser.saveBinlog(event)
 				continue
 			}
 
