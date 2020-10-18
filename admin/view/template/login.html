@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Bifrost</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href="/css/bootstrap.min14ed.css?v=3.3.6" rel="stylesheet">
+    <link href="/css/style.min862f.css?v=4.1.0" rel="stylesheet">
+    <!--[if lt IE 9]>
+    <meta http-equiv="refresh" content="0;ie.html" />
+    <![endif]-->
+    <script>if(window.top !== window.self){ window.top.location = window.location;}</script>
+</head>
+
+<body class="gray-bg">
+
+<h1>&nbsp;</h1>
+<div class="middle-box text-center loginscreen  animated fadeInDown">
+    <div>
+        <h3>Bifrost</h3>
+
+            <div class="form-group">
+                <input type="text" name="UserName" id="UserName" class="form-control" placeholder="用户名" required="">
+            </div>
+            <div class="form-group">
+                <input type="password" name="Password" id="Password" class="form-control" placeholder="密码" required="">
+            </div>
+            <button type="button" class="btn btn-primary block full-width m-b" id="loginBtn">登 录</button>
+            </p>
+    </div>
+</div>
+<script src="/js/jquery.min.js?v=2.1.4"></script>
+<script src="/js/bootstrap.min.js?v=3.3.6"></script>
+</body>
+</html>
+<script src="/js/Ajax.js?v=1.5.0"></script>
+<script type="text/javascript">
+    $("#Password").keypress(function(e) {
+        // 回车键事件
+        if(e.which == 13) {
+            $("#loginBtn").click();
+        }
+    });
+    $("#loginBtn").click(
+        function(){
+            var UserName = $("#UserName").val();
+            var Password = $("#Password").val();
+            if (UserName == ""){
+                $("UserName").focus();
+                return false;
+            }
+            if (Password == ""){
+                $("Password").focus();
+                return false;
+            }
+            var url ="/dologin";
+
+            var callbackFun = function (data) {
+                if(!data.status){
+                    alert(data.msg);
+                    return;
+                }else{
+                    window.location.href="/";
+                }
+            };
+            Ajax("POST",url, {UserName:UserName,Password:Password},callbackFun,true);
+        }
+    );
+</script>

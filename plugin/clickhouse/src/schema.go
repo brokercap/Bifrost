@@ -3,77 +3,14 @@ package src
 import (
 	"database/sql/driver"
 	clickhouse "github.com/ClickHouse/clickhouse-go"
-	"github.com/brokercap/Bifrost/manager/xgo"
-	"net/http"
-	"encoding/json"
-	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
-
 	"log"
 )
-
-func init()  {
-	xgo.AddRoute("/bifrost/clickhouse/tableinfo",getClickHouseTableFields)
-	xgo.AddRoute("/bifrost/clickhouse/schemalist",getClickHouseSchemaList)
-	xgo.AddRoute("/bifrost/clickhouse/tablelist",getClickHouseSchemaTableList)
-}
 
 type ckFieldStruct struct {
 	Name 				string
 	Type 				string
 	DefaultType 		string
 	DefaultExpression 	string
-}
-
-func getClickHouseSchemaList(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	c := NewClickHouseDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetSchemaList()
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
-}
-
-func getClickHouseSchemaTableList(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	schema := req.Form.Get("schema")
-	c := NewClickHouseDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetSchemaTableList(schema)
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
-}
-
-
-func getClickHouseTableFields(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	schema := req.Form.Get("schema")
-	TableName := req.Form.Get("table_name")
-	c := NewClickHouseDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetTableFields(schema,TableName)
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
 }
 
 func NewClickHouseDBConn(uri string) *ClickhouseDB {

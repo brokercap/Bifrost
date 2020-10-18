@@ -29,7 +29,7 @@ func DoDynamicPlugin(){
 		log.Println(runtime.GOOS,"don't support dynamic plugin")
 		return
 	}
-	if config.GetConfigVal("Bifrostd","dynamic_plugin") != "true"{
+	if !config.DynamicPlugin {
 		log.Println("don't support dynamic plugin")
 		return
 	}

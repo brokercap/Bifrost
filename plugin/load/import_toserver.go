@@ -1,4 +1,4 @@
-package plugin
+package init
 
 import (
 	_ "github.com/brokercap/Bifrost/plugin/hprose/src"
@@ -14,3 +14,4 @@ import (
 	_ "github.com/brokercap/Bifrost/plugin/mysql/src"
 	_ "github.com/brokercap/Bifrost/plugin/TableCount/src"
 )
+

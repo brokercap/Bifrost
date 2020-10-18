@@ -1,0 +1,91 @@
+
+{{template "header" .}}
+<script type="text/javascript">
+    function doWriteDbOrTable(s,i) {
+        document.write(s.split("-")[i]);
+    }
+
+</script>
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>{{.DbName}} - Channel:{{.ChannelName}} - Table List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>SchemaName</th>
+                                <th>TableName</th>
+                                <th>ToServerList</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $v := .TableList}}
+                            <tr>
+                                <td><script type="text/javascript">doWriteDbOrTable("{{$i}}",0)</script></td>
+                                <td><script type="text/javascript">doWriteDbOrTable("{{$i}}",1)</script></td>
+                                <td>
+                                  {{range $key,$val := $v.ToServerList}}
+                                    <p>
+                                    <strong>Plugin : {{$val.PluginName}}</strong>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    <strong>ToServerKey : {{$val.ToServerKey}}</strong>
+                                    </p>
+                                    <p>
+                                    BinlogFileNum : {{$val.BinlogFileNum}}
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    BinlogPos : {{$val.BinlogPosition}}
+                                    </p>
+                                	{{end}}
+                                </td>
+                                <td>
+                                    <button data-toggle="button" key="{{$i}}" class="btn-sm btn-primary TableDetail" type="button">Detail</button>
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+<script type="text/javascript">
+    $(".TableDetail").click(
+        function () {
+            var key = $(this).attr("key");
+            var keyArr = key.split("-");
+            var SchemaName = keyArr[0];
+            var TableName = keyArr[1];
+            location.href = "/db/detail?DbName={{.DbName}}&SchemaName="+SchemaName+"&TableName="+TableName;
+        }
+    );
+
+</script>
+
+{{template "footer" .}}

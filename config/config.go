@@ -29,7 +29,7 @@ func init() {
 	MyConf = make(map[string]map[string]string)
 }
 
-func LoadConf(conffile string) map[string]map[string]string {
+func DoLoadConf(conffile string) map[string]map[string]string {
 	var per map[string]map[string]string
 	per = make(map[string]map[string]string)
 	f, _ := os.Open(conffile)
@@ -75,4 +75,18 @@ func GetConfigVal(module string, key string) string{
 		return ""
 	}
 	return MyConf[module][key]
+}
+
+func SetConfigVal(module string, key string,val string) {
+	if _,ok := MyConf[module];!ok{
+		MyConf[module] = make(map[string]string,0)
+	}
+	MyConf[module][key] = val
+}
+
+func DelConfig(module string, key string) {
+	if _,ok := MyConf[module];!ok{
+		return
+	}
+	delete(MyConf[module],key)
 }

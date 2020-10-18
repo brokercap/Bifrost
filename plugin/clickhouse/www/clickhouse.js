@@ -221,10 +221,10 @@ function getClickHouseTableCreateSQL(tableName) {
 
 function GetCkSchameList() {
     $.get(
-        "/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val(),
+        "/bifrost/plugin/clickhouse/schemalist?ToServerKey="+$("#addToServerKey").val(),
         function (d, status) {
             if (status != "success") {
-                console.log("/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val());
+                console.log("/bifrost/plugin/clickhouse/schemalist?ToServerKey="+$("#addToServerKey").val());
                 return false;
             }
             var html = "<option value=''>自动创建CK库</option>";
@@ -236,15 +236,15 @@ function GetCkSchameList() {
         }, 'json');
 }
 
-function GetCkSchameTableList(schemaName) {
+function GetCkSchameTableList(SchemaName) {
     $("#CKTableFieldsTable").html("");
-    if(schemaName == ""){
+    if(SchemaName == ""){
         $("#clickohuse_table").html("");
 
         return
     }
     $.get(
-        "/bifrost/clickhouse/tablelist?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName,
+        "/bifrost/plugin/clickhouse/tablelist?ToServerKey="+$("#addToServerKey").val()+"&SchemaName="+SchemaName,
         function (d, status) {
             if (status != "success") {
                 return false;
@@ -259,11 +259,11 @@ function GetCkSchameTableList(schemaName) {
         }, 'json');
 }
 
-function GetCkTableDesc(schemaName,tableName) {
+function GetCkTableDesc(SchemaName,TableName) {
     $("#CKTableFieldsTable").html("");
     ckFieldDataMap = {};
     $.get(
-        "/bifrost/clickhouse/tableinfo?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
+        "/bifrost/plugin/clickhouse/tableinfo?ToServerKey="+$("#addToServerKey").val()+"&SchemaName="+SchemaName+"&TableName="+TableName,
         function (d, status) {
             if (status != "success") {
                 return false;

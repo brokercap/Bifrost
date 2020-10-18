@@ -1,0 +1,425 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>报警配置</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Config</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $id, $config := .WaringConfigList}}
+                            <tr>
+                                <td>{{if eq $config.Type "WechatWork"}}微信企业号{{else}}{{$config.Type}}{{end}}</td>
+                                <td>
+                            {{range $k, $v := $config.Param}}
+                                <p>{{$k}} : {{$v}}</p>
+                            {{end}}
+                                </td>
+                                <td>
+                                    <button data-toggle="button" class="btn-sm btn-danger WarningConfigDelBtn" id="{{$id}}" type="button" >Del</button>
+                                </td>
+                            </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<div class="ibox float-e-margins" id="addWarningConfigContair">
+    <div class="ibox-title">
+        <h5>Add new Warning Config</h5>
+        <div class="ibox-tools">
+
+            <a class="collapse-link">
+                <i class="fa fa-chevron-up"></i>
+            </a>
+            <a class="close-link">
+                <i class="fa fa-times"></i>
+            </a>
+        </div>
+    </div>
+    <div class="ibox-content">
+        <div class="row row-lg">
+
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Type：</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" name="warning_type" id="warning_type">
+                            <option value="Email" >Email</option>
+                            <option value="WechatWork" >微信企业号</option>
+                        </select><span class="help-block m-b-none"></span>
+                    </div>
+                </div>
+
+                <div id="Email_contair" class="warning_param_contair" style="display: none">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">FROM：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_FROM" id="Email_FROM" class="form-control" placeholder="jc3wish@126.com">
+                            <span class="help-block m-b-none">*用哪个邮件发送邮件</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">NickName：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_NickName" id="Email_NickName" class="form-control" placeholder="邮箱别名">
+                            <span class="help-block m-b-none"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Password：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_Password" id="Email_Password" class="form-control" placeholder="邮箱密码">
+                            <span class="help-block m-b-none">*邮箱密码</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">SMTP HOST：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_SMTP_HOST" id="Email_SMTP_HOST" class="form-control" placeholder="smtp.126.com">
+                            <span class="help-block m-b-none">*smtp服务器地址</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">SMTP PORT：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Email_SMTP_PORT" id="Email_SMTP_PORT" value="25" class="form-control" placeholder="25">
+                            <span class="help-block m-b-none">*smtp 端口</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">TO：</label>
+                        <div class="col-sm-9">
+                            <textarea type="text" name="Email_TO" id="Email_TO" value="25" class="form-control" placeholder="1@126.com;2@126.com"></textarea>
+                            <span class="help-block m-b-none">*发给哪些邮箱,多个用 ; 隔开</span>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="WechatWork_contair" class="warning_param_contair" style="display: none">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">CorpID：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_corpid" id="WechatWork_corpid" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号CorpID参数</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Secret：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_corpsecret" id="WechatWork_corpsecret" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号Secret参数</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">agentid：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_agentid" id="WechatWork_agentid" value="" class="form-control" placeholder="">
+                            <span class="help-block m-b-none">*微信企业号 应用ID,数字类型</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">touser：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_touser" id="WechatWork_touser" class="form-control" placeholder="UserID1|UserID2|UserID3">
+                            <span class="help-block m-b-none">消息接收者，多个接收者用‘|’分隔，最多支持1000个，默认为 all</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">toparty：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_toparty" id="WechatWork_toparty" class="form-control" placeholder="PartyID1 | PartyID2">
+                            <span class="help-block m-b-none">部门ID列表，多个接收者用‘|’分隔，最多支持100个</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">totag：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="WechatWork_totag" id="WechatWork_totag" class="form-control" placeholder="TagID1 | TagID2">
+                            <span class="help-block m-b-none">标签ID列表，多个接收者用‘|’分隔，最多支持100个</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">&nbsp;</label>
+                    <div class="col-sm-9">
+                        <button data-toggle="button" class="btn-sm btn-warning " id="checkParamBtn" type="button">测试</button>
+                        &nbsp;
+                        <button data-toggle="button" class="btn-sm btn-primary" id="addNewWarningBtn" type="button">提交</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+
+var hadCheckParam = false;
+
+$(":text,textarea,select").change(
+    function() {
+        hadCheckParam = false;
+    }
+);
+
+function showWarningConfig() {
+    $(".warning_param_contair").hide();
+    var warning_type = $("#warning_type").val();
+    $("#"+warning_type+"_contair").show();
+}
+
+showWarningConfig();
+
+$("#warning_type").change(
+  function(){
+      showWarningConfig();
+  }
+);
+
+
+$(".WarningConfigDelBtn").click(
+    function(){
+        var trObj = $(this).parent().parent();
+        if (!confirm("确定删除?删除后不能恢复!!!!")){
+            return false;
+        }
+        var url = "/warning/config/del";
+        $.post(
+            url,
+            { Id: $(this).attr("id")},
+            function(data,status){
+                if( status != 'success' ){
+                    alert("reqeust error, reqeust status : "+status);
+                    return false;
+                }
+                if(data.status != 1){
+                    alert(data.msg);
+                    return false;
+                }
+                trObj.remove();
+            },
+            'json'
+        );
+    }
+);
+
+function GetWarningParamEmail(){
+    var result = {data:{},status:false,msg:"error"}
+    var data = {};
+    var From        = $("#Email_FROM").val();
+    var NickName    = $("#Email_NickName").val();
+    var Host        = $("#Email_SMTP_HOST").val();
+    var Port        = $("#Email_SMTP_PORT").val();
+    var To          = $("#Email_TO").val();
+    var Password    = $("#Email_Password").val();
+
+    var emreg = /^([a-zA-Z0-9]+[_|\_|\.]?)*[a-zA-Z0-9]+@([a-zA-Z0-9]+[-|\-|_|\_|\.]?)*[a-zA-Z0-9]+\.[a-zA-Z]{2,3}$/;
+    if(emreg.test(From)==false) {
+        result.msg = "FROM:" + From + " 邮箱不合法";
+        return result;
+    }
+
+    if(Password == ""){
+        result.msg = "Password 不能为空";
+        return result;
+    }
+
+    if(To == ""){
+        result.msg = "To 发送目标邮箱，不能为空";
+        return result;
+    }
+    var ToList = To.split(";")
+    for (var index in ToList){
+        if(emreg.test(ToList[index])==false){
+            result.msg = ToList[index]+" 邮箱不合法";
+            return result;
+        }
+    }
+
+    if (Host == ""){
+        result.msg = "SMTP HOST 不能为空";
+        return result;
+    }
+
+    if (Port == "" || isNaN(Port)){
+        result.msg = "SMTP PORT 不能为空 并且未须为 数字";
+        return result;
+    }
+
+    data["From"] = From;
+    data["NickName"] = NickName;
+    data["Password"] = Password;
+    data["SmtpHost"] = Host;
+    data["SmtpPort"] = parseInt(Port);
+
+    data["To"] = To;
+
+    result.data = data;
+    result.msg = "success";
+    result.status = true;
+    return result;
+}
+
+
+function GetWarningParamWechatWork(){
+    var result = {data:{},status:false,msg:"error"}
+    var data = {};
+    var corpid        = $("#WechatWork_corpid").val();
+    var corpsecret    = $("#WechatWork_corpsecret").val();
+    var touser        = $("#WechatWork_touser").val();
+    var toparty       = $("#WechatWork_toparty").val();
+    var totag         = $("#WechatWork_totag").val();
+    var agentid       = $("#WechatWork_agentid").val();
+
+    if(corpid == "" || corpsecret == ""){
+        result.msg = "CorpID , Secret 不能为空";
+        return result;
+    }
+
+    if (agentid == "" || isNaN(agentid)){
+        result.msg = "agentid 不能为空 并且未须为 数字";
+        return result;
+    }
+
+    if(touser == "" && toparty=="" && totag == ""){
+        touser = "@all";
+    }
+
+    data["corpid"] = corpid;
+    data["corpsecret"] = corpsecret;
+    data["touser"] = touser;
+    data["toparty"] = toparty;
+    data["totag"] = totag;
+    data["agentid"] = parseInt(agentid);
+
+    result.data = data;
+    result.msg = "success";
+    result.status = true;
+    return result;
+}
+
+function CheckParam(Type,data) {
+    var url = "/warning/config/check";
+    var result = {status:false,msg:""};
+
+    var callbackFun = function (data) {
+        if(data.status){
+            hadCheckParam = true;
+        }
+        result = data;
+    };
+    // 因为要返回结果，所以这里采用同步的方式
+    Ajax("POST",url,{Param:data,Type:Type},callbackFun,false);
+    return result;
+}
+
+function GetParam(Type) {
+    var data = {}
+    switch (Type) {
+        case "Email":
+            data = GetWarningParamEmail();
+            break;
+        case "WechatWork":
+            data = GetWarningParamWechatWork();
+            break;
+        default:
+            break;
+    }
+    return data;
+}
+
+$("#checkParamBtn").click(
+    function () {
+        var Type = $("#warning_type").val();
+        var data = GetParam(Type);
+        if(data.length == 0){
+            return false;
+        }
+        if(data.status != true){
+            alert(data.msg);
+            return false
+        }
+        var checkResult = CheckParam(Type,data.data);
+        alert(checkResult.msg);
+        return;
+    }
+);
+
+$("#addNewWarningBtn").click(
+    function(){
+        var Type = $("#warning_type").val();
+        var data = GetParam(Type);
+        if(data.length == 0){
+            return false;
+        }
+        if(data.status != true){
+            alert(data.msg);
+            return false
+        }
+        if(hadCheckParam == false){
+            var checkResult = CheckParam(Type,data.data);
+            if (checkResult.status == false){
+                alert(checkResult.msg);
+                return;
+            }
+        }
+        var url = "/warning/config/add";
+        var callbackFun = function (data) {
+            if(data.status){
+                alert(data.msg);
+                location.reload();
+                return;
+            }
+            alert(data.msg);
+            return;
+        };
+        Ajax("POST",url,{Param:data.data,Type:Type},callbackFun,true);
+    }
+);
+
+</script>
+
+{{template "footer" .}}

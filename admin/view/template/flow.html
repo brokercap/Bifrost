@@ -1,0 +1,113 @@
+
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>流量趋势图
+                         {{if ne .TableName "" }}
+                         - TableName: {{.TableName}}
+                         {{end}}
+                         
+                         {{if ne .SchemaName "" }}
+                         - SchemaName: {{.SchemaName}}
+                         {{end}}
+                           
+                         {{if ne .ChannelId "" }}
+                         - Channel: {{.ChannelId}}
+                         {{end}}
+                         
+                         {{if ne .DbName "" }}
+                         - DB: {{.DbName}}
+                         {{else}}
+                         - ALL
+                         {{end}}
+                        </h5>
+                        <div class="ibox-tools">
+                            <a class="collapse-link">
+                                <i class="fa fa-chevron-up"></i>
+                            </a>
+                            <a class="close-link">
+                                <i class="fa fa-times"></i>
+                            </a>
+                        </div>
+
+                        <div class="ibox-tools" style="width: auto; padding-right:8px;">
+							<select class="form-control" style=" margin-top:-8px;" id="selectLengthsAge">
+                            	<option value="minute">1 分钟</option>
+                            	<option value="tenminute">10 分钟</option>
+                            	<option value="hour">1 小时</option>
+                                <option value="eighthour">8 小时</option>
+                                <option value="day">24 小时</option>
+                            </select>
+                        </div>       
+                        
+                        <div class="ibox-tools" style="width: auto; padding-right:8px;">
+							<select class="form-control" style=" margin-top:-8px;" id="data_display_format">
+                            	<option value="increment" selected="selected">增量</option>
+                            	<option value="full">全量</option>
+                            </select>
+                        </div>                                 
+                </div>
+                    
+                    <div class="ibox-content">
+                        <div class="echarts" id="morris-line-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+</div>
+
+
+{{template "footer" .}}
+
+<script src="/js/echarts.min.js"></script>
+<script src="/js/flow.js"></script>
+<script type="text/javascript">
+	var DbName = "{{.DbName}}";
+	var ChanneId = "{{.ChannelId}}";
+	var SchemaName = "{{.SchemaName}}";
+	var TableName = "{{.TableName}}";
+
+    var flowObj = Object.create(FlowClass)
+    flowObj.setCanvasId("morris-line-chart");
+    $("#selectLengthsAge").val("minute");
+	flowObj.setAgetLength("minute");
+    flowObj.setDbName(DbName);
+    flowObj.setTableName(TableName);
+    flowObj.setSchema(SchemaName);
+    flowObj.setChanneId(ChanneId);
+
+	$(function(){
+        $("#selectLengthsAge").change(
+                function(){
+                    flowObj.setAgetLength($(this).val());
+                    flowObj.getFlowData();
+                }
+        );
+		$("#data_display_format").change(
+			function(){
+                flowObj.setDisplayFormat($(this).val());
+                flowObj.getFlowData();
+			}
+		);
+	});
+	var IntervalFun = function () {
+        flowObj.getFlowData();
+    }
+
+</script>
+
+<script src="/js/timeInterval.js"></script>

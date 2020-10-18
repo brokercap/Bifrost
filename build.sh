@@ -202,7 +202,7 @@ init()
     if [[ ${#PLUGINS[*]} -eq 0 ]];then
         return
     fi
-    importPluginFileName="./plugin/import_toserver2.go"
+    importPluginFileName="./plugin/load/import_toserver2.go"
 
     echo "package plugin" > $importPluginFileName
 
@@ -295,10 +295,10 @@ build()
     tagDir=$3
     bifrostVersion=$4
 
-    echo "mkdir " $tagDir/manager
+    echo "mkdir " $tagDir/admin
     echo "mkdir " $tagDir/plugin
     echo "mkdir " $tagDir/bin
-    mkdir -p $tagDir/manager
+    mkdir -p $tagDir/admin
     mkdir -p $tagDir/plugin
     mkdir -p $tagDir/bin
 
@@ -331,22 +331,18 @@ build()
     echo $bifrostVersion > $tagDir/VERSION
     cp -rf ./README.MD ./$tagDir/README.MD
     cp -rf ./LICENSE ./$tagDir/LICENSE
-    cp -rf ./LICENSE ./$tagDir/LICENSE
     cp -rf ./go.mod ./$tagDir/go.mod
     cp -rf ./go.sum ./$tagDir/go.sum
     
-    echo "copy ./manager/template ==> " ./$tagDir/manager/template
+    echo "copy ./admin/view ==> " ./$tagDir/admin/view
 
-    cp -rf ./manager/template ./$tagDir/manager/template
-
-    echo "copy ./manager/public ==> " ./$tagDir/manager/public
-    cp -rf ./manager/public ./$tagDir/manager/public
+    cp -rf ./admin/view ./$tagDir/admin/view
 
     echo "copy ./etc ==> " ./$tagDir/etc
     cp -r ./etc ./$tagDir/
 
     #拷贝./plugin/import_toserver.go 中加载了的默认插件到编译之后的tags目录下
-    import_toserver_content=`cat ./plugin/import_toserver.go`
+    import_toserver_content=`cat ./plugin/load/import_toserver.go`
     #echo $import_toserver_content
     for element in `ls ./plugin`
     do

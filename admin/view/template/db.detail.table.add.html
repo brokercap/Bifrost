@@ -1,0 +1,299 @@
+{{define "db.detail.table.add"}}
+<!--add table start-->
+<div class="modal inmodal fade" id="addTableDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Add New Table</h3>
+            </div>
+            <div class="modal-body">
+                <table width="100%" border="0">
+                    <tr>
+                        <td align="right" height="50" width="20%">DB : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="DbName" id="addTableDbName" class="form-control" placeholder="Database" value="{{.DbName}}" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Schema : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="schema" class="form-control" placeholder="Database" value="" id="addTableSchema" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">TableName : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="TableName" class="form-control" placeholder="TableName" value="" id="addTableName" disabled>
+                            <input type="hidden" name="TableName_old" class="form-control"  value="" id="addTableNameOld">
+                            <div id="FuzzyMatchingTableNames" style="word-wrap: break-word;word-break: normal; width: auto;"></div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">FuzzyMatching : </td>
+                        <td style="text-indent:10px" >
+                            <select class="form-control" name="" id="AddTableIsFuzzyMatching" >
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                            <p style="padding-top: 5px">Yes 可以修改表名 带 * 的模糊匹配规则,例如: binlog_field_test_*</p>
+                            <p><a href="/docs#FuzzyMatching" target="_blank">模糊匹配文档</a></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" height="50" width="20%">IgnoreTables : </td>
+                        <td style="text-indent:10px" >
+                            <textarea type="text" name="TableName" class="form-control" value="" id="AddTableIgnoreTable" disabled></textarea>
+                            <div style="word-wrap: break-word;word-break: normal; width: auto;">
+                                <p>模糊匹配的时候，指定哪些表名不行进行匹配，多个用 逗号 隔开</p>
+                                <p>只对增量有效,全量任务无效,全量任务,可以自行修改不查询哪些表</p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" height="50">ChannelKey :  </td>
+                        <td style="text-indent:10px">
+                            <select class="form-control" name="" id="AddTableChannel" >
+                            {{range $k,$v := .ChannelList}}
+                                <option value="{{$k}}">{{$v.Name}}</option>
+                            {{end}}
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn-sm btn-primary" onclick="AddTable(this)">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--add table over-->
+
+<!--update table start-->
+<div class="modal inmodal fade" id="updateTableDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Update Table ignoreTables </h3>
+            </div>
+            <div class="modal-body">
+                <table width="100%" border="0">
+                    <tr>
+                        <td align="right" height="50" width="20%">DB : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="DbName" id="updateTableDbName" class="form-control" placeholder="Database" value="{{.DbName}}" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">Schema : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="schema" class="form-control" placeholder="Database" value="" id="updateTableSchema" disabled>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="right" height="50" width="20%">TableName : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="TableName" class="form-control" placeholder="TableName" value="" id="updateTableName" disabled>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="right" height="50" width="20%">IgnoreTables : </td>
+                        <td style="text-indent:10px" >
+                            <textarea type="text" name="TableName" class="form-control" placeholder="IgnoreTables" value="" id="updateTableIgnoreTable"></textarea>
+                            <div style="word-wrap: break-word;word-break: normal; width: auto;">
+                                <p>模糊匹配的时候，指定哪些表名不行进行匹配，多个用 逗号 隔开</p>
+                                <p>只对增量有效,全量任务无效,全量任务,可以自行修改不查询哪些表</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn-sm btn-primary" onclick="UpdateTable(this)">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--update table over-->
+
+<script type="text/javascript">
+
+    function showAddTable(TableNames){
+        if (TableNames == ""){
+            return false;
+        }
+        var addTableSchemaName = $("#DatabaseListContair a.active").find("h3").text();
+        $("#addTableSchema").val(addTableSchemaName);
+        var DbName = $("#DbName").val();
+        var url = "/channel/list";
+        $("#addTableName").val(TableNames);
+        $("#addTableNameOld").val(TableNames);
+        $("#AddTableIgnoreTable").val("");
+        $.get(url,
+                {DbName:DbName},
+                function(data,status){
+                    if( status != 'success' ){
+                        alert("reqeust error, reqeust status : "+status);
+                        return false;
+                    }
+                    var html = '';
+                    $.each(data,function(index,v){
+                        html += '<option value="'+index+'">'+v.Name+'</option>';
+                    });
+                    $("#AddTableChannel").html(html);
+                },
+                'json');
+        if ( TableNames.charAt(TableNames.length - 1 ) == ";" || TableNames == "AllTables"){
+            $("#AddTableIsFuzzyMatching").val("0");
+            $("#AddTableIsFuzzyMatching").attr("disabled","disabled");
+            $("#addTableName").attr("disabled","disabled");
+            $('#AddTableIgnoreTable').removeAttr("disabled");
+        }else{
+            $('#AddTableIsFuzzyMatching').removeAttr("disabled");
+        }
+        $("#addTableDiv").modal('show');
+    }
+
+    $("#AddTableIsFuzzyMatching").change(
+            function () {
+                if( $(this).val() == 1 ){
+                    $('#addTableName').removeAttr("disabled");
+                    $("#AddTableIgnoreTable").removeAttr("disabled");
+                }else{
+                    $("#addTableName").val($("#addTableNameOld").val());
+                    $("#addTableName").attr("disable","disable");
+                    $("#AddTableIgnoreTable").attr("disable","disable");
+                    $("#AddTableIgnoreTable").val("");
+                }
+            }
+    );
+
+    $("#addTableName").change(
+            function () {
+                var tableNames = getTablesByLikeName($(this).val());
+                $("#FuzzyMatchingTableNames").width($("#AddTableIsFuzzyMatching").width());
+                $("#FuzzyMatchingTableNames").text(tableNames);
+            }
+    );
+
+    function AddTable(obj){
+        if($(obj).text()=="正在执行"){
+            return false;
+        }
+        var DbName = $("#DbName").val();
+        var TableNames = $("#addTableName").val();
+        //var TableNames_old = $("#addTableNameOld").val();
+        var SchemaName = $("#addTableSchema").val();
+        var IgnoreTable = $("#AddTableIgnoreTable").val();
+        var channelid = $("#AddTableChannel").val();
+        if ( TableNames == "" ){
+            return false;
+        }
+        if ( TableNames == "*" ){
+            return false;
+        }
+        if ( $("#AddTableIsFuzzyMatching").val() == 1 ){
+            if (TableNames.indexOf("*") == -1){
+                alert("选择了模糊匹配,但 TableName 匹配规则有问题，没有 *，请参考文档后再进行设置 ！");
+                return false;
+            }
+            var tableNames = getTablesByLikeName(TableNames)
+            if (tableNames == ""){
+                alert("匹配规则 设置有问题，请参考文档后再进行设置 ！");
+                return false;
+            }
+            if( !confirm("请确认是否匹配正确："+tableNames ) ) {
+                return false;
+            }
+        }
+        $(obj).text("正在执行");
+        var url = "/table/add";
+        var arr = TableNames.split(";");
+        $("#addTableDiv").modal('hide');
+        batchDelOrAddTableResultFun("开始添加",-1);
+        for( var i in arr) {
+            var TableName = arr[i];
+            if ( TableName == "" ){
+                continue;
+            }
+            if ( TableName == "*" ){
+                continue;
+            }
+            var callback = function(data){
+                if(data.status){
+                    var tableDivId = md5(SchemaName + "_-" + TableName);
+                    if (TableName.indexOf("*") != -1){
+
+                        // 往表列表末尾新增一条记录
+                        var html = "";
+                        var title = "";
+                        title = " title='Bind Channel : " + channelid + "' ";
+                        html += '<a class="list-group-item"><div class="tableDiv" title="' + TableName + '" id="' + tableDivId + '">';
+                        html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + SchemaName + '\',\'' + TableName + '\')">' + TableName + '</h5>';
+                        html += '<div class="right1">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+TableName+'\',\''+IgnoreTable+'\')">多表</button></div>';
+                        html += '</div>';
+                        html += '<div class="right">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button></div>';
+
+                        html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+TableName+"' style='width: 20px; height: 20px;' /></div>";
+                        html += '</div>';
+                        html +=	'</div></a>';
+                        $("#TableListContair").append(html);
+
+                        DataBaseMap.delete(SchemaName);
+                        showSchemaTableList("Schema-"+SchemaName);
+                    }else{
+                        var html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button>';
+                        $("#" + tableDivId + " .right .button").html(html);
+                        $("#" + tableDivId + " .right .input input").prop("checked",false);
+                    }
+
+                }
+                batchDelOrAddTableResultFun(TableName +" ADD Result:"+data.msg,1);
+            }
+            Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, ChannelId: parseInt(channelid),IgnoreTable:IgnoreTable},callback,false);
+        }
+        batchDelOrAddTableResultFun("添加完成",-2);
+        $(obj).text("提交");
+    }
+
+
+    function showUpdateTable(DbName,SchemaName,TableName,IgnoreTable){
+        $("#updateTableDbName").val(DbName);
+        $("#updateTableSchema").val(SchemaName);
+        $("#updateTableName").val(TableName);
+        $("#updateTableIgnoreTable").val(IgnoreTable);
+        $("#updateTableDiv").modal('show');
+    }
+
+    function UpdateTable() {
+        var DbName = $("#updateTableDbName").val();
+        var SchemaName = $("#updateTableSchema").val();
+        var TableName = $("#updateTableName").val();
+        var IgnoreTable = $("#updateTableIgnoreTable").val();
+        var url = "/table/update";
+        var callback = function(data){
+            alert(data.msg);
+            DataBaseMap.delete(SchemaName);
+            showSchemaTableList("Schema-"+SchemaName);
+            $("#updateTableDiv").modal('hide');
+        }
+        Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, IgnoreTable:IgnoreTable},callback,false);
+    }
+
+</script>
+
+
+{{end}}
