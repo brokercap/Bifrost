@@ -7,8 +7,9 @@ services:
     ports:
       - "21036:21036"
     volumes:
-      - ./tags/v1.4.4-beta.01/:/sync
-    working_dir: /sync/bifrost_v1.4.4-beta.01_Linux-64bit-bin/bin
+      - ./tags/v1.5.2-release/bifrost_v1.5.2-release_Linux-amd64-bin:/sync/bifrost
+      - ./:/raw
+    working_dir: /sync/bifrost/bin
     entrypoint: ./Bifrost
   redis-sync:
     image: redis
