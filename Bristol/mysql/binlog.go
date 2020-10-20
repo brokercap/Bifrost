@@ -132,15 +132,11 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case QUERY_EVENT:
 		var queryEvent *QueryEvent
 		queryEvent, err = parser.parseQueryEvent(buf)
-		var TableName = ""
-		if queryEvent.query == "COMMIT" {
-			TableName = parser.lastMapEvent.tableName
-		}
 		event = &EventReslut{
 			Header:         queryEvent.header,
 			SchemaName:     queryEvent.schema,
 			BinlogFileName: parser.currentBinlogFileName,
-			TableName:      TableName,
+			TableName:      "",
 			Query:          queryEvent.query,
 			BinlogPosition: queryEvent.header.LogPos,
 		}
@@ -640,6 +636,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 					break
 				default:
 					if parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
+						parser.saveBinlog(event)
 						continue
 					}
 					break
@@ -649,7 +646,7 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 
 			//only return EventType by set
 			if parser.eventDo[int(event.Header.EventType)] == false {
-				//parser.saveBinlog(event)
+				parser.saveBinlog(event)
 				continue
 			}
 
