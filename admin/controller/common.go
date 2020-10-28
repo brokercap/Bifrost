@@ -118,6 +118,6 @@ func (c *CommonController) AddAdminTemplate(tpl ...string)  {
 
 func (c *CommonController) AddPluginTemplate(tpl ...string)  {
 	for _,tplName := range tpl {
-		c.AddTemplate(PluginTemplatePath(tplName))
+		c.AddTemplate(PluginTemplatePath("/plugin/"+tplName))
 	}
 }

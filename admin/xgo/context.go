@@ -65,7 +65,7 @@ func (ctx *Context) GetParamBool ( key string,defaultVal ...bool ) (bool) {
 
 func (ctx *Context) Get( key string,defaultVal ...string ) (string) {
 	val := ctx.Request.Form.Get(key)
-	if val == "" || len(defaultVal) > 0 {
+	if val == "" && len(defaultVal) > 0 {
 		return defaultVal[0]
 	}
 	return ctx.Request.Form.Get(key)

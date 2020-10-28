@@ -35,7 +35,7 @@ func Start() {
 	xgo.AddStaticRoute("/js/", controller.AdminTemplatePath("/public/"))
 	xgo.AddStaticRoute("/fonts/", controller.AdminTemplatePath("/public/"))
 	xgo.AddStaticRoute("/img/", controller.AdminTemplatePath("/public/"))
-	xgo.AddStaticRoute("/plugin/", controller.PluginTemplatePath(""))
+	xgo.AddStaticRoute("/plugin/", config.BifrostPluginTemplateDir)
 	log.Println(controller.PluginTemplatePath(""))
 	var err error
 	if config.TLS {

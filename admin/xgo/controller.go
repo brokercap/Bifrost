@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"log"
 )
 
 func init()  {
@@ -169,10 +170,14 @@ func (c *Controller) NormalStop()  {
 			var err error
 			c.Template, err = template.ParseFiles(c.tplArr...)
 			if err != nil {
+				log.Println("err:",err)
 				panic(err.Error())
 			}
 		}
-		c.Template.Execute(c.Ctx.ResponseWriter, c.Data)
+		err := c.Template.Execute(c.Ctx.ResponseWriter, c.Data)
+		if err != nil {
+			panic(err)
+		}
 		break
 	}
 }
