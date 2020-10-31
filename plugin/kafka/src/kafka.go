@@ -9,13 +9,23 @@ import (
 	"fmt"
 )
 
+
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
+
+func init(){
+	pluginDriver.Register("kafka",NewConn,VERSION,BIFROST_VERION)
+}
+
+
 const (
 	RUNNING int8 = 1
 	CLOSED int8 = 0
 )
 
 type Conn struct {
-	Uri    			string
+	pluginDriver.PluginDriverInterface
+	Uri    			*string
 	status 			int8
 	err    			error
 	p      			*PluginParam
@@ -28,31 +38,41 @@ type PluginParam struct {
 	BatchSize 		int
 	Timeout			int
 	RequiredAcks	sarama.RequiredAcks
+	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
+
 	dataList		[]*sarama.ProducerMessage
-	binlogList 		[]pluginDriver.PluginBinlog
+	commitBinlogList 		[]*pluginDriver.PluginDataType
 	dataCurrentCount int
 }
 
-func newConn(uri string) *Conn{
+func NewConn() pluginDriver.Driver{
 	f := &Conn{
-		Uri:uri,
+		status:CLOSED,
 	}
-	f.Connect()
 	return f
 }
 
-func (This *Conn) GetConnStatus() string {
-	if This.status == RUNNING{
-		return "running"
-	}
-	return "close"
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.Uri = uri
+	return
 }
 
-func (This *Conn) SetConnStatus(status string) {
-	if status == "running" {
-		This.status = RUNNING
-	}else{
-		This.status = CLOSED
+func (This *Conn) Open() error{
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) GetUriExample() string{
+	return "127.0.0.1:9092,127.0.0.1:9093"
+}
+
+func (This *Conn) CheckUri() error{
+	producer, err := sarama.NewSyncProducer(strings.Split(*This.Uri, ","), nil)
+	if err == nil {
+		return err
+	}else {
+		producer.Close()
+		return nil
 	}
 }
 
@@ -62,7 +82,7 @@ func (This *Conn) newProducer() bool {
 	config.Producer.RequiredAcks = This.p.RequiredAcks
 	config.Producer.Timeout = time.Duration(This.p.Timeout) * time.Second
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
-	This.producer, This.err = sarama.NewSyncProducer(strings.Split(This.Uri, ","), config)
+	This.producer, This.err = sarama.NewSyncProducer(strings.Split(*This.Uri, ","), config)
 	if This.err == nil {
 		This.status = RUNNING
 		return true
@@ -107,7 +127,7 @@ func (This *Conn) GetParam(p interface{}) (interface{},error){
 	}
 	if len(param.dataList) == 0{
 		param.dataList = make([]*sarama.ProducerMessage,0)
-		param.binlogList = make([]pluginDriver.PluginBinlog,0)
+		param.commitBinlogList = make([]*pluginDriver.PluginDataType,0)
 		param.dataCurrentCount = 0
 	}
 	This.p = param
@@ -146,10 +166,6 @@ func (This *Conn) ReConnect() bool {
 	}
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
 	if This.producer != nil {
 		func() {
@@ -166,24 +182,27 @@ func (This *Conn) Close() bool {
 	return true
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToList(data)
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToList(data,retry,false)
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToList(data)
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToList(data,retry,false)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToList(data)
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToList(data,retry,false)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToList(data)
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToList(data,retry,false)
 }
 
+func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool)  (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToList(data,retry,true)
+}
 
-func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) getMsg(data *pluginDriver.PluginDataType) (*sarama.ProducerMessage,error){
 	Topic := fmt.Sprint(pluginDriver.TransfeResult(This.p.Topic,data,len(data.Rows)-1))
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = Topic
@@ -197,33 +216,65 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 		return nil,err
 	}
 	msg.Value =  sarama.StringEncoder(c)
-	if This.p.BatchSize > 1{
-		This.p.dataList = append(This.p.dataList,msg)
-		This.p.binlogList = append(This.p.binlogList,pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition})
-		This.p.dataCurrentCount++
-		if This.p.dataCurrentCount >= This.p.BatchSize{
-			return This.sendToKafka()
+	return msg,nil
+}
+
+func (This *Conn) sendToList(data *pluginDriver.PluginDataType,retry bool,isCommit bool) (LastSuccessCommitData *pluginDriver.PluginDataType, Errdata *pluginDriver.PluginDataType, err error) {
+	if This.p.BatchSize > 1 || data == nil{
+		if retry == false {
+			var msg *sarama.ProducerMessage
+			msg , err = This.getMsg(data)
+			if err != nil {
+				goto endErr
+			}
+			This.p.dataList = append(This.p.dataList, msg)
+			if isCommit {
+				n0 := len(This.p.dataList) / This.p.BatchSize
+				// 计算出 commit 提交是在哪一个 合并组里
+				if len(This.p.commitBinlogList) - 1 < n0 {
+					This.p.commitBinlogList = append(This.p.commitBinlogList,data)
+				}else{
+					This.p.commitBinlogList[n0] = data
+				}
+			}
+			This.p.dataCurrentCount++
 		}
-		return nil,nil
+		if This.p.dataCurrentCount >= This.p.BatchSize{
+			LastSuccessCommitData,err = This.sendToKafkaByBatch()
+		}
 	}else{
+		var msg *sarama.ProducerMessage
+		msg , err = This.getMsg(data)
+		if err != nil {
+			goto endErr
+		}
 		if This.status != RUNNING{
 			This.ReConnect()
 			if This.status != RUNNING{
-				return nil,This.err
+				err = This.err
+				goto endErr
 			}
 		}
 		_, _, err = This.producer.SendMessage(msg)
+		if err == nil {
+			LastSuccessCommitData = data
+		}
 	}
-
-	if err != nil{
-		This.err = err
-		This.status = CLOSED
-		return nil,err
-	}
-	return nil,nil
+	endErr:
+		if err != nil {
+			if !This.p.BifrostMustBeSuccess {
+				return LastSuccessCommitData,nil,nil
+			}
+			if This.err != nil {
+				This.status = CLOSED
+				return nil,nil,This.err
+			}
+			return nil,nil,err
+		}
+	return LastSuccessCommitData,nil,nil
 }
 
-func (This *Conn) sendToKafka() (binlog *pluginDriver.PluginBinlog, err error) {
+func (This *Conn) sendToKafkaByBatch() (*pluginDriver.PluginDataType, error) {
 	if This.status != RUNNING{
 		This.ReConnect()
 		if This.status != RUNNING{
@@ -233,40 +284,41 @@ func (This *Conn) sendToKafka() (binlog *pluginDriver.PluginBinlog, err error) {
 	if This.p.dataCurrentCount == 0{
 		return nil,nil
 	}
+	var err error
+	var binlogEvent *pluginDriver.PluginDataType
 	if This.p.dataCurrentCount > This.p.BatchSize{
 		list := This.p.dataList[:This.p.BatchSize]
 		err = This.producer.SendMessages(list)
 		if err == nil{
 			This.p.dataList = This.p.dataList[This.p.BatchSize:]
-			binlogInfo := This.p.binlogList[This.p.BatchSize]
-			This.p.binlogList = This.p.binlogList[This.p.BatchSize:]
 			This.p.dataCurrentCount -= This.p.BatchSize
-			binlog = &binlogInfo
+			if len(This.p.commitBinlogList) > 0 {
+				binlogEvent = This.p.commitBinlogList[0]
+				This.p.commitBinlogList = This.p.commitBinlogList[1:]
+			}
 		}
 	}else{
 		err = This.producer.SendMessages(This.p.dataList)
 		if err == nil{
 			This.p.dataList = make([]*sarama.ProducerMessage,0)
 			This.p.dataCurrentCount = 0
-			binlogInfo := This.p.binlogList[len(This.p.binlogList)-1]
-			This.p.binlogList = make([]pluginDriver.PluginBinlog,0)
-			binlog = &binlogInfo
+			if len(This.p.commitBinlogList) > 0 {
+				binlogEvent = This.p.commitBinlogList[0]
+				This.p.commitBinlogList = This.p.commitBinlogList[1:]
+			}
 		}
 	}
-	return binlog,err
+	if err != nil {
+		return nil,err
+	}
+	if binlogEvent != nil {
+		return binlogEvent,nil
+	}else{
+		return nil,nil
+	}
 }
 
-func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
-	var binlog *pluginDriver.PluginBinlog
-	for{
-		binlogInfo,err := This.sendToKafka()
-		if err != nil{
-			return binlog,err
-		}
-		if err == nil && binlogInfo == nil{
-			break
-		}
-		binlog = binlogInfo
-	}
-	return binlog,nil
+
+func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	return This.sendToList(nil,true,false)
 }

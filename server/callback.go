@@ -17,19 +17,61 @@ package server
 
 import (
 	"log"
-
 	"time"
-
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 )
 
 func (db *db) Callback(data *mysql.EventReslut) {
-	if len(data.Rows) == 0 && data.Query == ""{
+	switch data.Header.EventType {
+	case mysql.QUERY_EVENT:
+		switch data.Query {
+		case "COMMIT":
+			db.CallbackDoCommit(data)
+			return
+		case "BEGIN":
+			db.lastTransactionTableMap = make(map[string]map[string]bool,0)
+			return
+		default:
+			break
+		}
+		break
+	case mysql.XID_EVENT:
+		db.CallbackDoCommit(data)
+		break
+	default:
+		break
+	}
+	if db.Callback0(data) == false {
 		return
 	}
+	if _,ok := db.lastTransactionTableMap[data.SchemaName];!ok {
+		db.lastTransactionTableMap[data.SchemaName] = make(map[string]bool,0)
+	}
+	db.lastTransactionTableMap[data.SchemaName][data.TableName] = true
+}
+
+func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
+	for SchemaName,TableNameMap := range db.lastTransactionTableMap {
+		for TableName,_ := range TableNameMap {
+			data0 := &mysql.EventReslut{
+				Header:         data.Header,
+				Rows:           data.Rows,
+				Query:          "COMMIT",
+				SchemaName:     SchemaName,
+				TableName:      TableName,
+				BinlogFileName: data.BinlogFileName,
+				BinlogPosition: data.BinlogPosition,
+				Pri:			data.Pri,
+			}
+			db.Callback0(data0)
+		}
+	}
+}
+
+func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	var ChannelKey int
 	var t *Table
-	var getChannelKey = func(SchemaName,tableName string) bool{
+	var getChannelKey = func(SchemaName,tableName string) bool {
 		t = db.GetTable(SchemaName,tableName)
 		if t == nil {
 			return false
@@ -42,13 +84,16 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	//最后再判断 schema.table 绑定的 channel
 	//这样一样顺序是为了 防止  *.* 绑了的之后,某个表又独立的去绑了其他 channel,防目数据不一致的情况
 	for{
-		if getChannelKey("*","*") {
+		b = getChannelKey("*","*")
+		if b {
 			break
 		}
-		if getChannelKey(data.SchemaName,"*") {
+		b = getChannelKey(data.SchemaName,"*")
+		if b {
 			break
 		}
-		if getChannelKey(data.SchemaName,data.TableName) {
+		b = getChannelKey(data.SchemaName,data.TableName)
+		if b {
 			break
 		}
 		//假如没一个获取成功的,直接退出函数
@@ -62,11 +107,11 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		}
 		c = db.channelMap[ChannelKey]
 		c.RLock()
-		if c.Status == "close"{
+		if c.Status == CLOSED{
 			c.RUnlock()
 			return
 		}
-		if c.Status != "running" {
+		if c.Status != RUNNING {
 			c.RUnlock()
 			if i%600 == 0 {
 				log.Printf("ChannelKey:%T , status:%s , data:%T \r\n , ", ChannelKey, c.Status, data)
@@ -84,4 +129,5 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	} else {
 		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
 	}
+	return
 }

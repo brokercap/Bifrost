@@ -14,7 +14,8 @@ func main() {
 	service.AddFunction("Insert", serverdo.Insert)
 	service.AddFunction("Update", serverdo.Update)
 	service.AddFunction("Delete", serverdo.Delete)
-	service.AddFunction("ToList", serverdo.Query)
+	service.AddFunction("Query", serverdo.Query)
+	service.AddFunction("Commit", serverdo.Commit)
 	service.AddFunction("Check", serverdo.Check)
 	http.ListenAndServe(":8881", service)
 }

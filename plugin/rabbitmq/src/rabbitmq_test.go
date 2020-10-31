@@ -64,8 +64,9 @@ func testGetParam(Confirm bool) map[string]interface{}  {
 }
 
 func TestCheckData(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(TestUrl)
+	conn := MyPlugin.NewConn()
+	conn.SetOption(&TestUrl,nil)
+	conn.Open()
 	conn.SetParam(testGetParam(true))
 
 	e := pluginTestData.NewEvent()
@@ -87,7 +88,7 @@ func TestCheckData(t *testing.T){
 
 
 	for _,v:=range test1List{
-		conn.Insert(v)
+		conn.Insert(v,false)
 	}
 
 	t.Log("insert test over")
@@ -102,7 +103,7 @@ func TestCheckData(t *testing.T){
 	testList2 = append(testList2,e.GetTestUpdateData())
 
 	for _,v:=range testList2{
-		conn.Update(v)
+		conn.Update(v,false)
 	}
 
 	t.Log("update test over")

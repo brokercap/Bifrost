@@ -4,10 +4,9 @@ import (
 	"fmt"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/server/filequeue"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 	"sync"
-
-	"encoding/json"
 )
 
 type ToServerStatus string
@@ -25,11 +24,11 @@ type ToServer struct {
 	BinlogFileNum                 int
 	BinlogPosition                uint32
 	PluginParam                   map[string]interface{}
-	Status                        string
+	Status                        StatusFlag
 	ToServerChan                  *ToServerChan `json:"-"`
 	Error                         string
 	ErrorWaitDeal                 int
-	ErrorWaitData                 interface{}
+	ErrorWaitData                 *pluginDriver.PluginDataType
 	LastBinlogFileNum             int    // 由 channel 提交到 ToServerChan 的最后一个位点
 	LastBinlogPosition            uint32 // 假如 BinlogFileNum == LastBinlogFileNum && BinlogPosition == LastBinlogPosition 则说明这个位点是没有问题的
 	LastBinlogKey                 []byte `json:"-"` // 将数据保存到 level 的key
@@ -118,10 +117,10 @@ func (db *db) DelTableToServer(schemaName string, tableName string, ToServerID i
 		db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList[:index], db.tableMap[key].ToServerList[index+1:]...)
 	}
 
-	if toServerInfo.Status == "running" || toServerInfo.Status == "stopping" {
-		toServerInfo.Status = "deling"
+	if toServerInfo.Status == RUNNING || toServerInfo.Status == STOPPING {
+		toServerInfo.Status = DELING
 	} else {
-		if toServerInfo.Status != "deling" {
+		if toServerInfo.Status != DELING {
 			delBinlogPosition(toServerPositionBinlogKey)
 		}
 	}
@@ -144,11 +143,10 @@ func (This *ToServer) UpdateBinlogPosition(BinlogFileNum int, BinlogPosition uin
 	return true
 }
 
-func (This *ToServer) AddWaitError(WaitErr error, WaitData interface{}) bool {
+func (This *ToServer) AddWaitError(WaitErr error, WaitData *pluginDriver.PluginDataType) bool {
 	This.Lock()
 	This.Error = WaitErr.Error()
-	b, _ := json.Marshal(WaitData)
-	This.ErrorWaitData = string(b)
+	This.ErrorWaitData = WaitData
 	This.Unlock()
 	return true
 }

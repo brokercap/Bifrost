@@ -14,12 +14,16 @@ import (
 )
 
 
-const VERSION  = "v1.3.2"
-const BIFROST_VERION = "v1.3.2"
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
 
-type dataTableStruct struct {
-	MetaMap			map[string]string //字段类型
+type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
+	CommitData 		[]*pluginDriver.PluginDataType		// commit 提交的数据列表，Data 每 BatchSize 数据量划分为一个最后提交的commit
+}
+
+func init(){
+	pluginDriver.Register("mysql",NewConn,VERSION,BIFROST_VERION)
 }
 
 type EventType int8
@@ -46,23 +50,67 @@ type fieldStruct struct {
 	ToFieldDefault         *string
 }
 
-func init(){
-	pluginDriver.Register("mysql",&MyConn{},VERSION,BIFROST_VERION)
-}
 
-type MyConn struct {}
-
-func (MyConn *MyConn) Open(uri string) pluginDriver.ConnFun{
-	return newConn(uri)
-}
-
-func (MyConn *MyConn) CheckUri(uri string) error{
-	c:= newConn(uri)
-	if c.err != nil{
-		return c.err
+func NewTableData() *TableDataStruct {
+	CommitData := make([]*pluginDriver.PluginDataType,0)
+	CommitData = append(CommitData,nil)
+	return &TableDataStruct{
+		Data:		make([]*pluginDriver.PluginDataType,0),
+		CommitData:	CommitData,
 	}
-	if c.conn == nil{
-		c.Close()
+}
+
+type Conn struct {
+	uri    	*string
+	status  string
+	p		*PluginParam
+	conn    *mysqlDB
+	err 	error
+}
+
+type PluginParam struct {
+	Field 			[]fieldStruct
+	BatchSize      	int
+	Schema			string
+	Table			string
+	NullTransferDefault bool  //是否将null值强制转成相对应类型的默认值
+	SyncMode		SyncMode
+	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
+
+	Datakey			string
+	replaceInto		bool  // 记录当前表是否有replace into操作
+	PriKey			[]fieldStruct
+	toPriKey		string   // toMysql 主键字段
+	mysqlPriKey		string  //	对应 from mysql 的主键id
+	Data			*TableDataStruct
+	fieldCount		int
+	stmtArr			[]dbDriver.Stmt
+	SkipBinlogData	*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
+}
+
+
+func NewConn() pluginDriver.Driver {
+	return &Conn{status:"close",}
+}
+
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.uri = uri
+	return
+}
+
+
+func (This *Conn) Open() error{
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) CheckUri() error{
+	This.Connect()
+	if This.err != nil{
+		return This.err
+	}
+	if This.conn == nil{
+		This.Close()
 		return fmt.Errorf("connect")
 	}
 
@@ -71,60 +119,18 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 		defer func() {
 			return
 		}()
-		schemaList = c.conn.GetSchemaList()
+		schemaList = This.conn.GetSchemaList()
 	}()
 	if len(schemaList) == 0{
-		c.Close()
+		This.Close()
 		return fmt.Errorf("schema count is 0 (not in system)")
 	}
 	return nil
 }
 
-func (MyConn *MyConn) GetUriExample() string{
+func (This *Conn) GetUriExample() string{
 	return "root:root@tcp(127.0.0.1:3306)/test"
 }
-
-type Conn struct {
-	uri    	string
-	status  string
-	p		*PluginParam
-	conn    *mysqlDB
-	err 	error
-}
-
-func newConn(uri string) *Conn{
-	f := &Conn{
-		uri:uri,
-	}
-	f.Connect()
-	return f
-}
-
-func (This *Conn) GetConnStatus() string {
-	return This.status
-}
-
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
-}
-
-type PluginParam struct {
-	Field 			[]fieldStruct
-	BatchSize      	int
-	Schema			string
-	Table			string
-	Datakey			string
-	replaceInto		bool  // 记录当前表是否有replace into操作
-	PriKey			[]fieldStruct
-	toPriKey		string   // toMysql 主键字段
-	mysqlPriKey		string  //	对应 from mysql 的主键id
-	Data			*dataTableStruct
-	fieldCount		int
-	stmtArr			[]dbDriver.Stmt
-	NullTransferDefault bool  //是否将null值强制转成相对应类型的默认值
-	SyncMode		SyncMode
-}
-
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
@@ -139,7 +145,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	if param.BatchSize == 0{
 		param.BatchSize = 500
 	}
-	param.Data = &dataTableStruct{Data:make([]*pluginDriver.PluginDataType,0)}
+	param.Data = NewTableData()
 	param.Datakey = "`"+param.Schema+"`.`"+param.Table+"`"
 	param.toPriKey = param.PriKey[0].ToField
 	param.mysqlPriKey = param.PriKey[0].FromMysqlField
@@ -206,7 +212,7 @@ func (This *Conn) getCktFieldType() {
 }
 
 func (This *Conn) Connect() bool {
-	This.conn = NewMysqlDBConn(This.uri)
+	This.conn = NewMysqlDBConn(*This.uri)
 	if This.conn.err != nil{
 		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
 	}
@@ -247,38 +253,64 @@ func (This *Conn) StmtClose() {
 	}
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
+	if This.conn != nil {
+		func(){
+			defer func() {
+				if err := recover();err != nil {
+					return
+				}
+			}()
+			This.conn.Close()
+		}()
+	}
 	return true
 }
 
-func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType)  (*pluginDriver.PluginBinlog,error){
+func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error){
 	var n int
-	This.p.Data.Data = append(This.p.Data.Data,data)
+	if retry == false {
+		This.p.Data.Data = append(This.p.Data.Data, data)
+	}
 	n = len(This.p.Data.Data)
 	if This.p.BatchSize <= n{
-		return This.Commit()
+		return This.AutoCommit()
 	}
-	return nil,nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
-	return nil,nil
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return nil,nil,nil
+}
+
+func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	n := len(This.p.Data.Data)
+	if n == 0 {
+		return data,nil,nil
+	}
+	n0 := n / This.p.BatchSize
+	if len(This.p.Data.CommitData) - 1 < n0 {
+		This.p.Data.CommitData = append(This.p.Data.CommitData,data)
+	}else{
+		This.p.Data.CommitData[n0] = data
+	}
+	return nil, nil, nil
+}
+
+func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	return This.AutoCommit()
 }
 
 func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key string) interface{} {
@@ -311,7 +343,13 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key s
 	return ""
 }
 
-func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
+// 设置跳过的位点
+func (This *Conn) Skip (SkipData *pluginDriver.PluginDataType) error {
+	This.p.SkipBinlogData = SkipData
+	return nil
+}
+
+func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
 	defer func() {
 		if err := recover();err != nil{
 			e = fmt.Errorf(string(debug.Stack()))
@@ -321,13 +359,13 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 	}()
 	n := len(This.p.Data.Data)
 	if n == 0{
-		return nil,nil
+		return nil,nil,nil
 	}
 	if This.conn.err != nil {
 		This.ReConnect()
 	}
 	if This.conn.err != nil {
-		return nil,This.conn.err
+		return nil,nil,This.conn.err
 	}
 	if n > This.p.BatchSize{
 		n = This.p.BatchSize
@@ -336,49 +374,55 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog,e error) {
 
 	This.conn.err = This.conn.Begin()
 	if This.conn.err != nil{
-		return nil,This.conn.err
+		return nil,nil,This.conn.err
 	}
-
+	var errData *pluginDriver.PluginDataType
 	switch This.p.SyncMode {
 	case SYNCMODE_NORMAL:
-		This.CommitNormal(list)
+		errData = This.CommitNormal(list)
 		break
 	case SYNCMODE_LOG_UPDATE:
-		This.CommitLogMod_Update(list)
+		errData = This.CommitLogMod_Update(list)
 		break
 	case SYNCMODE_LOG_APPEND:
-		This.CommitLogMod_Append(list)
+		errData = This.CommitLogMod_Append(list)
 		break
 	default:
 		This.err = fmt.Errorf("同步模式ERROR:%s",This.p.SyncMode)
 		break
 	}
 
-	if This.conn.err != nil{
+	if This.conn.err != nil {
 		This.err = This.conn.err
 		//log.Println("plugin mysql conn.err",This.err)
-		return nil,This.err
+		return nil,errData,This.err
 	}
 	if This.err != nil{
 		This.conn.err = This.conn.Rollback()
 		log.Println("plugin mysql err",This.err)
-		return nil,This.err
+		return nil,errData,This.err
 	}
 
 	err2 := This.conn.Commit()
 	This.StmtClose()
 	if err2 != nil{
 		This.conn.err = err2
-		return nil,This.conn.err
+		return nil,nil,This.conn.err
 	}
 
-	if len(This.p.Data.Data) <= int(This.p.BatchSize){
-		This.p.Data.Data = make([]*pluginDriver.PluginDataType,0)
-	}else{
+	var binlogEvent *pluginDriver.PluginDataType
+	if len(This.p.Data.Data) <= int(This.p.BatchSize) {
+		binlogEvent = This.p.Data.CommitData[0]
+		This.p.Data = NewTableData()
+	} else {
 		This.p.Data.Data = This.p.Data.Data[n:]
+		if len(This.p.Data.CommitData) > 0 {
+			binlogEvent = This.p.Data.CommitData[0]
+			This.p.Data.CommitData = This.p.Data.CommitData[1:]
+		}
 	}
-
-	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum,list[n-1].BinlogPosition}, nil
+	This.p.SkipBinlogData = nil
+	return binlogEvent,nil,nil
 }
 
 func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
@@ -390,7 +434,7 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 		}
 	}()
 	if data == nil {
-		if This.p.NullTransferDefault == false{
+		if This.p.NullTransferDefault == false {
 			if defaultVal == nil{
 				v = nil
 				return
@@ -604,6 +648,12 @@ func (This *Conn) closeStmt0(){
 	}
 }
 
+func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
+	if This.p.SkipBinlogData != nil && This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition == data.BinlogPosition {
+		return true
+	}
+	return false
+}
 
 func checkOpMap(opMap map[interface{}]*opLog,key interface{}, EvenType string) bool {
 	if _,ok := opMap[key];ok{

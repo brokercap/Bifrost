@@ -1,13 +1,13 @@
 ## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.5.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.6.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 
 ##### 漫威里的彩虹桥可以将 雷神 送到 阿斯加德 和 地球
 
 
-#### 而这个 Bifrost 可以将 你 MySQL 里的数据,<font color="#F00">实时</font>的同步到 :
+#### 而这个 Bifrost 可以将 你 MySQL 里的数据 <font color="#F00">全量</font> , <font color="#F00">实时</font>的同步到 :
 
 * Redis
 * MongoDB
@@ -17,8 +17,8 @@
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.5.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.5.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -57,12 +57,12 @@ https://www.xbifrost.com/demo/goto.html
 
 密码  :  Bifrost123
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.5.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.5.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/diagram.png)
 
 
 

@@ -455,7 +455,7 @@ func TransferToCreateTableSql(SchemaName, TableName string, data map[string]inte
 		} else {
 			val += ",`" + ckFieldName +"` "+ ckType
 		}
-		ckField = append(ckField, fieldStruct{CK: ckFieldName, MySQL: ckFieldName, CkType: ckType})
+		ckField = append(ckField, fieldStruct{CK: ckFieldName, MySQL: mysqlFieldName, CkType: ckType})
 		return
 	}
 	priArr := make([]string, 0)

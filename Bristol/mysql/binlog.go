@@ -53,7 +53,7 @@ type eventParser struct {
 	binlog_checksum    bool
 	filterNextRowEvent bool
 	binlogDump         *BinlogDump
-	lastMapEvent		*TableMapEvent				// 保存最近一次 map event 解析出来的 tableId，用于接下来的 row event 解析使用，因为实际运行中发现，row event 解析出来 tableId 可能对不上。row event 紧跟在 map event 之后，row event 的时候，直接采用最后一次map event
+	lastMapEvent	   *TableMapEvent				// 保存最近一次 map event 解析出来的 tableId，用于接下来的 row event 解析使用，因为实际运行中发现，row event 解析出来 tableId 可能对不上。row event 紧跟在 map event 之后，row event 的时候，直接采用最后一次map event
 }
 
 func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
@@ -206,6 +206,22 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				Rows:           rowsEvent.rows,
 				Pri:            make([]*string, 0),
 			}
+		}
+		break
+	case XID_EVENT:
+		var xidEvent *XIdEvent
+		xidEvent,err = parser.parseXidEvent(buf)
+		if err != nil {
+			log.Println("xid event err:", err)
+		}
+		event = &EventReslut{
+			Header:         xidEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: xidEvent.header.LogPos,
+			SchemaName:     "",
+			TableName:      "",
+			Rows:           nil,
+			Pri:            nil,
 		}
 		break
 	default:
@@ -603,45 +619,41 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 				}
 			}
 
-			//QUERY_EVENT ,must be read Schema again
-			if event.Header.EventType == QUERY_EVENT {
-				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
-					if SchemaName != "" {
-						event.SchemaName = SchemaName
-					}
-					event.TableName = tableName
-					if parser.binlogDump.CheckReplicateDb(event.SchemaName, tableName) == false {
-						parser.saveBinlog(event)
-						continue
-					}
-					if tableId,err := parser.GetTableId(event.SchemaName, tableName); err == nil {
-						parser.GetTableSchema(tableId, event.SchemaName, tableName)
-					}
-				}
-			}
-			//only return replicateDoDb, any sql may be use db.table query
-
+			switch event.Header.EventType {
 			//这里要判断一下如果是row事件
 			//在map event的时候已经判断过了是否要过滤，所以判断一下 parser.filterNextRowEvent 是否为true
-			switch event.Header.EventType {
 			case WRITE_ROWS_EVENTv0, WRITE_ROWS_EVENTv1, WRITE_ROWS_EVENTv2, UPDATE_ROWS_EVENTv0, UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2, DELETE_ROWS_EVENTv0, DELETE_ROWS_EVENTv1, DELETE_ROWS_EVENTv2:
 				if parser.filterNextRowEvent == true {
 					continue
 				}
 				break
-			default:
-				switch event.Header.EventType {
-				case XID_EVENT:
-					parser.saveBinlog(event)
-					break
-				default:
+				break
+			case QUERY_EVENT:
+				//only return replicateDoDb, any sql may be use db.table query
+				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
+					if SchemaName != "" {
+						event.SchemaName = SchemaName
+					}
+					event.TableName = tableName
+				}
+				if event.TableName != "" {
 					if parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
 						parser.saveBinlog(event)
 						continue
 					}
-					break
+					if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
+						parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+					}
 				}
 				break
+			case XID_EVENT:
+				parser.saveBinlog(event)
+				break
+			default:
+				if event.TableName != "" && parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
+					parser.saveBinlog(event)
+					continue
+				}
 			}
 
 			//only return EventType by set
@@ -931,6 +943,12 @@ func (This *BinlogDump) checkDumpConnection() {
 	}
 }
 
+func (This *BinlogDump) UpdateUri(connUri string) {
+	This.Lock()
+	This.DataSource = connUri
+	This.Unlock()
+}
+
 func (This *BinlogDump) Stop() {
 	This.Lock()
 	This.parser.dumpBinLogStatus = STATUS_STOPED
@@ -973,5 +991,4 @@ func (This *BinlogDump) KillDump() {
 		This.parser.KillConnect(connectId)
 	}
 	This.BinlogConnCLose(true)
-
 }

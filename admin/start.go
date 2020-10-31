@@ -36,7 +36,6 @@ func Start() {
 	xgo.AddStaticRoute("/fonts/", controller.AdminTemplatePath("/public/"))
 	xgo.AddStaticRoute("/img/", controller.AdminTemplatePath("/public/"))
 	xgo.AddStaticRoute("/plugin/", config.BifrostPluginTemplateDir)
-	log.Println(controller.PluginTemplatePath(""))
 	var err error
 	if config.TLS {
 		err = xgo.StartTLS(config.Listen, config.TLSServerKeyFile, config.TLSServerCrtFile)

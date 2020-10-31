@@ -504,7 +504,11 @@
                     }
                     var ErrorHtml = "";
                     if (v.Error != "" && v.Error != null){
-                        ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
+                        var ErrData = "";
+                        if ( v.ErrorWaitData != null ) {
+                            ErrData = JSON.stringify(v.ErrorWaitData);
+                        }
+                        ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+ErrData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Skip</button></p>";
                     }
                     var op = "<p>"+v.Status+"</p>";
                     if (v.Status == "stopped"){
@@ -923,7 +927,7 @@
                 }
                 $(thisButton).parent().parent().html("");
             };
-            Ajax("POST",{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:ToServerID,Index:index}, data,callback,false);
+            Ajax("POST",url,{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:parseInt(ToServerID),Index:parseInt(index)},callback,false);
         }
 
 

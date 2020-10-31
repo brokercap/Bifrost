@@ -1,4 +1,7 @@
 function fileQueueStart(thisObj,DbName,SchemaName,TableName,ToServerId,Index){
+    if ( !confirm("非极端情况下,不要手工点击启动文件队列，进行启动! \n确定 需要 继续 开启吗？！！") ){
+        return false;
+    }
     var url = "/table/toserver/filequeue/update";
     var callback = function (data) {
         alert(data.msg)
@@ -38,8 +41,7 @@ function getFileQueueInfo(thisObj,DbName,SchemaName,TableName,ToServerId,Index){
             }
             html += "</table>"
         }
-        var htmlId = DbName+"_"+SchemaName+"_"+TableName+"_"+ToServerId;
-        $("#"+htmlId).html(html);
+        $(thisObj).parent().parent().find(".fileInfoDiv").html(html);
     };
     Ajax("GET",url, {DbName:DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:ToServerId,Index:Index},callback,true);
 }

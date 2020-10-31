@@ -32,7 +32,8 @@ type ToServerParam struct {
 	PluginName  string
 	Notes       string
 	ConnUri     string
-	MaxConn     int
+	MaxConn     int			// 最大连接数
+	MinConn		int			// 最小连接数
 }
 
 func (c *ToServerController) getParam() *ToServerParam {
@@ -77,7 +78,7 @@ func (c *ToServerController) CheckUri() {
 		result.Msg = "PluginName,connuri muest be not empty"
 		return
 	}
-	err := driver.CheckUri(param.PluginName, param.ConnUri)
+	err := driver.CheckUri(param.PluginName, &param.ConnUri)
 	if err != nil {
 		result.Msg = err.Error()
 		return
@@ -103,6 +104,7 @@ func (c *ToServerController) Add() {
 			ConnUri:    param.ConnUri,
 			Notes:      param.Notes,
 			MaxConn:    param.MaxConn,
+			MinConn:    param.MinConn,
 		})
 	defer server.SaveDBConfigInfo()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
@@ -126,6 +128,7 @@ func (c *ToServerController) Update() {
 			ConnUri:    param.ConnUri,
 			Notes:      param.Notes,
 			MaxConn:    param.MaxConn,
+			MinConn:	param.MinConn,
 		})
 	defer server.SaveDBConfigInfo()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}

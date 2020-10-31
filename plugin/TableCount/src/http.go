@@ -9,8 +9,8 @@ import (
 func init()  {
 	xgo.Router("/bifrost/plugin/TableCount/index",&PluginTableCountController{},"*:Index")
 	xgo.Router("/bifrost/plugin/TableCount/flow/get",&PluginTableCountController{},"*:GetFlow")
-	xgo.Router("/bifrost/plugin/TableCount/schema/list",&PluginTableCountController{},"*:GetSchemaList")
-	xgo.Router("/bifrost/plugin/TableCount/table/list",&PluginTableCountController{},"*:GetSchemaTableList")
+	xgo.Router("/bifrost/plugin/TableCount/flow/schema/list",&PluginTableCountController{},"*:GetSchemaList")
+	xgo.Router("/bifrost/plugin/TableCount/flow/table/list",&PluginTableCountController{},"*:GetSchemaTableList")
 }
 
 type PluginTableCountController struct {
@@ -20,16 +20,16 @@ type PluginTableCountController struct {
 func (c *PluginTableCountController) Index()  {
 	c.SetTitle("FlowCount-Plugin-TableCount")
 	c.SetData("DbList",GetDbList())
-	c.AddAdminTemplate("header.html","footer.html")
 	c.AddPluginTemplate("TableCount/www/flow.html")
+	c.AddAdminTemplate("header.html","footer.html")
 	return
 }
 
 func (c *PluginTableCountController) GetFlow()  {
-	DbName := c.Ctx.Get("DbName")
-	SchemaName := c.Ctx.Get("SchemaName")
-	TableName := c.Ctx.Get("TableName")
-	FlowType := c.Ctx.Get("Type")
+	DbName := c.Ctx.Get("DbName","")
+	SchemaName := c.Ctx.Get("SchemaName","")
+	TableName := c.Ctx.Get("TableName","")
+	FlowType := c.Ctx.Get("Type","tenminute")
 	var Type  string
 	switch strings.ToLower(FlowType) {
 	case "tenminute":

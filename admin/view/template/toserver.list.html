@@ -34,7 +34,7 @@
                                 <th>PluginVersion</th>
                                 <th>ConnUri</th>
                                 <th>LastID</th>
-                                <th>MaxConn</th>
+                                <th>Min/MaxConn</th>
                                 <th>CurrentConn</th>
                                 <th title="空闲连接数">AvailableConn</th>
                                 <th>Notes</th>
@@ -53,7 +53,8 @@
                                 </td>
                                 <td>{{$v.LastID}}</td>
                                 <td>
-                                {{$v.MaxConn}}
+                                    <p>MinConn: <span class="MinConn">{{$v.MinConn}}</span></p>
+                                    <p>MaxConn: <span class="MaxConn">{{$v.MaxConn}}</span></p>
                                 </td>
                                 <td>{{$v.CurrentConn}}</td>
                                 <td>{{$v.AvailableConn}}</td>
@@ -112,6 +113,15 @@
                         <div class="col-sm-9"  style=" position: relative">
                             <input type="text" name="ConnUri"  class="form-control" placeholder="ConnUri">
                             <span class="help-block m-b-none">*</span>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">MinConn：</label>
+                        <div class="col-sm-9"  style=" position: relative">
+                            <input type="text" name="MinConn"  class="form-control" placeholder="MinConn">
+                            <span class="help-block m-b-none">*最小连接数</span>
 
                         </div>
                     </div>
@@ -189,6 +199,14 @@
                         <input type="text" name="ConnUri" id="ConnUri" class="form-control" placeholder="ConnUri">
                         <span class="help-block m-b-none" id="ConnUri_example">*</span>
 
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">MinConn：</label>
+                    <div class="col-sm-9" >
+                        <input type="text" name="MaxConn" id="MinConn" class="form-control" value="0" placeholder="MinConn">
+                        <span class="help-block m-b-none">*最小连接数</span>
                     </div>
                 </div>
 
@@ -287,11 +305,16 @@
                 var PluginName = $("#PluginName").val();
                 var Notes = $("#Notes").val();
                 var MaxConn = $("#MaxConn").val();
+                var MinConn = $("#MinConn").val();
                 if( ConnUri == "" || PluginName=="" || Notes==""){
                     alert("ConnUri,notes 不能为空")
                     return
                 }
-                if(MaxConn == "" || isNaN(MaxConn)){
+                if( MinConn == "" || isNaN(MinConn) ){
+                    alert("MinConn 不能为空且必须为数字");
+                    return
+                }
+                if( MaxConn == "" || isNaN(MaxConn) ){
                     alert("MaxConn 不能为空且必须为数字");
                     return
                 }
@@ -304,7 +327,7 @@
                     }
                     location.reload();
                 };
-                Ajax("POST",url,{ ToServerKey: ToServerKey,ConnUri:ConnUri,PluginName:PluginName,Notes:Notes,MaxConn:parseInt(MaxConn)},callback,true);
+                Ajax("POST",url,{ ToServerKey: ToServerKey,ConnUri:ConnUri,PluginName:PluginName,Notes:Notes,MaxConn:parseInt(MaxConn),MinConn:parseInt(MinConn)},callback,true);
             }
     );
 
@@ -329,14 +352,17 @@
 
     $(".updateMaxConnBtn").click(
         function () {
-            var MaxConn = $.trim($(this).parent().parent().children().eq(5).text());
-            var ConnUri = $(this).parent().parent().children().eq(3).attr("title");
-            var ToServerKey = $(this).parent().parent().children().eq(0).text();
-            var PluginName = $(this).parent().parent().children().eq(1).text();
-            var Notes = $(this).parent().parent().children().eq(8).text();
+            var trChildObj = $(this).parent().parent().children();
+            var MinConn = $.trim(trChildObj.eq(5).find(".MinConn").text());
+            var MaxConn = $.trim(trChildObj.eq(5).find(".MaxConn").text());
+            var ConnUri = trChildObj.eq(3).attr("title");
+            var ToServerKey = trChildObj.eq(0).text();
+            var PluginName = trChildObj.eq(1).text();
+            var Notes = trChildObj.eq(8).text();
 
             $("#updateToServerInfoDiv input[name=ToServerKey]").val(ToServerKey);
             $("#updateToServerInfoDiv input[name=PluginName]").val(PluginName);
+            $("#updateToServerInfoDiv input[name=MinConn]").val(MinConn);
             $("#updateToServerInfoDiv input[name=MaxConn]").val(MaxConn);
             $("#updateToServerInfoDiv textarea[name=Notes]").val(Notes);
             $("#updateToServerInfoDiv input[name=ConnUri]").val(ConnUri);
@@ -346,6 +372,7 @@
 
     $(".updateMaxConnCommitBtn").click(
             function () {
+                var MinConn = $("#updateToServerInfoDiv input[name=MinConn]").val();
                 var MaxConn = $("#updateToServerInfoDiv input[name=MaxConn]").val();
                 var ToServerKey = $("#updateToServerInfoDiv input[name=ToServerKey]").val();
                 var PluginName = $("#updateToServerInfoDiv input[name=PluginName]").val();
@@ -353,7 +380,11 @@
                 var Notes = $("#updateToServerInfoDiv textarea[name=Notes]").val();
 
                 var url = "/toserver/update";
-                if(MaxConn == "" || isNaN(MaxConn)){
+                if( MinConn == "" || isNaN(MinConn) ){
+                    alert("MinConn 不能为空且必须为数字");
+                    return
+                }
+                if( MaxConn == "" || isNaN(MaxConn) ){
                     alert("MaxConn 不能为空且必须为数字");
                     return
                 }
@@ -377,10 +408,11 @@
                     alert(data.msg);
                     $("#ToServer_"+ToServerKey).children().eq(3).attr("title",ConnUri);
                     $("#ToServer_"+ToServerKey).children().eq(3).text(ConnUri);
-                    $("#ToServer_"+ToServerKey).children().eq(5).text(MaxConn);
+                    $("#ToServer_"+ToServerKey).children().eq(5).find(".MinConn").text(MinConn);
+                    $("#ToServer_"+ToServerKey).children().eq(5).find(".MaxConn").text(MaxConn);
                     $("#ToServer_"+ToServerKey).children().eq(8).text(Notes);
                 };
-                Ajax("POST",url,{ ToServerKey: ToServerKey,MaxConn:parseInt(MaxConn),PluginName:PluginName,notes:Notes,ConnUri:ConnUri},callback,true);
+                Ajax("POST",url,{ ToServerKey: ToServerKey,MinConn:parseInt(MinConn),MaxConn:parseInt(MaxConn),PluginName:PluginName,notes:Notes,ConnUri:ConnUri},callback,true);
                 $("#updateToServerInfoDiv").modal('hide');
             }
     );

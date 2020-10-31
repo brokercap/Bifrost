@@ -10,16 +10,17 @@ func TestCommitLogAppend(t *testing.T){
 	param["SyncType"] = "insertAll"
 	conn.SetParam(param)
 	insertdata := event.GetTestInsertData()
-	conn.Insert(insertdata)
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
-	conn.Insert(event.GetTestInsertData())
-	conn.Del(event.GetTestDeleteData())
+	conn.Insert(insertdata,false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Del(event.GetTestDeleteData(),false)
 
-	_,err2 := conn.Commit()
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
+	t.Log("success")
 }
 
 
@@ -31,12 +32,13 @@ func TestCommitLogUpdate(t *testing.T){
 	param["SyncType"] = "LogUpdate"
 	conn.SetParam(param)
 	insertdata := event.GetTestInsertData()
-	conn.Insert(insertdata)
-	conn.Del(event.GetTestDeleteData())
-	_,err2 := conn.Commit()
+	conn.Insert(insertdata,false)
+	conn.Del(event.GetTestDeleteData(),false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
+	t.Log("success")
 }
 
 func TestCommitLogAppendReplacingMergeTree(t *testing.T){
@@ -49,15 +51,16 @@ func TestCommitLogAppendReplacingMergeTree(t *testing.T){
 	conn.SetParam(param)
 	for j:=0;j<10;j++{
 		insertdata := event.GetTestInsertData()
-		conn.Insert(insertdata)
+		conn.Insert(insertdata,false)
 		for i:=0;i<100000;i++{
-			conn.Update(event.GetTestUpdateData())
+			conn.Update(event.GetTestUpdateData(),false)
 		}
-		conn.Del(event.GetTestDeleteData())
+		conn.Del(event.GetTestDeleteData(),false)
 	}
-	_,err2 := conn.Commit()
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
+	t.Log("success")
 }
 

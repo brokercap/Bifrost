@@ -66,8 +66,9 @@ func beforeTest() {
 
 func TestChechUri(t *testing.T){
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(httpUrl);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&httpUrl,nil)
+	if err := myConn.CheckUri();err!= nil{
 		log.Println("TestChechUri err:",err)
 	}else{
 		log.Println("TestChechUri success")
@@ -82,23 +83,27 @@ func getParam() map[string]interface{} {
 }
 
 func TestSetParam(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(httpUrl)
-	conn.SetParam(nil)
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&httpUrl,nil)
+	myConn.Open()
+	myConn.SetParam(nil)
 }
 
 func TestCommit(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(httpUrl)
-	conn.Commit()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&httpUrl,nil)
+	myConn.Open()
+	e := pluginTestData.NewEvent()
+	myConn.Commit(e.GetTestCommitData(),false)
 }
 
 
 func TestAndCheckData(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(httpUrl)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&httpUrl,nil)
+	myConn.Open()
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
@@ -108,7 +113,7 @@ func TestAndCheckData(t *testing.T)  {
 	t.Log(" insert test start")
 	eventData := e.GetTestInsertData()
 
-	conn.Insert(eventData)
+	myConn.Insert(eventData,false)
 
 	var err error
 
@@ -132,7 +137,7 @@ func TestAndCheckData(t *testing.T)  {
 	t.Log(" update test start")
 	eventData = e.GetTestUpdateData()
 
-	conn.Update(eventData)
+	myConn.Update(eventData,false)
 
 	if eventData.EventType != lastEvent.EventType{
 		t.Error("lastEvent.EventType:",lastEvent.EventType, " != ",eventData.EventType )
@@ -145,7 +150,7 @@ func TestAndCheckData(t *testing.T)  {
 	t.Log(" delete test start")
 	eventData = e.GetTestDeleteData()
 
-	conn.Del(eventData)
+	myConn.Del(eventData,false)
 
 
 	checkResult,err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1],lastBody)

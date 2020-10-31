@@ -105,7 +105,7 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	dbObj := DbList[Name]
 	dbObj.Lock()
 	defer dbObj.Unlock()
-	if dbObj.ConnStatus != "close"{
+	if dbObj.ConnStatus != CLOSED{
 		return fmt.Errorf("db status must be close")
 	}
 	dbObj.ConnectUri = ConnectUri
@@ -143,7 +143,7 @@ func DelDB(Name string) bool {
 	defer DbLock.Unlock()
 	DBPositionBinlogKey := getDBBinlogkey(DbList[Name])
 	if _, ok := DbList[Name]; ok {
-		if DbList[Name].ConnStatus == "close" {
+		if DbList[Name].ConnStatus == CLOSED {
 			for _,c := range  DbList[Name].channelMap{
 				count.DelChannel(Name,c.Name)
 			}
@@ -163,7 +163,7 @@ type db struct {
 	sync.RWMutex
 	Name               		string `json:"Name"`
 	ConnectUri         		string `json:"ConnectUri"`
-	ConnStatus         		string `json:"ConnStatus"` //close,stop,starting,running
+	ConnStatus         		StatusFlag `json:"ConnStatus"`
 	ConnErr            		string `json:"ConnErr"`
 	channelMap         		map[int]*Channel `json:"ChannelMap"`
 	LastChannelID      		int	`json:"LastChannelID"`
@@ -179,12 +179,13 @@ type db struct {
 	maxBinlogDumpPosition 	uint32 `json:"MaxBinlogDumpPosition"`
 	AddTime					int64
 	DBBinlogKey				[]byte `json:"-"`  // 保存 binlog到levelDB 的key
+	lastTransactionTableMap map[string]map[string]bool  `json:"-"` // 最近一个事务里更新了数据表
 }
 
 type DbListStruct struct {
 	Name               		string
 	ConnectUri         		string
-	ConnStatus         		string //close,stop,starting,running
+	ConnStatus         		StatusFlag //close,stop,starting,running
 	ConnErr            		string
 	ChannelCount       		int
 	LastChannelID      		int
@@ -261,7 +262,7 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 	return &db{
 		Name:               	Name,
 		ConnectUri:         	ConnectUri,
-		ConnStatus:         	"close",
+		ConnStatus:         	CLOSED,
 		ConnErr:            	"",
 		LastChannelID:			0,
 		channelMap:         	make(map[int]*Channel, 0),
@@ -276,6 +277,7 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 									[]mysql.EventType{
 										mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
 										mysql.QUERY_EVENT,
+										mysql.XID_EVENT,
 										mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
 										mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
 									},
@@ -284,31 +286,16 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 		serverId:      			serverId,
 		killStatus:				0,
 		AddTime:				AddTime,
+		lastTransactionTableMap:make(map[string]map[string]bool,0),
 	}
 }
-/*
-
-func DelDb(Name string) error{
-	DbLock.Lock()
-	defer DbLock.Unlock()
-	if _,ok := DbList[Name];!ok{
-		return fmt.Errorf(Name+" not exsit")
-	}
-	if DbList[Name].ConnStatus == "close"{
-		delete(DbList,Name)
-		return nil
-	}else{
-		return fmt.Errorf(Name+" ConnStatus is not close")
-	}
-}
-*/
 
 func (db *db) SetServerId(serverId uint32) {
 	db.serverId = serverId
 }
 
 func (db *db) SetReplicateDoDb(dbArr []string) bool {
-	if db.ConnStatus == "close" || db.ConnStatus == "stop" {
+	if db.ConnStatus == CLOSED || db.ConnStatus == STOPPED {
 		for i := 0; i < len(dbArr); i++ {
 			db.replicateDoDb[dbArr[i]] = 1
 		}
@@ -415,7 +402,7 @@ func (db *db) getReplicateDoDbMap() map[string]map[string]uint8 {
 
 func (db *db) Start() (b bool) {
 	db.Lock()
-	if db.ConnStatus != "close" && db.ConnStatus != "stop"{
+	if db.ConnStatus != CLOSED && db.ConnStatus != STOPPED{
 		db.Unlock()
 		return false
 	}
@@ -428,12 +415,12 @@ func (db *db) Start() (b bool) {
 		return
 	}
 	switch db.ConnStatus {
-	case "close":
-		db.ConnStatus = "starting"
+	case CLOSED:
+		db.ConnStatus = STARTING
 		var newPosition uint32 = 0
 		log.Println(db.Name,"Start(),and starting "," getRightBinlogPosition")
 		for i:=0;i<3;i++{
-			if db.ConnStatus == "closing"{
+			if db.ConnStatus == CLOSING{
 				break
 			}
 			newPosition = db.getRightBinlogPosition()
@@ -442,8 +429,8 @@ func (db *db) Start() (b bool) {
 			}
 			time.Sleep(time.Duration(1) * time.Second)
 		}
-		if db.ConnStatus == "closing"{
-			db.ConnStatus = "close"
+		if db.ConnStatus == CLOSING{
+			db.ConnStatus = CLOSED
 			db.ConnErr = "close"
 			break
 		}
@@ -459,7 +446,7 @@ func (db *db) Start() (b bool) {
 			db.binlogDumpPosition = newPosition
 		}
 		reslut := make(chan error, 1)
-		db.binlogDump.DataSource = db.ConnectUri
+		db.binlogDump.UpdateUri(db.ConnectUri)
 		db.binlogDump.CallbackFun = db.Callback
 		for key,_ := range db.tableMap{
 			schemaName,TableName := GetSchemaAndTableBySplit(key)
@@ -469,8 +456,8 @@ func (db *db) Start() (b bool) {
 
 		go db.monitorDump(reslut)
 		break
-	case "stop":
-		db.ConnStatus = "running"
+	case STOPPED:
+		db.ConnStatus = RUNNING
 		log.Println(db.Name+" monitor:","running")
 		db.binlogDump.Start()
 		break
@@ -483,9 +470,9 @@ func (db *db) Start() (b bool) {
 func (db *db) Stop() bool {
 	db.Lock()
 	defer db.Unlock()
-	if db.ConnStatus == "running" {
+	if db.ConnStatus == RUNNING {
 		db.binlogDump.Stop()
-		db.ConnStatus = "stop"
+		db.ConnStatus = STOPPED
 	}
 	return true
 }
@@ -493,10 +480,10 @@ func (db *db) Stop() bool {
 func (db *db) Close() bool {
 	db.Lock()
 	defer db.Unlock()
-	if db.ConnStatus != "stop" && db.ConnStatus != "starting"{
+	if db.ConnStatus != STOPPED && db.ConnStatus != STARTING{
 		return true
 	}
-	db.ConnStatus = "closing"
+	db.ConnStatus = CLOSING
 	db.binlogDump.Close()
 	return true
 }
@@ -513,11 +500,11 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 			switch v.Error() {
 			case "stop":
 				i = 0
-				db.ConnStatus = "stop"
+				db.ConnStatus = STOPPED
 				break
 			case "running":
 				i = 0
-				db.ConnStatus = "running"
+				db.ConnStatus = RUNNING
 				db.ConnErr = "running"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGNORMAL,
@@ -526,11 +513,11 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 				})
 				break
 			case "starting":
-				db.ConnStatus = "starting"
+				db.ConnStatus = STARTING
 				break
 			case "close":
 				log.Println(db.Name+" monitor:", v.Error())
-				db.ConnStatus = "close"
+				db.ConnStatus = CLOSED
 				db.ConnErr = "close"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGERROR,
@@ -756,8 +743,8 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	t := db.tableMap[key]
 	toServerLen := len(t.ToServerList)
 	for _,toServerInfo := range t.ToServerList {
-		if toServerInfo.Status == "running"{
-			toServerInfo.Status = "deling"
+		if toServerInfo.Status == RUNNING{
+			toServerInfo.Status = DELING
 		}
 	}
 	delete(db.tableMap,key)

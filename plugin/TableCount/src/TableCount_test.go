@@ -3,7 +3,6 @@ package src_test
 import "testing"
 
 import (
-	"github.com/brokercap/Bifrost/test/pluginTest"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/TableCount/src"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 )
@@ -12,6 +11,16 @@ var url = "TableCount"
 
 var dbname string = "TestDbName"
 
+var event *pluginTestData.Event
+var SchemaName = "bifrost_test"
+var TableName = "binlog_field_test"
+
+func testBefore()  {
+	event = pluginTestData.NewEvent()
+	event.SetSchema(SchemaName)
+	event.SetTable(TableName)
+}
+
 func getParam() map[string]interface{}{
 	p := make(map[string]interface{},0)
 	p["DbName"] = dbname
@@ -19,8 +28,9 @@ func getParam() map[string]interface{}{
 }
 
 func TestChechUri(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(url);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	if err := myConn.CheckUri();err!= nil{
 		t.Fatal("TestChechUri err:",err)
 	}else{
 		t.Log("TestChechUri success")
@@ -28,41 +38,71 @@ func TestChechUri(t *testing.T){
 }
 
 func TestSetParam(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 func TestInsert(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestInsertData())
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,_,err := myConn.Insert(event.GetTestInsertData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestUpate(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestUpdateData())
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,_,err := myConn.Update(event.GetTestUpdateData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 
 func TestDelete(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestDeleteData())
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,_,err := myConn.Del(event.GetTestDeleteData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 
 func TestQuery(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Insert(pluginTest.GetTestQueryData())
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,_,err := myConn.Query(event.GetTestQueryData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCommit(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Commit()
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(nil,nil)
+	myConn.Open()
+	_,_,err := myConn.Commit(event.GetTestCommitData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 

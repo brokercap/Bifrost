@@ -17,6 +17,7 @@ type CountContent struct {
 	UpdateRows  uint64
 	DeleteRows  uint64
 	DDLCount	uint64
+	CommitCount	uint64
 }
 
 func NewCountContent() *CountContent {
@@ -32,6 +33,7 @@ func ClearCountContent(c *CountContent)  {
 	c.UpdateRows = 0
 	c.DeleteRows = 0
 	c.DDLCount = 0
+	c.CommitCount = 0
 }
 
 type CountContentArr struct {
@@ -105,6 +107,7 @@ const(
 	UPDATE eventType = 2
 	DELETE eventType = 3
 	DDL	   eventType = 4
+	COMMIT eventType = 5
 )
 
 func AddCount(dbname,schameName,tableName string,event eventType,rowsCount int,eventCount bool){
@@ -150,8 +153,10 @@ func AddCount(dbname,schameName,tableName string,event eventType,rowsCount int,e
 		}
 		break
 	case DDL:
-		t1.Content.DDLCount += uint64(rowsCount)
+		t1.Content.DDLCount += 1
 		break
+	case COMMIT:
+		t1.Content.CommitCount += 1
 	default:
 		break
 	}
@@ -254,6 +259,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 		UpdateRows:tableInfo.Content.UpdateRows,
 		DeleteRows:tableInfo.Content.DeleteRows,
 		DDLCount:tableInfo.Content.DDLCount,
+		CommitCount:tableInfo.Content.CommitCount,
 	})
 	tableInfo.TenMinute.Count++
 	if tableInfo.TenMinute.Count > 120 {
@@ -271,6 +277,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 	tableInfo.Hour.Content.UpdateRows += tableInfo.Content.UpdateRows
 	tableInfo.Hour.Content.DeleteRows += tableInfo.Content.DeleteRows
 	tableInfo.Hour.Content.DDLCount += tableInfo.Content.DDLCount
+	tableInfo.Hour.Content.CommitCount += tableInfo.Content.CommitCount
 
 	if DoSlice.DoHourSlice == true {
 		tableInfo.Hour.Data = append(tableInfo.Hour.Data,CountContent{
@@ -282,6 +289,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 			UpdateRows:tableInfo.Hour.Content.UpdateRows,
 			DeleteRows:tableInfo.Hour.Content.DeleteRows,
 			DDLCount:tableInfo.Hour.Content.DDLCount,
+			CommitCount:tableInfo.Hour.Content.CommitCount,
 		})
 		tableInfo.Hour.Count++
 		if tableInfo.Hour.Count > 120 {
@@ -302,6 +310,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 	tableInfo.EightHour.Content.UpdateRows += tableInfo.Content.UpdateRows
 	tableInfo.EightHour.Content.DeleteRows += tableInfo.Content.DeleteRows
 	tableInfo.EightHour.Content.DDLCount += tableInfo.Content.DDLCount
+	tableInfo.EightHour.Content.CommitCount += tableInfo.Content.CommitCount
 
 	if DoSlice.DoEightHourSlice == true {
 		tableInfo.EightHour.Data = append(tableInfo.EightHour.Data,CountContent{
@@ -313,6 +322,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 			UpdateRows:tableInfo.EightHour.Content.UpdateRows,
 			DeleteRows:tableInfo.EightHour.Content.DeleteRows,
 			DDLCount:tableInfo.EightHour.Content.DDLCount,
+			CommitCount:tableInfo.EightHour.Content.CommitCount,
 		})
 		tableInfo.EightHour.Count++
 		if tableInfo.EightHour.Count > 96 {
@@ -333,6 +343,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 	tableInfo.Day.Content.UpdateRows += tableInfo.Content.UpdateRows
 	tableInfo.Day.Content.DeleteRows += tableInfo.Content.DeleteRows
 	tableInfo.Day.Content.DDLCount += tableInfo.Content.DDLCount
+	tableInfo.Day.Content.CommitCount += tableInfo.Content.CommitCount
 
 	if DoSlice.DoDaySlice == true {
 		tableInfo.Day.Data = append(tableInfo.Day.Data,CountContent{
@@ -344,6 +355,7 @@ func doTableFlowCount(tableInfo *CountFlow,NowTime int64,DoSlice *DoSlice) {
 			UpdateRows:tableInfo.Day.Content.UpdateRows,
 			DeleteRows:tableInfo.Day.Content.DeleteRows,
 			DDLCount:tableInfo.Day.Content.DDLCount,
+			CommitCount:tableInfo.Day.Content.CommitCount,
 		})
 		tableInfo.Day.Count++
 		if tableInfo.Day.Count > 144 {

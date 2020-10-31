@@ -26,16 +26,16 @@ var engine  string = "MergeTree()"
 CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,testjson String,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);
 */
 
-var myConn MyPlugin.MyConn
-var conn pluginDriver.ConnFun
+var myConn MyPlugin.Conn
+var conn pluginDriver.Driver
 var event *pluginTestData.Event
 var SchemaName = "bifrost_test"
 var TableName = "binlog_field_test"
 
 func testBefore(){
-	myConn := MyPlugin.MyConn{}
-	conn = myConn.Open(url)
-
+	conn = MyPlugin.NewConn()
+	conn.SetOption(&url,nil)
+	conn.Open()
 	event = pluginTestData.NewEvent()
 	event.SetSchema(SchemaName)
 	event.SetTable(TableName)
@@ -76,8 +76,8 @@ func initDBTablePriString(delTable bool) {
 }
 
 func TestChechUri(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(url);err!= nil{
+	testBefore()
+	if err := conn.CheckUri();err!= nil{
 		t.Fatal("TestChechUri err:",err)
 	}else{
 		t.Log("TestChechUri success")
@@ -97,7 +97,7 @@ func TestGetSchemaTableList(t *testing.T)  {
 
 func TestGetTableFields(t *testing.T)  {
 	c := MyPlugin.NewClickHouseDBConn(url)
-	t.Log(c.GetTableFields("bifrost_test","binlog_field_test"))
+	t.Log(c.GetTableFields("bifrost_test","binlog_field_test_1"))
 }
 
 func getParam(args ...bool) map[string]interface{} {
@@ -196,30 +196,33 @@ func TestCommit(t *testing.T){
 	initDBTable(true)
 	initSyncParam()
 	insertdata := event.GetTestInsertData()
-	conn.Insert(insertdata)
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
+	conn.Insert(insertdata,false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
 
-	conn.Insert(event.GetTestInsertData())
-	conn.Del(event.GetTestDeleteData())
-	conn.Insert(event.GetTestInsertData())
-	_,err2 := conn.Commit()
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Commit(event.GetTestCommitData(),false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
 
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
 
-	conn.Insert(event.GetTestInsertData())
-	conn.Del(event.GetTestDeleteData())
-	conn.Insert(event.GetTestInsertData())
-	conn.Insert(event.GetTestInsertData())
-	conn.Insert(event.GetTestInsertData())
-	_,err2 = conn.Commit()
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Commit(event.GetTestCommitData(),false)
+	_,_,err2 = conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
+	t.Log("success")
 }
 
 func TestCommitPriKeyIsString(t *testing.T){
@@ -227,59 +230,61 @@ func TestCommitPriKeyIsString(t *testing.T){
 	initDBTablePriString(true)
 	initSyncParam()
 	insertdata := event.GetTestInsertData()
-	conn.Insert(insertdata)
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
+	conn.Insert(insertdata,false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
 
-	conn.Insert(event.GetTestInsertData())
-	conn.Del(event.GetTestDeleteData())
-	conn.Insert(event.GetTestInsertData())
-	_,err2 := conn.Commit()
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
 
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
 
-	conn.Insert(event.GetTestInsertData())
-	conn.Del(event.GetTestDeleteData())
-	conn.Insert(event.GetTestInsertData())
-	conn.Insert(event.GetTestInsertData())
-	conn.Insert(event.GetTestInsertData())
-	_,err2 = conn.Commit()
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	conn.Insert(event.GetTestInsertData(),false)
+	_,_,err2 = conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
+	t.Log("success")
 }
 
 func TestReConnCommit(t *testing.T){
 	testBefore()
 	initDBTable(false)
 	initSyncParam()
-	conn.Insert(event.GetTestInsertData())
-	_,err1:=conn.Commit()
+	conn.Insert(event.GetTestInsertData(),false)
+	_,_,err1 := conn.TimeOutCommit()
 	if err1 != nil{
-		log.Println("err1",err1)
+		t.Fatal("err1",err1)
 		return
 	}else{
-		log.Println("insert 1 success")
+		t.Log("insert 1 success")
 	}
 
-	conn.Del(event.GetTestDeleteData())
-	conn.Update(event.GetTestUpdateData())
+	conn.Del(event.GetTestDeleteData(),false)
+	conn.Update(event.GetTestUpdateData(),false)
 	time.Sleep(20 * time.Second)
 	for{
 		time.Sleep(3 * time.Second)
-		_,err2 := conn.Commit()
+		_,_,err2 := conn.TimeOutCommit()
 		if err2 != nil{
-			log.Println("err2:",err2)
+			t.Error("err2:",err2)
 		}else{
 			break
 		}
 	}
-	log.Println("success")
+	t.Log("success")
 }
+
 func TestInsertNullAndChekcData(t *testing.T){
 	testBefore()
 
@@ -288,8 +293,8 @@ func TestInsertNullAndChekcData(t *testing.T){
 	e := pluginTestData.NewEvent()
 	e.SetIsNull(true)
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
-	_,err2 := conn.Commit()
+	conn.Insert(insertdata,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -298,11 +303,12 @@ func TestInsertNullAndChekcData(t *testing.T){
 	dataList := c.GetTableDataList(insertdata.SchemaName,insertdata.TableName,"id="+fmt.Sprint(insertdata.Rows[0]["id"]))
 
 	for k,v := range dataList {
-		log.Println("k:",k)
+		t.Log("k:",k)
 		for key,val := range v{
-			log.Println(key,val)
+			t.Log(key,val)
 		}
 	}
+	t.Log("success")
 }
 
 func TestCommitAndCheckData(t *testing.T){
@@ -312,9 +318,9 @@ func TestCommitAndCheckData(t *testing.T){
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
 	eventData = event.GetTestUpdateData()
-	conn.Update(eventData)
+	conn.Update(eventData,false)
 	//conn.Insert(eventData)
-	_,err2 := conn.Commit()
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -450,23 +456,23 @@ func TestRandDataAndCheck(t *testing.T){
 		switch rand.Intn(3){
 		case 0:
 			eventData = e.GetTestInsertData()
-			conn.Insert(eventData)
+			conn.Insert(eventData,false)
 			break
 		case 1:
 			eventData = e.GetTestUpdateData()
-			conn.Update(eventData)
+			conn.Update(eventData,false)
 			break
 		case 2:
 			eventData = e.GetTestDeleteData()
-			conn.Del(eventData)
+			conn.Del(eventData,false)
 			break
 		case 3:
 			eventData = e.GetTestQueryData()
-			conn.Query(eventData)
+			conn.Query(eventData,false)
 			break
 		}
 	}
-	conn.Commit()
+	conn.TimeOutCommit()
 
 	resultData := make(map[string][]string,0)
 	resultData["ok"] = make([]string,0)
@@ -537,8 +543,8 @@ func TestCommitAndCheckData2(t *testing.T){
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
 	eventData.Rows[0]["testint"] = "1334　"
-	conn.Insert(eventData)
-	_,err2 := conn.Commit()
+	conn.Insert(eventData,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -691,8 +697,8 @@ func TestConn_AutoCreateTableCommit(t *testing.T) {
 	initSyncParamAutoCreateTable()
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
-	conn.Insert(eventData)
-	_,err2 := conn.Commit()
+	conn.Insert(eventData,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -726,8 +732,8 @@ func TestConn_NullNotTransferDefault_CommitAndCheck(t *testing.T)  {
 	initDBTableDefaultNullVal(true)
 	conn.SetParam(getParam(true))
 	eventData := event.GetTestInsertData()
-	conn.Insert(eventData)
-	_,err := conn.Commit()
+	conn.Insert(eventData,false)
+	_,_,err := conn.TimeOutCommit()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -765,3 +771,11 @@ func TestConn_NullNotTransferDefault_CommitAndCheck(t *testing.T)  {
 
 }
 
+func TestNewTableData(t *testing.T) {
+	c := MyPlugin.NewTableData()
+	if c.CommitData[0] == nil {
+		t.Log("test frist 0 index is nil")
+	}
+	c.CommitData = c.CommitData[1:]
+	t.Log("success")
+}

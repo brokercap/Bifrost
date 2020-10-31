@@ -19,14 +19,15 @@ func getParam() map[string]interface{} {
 	return p
 }
 
-func getKafkaUrls() string  {
-	return 	"127.0.0.1:9092"
+func getKafkaUrls() *string  {
+	url :="127.0.0.1:9092"
+	return &url
 }
 
 func TestInsert(t *testing.T)  {
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(getKafkaUrls())
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(getKafkaUrls(),nil)
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
@@ -35,11 +36,12 @@ func TestInsert(t *testing.T)  {
 	t.Log(" insert test start")
 	eventData := e.GetTestInsertData()
 
-	_, err = conn.Insert(eventData)
+	_, _,err = myConn.Insert(eventData,false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_,err = conn.Commit()
+	_,_,err = myConn.Commit(e.GetTestCommitData(),false)
+	myConn.TimeOutCommit()
 
 	if err != nil {
 		t.Fatal(err)

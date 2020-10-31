@@ -74,16 +74,24 @@ func (c *FileQueueController) Update() {
 }
 
 func (c *FileQueueController) GetInfo() {
-	param := c.getParam()
 	result := ResultDataStruct{Status: 0, Msg: "error", Data: nil}
 	defer func() {
 		c.SetJsonData(result)
 		c.StopServeJSON()
 	}()
-	SchemaName := tansferSchemaName(param.SchemaName)
-	TableName := tansferTableName(param.TableName)
-	ToServerInfo := server.GetDBObj(param.DbName).GetTable(SchemaName, TableName).ToServerList[param.Index]
-	if ToServerInfo.ToServerID != param.ToServerId {
+	DbName := c.Ctx.Get("DbName")
+	SchemaName := c.Ctx.Get("SchemaName")
+	TableName := c.Ctx.Get("TableName")
+	SchemaName = tansferSchemaName(SchemaName)
+	TableName = tansferTableName(TableName)
+	Index,_ := c.Ctx.GetParamInt64("Index",0)
+	ToServerId,_ := c.Ctx.GetParamInt64("ToServerId",-1)
+	if DbName == "" || SchemaName == "" || TableName == "" || ToServerId < 0 {
+		result.Msg = "param error!"
+		return 
+	}
+	ToServerInfo := server.GetDBObj(DbName).GetTable(SchemaName, TableName).ToServerList[int(Index)]
+	if ToServerInfo.ToServerID != int(ToServerId) {
 		result.Msg = "ToServerID error"
 		return
 	}

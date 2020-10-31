@@ -120,7 +120,7 @@
                                             <button data-toggle="button" onclick="getFileQueueInfo(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary" type="button" >文件队列信息</button>
                                         {{end}}
                                     </p>
-                                    <div id="{{$toServer.DbName}}_{{$toServer.SchemaName}}_{{$toServer.TableName}}_{{$v.ToServerID}}"></div>
+                                    <div id="{{$toServer.DbName}}_{{$toServer.SchemaName}}_{{$toServer.TableName}}_{{$v.ToServerID}}" class="fileInfoDiv"></div>
                                 </td>
                                 <td>
                                     {{$v.Status}}
@@ -215,6 +215,6 @@
     }
 </script>
 
-<script src="/js/filequeue.js?v1.2.0-beta.03"></script>
+<script src="/js/filequeue.js?v1.6.0"></script>
 
 {{template "footer" .}}

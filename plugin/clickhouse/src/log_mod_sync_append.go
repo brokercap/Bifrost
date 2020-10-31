@@ -8,15 +8,12 @@ import (
 	dbDriver "database/sql/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
+	"fmt"
 )
 
-func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (e error)  {
-	stmt := This.getStmt("insert")
-	if stmt == nil {
-		goto errLoop
-	}
-	defer stmt.Close()
-	for i := 0; i < n; i++ {
+func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
+	var stmt dbDriver.Stmt
+	LOOP: for i := 0; i < n; i++ {
 		vData := list[i]
 		val := make([]dbDriver.Value, 0)
 		l := len(vData.Rows)
@@ -27,6 +24,11 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 					var toV interface{}
 					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
 					if This.err != nil {
+						if This.CheckDataSkip(vData) {
+							This.err = nil
+							continue LOOP
+						}
+						errData = vData
 						goto errLoop
 					}
 					val = append(val, toV)
@@ -39,7 +41,13 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 					for _, v := range This.p.Field {
 						var toV interface{}
 						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
+						This.err = fmt.Errorf("mytest error")
 						if This.err != nil {
+							if This.CheckDataSkip(vData) {
+								This.err = nil
+								continue LOOP
+							}
+							errData = vData
 							goto errLoop
 						}
 						val = append(val, toV)
@@ -51,8 +59,19 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			continue
 			break
 		}
+		if stmt == nil {
+			stmt = This.getStmt("insert")
+			if stmt == nil {
+				goto errLoop
+			}
+		}
 		_, This.conn.err = stmt.Exec(val)
 		if This.conn.err != nil {
+			if This.CheckDataSkip(vData) {
+				This.conn.err = nil
+				continue LOOP
+			}
+			errData = vData
 			This.err = This.conn.err
 		}
 		if This.err != nil {

@@ -665,3 +665,20 @@ func (This *Event) GetTestQueryData() *pluginDriver.PluginDataType{
 	}
 }
 
+func (This *Event) GetTestCommitData() *pluginDriver.PluginDataType{
+	var Rows []map[string]interface{}
+	Rows = make([]map[string]interface{},0)
+
+	This.position+=100
+	return &pluginDriver.PluginDataType{
+		Timestamp 		: uint32(time.Now().Unix()),
+		EventType 		: "sql",
+		Rows            : Rows,
+		Query          	: "COMMIT",
+		SchemaName     	: This.Schema,
+		TableName      	: This.Talbe,
+		BinlogFileNum 	: 10,
+		BinlogPosition 	: This.position,
+	}
+}
+

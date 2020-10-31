@@ -26,14 +26,14 @@ import (
 	"runtime"
 )
 
-func LoadConf(configFile string)  {
-	if configFile == "" {
+func LoadConf(BifrostConfigFile string)  {
+	if BifrostConfigFile == "" {
 		BifrostConfigFile = BifrostDir+"/etc/Bifrost.ini"
-		log.Println("BifrostConfigFile:",BifrostConfigFile)
+		//log.Println("BifrostConfigFile:",BifrostConfigFile)
 	}else {
 		if runtime.GOOS != "windows" {
-			if configFile[0:1] != "/" {
-				BifrostConfigFile = BifrostDir + configFile
+			if BifrostConfigFile[0:1] != "/" {
+				BifrostConfigFile = BifrostDir + BifrostConfigFile
 			}
 		}
 	}

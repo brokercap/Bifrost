@@ -31,7 +31,7 @@ type Channel struct {
 	chanName         chan mysql.EventReslut
 	MaxThreadNum     int // 消费通道的最大线程数
 	CurrentThreadNum int
-	Status           string //stop ,starting,running,wait
+	Status           StatusFlag //stop ,starting,running,wait
 	db               *db
 	countChan		 chan  *count.FlowCount
 }
@@ -42,7 +42,7 @@ func NewChannel(MaxThreadNum int,Name string, db *db) *Channel {
 		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*config.ChannelQueueSize),
 		MaxThreadNum:     		MaxThreadNum,
 		CurrentThreadNum: 		0,
-		Status:           		"stop",
+		Status:           		STOPPED,
 		db:               		db,
 	}
 }
@@ -83,10 +83,10 @@ func (Channel *Channel) Start() chan mysql.EventReslut {
 	Channel.Lock()
 	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
-	if Channel.Status == "running"{
+	if Channel.Status == RUNNING{
 		return Channel.chanName
 	}
-	Channel.Status = "running"
+	Channel.Status = RUNNING
 	for i := 0; i < Channel.MaxThreadNum; i++ {
 		go Channel.channelConsume()
 	}
@@ -102,14 +102,14 @@ func (Channel *Channel) Stop() {
 	Channel.Lock()
 	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"stop")
-	Channel.Status = "stop"
+	Channel.Status = STOPPED
 }
 
 func (Channel *Channel) Close() {
 	Channel.Lock()
 	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"close")
-	Channel.Status = "close"
+	Channel.Status = CLOSED
 }
 
 func (This *Channel) SetChannelMaxThreadNum(n int) {
@@ -136,5 +136,5 @@ func (c *Channel) channelConsume() {
 			c.Unlock()
 		}
 	}()
-	NewConsumeChannel(c).consume_channel()
+	NewConsumeChannel(c).consumeChannel()
 }

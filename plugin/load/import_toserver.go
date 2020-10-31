@@ -14,4 +14,3 @@ import (
 	_ "github.com/brokercap/Bifrost/plugin/mysql/src"
 	_ "github.com/brokercap/Bifrost/plugin/TableCount/src"
 )
-

@@ -53,7 +53,7 @@ ___         ___                   _
 func printLogo(){
 	var IpAndPort2 string
 	//IpAndPort2 = strings.Replace(IpAndPort,"0.0.0.0","127.0.0.1",-1)
-	if config.GetConfigVal("Bifrostd","tls") == "true"{
+	if config.TLS {
 		IpAndPort2 = "https://"+config.Listen
 	}else{
 		IpAndPort2 = "http://"+config.Listen
@@ -130,8 +130,6 @@ func main() {
 		if !isDaemoProcess {
 			filePath,_:=filepath.Abs(os.Args[0])  //将命令行参数中执行文件路径转换成可用路径
 			args:=append([]string{filePath},os.Args[1:]...)
-			fmt.Println(filePath)
-			fmt.Println(args)
 			os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
 			return
 		}

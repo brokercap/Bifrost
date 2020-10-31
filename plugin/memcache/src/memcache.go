@@ -7,34 +7,17 @@ import (
 	"encoding/json"
 )
 
-const VERSION  = "v1.3.0"
-const BIFROST_VERION = "v1.3.0"
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
 
 func init(){
-	driver.Register("memcache",&MyConn{},VERSION,BIFROST_VERION)
+	driver.Register("memcache",NewConn,VERSION,BIFROST_VERION)
 }
 
-type MyConn struct {}
-
-func (MyConn *MyConn) Open(uri string) driver.ConnFun{
-	return newConn(uri)
-}
-
-func (MyConn *MyConn) GetUriExample() string{
-	return "127.0.0.1:11211"
-}
-
-func (MyConn *MyConn) CheckUri(uri string) error{
-	c:= newConn(uri)
-	if c.err != nil{
-		return c.err
-	}
-	c.Close()
-	return nil
-}
 
 type Conn struct {
-	uri    		string
+	driver.PluginDriverInterface
+	uri    		*string
 	status 		string
 	conn   		*memcache.Client
 	err    		error
@@ -49,12 +32,34 @@ type PluginParam struct {
 }
 
 
-func newConn(uri string) *Conn{
+func NewConn() driver.Driver{
 	f := &Conn{
-		uri:uri,
+		status:"close",
 	}
-	f.Connect()
 	return f
+}
+
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.uri = uri
+	return
+}
+
+func (This *Conn) Open() error{
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) GetUriExample() string{
+	return "127.0.0.1:11211"
+}
+
+func (This *Conn) CheckUri() error{
+	This.Connect()
+	if This.err != nil{
+		return This.err
+	}
+	This.Close()
+	return nil
 }
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
@@ -84,16 +89,9 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 	}
 }
 
-func (This *Conn) GetConnStatus() string {
-	return This.status
-}
-
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
-}
 
 func (This *Conn) Connect() bool {
-	This.conn = memcache.New(This.uri)
+	This.conn = memcache.New(*This.uri)
 	if This.conn == nil {
 		This.err = fmt.Errorf("memcache New failed",This.uri)
 		return false
@@ -113,12 +111,8 @@ func (This *Conn) ReConnect() bool {
 	return  true
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
-	return true
+	return false
 }
 
 func (This *Conn) getKeyVal(data *driver.PluginDataType,index int) string {
@@ -129,11 +123,11 @@ func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
 	return fmt.Sprint(driver.TransfeResult(This.p.ValConfig,data,index))
 }
 
-func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	return This.Update(data)
+func (This *Conn) Insert(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	return This.Update(data,retry)
 }
 
-func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Update(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error){
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -151,12 +145,12 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Del(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error){
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -165,15 +159,15 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) 
 	err = This.conn.Delete(Key)
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+func (This *Conn) Query(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error){
+	return nil,nil,nil
 }
 
-func (This *Conn) Commit() (*driver.PluginBinlog,error){
-	return nil,nil
+func (This *Conn) Commit(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error){
+	return data,nil,nil
 }

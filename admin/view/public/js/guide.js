@@ -46,10 +46,10 @@ function GetUrlRelativePath()
 
 var gruidBool = false;
 
-if(document.URL.indexOf("/db/list") != -1){
+if(document.URL.indexOf("/db/index") != -1){
     DbSourceGruid();
     gruidBool = true;
-}else if(document.URL.indexOf("/toserver/list") != -1){
+}else if(document.URL.indexOf("/toserver/index") != -1){
     ToserverListGruid();
     gruidBool = true;
 }else if(document.URL.indexOf("/db/detail") != -1){

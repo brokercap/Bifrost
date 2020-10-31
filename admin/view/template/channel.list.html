@@ -49,11 +49,11 @@
                             {{if eq $v.Status "running"}}
                                 <button data-toggle="button" class="btn-sm btn-warning stopChannelBtn" onclick="DoChangeChannelStatus(this,'stop')" type="button" >Stop</button>
                             {{end}}
-                            {{if eq $v.Status "close"}}
+                            {{if eq $v.Status "closed"}}
                                 <button data-toggle="button" class="btn-sm btn-danger delChannelBtn" onclick="DoChangeChannelStatus(this,'del')" type="button" >Del</button>
                                 <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeChannelStatus(this,'start')" type="button" >Start</button>
                             {{end}}
-                            {{if eq $v.Status "stop"}}
+                            {{if eq $v.Status "stopped"}}
                                 <button data-toggle="button" class="btn-sm btn-danger closeChannelBtn" onclick="DoChangeChannelStatus(this,'close')" type="button" >Close</button>
                                 <button data-toggle="button" class="btn-sm btn-primary startChannelBtn" onclick="DoChangeChannelStatus(this,'start')" type="button" >Start</button>
                             {{end}}

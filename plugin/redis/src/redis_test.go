@@ -5,14 +5,21 @@ import (
 	"log"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/redis/src"
-	"github.com/brokercap/Bifrost/test/pluginTest"
-	//"github.com/garyburd/redigo/redis"
 	"github.com/go-redis/redis"
 	"fmt"
 	"strings"
 )
 
 var url string = "10.40.2.41:6379"
+var event *pluginTestData.Event
+var SchemaName = "bifrost_test"
+var TableName = "binlog_field_test"
+
+func testBefore()  {
+	event = pluginTestData.NewEvent()
+	event.SetSchema(SchemaName)
+	event.SetTable(TableName)
+}
 
 var redisConn *redis.Client
 func getParam() map[string]interface{}{
@@ -37,9 +44,11 @@ func initRedisConn() error{
 }
 
 func TestChechUri(t *testing.T){
+	testBefore()
 	var url string = "127.0.0.1:6379"
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(url);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	if err := myConn.CheckUri();err!= nil{
 		log.Println("TestChechUri err:",err)
 	}else{
 		log.Println("TestChechUri success")
@@ -47,62 +56,105 @@ func TestChechUri(t *testing.T){
 }
 
 func TestSetParam(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 func TestInsert(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
-	conn.Insert(pluginTest.GetTestInsertData())
-	log.Println("test over")
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_,_,err = myConn.Insert(event.GetTestInsertData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 func TestUpate(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
-	conn.Insert(pluginTest.GetTestUpdateData())
-	log.Println("test over")
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_,_,err = myConn.Update(event.GetTestUpdateData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 
 func TestDelete(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
-	conn.Insert(pluginTest.GetTestDeleteData())
-	log.Println("test over")
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_,_,err = myConn.Del(event.GetTestDeleteData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 
 func TestQuery(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
-	conn.Insert(pluginTest.GetTestQueryData())
-	log.Println("test over")
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_,_,err = myConn.Query(event.GetTestQueryData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 func TestCommit(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.Commit()
-	log.Println("test over")
+	testBefore()
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err := myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_,_,err = myConn.Commit(event.GetTestCommitData(),false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
 }
 
 func TestCheckData(t *testing.T){
-
+	testBefore()
 	var err error
 	err = initRedisConn()
 	if err!=nil{
 		t.Fatal(err)
 	}
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	_ ,err = myConn.SetParam(getParam())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	e := pluginTestData.NewEvent()
 
@@ -113,7 +165,7 @@ func TestCheckData(t *testing.T){
 
 	insertData := e.GetTestInsertData()
 	//log.Println(insertData)
-	_, err = conn.Insert(insertData)
+	_,_, err = myConn.Insert(insertData,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -145,7 +197,7 @@ func TestCheckData(t *testing.T){
 	t.Log("update test start")
 
 	updateData := e.GetTestUpdateData()
-	_, err = conn.Update(updateData)
+	_,_, err = myConn.Update(updateData,false)
 	if err != nil{
 		t.Fatal(err)
 	}
@@ -175,7 +227,7 @@ func TestCheckData(t *testing.T){
 
 	deleteData := e.GetTestDeleteData()
 
-	_, err = conn.Del(deleteData)
+	_,_, err = myConn.Del(deleteData,false)
 	if err != nil{
 		t.Fatal(err)
 	}

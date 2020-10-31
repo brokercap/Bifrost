@@ -64,7 +64,7 @@ function formatDate(timestamp) {
                                                     <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
-                                                    	{{if eq $v.ConnStatus "close"}}
+                                                    	{{if eq $v.ConnStatus "closed"}}
                                                         	{{if ne $v.ConnErr "running"}}
                                                             	{{if eq $v.ConnErr ""}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
@@ -80,7 +80,7 @@ function formatDate(timestamp) {
                                                         {{if eq $v.ConnStatus "running"}}
                                                         <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
                                                         {{end}}
-                                                        {{if eq $v.ConnStatus "stop"}}
+                                                        {{if eq $v.ConnStatus "stopped"}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         {{end}}
@@ -99,7 +99,7 @@ function formatDate(timestamp) {
                                                         <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
                                                         <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
 
-                                                    {{if eq $v.ConnStatus "close"}}
+                                                    {{if eq $v.ConnStatus "closed"}}
                                                     {{if  eq $v.ConnErr ""}}
                                                         <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
                                                     {{else if eq $v.ConnErr "close"}}
@@ -202,7 +202,7 @@ function formatDate(timestamp) {
 
                                 <p><span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span></p>
                                 <p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
-                                <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限</span></p>
+                                <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限(不要勾选 验证是否有足够权限 选项)</span></p>
                                 <p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
                                 <p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
                             </div>
