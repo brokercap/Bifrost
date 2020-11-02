@@ -43,7 +43,7 @@ func LoadConf(BifrostConfigFile string)  {
 func InitParam(){
 
 	// 监听端口
-	Listen := GetConfigVal("Bifrostd","listen")
+	Listen = GetConfigVal("Bifrostd","listen")
 	if Listen == ""{
 		Listen = "0.0.0.0:21036"
 	}
