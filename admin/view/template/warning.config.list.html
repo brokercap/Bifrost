@@ -227,22 +227,14 @@ $(".WarningConfigDelBtn").click(
             return false;
         }
         var url = "/warning/config/del";
-        $.post(
-            url,
-            { Id: $(this).attr("id")},
-            function(data,status){
-                if( status != 'success' ){
-                    alert("reqeust error, reqeust status : "+status);
-                    return false;
-                }
-                if(data.status != 1){
-                    alert(data.msg);
-                    return false;
-                }
-                trObj.remove();
-            },
-            'json'
-        );
+        var callbackFun = function(data){
+            if(data.status != 1){
+                alert(data.msg);
+                return false;
+            }
+            trObj.remove();
+        }
+        Ajax("POST",url,{ Id: $(this).attr("id")},callbackFun,false);
     }
 );
 
