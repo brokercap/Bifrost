@@ -90,6 +90,7 @@
                                 <th>PluginName</th>
                                 <th>ToServerKey</th>
                                 <th>Position</th>
+                                <th>PluginParam</th>
                                 <th>Status</th>
                                 <th>Error</th>
                                 <th>ErrorWaitData</th>
@@ -121,6 +122,11 @@
                                         {{end}}
                                     </p>
                                     <div id="{{$toServer.DbName}}_{{$toServer.SchemaName}}_{{$toServer.TableName}}_{{$v.ToServerID}}" class="fileInfoDiv"></div>
+                                </td>
+                                <td width="20%">
+                                    {{range $pKey, $pVal := $v.PluginParam}}
+                                    <p>{{$pKey}} : {{$pVal}}</p>
+                                    {{end}}
                                 </td>
                                 <td>
                                     {{$v.Status}}
