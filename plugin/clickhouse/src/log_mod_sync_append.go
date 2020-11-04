@@ -8,7 +8,6 @@ import (
 	dbDriver "database/sql/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
-	"fmt"
 )
 
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
@@ -41,7 +40,6 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 					for _, v := range This.p.Field {
 						var toV interface{}
 						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
-						This.err = fmt.Errorf("mytest error")
 						if This.err != nil {
 							if This.CheckDataSkip(vData) {
 								This.err = nil
