@@ -30,7 +30,7 @@ function doGetPluginParam(){
             var ck_field_name = $(this).find("input[name=ck_field_name]").val();
             //var ck_field_type = $(this).find("input[name=ck_field_name]").prop("ck_field_type");
             var ck_field_type = ckFieldDataMap[ck_field_name];
-            console.log("ck_field_name_input_:" + ck_field_name + " ck_field_type:" + ck_field_type);
+            //console.log("ck_field_name_input_:" + ck_field_name + " ck_field_type:" + ck_field_type);
             var mysql_field_name = $(this).find("input[name=mysql_field_name]").val();
 
             var d = {};

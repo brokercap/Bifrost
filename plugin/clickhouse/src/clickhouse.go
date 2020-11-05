@@ -607,15 +607,21 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n in
 		}
 		This.p.Field = p.Field
 		This.p.ckDatakey = p.CkSchemaAndTable
-		This.conn.conn.Begin()
+		var tx driver.Tx
+		tx,This.conn.err = This.conn.conn.Begin()
+		if This.conn.err != nil {
+			This.err = This.conn.err
+		}
 		errData = This.CommitLogMod_Append(data, len(data))
-		if This.err != nil {
-			This.conn.conn.Rollback()
+		//假如连接本身有异常的情况下,则执行 rollback
+		if This.conn.err != nil {
+			tx.Rollback()
+			This.err = This.conn.err
 			break
 		}
-		This.conn.err = This.conn.conn.Commit()
-		This.err = This.conn.err
 		if This.err != nil {
+			// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
+			This.conn.err = tx.Commit()
 			break
 		}
 	}
@@ -624,7 +630,8 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n in
 
 // 非自动创建表的提交
 func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
-	_, This.conn.err = This.conn.conn.Begin()
+	var tx driver.Tx
+	tx,This.conn.err = This.conn.conn.Begin()
 	if This.conn.err != nil {
 		return
 	}
@@ -640,14 +647,15 @@ func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType,n int
 		break
 	}
 	if This.conn.err != nil {
+		tx.Rollback()
 		This.err = This.conn.err
-	}
-	if This.err != nil {
-		This.conn.conn.Rollback()
 		return
 	}
-	This.conn.err = This.conn.conn.Commit()
-	This.err = This.conn.err
+	if This.err != nil {
+		// 假如是不是连接错误的情况下，进行 Commit提交，因为rollback 会造成连接自身异常，下一次循环会进行多余的重连错误
+		This.conn.err = tx.Commit()
+		return
+	}
 	return
 }
 
@@ -658,8 +666,13 @@ func (This *Conn) Skip (SkipData *pluginDriver.PluginDataType) error {
 }
 
 func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
-	if This.p.SkipBinlogData != nil && This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition == data.BinlogPosition {
-		return true
+	if This.p.SkipBinlogData != nil {
+		if This.p.SkipBinlogData.BinlogFileNum > data.BinlogFileNum {
+			return true
+		}
+		if This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition >= data.BinlogPosition {
+			return true
+		}
 	}
 	return false
 }
