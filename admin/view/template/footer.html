@@ -12,7 +12,15 @@
 
 </body>
 </html>
-
+<script type="text/javascript">
+    $(function(){
+        $(":text").change(
+                function(){
+                    $(this).val($.trim($(this).val()));
+                }
+        );
+    });
+</script>
 <link href="/js/plugins/chardin.js/chardinjs.css" rel="stylesheet">
 <script src="/js/plugins/chardin.js/chardinjs.js?v0.2.0"></script>
 <script src="/js/guide.js?v1.2.1_20200516"></script>
