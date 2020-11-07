@@ -650,7 +650,12 @@ func (This *Conn) closeStmt0(){
 
 func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
 	if This.p.SkipBinlogData != nil && This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition == data.BinlogPosition {
-		return true
+		if This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition >= data.BinlogPosition {
+			return true
+		}
+		if This.p.SkipBinlogData.BinlogFileNum > data.BinlogFileNum {
+			return true
+		}
 	}
 	return false
 }
