@@ -132,7 +132,12 @@
                                     {{$v.Status}}
                                 </td>
                                 <td>{{$v.Error}}</td>
-                                <td>{{$v.ErrorWaitData}}</td>
+                                <td>
+                                {{if $v.ErrorWaitData }}
+                                    <p>{{$v.ErrorWaitData}}</p>
+                                    <p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,{{$v.ToServerID}},{{$k}})' type='button'>Skip</button></p>
+                                {{end}}
+                                </td>
                                 <td>
                                     <p><a href="/db/detail?DbName={{$toServer.DbName}}&schema={{$toServer.SchemaName}}&TableName={{$toServer.TableName}}">
                                     <button data-toggle="button" class="btn-sm btn-primary" type="button" >Detail</button>
@@ -218,6 +223,24 @@
         };
         var ajaxParam = {DbName:DbName,SchemaName:SchemaName,TableName:TableName,Index:Index,ToServerId:ToServerId};
         Ajax("POST",url, ajaxParam,callback,true);
+    }
+
+    function DealWaitErr(obj,ToServerID,index){
+        var thisButton = $(obj);
+        var trChildObj = $(obj).parent().parent().parent("tr").children();
+        var DbName = trChildObj.eq(1).text();
+        var SchemaName = trChildObj.eq(2).text();
+        var TableName = trChildObj.eq(3).text();
+        var url = "/table/toserver/deal";
+        var callback = function (dataResult) {
+            if(!dataResult.status){
+                alert(dataResult.msg);
+                return false;
+            }
+            alert("提交 Skip 成功，请刷界面查看结果！");
+            $(thisButton).parent().parent().html("");
+        };
+        Ajax("POST",url,{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:parseInt(ToServerID),Index:parseInt(index)},callback,false);
     }
 </script>
 
