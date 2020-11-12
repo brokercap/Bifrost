@@ -5,6 +5,7 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"log"
 	"fmt"
+	"strconv"
 )
 
 func NewMysqlDBConn(uri string) *mysqlDB {
@@ -172,13 +173,13 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 		if dest[8] == nil{
 			NUMERIC_PRECISION 	= nil
 		}else{
-			t := dest[8].(uint64)
+			t,_ := strconv.ParseUint(fmt.Sprint(dest[8]), 10, 64)
 			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
 			NUMERIC_SCALE 	= nil
 		}else{
-			t := dest[9].(uint64)
+			t,_ := strconv.ParseUint(fmt.Sprint(dest[9]), 10, 64)
 			NUMERIC_SCALE 	= &t
 		}
 
