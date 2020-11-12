@@ -1,80 +1,64 @@
-## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.6.x)](https://travis-ci.org/brokercap/Bifrost)
-[![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
+## Bifrost ---- A heterogeneous middleware which can synchronize MySQL binlog data To Redis,MongoDB,ClickHouse...
 
+##### *Real time data synchronization, only use mouse .....*
 
-##### 漫威里的彩虹桥可以将 雷神 送到 阿斯加德 和 地球
+[中文](https://github.com/brokercap/Bifrost/blob/v1.6.x/README.CN.MD)
 
+Binary [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)
 
-#### 而这个 Bifrost 可以将 你 MySQL 里的数据 <font color="#F00">全量</font> , <font color="#F00">实时</font>的同步到 :
+Source: [Github](https://github.com/brokercap/Bifrost/)  , [Gitee](https://gitee.com/jc3wish/Bifrost)
+
+Your star is the biggest support for Bifrost!!!
+
+*Bifrsot* Support plugin, for example:
 
 * Redis
-* MongoDB
-* ClickHouse
-* MySQL
-* Memcahe
+* Memcache
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
+* Mongodb
+* ClickHouse
+* MySQL
+* [Http](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
 
 ---
 
-#### **WIKI** : [https://wiki.xbifrost.com](https://wiki.xbifrost.com)
+#### **WIKI** : [https://wiki.xbifrost.com/en](https://wiki.xbifrost.com/en)
 
 ----
 
+#### Online experience
 
-#### Bifrost 特点
+http://www.xbifrost.com/demo/
 
-* 支持 MySQL 所有存储类型
-
-* **界面化**动态灵活配置不同的数据表及目标库
-
-* 多数据源,**多种目标库**支持
-
-* 同时支持 **增量** 及 **全量** 数据同步
-
-* 一个Binlog解析线程,多个目标库**并行同步**
-
-* 宕机后重启自动恢复配置,位点精确控制
-
-* 支持自定义插件开发，动态加载
-
-* 支持 Email 及 微信企业号等**监控报警**功能
-
-* 提供第三方监控平台访问接口(Http Basic验证)
-
-* 支持对 Null 的解析，但对 Null 的支持程度，取决于插件的支持，如果有 Null 数据，请查阅 相关插件文档
-
-#### Bifrost在线界面体验
-
-https://www.xbifrost.com/demo/goto.html
-
-用户名： Bifrost
-
-密码  :  Bifrost123
-
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/bifrost.png)
+![image](/images/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/diagram.png)
+![image](/images/diagram.png)
 
 
+### Points
 
 
-#### Bifrost 还不足的地方
+* Support all save types of MySQL
 
-* 支持批量刷数据的插件，在数据同步异常的情况下，不支持错过当前数据同步功能，例如： ClickHouse,Kafka
+* Interface **dynamics** can dispose different data sheet and target database flexibly
 
-* datetime,timestamp 解析还不支持精确到毫秒,毫秒部分将会自动被丢弃
+* Supported by various data sources and target databases
+
+* Supported **FULL** AND **Increment**
+
+* Supported Email AND Wechat **warning**
+
+* Supported **Flow** display
 
 
-#### MySQL 版本（经过测试）
+### MySQL version(after test)
 
 * 5.1.73
 
@@ -84,39 +68,49 @@ https://www.xbifrost.com/demo/goto.html
 
 * 5.7.18
 
-* 8.0.21 (用户密码验证需要采用 mysql_native_password 方式)
+* 8.0.11 (mysql-native-password)
 
 
-#### 安装
+### Install
 
-##### 编译
+##### Compile
 
-```sh
+download Bifrost Source
 
-git clone https://github.com/brokercap/Bifrost.git
+```
+git clone git clone https://github.com/brokercap/Bifrost.git
 
-make install prefix=./target
+./build.sh linux
+
+./build.sh windows
+
+./build.sh freebsd
+
+./build.sh darwin
 ```
 
-##### 二进制文件安装
-`````sh
+After compiling, the corresponding platform name folder will be created in the tags directory,
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.5.2-release/bifrost_v1.5.2-release_Linux-amd64-bin.tar.gz
+##### Binary
 
-tar -zxvf bifrost_v1.5.2-release_Linux-amd64-bin.tar.gz
+```
+wget https://github.com/brokercap/Bifrost/releases/download/v1.6.0-beta.02/bifrost_v1.6.0-beta.02_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.5.2-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+tar -zxvf bifrost_v1.6.0-beta.02_Linux-amd64-bin.tar.gz
 
-`````
+cd bifrost_v1.6.0-beta.02_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
-##### 启动
+```
+
+
+##### Start
 
 `````shell
 ./Bifrost-server start
 
 `````
 
-##### 停止
+##### Stop
 
 `````shell
 ./Bifrost-server stop
@@ -124,32 +118,29 @@ cd bifrost_v1.5.2-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 `````
 
 
-##### 界面管理
+##### manager
 
 https://127.0.0.1:21036
 
-用户名和密码是在 etc/Bifrost.ini 配置文件中配置的
-
-默认用户名和密码
-
-用户名：Bifrost
-
-密码：Bifrost123
+Default user name : Bifrost
 
 
-##### Docker启动
+Default user password : Bifrost123
+
+
+##### Docker
 
 `````shell
 docker pull jc3wish/bifrost
 
 mkdir -p /data/BifrostData
 
-docker run -d -p21036:21036 -v /etc/localtime:/etc/localtime -v /data/BifrostData:/linux/data jc3wish/bifrost
+docker run -d -p21036:21036 -v /data/BifrostData:/linux/data jc3wish/bifrost
 
 `````
 
 
-##### 配置
+##### Configuration
 `````sh
 
 vim Bifrost.ini
@@ -177,7 +168,7 @@ listen=0.0.0.0:21036
 data_dir=./
 
 #设置同步给第三方服务的队列大小，默认5000
-toserver_queue_size=10000
+toserver_queue_size=5000
 
 #通道队列的大小，默认1000
 channel_queue_size=1000
@@ -193,15 +184,6 @@ tls=true
 tls_key_file=./etc/server.key
 tls_crt_file=./etc/server.crt
 
-#是否开启文件队列功能 true|false
-file_queue_usable=true
-
-#统计是否启文件队列的时间，单位毫秒
-file_queue_usable_count_time_diff=5000
-
-#file_queue_usable_count_time_diff 时间内内存队列被挤满的次数
-file_queue_usable_count=10
-
 #采用什么方式存储,默认文件方式
 meta_storage_type=redis
 
@@ -211,28 +193,19 @@ meta_storage_path=127.0.0.1:6379
 #用于区别实例的名字
 cluster_name=bifrostTestClusterName
 
-#是否开启文件队列功能 true|false
-file_queue_usable=true
-
-#统计是否启文件队列的时间，单位毫秒
-file_queue_usable_count_time_diff=5000
-
-#file_queue_usable_count_time_diff 时间内内存队列被挤满的次数
-file_queue_usable_count=10
-
-#在没有数据的情况下,间隔多久提交一次插件,单位 秒
-plugin_commit_timeout=5
-
-#在同步出错的情况下,每2次重试之后 间隔多久再重试 ,单位 秒
-plugin_sync_retry_time=5
-
 `````
 
-##### 生成https证书
+##### build https certificate
 
-[参考证书生成](https://wiki.xbifrost.com/install/https_certificate/)
+[example](https://github.com/brokercap/Bifrost/wiki/HTTPS%E8%AF%81%E4%B9%A6)
 
-### 感谢相关依赖包提供者
+
+
+### Manager doc
+
+[Bifrost](http://www.xbifrost.com/)
+
+### Thank you to the relevant Elaine package provider
 
 - github.com/gmallard/stompngo
 - github.com/hprose/hprose-golang
@@ -246,13 +219,4 @@ plugin_sync_retry_time=5
 
 ### QQ群号： 70331601
 
-<img src="https://github.com/brokercap/Bifrost/blob/master/qq.jpg" width="200" alt="qq群"/>
-
-### 捐赠
-
-<table>
-    <tr>
-        <td><img src="https://wiki.xbifrost.com/images/donate/alipay.jpeg" width="200"></td>
-        <td><img src="https://wiki.xbifrost.com/images/donate/weixin.jpeg" width="200"></td>
-    </tr>
-</table>
+<img src="/images/qq.jpg" width="250" alt="qq群"/>
