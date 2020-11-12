@@ -546,7 +546,11 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 		This.ReConnect()
 	}
 	if This.conn.err != nil {
+		log.Println(" This.conn.err:", This.conn.err)
 		return nil,nil, This.conn.err
+	}
+	if This.err != nil {
+		log.Println("This.err:",This.err)
 	}
 	n := len(This.p.Data.Data)
 	if n == 0 {
@@ -619,9 +623,9 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n in
 			This.err = This.conn.err
 			break
 		}
+		// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
+		This.conn.err = tx.Commit()
 		if This.err != nil {
-			// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
-			This.conn.err = tx.Commit()
 			break
 		}
 	}
@@ -651,11 +655,7 @@ func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType,n int
 		This.err = This.conn.err
 		return
 	}
-	if This.err != nil {
-		// 假如是不是连接错误的情况下，进行 Commit提交，因为rollback 会造成连接自身异常，下一次循环会进行多余的重连错误
-		This.conn.err = tx.Commit()
-		return
-	}
+	This.conn.err = tx.Commit()
 	return
 }
 
