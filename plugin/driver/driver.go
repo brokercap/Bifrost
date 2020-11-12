@@ -135,11 +135,16 @@ func CheckUri(name string,uri *string) error{
 }
 
 func TransfeResult(val string, data *PluginDataType,rowIndex int) interface{} {
-	if data == nil || data.Rows == nil {
+	if data == nil {
 		return nil
 	}
 	p := reqTagAll.FindAllStringSubmatch(val, -1)
-	n := len(data.Rows) - 1
+	var n int
+	if data.Rows == nil {
+		n = -1
+	}else{
+		n = len(data.Rows) - 1
+	}
 	for _, v := range p {
 		switch v[1] {
 		case "TableName":
