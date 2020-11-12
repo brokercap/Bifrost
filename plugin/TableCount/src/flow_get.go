@@ -78,17 +78,17 @@ func GetFlow(flowType string,dbname,schameName,tableName string) (data []CountCo
 	t.RLock()
 	defer t.RUnlock()
 	if _,ok := t.dbMap[dbname];!ok{
-		err = fmt.Errorf(dbname+" not exsit")
+		err = fmt.Errorf("dbname:"+dbname+" not exsit")
 		return
 	}
 	db := t.dbMap[dbname]
 	if _,ok := db.schemaMap[schameName];!ok{
-		err = fmt.Errorf(schameName+" not exsit")
+		err = fmt.Errorf("schameName:"+schameName+" not exsit")
 		return
 	}
 
 	if _,ok := db.schemaMap[schameName][tableName];!ok{
-		err = fmt.Errorf(tableName+" not exsit")
+		err = fmt.Errorf("tableName:"+tableName+" not exsit")
 		return
 	}
 
@@ -118,12 +118,12 @@ func GetFlowBySchema(flowType string,dbname,schameName string) (data []CountCont
 	t.RLock()
 	defer t.RUnlock()
 	if _,ok := t.dbMap[dbname];!ok{
-		err = fmt.Errorf(dbname+" not exsit")
+		err = fmt.Errorf("dbname:"+dbname+" not exsit")
 		return
 	}
 	db := t.dbMap[dbname]
 	if _,ok := db.schemaMap[schameName];!ok{
-		err = fmt.Errorf(schameName+" not exsit")
+		err = fmt.Errorf("schameName:"+ schameName+" not exsit")
 		return
 	}
 
@@ -166,7 +166,7 @@ func GetFlowByDbName(flowType string,dbname string) (data []CountContent,err err
 	t.RLock()
 	defer t.RUnlock()
 	if _,ok := t.dbMap[dbname];!ok{
-		err = fmt.Errorf(dbname+" not exsit")
+		err = fmt.Errorf("dbname:"+dbname+" not exsit")
 		return
 	}
 	db := t.dbMap[dbname]

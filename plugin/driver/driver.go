@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"runtime/debug"
 	"sync"
 	"fmt"
 	"regexp"
@@ -12,7 +13,7 @@ import (
 	"strconv"
 )
 
-const API_VERSION  = "v1.3"
+const API_VERSION  = "v1.6"
 
 const RegularxEpression  = `\{\$([a-zA-Z0-9\-\_\[\]\'\"]+)\}`
 const RegularxEpressionKey  = `([a-zA-Z0-9\-\_]+)`
@@ -40,34 +41,22 @@ func GetApiVersion() string{
 	return API_VERSION
 }
 
+type NewDriver func() Driver
+
 type Driver interface {
-	Open(uri string) ConnFun
-	GetUriExample() string
-	CheckUri(uri string) error
-}
-
-type ConnFun interface {
-	GetConnStatus() string
-	SetConnStatus(status string)
-	Connect() bool
-	ReConnect() bool
-	HeartCheck()
+	SetOption(uri *string,param map[string]interface{})
+	Open() error
 	Close() bool
-	Insert(data *PluginDataType) (*PluginBinlog,error) //binlog位点，处理了多少条数据,错误信息
-	Update(data *PluginDataType) (*PluginBinlog,error)
-	Del(data *PluginDataType) (*PluginBinlog,error)
-	Query(data *PluginDataType) (*PluginBinlog,error)
+	GetUriExample() string
+	CheckUri() error
+	Insert(data *PluginDataType,retry bool) (*PluginDataType,*PluginDataType,error) //binlog位点，处理了多少条数据,错误信息
+	Update(data *PluginDataType,retry bool) (*PluginDataType,*PluginDataType,error)
+	Del(data *PluginDataType,retry bool) (*PluginDataType,*PluginDataType,error)
+	Query(data *PluginDataType,retry bool) (*PluginDataType,*PluginDataType,error)
+	Commit(data *PluginDataType,retry bool) (*PluginDataType,*PluginDataType,error)
 	SetParam(p interface{})(interface{},error)
-	Commit() (*PluginBinlog,error)
-}
-
-type PluginBinlog struct {
-	BinlogFileNum int
-	BinlogPosition uint32
-}
-
-type ToPluginParam struct {
-	FromPluginBinlogChan chan PluginBinlog
+	TimeOutCommit() (*PluginDataType,*PluginDataType,error)
+	Skip(*PluginDataType) error
 }
 
 type DriverStructure struct{
@@ -75,7 +64,7 @@ type DriverStructure struct{
 	BifrostVersion 	string // 插件开发所使用的Bifrost的版本
 	Error   		string
 	ExampleConnUri 	string
-	driver  		Driver
+	driver  		NewDriver
 }
 
 var (
@@ -83,26 +72,27 @@ var (
 	drivers   = make(map[string]DriverStructure)
 )
 
-func Register(name string, driver Driver,version string,bifrost_version string) {
+func Register(name string, NewDriverFun NewDriver,version string,bifrost_version string) {
 	defer func() {
-		if err := recover();err!=nil{
-			log.Println(err)
+		if err := recover();err != nil {
+			log.Println("plugin driver Register name:",name," recory:",err,string(debug.Stack()))
 		}
 	}()
 	driversMu.Lock()
 	defer driversMu.Unlock()
-	if driver == nil {
+	if NewDriverFun == nil {
 		panic("Register driver is nil")
 	}
 	if _, ok := drivers[name]; ok {
 		panic("Register called twice for driver " + name)
 	}
+	newDriver := NewDriverFun()
 	drivers[name] = DriverStructure{
 		Version:version,
 		BifrostVersion:bifrost_version,
 		Error:"",
-		ExampleConnUri:driver.GetUriExample(),
-		driver:driver,
+		ExampleConnUri:newDriver.GetUriExample(),
+		driver:NewDriverFun,
 	}
 }
 
@@ -119,28 +109,42 @@ func Drivers() map[string]DriverStructure {
 	return data
 }
 
-func Open(name string,uri string) ConnFun{
+func Open(name string,uri *string) Driver {
 	driversMu.RLock()
 	defer driversMu.RUnlock()
-	if _,ok := drivers[name];!ok{
+	if _, ok := drivers[name]; !ok {
 		return nil
 	}
-	return drivers[name].driver.Open(uri)
+	newDriver := drivers[name].driver()
+	newDriver.SetOption(uri, nil)
+	newDriver.Open()
+	return newDriver
 }
 
 
-func CheckUri(name string,uri string) error{
+func CheckUri(name string,uri *string) error{
 	driversMu.RLock()
 	defer driversMu.RUnlock()
 	if _,ok := drivers[name];!ok{
 		return fmt.Errorf("no "+name)
 	}
-	return drivers[name].driver.CheckUri(uri)
+	newDriver := drivers[name].driver()
+	newDriver.SetOption(uri, nil)
+	err := newDriver.CheckUri()
+	return err
 }
 
 func TransfeResult(val string, data *PluginDataType,rowIndex int) interface{} {
+	if data == nil {
+		return nil
+	}
 	p := reqTagAll.FindAllStringSubmatch(val, -1)
-	n := len(data.Rows) - 1
+	var n int
+	if data.Rows == nil {
+		n = -1
+	}else{
+		n = len(data.Rows) - 1
+	}
 	for _, v := range p {
 		switch v[1] {
 		case "TableName":

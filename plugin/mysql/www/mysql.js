@@ -70,7 +70,7 @@ function doGetPluginParam(){
 
 function GetToSchameList() {
     $.get(
-        "/bifrost/mysql/schemalist?toserverkey="+$("#addToServerKey").val(),
+        "/bifrost/plugin/mysql/schemalist?ToServerKey="+$("#addToServerKey").val(),
         function (d, status) {
             if (status != "success") {
                 //console.log("/bifrost/clickhouse/schemalist?toserverkey="+$("#addToServerKey").val());
@@ -93,7 +93,7 @@ function GetToSchameTableList(schemaName) {
         return
     }
     $.get(
-        "/bifrost/mysql/tablelist?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName,
+        "/bifrost/plugin/mysql/tablelist?ToServerKey="+$("#addToServerKey").val()+"&SchemaName="+schemaName,
         function (d, status) {
             if (status != "success") {
                 return false;
@@ -111,7 +111,7 @@ function GetToSchameTableList(schemaName) {
 function GetToTableDesc(schemaName,tableName) {
     $("#ToTableFieldsTable").html("");
     $.get(
-        "/bifrost/mysql/tableinfo?toserverkey="+$("#addToServerKey").val()+"&schema="+schemaName+"&table_name="+tableName,
+        "/bifrost/plugin/mysql/tableinfo?ToServerKey="+$("#addToServerKey").val()+"&SchemaName="+schemaName+"&TableName="+tableName,
         function (d, status) {
             if (status != "success") {
                 return false;
@@ -204,10 +204,9 @@ $("#TableFieldsContair p.fieldsname input:checkbox").click(
 });
 
 function showMySQLCreateSQL() {
-    var schemaName = $("#tableToServerListContair").attr("schema");
-    var tableName = $("#tableToServerListContair").attr("table_name");
+    var param = getPluginFunctionParam();
     $.get(
-        "/db/table/createsql?dbname="+getDbName()+"&schema_name="+schemaName+"&table_name="+tableName,
+        "/db/table/createsql?DbName="+param.DbName+"&SchemaName="+param.SchemaName+"&TableName="+param.TableName,
         function (d, status) {
             if (status != "success") {
                 return false;

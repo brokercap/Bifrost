@@ -1,0 +1,102 @@
+{{define "header"}}
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href="/css/bootstrap.min14ed.css?v=3.3.6" rel="stylesheet">
+    <link href="/css/style.min862f.css?v=4.1.0" rel="stylesheet">
+    <script src="/js/jquery.min.js?v=2.1.4"></script>
+    <script src="/js/ajax.js?v=1.6.0"></script>
+</head>
+
+<body class="gray-bg top-navigation">
+
+<div id="wrapper">
+    <div id="page-wrapper" class="gray-bg">
+        <div class="row border-bottom white-bg">
+            <nav class="navbar navbar-static-top" role="navigation">
+                <div class="navbar-header" style="float: left; width: auto">
+                    <button aria-controls="navbar" aria-expanded="false" data-target="#navbar" data-toggle="collapse" class="navbar-toggle collapsed" type="button">
+                        <i class="fa fa-reorder"></i>
+                    </button>
+                    <a href="http://www.xbifrost.com" target="_blank" class="navbar-brand">Bifrost</a>
+                </div>
+                <div class="navbar-collapse collapse" id="navbar" style="float: right; width: auto; margin-right: 0px">
+                    <ul class="nav navbar-nav" id="header_nav">
+                        <li class="active">
+                            <a aria-expanded="false" role="button" href="/"> 返回首页</a>
+                        </li>
+                        <li class="dropdown">
+                            <a  href="/db/index" class="dropdown-toggle" > 数据源 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="/toserver/index" class="dropdown-toggle"> 目标库列表 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a  href="/flow/index" class="dropdown-toggle"> 流量 </a>
+                        </li>
+
+                        <li class="dropdown">
+                            <a  href="/table/synclist/index" class="dropdown-toggle"> 表同步列表 </a>
+                        </li>
+
+                        <li class="dropdown">
+                            <a  href="/history/index" class="dropdown-toggle"> 全量任务 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="/plugin/index" class="dropdown-toggle"> 插件 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="/warning/config/index" class="dropdown-toggle"> 报警 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="/user/index" class="dropdown-toggle"> 用户管理 </a>
+                        </li>
+                        <li class="dropdown">
+                            <a href="/docs" target="_blank" class="dropdown-toggle"> 文档 </a>
+                        </li>
+
+
+                    </ul>
+                    <ul class="nav navbar-top-links navbar-right">
+                        <li>
+                            <a href="/logout">
+                                <i class="fa fa-sign-out"></i> 退出
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+
+    </div>
+</div>
+
+<script type="text/javascript">
+function showOriginalData(obj,c){
+    $(obj).parent().text(c);
+}
+function filterIpAndPort(c){
+    var html = " <button data-toggle=\"button\" class=\"btn-sm btn-primary\" onclick='showOriginalData(this,\""+c+"\")' type=\"button\">show</button>\n"
+    if(c.indexOf("@") != -1){
+        document.write("***"+c.slice(c.indexOf("@")+1,c.length-5)+"***"+html)
+    }else{
+        document.write("***"+c.slice(5,c.length-5)+"***"+html)
+    }
+    return;
+}
+$(function(){
+	$("#header_nav li a").each(function(){
+		if(document.URL.indexOf($(this).attr("href")) != -1){
+			$("#header_nav li").removeClass("active");
+			$(this).parent().addClass("active");
+		}
+	 });
+})
+</script>
+{{end}}

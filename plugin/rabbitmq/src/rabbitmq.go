@@ -9,35 +9,16 @@ import (
 	"log"
 )
 
-const VERSION  = "v1.3.0"
-const BIFROST_VERION = "v1.3.0"
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.0.0"
 
 func init(){
-	pluginDriver.Register("rabbitmq",&MyConn{},VERSION,BIFROST_VERION)
-}
-
-type MyConn struct {}
-
-
-func (MyConn *MyConn) Open(uri string) pluginDriver.ConnFun{
-	return newConn(uri)
-}
-
-func (MyConn *MyConn) GetUriExample() string{
-	return "amqp://guest:guest@localhost:5672/MyVhost"
-}
-
-func (MyConn *MyConn) CheckUri(uri string) error{
-	c := newConn(uri)
-	if c.err != nil{
-		return c.err
-	}
-	c.Close()
-	return nil
+	pluginDriver.Register("rabbitmq",NewConn,VERSION,BIFROST_VERION)
 }
 
 type Conn struct {
-	uri    			string
+	pluginDriver.PluginDriverInterface
+	uri    			*string
 	status 			string
 	conn   			*amqp.Connection
 	ch 				*amqp.Channel
@@ -50,39 +31,67 @@ type Conn struct {
 	bindMap			map[string]bool
 }
 
-func newConn(uri string) *Conn{
-	f := &Conn{
-		uri:uri,
-	}
-	f.Connect()
+type Queue struct {
+	Name string
+	Durable bool
+	AutoDelete bool
+}
+
+type Exchange struct {
+	Name string
+	Type string
+	Durable bool
+	AutoDelete bool
+}
+
+type PluginParam struct {
+	Queue 				Queue
+	Exchange 			Exchange
+	Confirm 			bool
+	Persistent 			bool
+	RoutingKey 			string
+	Expir 				int
+	Declare 			bool
+	expir               string
+	deliveryMode		uint8
+}
+
+func NewConn() pluginDriver.Driver {
+	f := &Conn{status:"close"}
 	return f
 }
 
-func (This *Conn) GetConnStatus() string {
-	return This.status
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.uri = uri
+	return
 }
 
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
+func (This *Conn) Open() error {
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) GetUriExample() string{
+	return "amqp://guest:guest@localhost:5672/MyVhost"
+}
+
+func (This *Conn) CheckUri() error{
+	This.Connect()
+	if This.err != nil{
+		return This.err
+	}
+	This.Close()
+	return nil
 }
 
 func (This *Conn) Connect() bool {
 	var err error
-	This.conn, err = amqp.Dial(This.uri)
+	This.conn, err = amqp.Dial(*This.uri)
 	if err != nil{
 		This.err = err
 		This.status = "close"
 		return false
 	}
-	/*
-	This.ch,err = This.conn.Channel()
-	if err != nil{
-		This.err = err
-		This.status = "close"
-		This.conn.Close()
-		return false
-	}
-	*/
 	This.queueMap = make(map[string]bool,0)
 	This.exchangeMap = make(map[string]bool,0)
 	This.bindMap = make(map[string]bool,0)
@@ -125,10 +134,6 @@ func (This *Conn) ReConnect() bool {
 	}
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
 	if This.conn == nil{
 		return true
@@ -156,32 +161,8 @@ func (This *Conn) Close() bool {
 	return true
 }
 
-type Queue struct {
-	Name string
-	Durable bool
-	AutoDelete bool
-}
 
-type Exchange struct {
-	Name string
-	Type string
-	Durable bool
-	AutoDelete bool
-}
-
-type PluginParam struct {
-	Queue 				Queue
-	Exchange 			Exchange
-	Confirm 			bool
-	Persistent 			bool
-	RoutingKey 			string
-	Expir 				int
-	Declare 			bool
-	expir               string
-	deliveryMode		uint8
-}
-
-func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error) {
 	s,err := json.Marshal(p)
 	if err != nil{
 		return nil,err
@@ -217,20 +198,28 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 	}
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
 	return This.sendToList(data)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
 	return This.sendToList(data)
+}
+
+func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+	LastSuccessCommitData,ErrData,err = This.sendToList(data)
+	if err == nil {
+		LastSuccessCommitData = data
+	}
+	return
 }
 
 func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (error){
@@ -269,17 +258,17 @@ func (This *Conn) Declare(Queue *string,Exchange *string,RoutingKey *string) (er
 	return nil
 }
 
-func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
 	if This.status != "running"{
 		This.ReConnect()
 		if This.status != "running"{
-			return nil,This.err
+			return nil,data,This.err
 		}
 	}
 	c,err := json.Marshal(data)
 	if err != nil{
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
 	var queuename string
 	var exchange string
@@ -290,7 +279,7 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 	if This.p.Declare == true {
 		queuename = fmt.Sprint(pluginDriver.TransfeResult(This.p.Queue.Name, data, index))
 		if err := This.Declare(&queuename,&exchange,&routingkey); err != nil{
-			return nil,err
+			return nil,data,err
 		}
 	}
 	if This.p.Confirm == true{
@@ -299,11 +288,11 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (*pluginDriver.P
 		_,err = This.SendAndNoWait(&exchange,&routingkey,&c,This.p.deliveryMode)
 	}
 	if err != nil{
-		return nil,err
+		return nil,data,err
 	}
-	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
-	return nil,nil
+func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType,error) {
+	return nil,nil,nil
 }

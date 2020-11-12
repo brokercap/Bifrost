@@ -11,13 +11,13 @@ func TestUpdateSyncAndChekcData(t *testing.T){
 	conn := getPluginConn("LogUpdate")
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
-	conn.Insert(e.GetTestInsertData())
+	conn.Insert(insertdata,false)
+	conn.Insert(e.GetTestInsertData(),false)
 	updateData := e.GetTestUpdateData()
-	conn.Update(updateData)
+	conn.Update(updateData,false)
 	deleteData := e.GetTestDeleteData()
-	conn.Del(deleteData)
-	_,err2 := conn.Commit()
+	conn.Del(deleteData,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}

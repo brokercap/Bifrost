@@ -18,7 +18,7 @@ type opLog struct{
 	EventType string
 }
 
-func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e error)  {
+func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errData *pluginDriver.PluginDataType)  {
 
 	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
 
@@ -28,7 +28,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 	//从最后一条数据开始遍历
 	var stmt dbDriver.Stmt
 	n  := len(list)
-	for i := n - 1; i >= 0; i-- {
+	LOOP: for i := n - 1; i >= 0; i-- {
 		data := list[i]
 		switch data.EventType {
 		case "update":
@@ -36,9 +36,12 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 			for i,v:=range This.p.Field{
 				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-
 				if This.err != nil{
-					return This.err
+					if !This.p.BifrostMustBeSuccess {
+						This.err = nil
+						continue LOOP
+					}
+					return data
 				}
 				val[i] = toV
 				//第几个字段 + 总字段数量 - 1  算出，on update 所在数组中的位置
@@ -54,6 +57,10 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				if This.CheckDataSkip(data) {
+					This.conn.err = nil
+					continue LOOP
+				}
 				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
@@ -64,9 +71,12 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 			for i,v:=range This.p.Field{
 				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-
 				if This.err != nil{
-					return This.err
+					if !This.p.BifrostMustBeSuccess {
+						This.err = nil
+						continue LOOP
+					}
+					return data
 				}
 				val[i] = toV
 				//第几个字段 + 总字段数量 - 1  算出，on update 所在数组中的位置
@@ -79,6 +89,10 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 				}
 				_,This.conn.err = stmt.Exec(val)
 				if This.conn.err != nil{
+					if This.CheckDataSkip(data) {
+						This.conn.err = nil
+						continue LOOP
+					}
 					log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 					goto errLoop
 				}
@@ -92,7 +106,11 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 				var toV dbDriver.Value
 				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
 				if This.err != nil{
-					return This.err
+					if !This.p.BifrostMustBeSuccess {
+						This.err = nil
+						continue LOOP
+					}
+					return data
 				}
 				val = append(val,toV)
 				i++
@@ -106,7 +124,11 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 				goto errLoop
 			}
 			_,This.conn.err = stmt.Exec(val)
-			if This.conn.err != nil{
+			if This.conn.err != nil {
+				if This.CheckDataSkip(data) {
+					This.conn.err = nil
+					continue LOOP
+				}
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
@@ -117,6 +139,6 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (e er
 	}
 
 errLoop:
-	return This.conn.err
+	return nil
 }
 

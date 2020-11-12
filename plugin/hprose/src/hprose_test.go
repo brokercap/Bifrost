@@ -74,14 +74,15 @@ func beforeTest()  {
 
 func TestCheckUri(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(tcpUrl);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&tcpUrl,nil)
+	if err := myConn.CheckUri();err!= nil{
 		t.Error("TCP TestChechUri err:",err)
 	}else{
 		t.Log("TCP TestChechUri success")
 	}
-
-	if err := myConn.CheckUri(httpUrl);err!= nil{
+	myConn.SetOption(&httpUrl,nil)
+	if err := myConn.CheckUri();err!= nil{
 		t.Error("HTTP TestChechUri err:",err)
 	}else{
 		t.Log("HTTP TestChechUri success")
@@ -94,9 +95,9 @@ func getParam()  map[string]interface{}{
 
 func TestInsertAndCheckData(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(tcpUrl)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&tcpUrl,nil)
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
@@ -104,7 +105,7 @@ func TestInsertAndCheckData(t *testing.T)  {
 
 	eventData := e.GetTestInsertData()
 
-	conn.Insert(eventData)
+	myConn.Insert(eventData,false)
 	c,err:=json.Marshal(lastEventData)
 	if err!=nil{
 		t.Fatal(err)
@@ -128,9 +129,9 @@ func TestInsertAndCheckData(t *testing.T)  {
 
 func TestUpdateAndCheckData(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(tcpUrl)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&tcpUrl,nil)
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
@@ -138,7 +139,7 @@ func TestUpdateAndCheckData(t *testing.T)  {
 
 	eventData := e.GetTestUpdateData()
 
-	conn.Update(eventData)
+	myConn.Update(eventData,false)
 	c,err:=json.Marshal(lastEventData)
 	if err!=nil{
 		t.Fatal(err)
@@ -162,9 +163,9 @@ func TestUpdateAndCheckData(t *testing.T)  {
 
 func TestDelAndCheckData(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(tcpUrl)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&tcpUrl,nil)
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
@@ -172,7 +173,7 @@ func TestDelAndCheckData(t *testing.T)  {
 
 	eventData := e.GetTestDeleteData()
 
-	conn.Del(eventData)
+	myConn.Del(eventData,false)
 	c,err:=json.Marshal(lastEventData)
 	if err!=nil{
 		t.Fatal(err)
@@ -196,18 +197,17 @@ func TestDelAndCheckData(t *testing.T)  {
 
 func TestQuery(t *testing.T)  {
 	beforeTest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(tcpUrl)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&tcpUrl,nil)
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
 	eventData := e.GetTestQueryData()
 
-	conn.Query(eventData)
+	myConn.Query(eventData,false)
 	if lastQuery == nil{
 		t.Fatal("test query error,query is nil")
 	}
 	t.Log(lastQuery)
-
 }

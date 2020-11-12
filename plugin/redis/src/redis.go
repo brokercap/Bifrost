@@ -11,29 +11,57 @@ import (
 	"time"
 )
 
-const VERSION  = "v1.3.0"
-const BIFROST_VERION = "v1.3.0"
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
 
 func init(){
-	driver.Register("redis",&MyConn{},VERSION,BIFROST_VERION)
+	driver.Register("redis",NewConn,VERSION,BIFROST_VERION)
 }
 
-type MyConn struct {}
-
-func (MyConn *MyConn) Open(uri string) driver.ConnFun{
-	return newConn(uri)
+type Conn struct {
+	driver.PluginDriverInterface
+	Uri    		*string
+	status 		string
+	conn   		redis.UniversalClient
+	err    		error
+	p 			*PluginParam
 }
 
-func (MyConn *MyConn) GetUriExample() string{
+type PluginParam struct {
+	KeyConfig 		string
+	Expir 			int
+	DataType 		string
+	ValConfig 		string
+	Type 			string
+}
+
+func NewConn() driver.Driver{
+	f := &Conn{
+		status:"close",
+	}
+	return f
+}
+
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.Uri = uri
+	return
+}
+
+func (This *Conn) Open() error {
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) GetUriExample() string{
 	return "pwd@tcp(127.0.0.1:6379)/0 or 127.0.0.1:6379 or pwd@tcp(127.0.0.1:6379,127.0.0.1:6380)/0 or 127.0.0.1:6379,127.0.0.1:6380"
 }
 
-func (MyConn *MyConn) CheckUri(uri string) error{
-	c:= newConn(uri)
-	if c.err != nil{
-		return c.err
+func (This *Conn) CheckUri() error{
+	This.Connect()
+	if This.err != nil{
+		return This.err
 	}
-	c.Close()
+	This.Close()
 	return nil
 }
 
@@ -68,39 +96,6 @@ func getUriParam(uri string)(pwd string, network string, url string, database in
 	return
 }
 
-type Conn struct {
-	Uri    		string
-	pwd 		string
-	database 	int
-	network 	string
-	status 		string
-	conn   		redis.UniversalClient
-	err    		error
-	p 			*PluginParam
-}
-
-type PluginParam struct {
-	KeyConfig 		string
-	Expir 			int
-	DataType 		string
-	ValConfig 		string
-	Type 			string
-}
-
-
-func newConn(uri string) *Conn{
-	pwd,network,uri,database := getUriParam(uri)
-	f := &Conn{
-		pwd:pwd,
-		network:network,
-		database:database,
-		Uri:uri,
-	}
-	f.Connect()
-	return f
-}
-
-
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
 	if err != nil{
@@ -128,28 +123,21 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 	}
 }
 
-func (This *Conn) GetConnStatus() string {
-	return This.status
-}
-
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
-}
-
 func (This *Conn) Connect() bool {
-	if This.database < 0 || This.database >16{
+	pwd,network,uri,database := getUriParam(*This.Uri)
+	if database < 0 {
 		This.err = fmt.Errorf("database must be in 0 and 16")
 		return false
 	}
-	if This.network != "tcp" {
+	if network != "tcp" {
 		This.err = fmt.Errorf("network must be tcp")
 		return false
 	}
 
 	universalClient := redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:    strings.SplitN(This.Uri, ",", -1),
-		Password: This.pwd,
-		DB:       This.database,
+		Addrs:    strings.SplitN(uri, ",", -1),
+		Password: pwd,
+		DB:      database,
 		PoolSize: 4096,
 	})
 
@@ -179,15 +167,10 @@ func (This *Conn) ReConnect() bool {
 	return  true
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
 	This.conn.Close()
 	return true
 }
-
 
 func (This *Conn) getKeyVal(data *driver.PluginDataType,index int) string {
 	return fmt.Sprint(driver.TransfeResult(This.p.KeyConfig,data,index))
@@ -197,11 +180,11 @@ func (This *Conn) getVal(data *driver.PluginDataType,index int) string {
 	return fmt.Sprint(driver.TransfeResult(This.p.ValConfig,data,index))
 }
 
-func (This *Conn) Insert(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	return This.Update(data)
+func (This *Conn) Insert(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	return This.Update(data,retry)
 }
 
-func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Update(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -212,13 +195,13 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 	case "set":
 		if This.p.ValConfig != ""{
 			err =This.conn.Set(Key, This.getVal(data,index), time.Duration(This.p.Expir) * time.Second).Err()
-		}else{
+		}else {
 			vbyte, _ := json.Marshal(data.Rows[index])
 			err =This.conn.Set(Key, string(vbyte), time.Duration(This.p.Expir) * time.Second).Err()
 		}
 		break
 	case "list":
-		_,err = This.SendToList(Key,data)
+		return This.SendToList(Key,data)
 		break
 	default:
 		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
@@ -227,12 +210,12 @@ func (This *Conn) Update(data *driver.PluginDataType) (*driver.PluginBinlog,erro
 
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) Del(data *driver.PluginDataType,retry bool)(*driver.PluginDataType, *driver.PluginDataType,error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
@@ -243,19 +226,19 @@ func (This *Conn) Del(data *driver.PluginDataType) (*driver.PluginBinlog,error) 
 		err = This.conn.Del(Key).Err()
 		break
 	case "list":
-		_,err = This.SendToList(Key,data)
+		return This.SendToList(Key,data)
 		break
 	default:
 		err = fmt.Errorf(This.p.Type+ " not in(set,list)")
 	}
 	if err != nil {
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginBinlog,error) {
+func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginDataType, *driver.PluginDataType,error) {
 	var Val string
 	var err error
 	if This.p.ValConfig != ""{
@@ -266,7 +249,7 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.P
 		}else{
 			c,err := json.Marshal(data)
 			if err != nil{
-				return nil,err
+				return nil,data,err
 			}
 			Val = string(c)
 		}
@@ -274,19 +257,15 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.P
 	err =This.conn.LPush(Key, Val).Err()
 
 	if err != nil {
-		return nil,err
+		return nil,data,err
 	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Query(data *driver.PluginDataType) (*driver.PluginBinlog,error) {
-	if This.p.Type == "list"{
-		Key := This.getKeyVal(data, 0)
-		return This.SendToList(Key,data)
-	}
-	return &driver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+func (This *Conn) Query(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	return nil,nil,nil
 }
 
-func (This *Conn) Commit() (*driver.PluginBinlog,error){
-	return nil,nil
+func (This *Conn) Commit(data *driver.PluginDataType,retry bool) (LastSuccessCommitData *driver.PluginDataType,ErrData *driver.PluginDataType,err error) {
+	return data,nil,nil
 }

@@ -131,19 +131,40 @@ function dockerStartAll(){
     docker start $(docker ps -a | awk '{ print $1}' | tail -n +2)
 }
 
+function dockerRunToServer(){
+	#activemq
+	docker run -d --name activemq -p 61616:61616 -p 8161:8161 docker.io/webcenter/activemq:latest
+	
+	#redis
+	docker run -p 6379:6379 -d redis:3.0
+	#docker run -it --rm --link some-clickhouse-server:clickhouse-server yandex/clickhouse-client --host clickhouse-server
+	
+	#mysql
+	docker run --name mysql8 -e MYSQL_ROOT_PASSWORD=root -d mysql:8.0 --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --default-authentication-plugin=mysql_native_password --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTIO
+	#kakfa
+	docker run -d --name zookeeper -p 2181:2181 -t wurstmeister/zookeeper 
+	docker run -d --name kafka --publish 9092:9092 --link zookeeper --env KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 --env KAFKA_ADVERTISED_HOST_NAME=localhost --env KAFKA_ADVERTISED_PORT=9092 --volume /etc/localtime:/etc/localtime wurstmeister/kafka:latest
+	
+	#rabbitmq
+	docker run -dit --name Myrabbitmq -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin -p 15672:15672 -p 5672:5672 rabbitmq:managemen
+	
+	#memcache
+	docker run -p 11211:11211 --name memcache memcached
+}
+
 function dockerHelp(){
     echo "dev_build"
     echo "dev_clean"
     echo "dev_run"
     echo "dev_stop"
-    echo "test_build [1.12|1.13(golang version)]"
+    echo "test_build [golang version 1.13+]"
     echo "test_clean"
     echo "test_run"
     echo "test_stop"
     echo "release_build"
     echo "push"
     echo "clean    -- clean all exit and none images"
-    echo "online_test_run jc3wish/bifrost:1.1.0   -- clean all exit and none images"
+    echo "online_test_run jc3wish/bifrost:v1.6.0   -- clean all exit and none images"
     echo "getip dockerName "
     echo "start_all "
 }

@@ -15,8 +15,9 @@ var url = "10.40.2.41:27017"
 var MongodbConn *mgo.Session
 
 func TestChechUri(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(url);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	if err := myConn.CheckUri();err!= nil{
 		t.Error("TestChechUri err:",err)
 	}else{
 		t.Log("TestChechUri success")
@@ -49,17 +50,17 @@ func getParam() map[string]interface{} {
 }
 
 func TestAndCheck(t *testing.T)  {
-	beforetest()
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
-	conn.SetParam(getParam())
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	myConn.Open()
+	myConn.SetParam(getParam())
 
 	e := pluginTestData.NewEvent()
 
 	eventData := e.GetTestInsertData()
 
 	eventData.Rows[0]["test_unsinged_bigint"] = uint64(2147483647)
-	_,err :=conn.Insert(eventData)
+	_,_,err :=myConn.Insert(eventData,false)
 
 	if err != nil{
 		t.Log(eventData)
@@ -69,14 +70,14 @@ func TestAndCheck(t *testing.T)  {
 	eventData = e.GetTestUpdateData()
 
 	eventData.Rows[1]["test_unsinged_bigint"] = uint64(2147483647)
-	_,err = conn.Update(eventData)
+	_,_,err = myConn.Update(eventData,false)
 
 	if err != nil{
 		t.Log(eventData)
 		t.Fatal(err)
 	}
 
-	conn.Commit()
+	myConn.TimeOutCommit()
 
 	result := getDataFromMongodb(eventData.SchemaName,eventData.TableName,eventData.Rows[1]["id"].(uint32))
 	if len(result) != 1{
@@ -105,8 +106,8 @@ func TestAndCheck(t *testing.T)  {
 
 
 	eventData = e.GetTestDeleteData()
-	conn.Del(eventData)
-	conn.Commit()
+	myConn.Del(eventData,false)
+	myConn.TimeOutCommit()
 
 	result2 := getDataFromMongodb(eventData.SchemaName,eventData.TableName,eventData.Rows[0]["id"].(uint32))
 	if len(result2) != 0{

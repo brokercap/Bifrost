@@ -10,25 +10,60 @@ import (
 )
 
 
-const VERSION  = "v1.4.1"
-const BIFROST_VERION = "v1.4.1"
+const VERSION  = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
 
 func init(){
-	pluginDriver.Register("http",&MyConn{},VERSION,BIFROST_VERION)
+	pluginDriver.Register("http",NewConn,VERSION,BIFROST_VERION)
 }
 
-type MyConn struct {}
 
-func (MyConn *MyConn) Open(uri string) pluginDriver.ConnFun{
-	return newConn(uri)
+type Conn struct {
+	pluginDriver.PluginDriverInterface
+	uri    	*string
+	url		string	  // 解析过后的 http url，不是传参进来的  uri
+	user 	string
+	pwd 	string
+	status  string
+	err     error
+	p		*PluginParam
 }
 
-func (MyConn *MyConn) GetUriExample() string{
+type HttpContentType string
+
+const (
+	HTTP_CONTENT_TYPE_JSON_RAW 	HttpContentType = "application/json-raw"
+)
+
+
+type PluginParam struct {
+	Timeout	int
+	ContentType HttpContentType
+}
+
+func NewConn() pluginDriver.Driver{
+	f := &Conn{
+		status:"close",
+	}
+	return f
+}
+
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.uri = uri
+	return
+}
+
+func (This *Conn) Open() error{
+	This.user,This.pwd,This.url = getUriParam(*This.uri)
+	return nil
+}
+
+func (This *Conn) GetUriExample() string{
 	return "user:pwd@http://a.Bifrist.com?bifrost_api=ok ; http://a.Bifrist.com?bifrost_api=ok"
 }
 
-func (MyConn *MyConn) CheckUri(uri string) error{
-	user,pwd,url := getUriParam(uri)
+func (This *Conn) CheckUri() error {
+	user,pwd,url := getUriParam(*This.uri)
 	client := &http.Client{Timeout:5 * time.Second}
 	req, err := http.NewRequest("GET", url,nil)
 	if user != ""{
@@ -49,26 +84,6 @@ func (MyConn *MyConn) CheckUri(uri string) error{
 	return fmt.Errorf("http code:%d",resp.StatusCode)
 }
 
-type Conn struct {
-	uri    	string
-	user 	string
-	pwd 	string
-	status  string
-	err     error
-	p		*PluginParam
-}
-
-type HttpContentType string
-
-const (
-	HTTP_CONTENT_TYPE_JSON_RAW 	HttpContentType = "application/json-raw"
-)
-
-
-type PluginParam struct {
-	Timeout	int
-	ContentType HttpContentType
-}
 
 func getUriParam(uri string)(string,string,string){
 	i := strings.IndexAny(uri, "@")
@@ -88,25 +103,6 @@ func getUriParam(uri string)(string,string,string){
 		url = uri[i+1:]
 	}
 	return user,pwd,url
-}
-
-func newConn(uri string) *Conn{
-	user,pwd,url := getUriParam(uri)
-	f := &Conn{
-		uri:url,
-		user:user,
-		pwd:pwd,
-	}
-	return f
-}
-
-
-func (This *Conn) GetConnStatus() string {
-	return This.status
-}
-
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
 }
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
@@ -151,7 +147,7 @@ func (This *Conn) httpPost(data *pluginDriver.PluginDataType) error {
 	case HTTP_CONTENT_TYPE_JSON_RAW:
 		c,_:=json.Marshal(data)
 		body := strings.NewReader("\n"+string(c))
-		req, err = http.NewRequest("POST", This.uri, body)
+		req, err = http.NewRequest("POST", This.url, body)
 		req.Header.Set("Content-Type", "application/json")
 		break
 	default:
@@ -177,56 +173,48 @@ func (This *Conn) httpPost(data *pluginDriver.PluginDataType) error {
 	return fmt.Errorf("http code:%d",resp.StatusCode)
 }
 
-
-func (This *Conn) Connect() bool {
-	return true
-}
-
-func (This *Conn) ReConnect() bool {
-	return  true
-}
-
-func (This *Conn) HeartCheck() {
-	return
-}
-
 func (This *Conn) Close() bool {
 	return true
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	err := This.httpPost(data)
 	if err != nil{
-		return nil,err
+		return nil,data,err
 	}
-	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	err := This.httpPost(data)
 	if err != nil{
-		return nil,err
+		return nil,data,err
 	}
-	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	err := This.httpPost(data)
 	if err != nil{
-		return nil,err
+		return nil,data,err
 	}
-	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog,error) {
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool)  (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	err := This.httpPost(data)
 	if err != nil{
 		This.err = err
-		return nil,err
+		return nil,data,err
 	}
-	return &pluginDriver.PluginBinlog{data.BinlogFileNum,data.BinlogPosition},nil
+	return nil,nil,nil
 }
 
-func (This *Conn) Commit() (*pluginDriver.PluginBinlog,error){
-	return nil,nil
+func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool)  (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	err := This.httpPost(data)
+	if err != nil{
+		This.err = err
+		return nil,data,err
+	}
+	return data,nil,nil
 }

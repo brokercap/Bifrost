@@ -30,7 +30,7 @@ import (
 type dbSaveInfo struct {
 	Name               		string `json:"Name"`
 	ConnectUri         		string `json:"ConnectUri"`
-	ConnStatus         		string `json:"ConnStatus"`
+	ConnStatus         		StatusFlag `json:"ConnStatus"`
 	ConnErr            		string `json:"ConnErr"`
 	ChannelMap         		map[int]channelSaveInfo `json:"ChannelMap"`
 	LastChannelID      		int	`json:"LastChannelID"`
@@ -48,7 +48,7 @@ type channelSaveInfo struct {
 	Name string
 	MaxThreadNum     int // 消费通道的最大线程数
 	CurrentThreadNum int
-	Status           string //stop ,starting,running,wait
+	Status           StatusFlag //stop ,starting,running,wait
 }
 
 func CompareBinlogPositionAndReturnGreater(BinlogFileNum1 int, BinlogPosition1 uint32,BinlogFileNum2 int,BinlogPosition2 uint32)(int,uint32){
@@ -110,10 +110,10 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		//db.SetReplicateDoDb(m)
 		for oldChannelId,cInfo := range dbInfo.ChannelMap{
 			ch,ChannelID := db.AddChannel(cInfo.Name,cInfo.MaxThreadNum)
-			ch.Status = "close"
+			ch.Status = CLOSED
 			channelIDMap[oldChannelId] = ChannelID
 			// 只要不是 close 状态，就启动
-			if cInfo.Status != "close" {
+			if cInfo.Status != CLOSED {
 				if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 					ch.Start()
 					continue
@@ -223,12 +223,19 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 					if config.FileQueueUsable == false{
 						toServer.FileQueueStatus = false
 					}
-					var status = ""
+					// 1.6 之前版本, 还是用stop ,close ，而不是stopped,closed
+					if toServer.Status == "stop" {
+						toServer.Status = STOPPED
+					}
+					if toServer.Status == "close" {
+						toServer.Status = CLOSED
+					}
+					var status StatusFlag
 					switch toServer.Status {
-					case "stopping","stopped":
-						status = "stopped"
+					case STOPPING,STOPPED:
+						status = STOPPED
 						break
-					case "deling","deled":
+					case DELING,DELED:
 						continue
 					default:
 						break
@@ -256,12 +263,14 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						}
 						// 假如没有找到数据，或者文件队列里的最后一条数据，位点 对不上 ToServer里保存的数据，则认为数据是有异常的，则需要将 FileQueueStatus 修改为  false,清空文件队列数据
 						// 假如文件队列里最后一条数据和当前同步记录的进入 这个同步最后一个位点数据 相等，则不进行位点计算，随便其他 同步位点怎么来
-						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastBinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastBinlogPosition{
+						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastBinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastBinlogPosition {
 							toServerObj.FileQueueStatus = false
 						}
 					}
-					//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
-					filequeue.Delete(GetFileQueue(db.Name,schemaName,tableName,fmt.Sprint(toServerObj.ToServerID)))
+					if toServerObj.FileQueueStatus == false {
+						//FileQueueStatus == false 这里强制将将文件队列数据清除，因为有可能会有脏数据
+						filequeue.Delete(GetFileQueue(db.Name, schemaName, tableName, fmt.Sprint(toServerObj.ToServerID)))
+					}
 					db.AddTableToServer(schemaName, tableName,toServerObj)
 					log.Printf("dbname:%s,schemaName:%s,tableName:%s ToServerKey:%s,ToServerID:%d,BinlogFileNum:%d,BinlogPosition:%d",db.Name,schemaName,tableName,toServer.ToServerKey,toServer.ToServerID,toServer.BinlogFileNum,toServer.BinlogPosition)
 
@@ -367,10 +376,10 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			db.binlogDumpPosition = PerformanceTestingPosition
 		}
 
-		if dbInfo.ConnStatus == "closing"{
-			dbInfo.ConnStatus = "close"
+		if dbInfo.ConnStatus == CLOSING{
+			dbInfo.ConnStatus = CLOSED
 		}
-		if dbInfo.ConnStatus != "close" && dbInfo.ConnStatus != "stop" && !isStop{
+		if dbInfo.ConnStatus != CLOSED && dbInfo.ConnStatus != STOPPED && !isStop{
 			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition{
 				go db.Start()
 			}

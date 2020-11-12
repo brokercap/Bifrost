@@ -1,0 +1,249 @@
+
+{{template "header" .}}
+
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>同步列表
+                    {{if ne .TableName "" }}
+                        - TableName: {{.TableName}}
+                    {{end}}
+                    {{if ne .SchemaName "" }}
+                        - SchemaName: {{.SchemaName}}
+                    {{end}}</h5>
+
+                    <!--DbName list-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                    <select class="form-control" name="DbName" id="DbName">
+                        <option value="" > 数据源 </option>
+                        {{range $i, $db := .DbList}}
+                            <option value="{{$db.Name}}"> {{$db.Name}} </option>
+                        {{end}}
+                    </select>
+                    </div>
+                    <script type="text/javascript">$("#DbName").val("{{.DbName}}")</script>
+
+                    <!--通道-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px;" id="ChannelId_div">
+                        <select class="form-control" name="ChannelId" id="ChannelId">
+                            <option value="0" > 通道 </option>
+                            {{range $chID,$ch := .ChannelList}}
+                                <option value="{{$chID}}"> {{$ch.Name}} </option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <script type="text/javascript">
+                        $("#ChannelId").val("{{.ChannelID}}");
+                        if($("#DbName").val()==""){$("#ChannelId_div").hide();}
+                    </script>
+
+                    <!--ToServerKey list-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                        <select class="form-control" name="ToServerKey" id="ToServerKey">
+                            <option value="" > 目标库 </option>
+                        {{range $key, $toserver := .ToServerKeyList}}
+                            <option value="{{$key}}" > {{$toserver.PluginName}} -- {{$key}} </option>
+                        {{end}}
+                        </select>
+                    </div>
+                    <script type="text/javascript">$("#ToServerKey").val("{{.ToServerKey}}")</script>
+
+                    <!--ToServerKey list-->
+                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                        <select class="form-control" name="ToServerKey" id="SyncStatus">
+                            <option value="" > 状态 </option>
+                            <option value="nodata" > No Data </option>
+                            <option value="running" > Running </option>
+                            <option value="error" > Error </option>
+                        </select>
+                    </div>
+                    <script type="text/javascript">$("#SyncStatus").val("{{.SyncStatus}}")</script>
+
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>DbName</th>
+                                <th>SchemaName</th>
+                                <th>TableName</th>
+                                <th>PluginName</th>
+                                <th>ToServerKey</th>
+                                <th>Position</th>
+                                <th>PluginParam</th>
+                                <th>Status</th>
+                                <th>Error</th>
+                                <th>ErrorWaitData</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{range $i, $toServer := .SyncList}}
+                            {{range $k, $v := $toServer.ToServerList}}
+                            <tr>
+                                <td>{{$i}}-{{$k}}</td>
+                                <td>{{$toServer.DbName}}</td>
+                                <td>{{$toServer.SchemaName}}</td>
+                                <td>{{$toServer.TableName}}</td>
+                                <td>{{$v.PluginName}}</td>
+                                <td>{{$v.ToServerKey}}</td>
+                                <td>
+                                    <p title="最后一个成功处理的位点">BinlogNum: {{$v.BinlogFileNum}}</p>
+                                    <p>Position : {{$v.BinlogPosition}}</p>
+                                    <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
+                                    <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
+                                    <p title="内存队列堆积多少条数据待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
+                                    <p title="非极端情况下,不要手工点击启动文件队列，进行启动">FileQueueStatus: {{$v.FileQueueStatus}}
+                                        {{if eq $v.FileQueueStatus false}}
+                                            <button data-toggle="button" onclick="fileQueueStart(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary fileQueueStartBtn" type="button" >启用</button>
+                                            <p>非极端情况下,不要手工点击启动文件队列，进行启动<p>
+                                        {{else}}
+                                            <button data-toggle="button" onclick="getFileQueueInfo(this,'{{$toServer.DbName}}','{{$toServer.SchemaName}}','{{$toServer.TableName}}',{{$v.ToServerID}},{{$k}})" class="btn-sm btn-primary" type="button" >文件队列信息</button>
+                                        {{end}}
+                                    </p>
+                                    <div id="{{$toServer.DbName}}_{{$toServer.SchemaName}}_{{$toServer.TableName}}_{{$v.ToServerID}}" class="fileInfoDiv"></div>
+                                </td>
+                                <td width="20%">
+                                    {{range $pKey, $pVal := $v.PluginParam}}
+                                    <p>{{$pKey}} : {{$pVal}}</p>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    {{$v.Status}}
+                                </td>
+                                <td>{{$v.Error}}</td>
+                                <td>
+                                {{if $v.ErrorWaitData }}
+                                    <p>{{$v.ErrorWaitData}}</p>
+                                    <p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,{{$v.ToServerID}},{{$k}})' type='button'>Skip</button></p>
+                                {{end}}
+                                </td>
+                                <td>
+                                    <p><a href="/db/detail?DbName={{$toServer.DbName}}&schema={{$toServer.SchemaName}}&TableName={{$toServer.TableName}}">
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" >Detail</button>
+                                    </a>
+                                    </p>
+                                    {{if eq $v.Status "stopped"}}
+                                        <p><button data-toggle="button" class="btn-sm btn-primary" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'start')">Start</button></p>
+                                    {{end}}
+                                    {{if or (eq $v.Status "running") (eq $v.Status "") }}
+                                        <p><button data-toggle="button" class="btn-sm btn-warning" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'stop')">Stop</button></p>
+                                    {{end}}
+
+                                    <p><button data-toggle="button" class="btn-sm btn-danger" type="button" onclick="UpdateTableToServerStatus(this,{{$v.ToServerID}},{{$k}},'del')">Del</button></p>
+
+                                </td>
+                            </tr>
+                            {{end}}
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+<script type="text/javascript">
+    var TableName  = "{{.TableName}}";
+    var SchemaName = "{{.SchemaName}}";
+    $("#DbName,#ChannelId,#ToServerKey,#SyncStatus").change(
+        function () {
+            GetTableToServerList();
+        }
+    );
+
+    function GetTableToServerList(){
+        var DbName      = $("#DbName").val();
+        var ChannelId   = $("#ChannelId").val();
+        var ToServerKey = $("#ToServerKey").val();
+        var SyncStatus = $("#SyncStatus").val();
+        location.href = "/table/synclist/index?DbName="+DbName+"&SchemaName="+SchemaName+"&TableName="+TableName+"&ToServerKey="+ToServerKey+"&ChannelId="+ChannelId+"&SyncStatus="+SyncStatus;
+    }
+
+    function UpdateTableToServerStatus(obj,ToServerId,Index,status){
+        var trObjChildren = $(obj).parent().parent().parent().children();
+        var DbName = trObjChildren.eq(1).text();
+        var SchemaName = trObjChildren.eq(2).text();
+        var TableName = trObjChildren.eq(3).text();
+        var url = "";
+        var opName = "";
+        switch (status){
+            case "stop":
+                if (!confirm("确定暂停第 [ "+ Index +" ] 条记录？")){
+                    return false;
+                }
+                url = "/table/toserver/stop";
+                opName = "暂停";
+                break;
+            case "del":
+                if (!confirm("确定删除第 [ "+ Index +" ] 条记录？删除将不能恢复？！！！")){
+                    return false;
+                }
+                url = "/table/toserver/del";
+                opName = "删除";
+                break;
+            case "start":
+                url = "/table/toserver/start";
+                opName = "启动";
+                break;
+            default:
+                return;
+        }
+        var callback = function (data) {
+            if (!data.status){
+                alert(data.msg);
+                return;
+            }
+            alert(opName+"成功!");
+            GetTableToServerList(SchemaName,TableName);
+        };
+        var ajaxParam = {DbName:DbName,SchemaName:SchemaName,TableName:TableName,Index:Index,ToServerId:ToServerId};
+        Ajax("POST",url, ajaxParam,callback,true);
+    }
+
+    function DealWaitErr(obj,ToServerID,index){
+        var thisButton = $(obj);
+        var trChildObj = $(obj).parent().parent().parent("tr").children();
+        var DbName = trChildObj.eq(1).text();
+        var SchemaName = trChildObj.eq(2).text();
+        var TableName = trChildObj.eq(3).text();
+        var url = "/table/toserver/deal";
+        var callback = function (dataResult) {
+            if(!dataResult.status){
+                alert(dataResult.msg);
+                return false;
+            }
+            alert("提交 Skip 成功，请刷界面查看结果！");
+            $(thisButton).parent().parent().html("");
+        };
+        Ajax("POST",url,{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:parseInt(ToServerID),Index:parseInt(index)},callback,false);
+    }
+</script>
+
+<script src="/js/filequeue.js?v1.6.0"></script>
+
+{{template "footer" .}}

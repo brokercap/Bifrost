@@ -70,7 +70,11 @@ func (This *ToServer) ReadLastFromFileQueue() (*pluginDriver.PluginDataType,erro
 func (This *ToServer) FileQueueStart() error {
 	This.Lock()
 	defer This.Unlock()
-	This.FileQueueStatus = true
+	if config.FileQueueUsable == true {
+		This.FileQueueStatus = true
+	}else{
+		return fmt.Errorf("config.FileQueueUsable unable")
+	}
 	return nil
 }
 

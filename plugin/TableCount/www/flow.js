@@ -65,7 +65,7 @@ var FlowClass  = {
                 trigger: "axis"
             },
             legend: {
-                data: ["InsertCount","UpdateCount","DeleteCount","DDLCount","InsertRows","UpdateRows","DeleteRows"]
+                data: ["InsertCount","UpdateCount","DeleteCount","DDLCount","InsertRows","UpdateRows","DeleteRows","CommitCount"]
             },
             calculable: !0,
             xAxis: [{
@@ -182,6 +182,21 @@ var FlowClass  = {
                                 name: "最小值"
                             }]
                     }
+                },
+                {
+                    name: "CommitCount",
+                    type: "line",
+                    data: [],
+                    markPoint: {
+                        data: [{
+                            type: "max",
+                            name: "最大值"
+                        },
+                            {
+                                type: "min",
+                                name: "最小值"
+                            }]
+                    }
                 }
 
             ]
@@ -216,6 +231,7 @@ var FlowClass  = {
             a.series[4].data.push(d[i].InsertRows);
             a.series[5].data.push(d[i].UpdateRows);
             a.series[6].data.push(d[i].DeleteRows);
+            a.series[7].data.push(d[i].CommitCount);
         }
         e.setOption(a);
         $(window).resize(e.resize);
@@ -228,19 +244,16 @@ var FlowClass  = {
             return;
         }
         var obj = this;
-        $.post(
-            "/bifrost/TableCount/flow/get",
+        $.get(
+            "/bifrost/plugin/TableCount/flow/get",
             {
-                dbname: this.dbName,
-                schema: this.schema,
-                table_name: this.tableName,
-                type: this.AgetLength,
+                DbName: this.dbName,
+                SchemaName: this.schema,
+                TableName: this.tableName,
+                Type: this.AgetLength,
             },
             function (d, status) {
                 if (status != "success") {
-                    return false;
-                }
-                if (d.status == false){
                     return false;
                 }
                 obj.rewrite_data(obj.rewrite_data(d.data));

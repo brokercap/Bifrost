@@ -20,6 +20,7 @@ func Recovery(data *json.RawMessage){
 				ConnUri:v.ConnUri,
 				Notes:v.Notes,
 				MaxConn:v.MaxConn,
+				MinConn:v.MinConn,
 			})
 	}
 }

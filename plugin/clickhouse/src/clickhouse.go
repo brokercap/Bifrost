@@ -12,14 +12,14 @@ import (
 	"database/sql/driver"
 )
 
-const VERSION = "v1.5.0"
-const BIFROST_VERION = "v1.5.0"
+const VERSION = "v1.6.0"
+const BIFROST_VERION = "v1.6.0"
 
 var l sync.RWMutex
 
-type dataTableStruct struct {
-	MetaMap map[string]string //字段类型
+type TableDataStruct struct {
 	Data    []*pluginDriver.PluginDataType
+	CommitData []*pluginDriver.PluginDataType		// commit 提交的数据列表，Data 每 BatchSize 数据量划分为一个最后提交的commit
 }
 
 type fieldStruct struct {
@@ -28,66 +28,21 @@ type fieldStruct struct {
 	CkType string
 }
 
-func init() {
-	pluginDriver.Register("clickhouse", &MyConn{}, VERSION, BIFROST_VERION)
+func init(){
+	pluginDriver.Register("clickhouse",NewConn,VERSION,BIFROST_VERION)
 }
 
-type MyConn struct{}
-
-func (MyConn *MyConn) Open(uri string) pluginDriver.ConnFun {
-	return newConn(uri)
-}
-
-func (MyConn *MyConn) CheckUri(uri string) error {
-	c := newConn(uri)
-	if c.err != nil {
-		return c.err
+func NewTableData() *TableDataStruct {
+	CommitData := make([]*pluginDriver.PluginDataType,0)
+	CommitData = append(CommitData,nil)
+	return &TableDataStruct{
+		Data:		make([]*pluginDriver.PluginDataType,0),
+		CommitData:	CommitData,
 	}
-	if c.conn == nil {
-		c.Close()
-		return fmt.Errorf("connect")
-	}
-
-	var schemaList []string
-	func() {
-		defer func() {
-			return
-		}()
-		schemaList = c.conn.GetSchemaList()
-	}()
-	if len(schemaList) == 0 {
-		c.Close()
-		return fmt.Errorf("schema count is 0 (not in system)")
-	}
-	return nil
 }
 
-func (MyConn *MyConn) GetUriExample() string {
-	return "tcp://127.0.0.1:9000?username=&password=&compress=true"
-}
-
-type Conn struct {
-	uri    string
-	status string
-	p      *PluginParam
-	conn   *ClickhouseDB
-	err    error
-}
-
-func newConn(uri string) *Conn {
-	f := &Conn{
-		uri: uri,
-	}
-	f.Connect()
-	return f
-}
-
-func (This *Conn) GetConnStatus() string {
-	return This.status
-}
-
-func (This *Conn) SetConnStatus(status string) {
-	This.status = status
+func NewConn() pluginDriver.Driver {
+	return &Conn{status:"close",}
 }
 
 type SyncType string
@@ -103,19 +58,24 @@ type PluginParam struct {
 	BatchSize               int
 	CkSchema                string
 	CkTable                 string
-	ckDatakey               string
 	PriKey                  []fieldStruct
+	SyncType                SyncType
+	AutoCreateTable         bool
+	NullNotTransferDefault 	bool  //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
+	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
+	// 以上的数据是 界面配置的参数
+
+	// 以下的数据 是插件执行的时候，进行计算而来的
+	ckDatakey               string
 	ckPriKey                string // ck 主键字段
 	ckPriKeyFieldIsInt      bool   // ck 主键存储类型是否为int类型
 	mysqlPriKey             string //ck对应 mysql 的主键id
-	Data                    *dataTableStruct
-	SyncType                SyncType
+	Data                    *TableDataStruct
 	bifrostDataVersionField string // 版本记录字段，delete的时候有用
 	nowBifrostDataVersion   int64  // 每次提交的时候都会更新这个版本号，纳秒时间戳
 	tableMap                map[string]*PluginParam0		// 需要自动创建ck表结构 创建之后表基本信息
-	ckDatabaseMap			map[string]bool
-	AutoCreateTable         bool
-	NullNotTransferDefault 	bool  //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
+	ckDatabaseMap			map[string]bool					// ck 里,database 列表信息，database name 做为key，用于缓存
+	SkipBinlogData			*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
 }
 
 type PluginParam0 struct {
@@ -123,6 +83,87 @@ type PluginParam0 struct {
 	CkSchema                string
 	CkTable                 string
 	CkSchemaAndTable        string
+}
+
+
+type Conn struct {
+	pluginDriver.PluginDriverInterface
+	uri    *string
+	status string
+	p      *PluginParam
+	conn   *ClickhouseDB
+	err    error
+}
+
+func (This *Conn) Connect() bool {
+	if This.conn == nil {
+		This.conn = NewClickHouseDBConn(*This.uri)
+	}
+	return true
+}
+
+func (This *Conn) ReConnect() bool {
+	This.Close()
+	This.Connect()
+	if This.conn.err == nil {
+		if This.p.AutoCreateTable == true {
+			This.p.tableMap = make(map[string]*PluginParam0, 0)
+			This.initCkDatabaseMap()
+		}else{
+			This.getCktFieldType()
+		}
+	}
+	return true
+}
+
+func (This *Conn) GetUriExample() string {
+	return "tcp://127.0.0.1:9000?username=&password=&compress=true"
+}
+
+func (This *Conn) SetOption(uri *string,param map[string]interface{}) {
+	This.uri = uri
+	return
+}
+
+func (This *Conn) CheckUri() error {
+	var err error
+	This.Connect()
+	if This.conn.err != nil {
+		return This.conn.err
+	}
+	var schemaList []string
+	func() {
+		defer func() {
+			return
+		}()
+		schemaList = This.conn.GetSchemaList()
+	}()
+	if len(schemaList) == 0 {
+		This.conn.Close()
+		err = fmt.Errorf("schema count is 0 (not in system)")
+	}
+	return err
+}
+
+func (This *Conn) Open() error {
+	This.Connect()
+	return nil
+}
+
+func (This *Conn) Close() bool {
+	if This.conn != nil {
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					return
+				}
+			}()
+			This.conn.Close()
+		}()
+	}
+	This.conn = nil
+	This.status = "close"
+	return true
 }
 
 func (This *Conn) GetParam(p interface{}) (*PluginParam, error) {
@@ -146,7 +187,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam, error) {
 		param.ckPriKey = param.PriKey[0].CK
 		param.mysqlPriKey = param.PriKey[0].MySQL
 	}
-	param.Data = &dataTableStruct{Data: make([]*pluginDriver.PluginDataType, 0)}
+	param.Data = NewTableData()
 	if param.SyncType == "" {
 		param.SyncType = SYNCMODE_NORMAL
 	}
@@ -193,6 +234,7 @@ func (This *Conn) getCktFieldType() {
 	defer func() {
 		if err := recover(); err != nil {
 			This.conn.err = fmt.Errorf(fmt.Sprint(err))
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.p == nil {
@@ -344,28 +386,7 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	return p0,nil
 }
 
-
-func (This *Conn) Connect() bool {
-	if This.conn == nil {
-		This.conn = NewClickHouseDBConn(This.uri)
-	}
-	return true
-}
-
-func (This *Conn) ReConnect() bool {
-	This.Close()
-	This.Connect()
-	if This.conn.err == nil {
-		if This.p.AutoCreateTable == true {
-			This.p.tableMap = make(map[string]*PluginParam0, 0)
-			This.initCkDatabaseMap()
-		}else{
-			This.getCktFieldType()
-		}
-	}
-	return true
-}
-
+// 查出ck 里所有database,放到 map 中，用于缓存
 func (This *Conn) initCkDatabaseMap() {
 	This.p.ckDatabaseMap = make(map[string]bool,0)
 	defer func() {
@@ -380,52 +401,54 @@ func (This *Conn) initCkDatabaseMap() {
 	return
 }
 
-func (This *Conn) HeartCheck() {
-	return
-}
-
-func (This *Conn) Close() bool {
-	if This.conn != nil {
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					return
-				}
-			}()
-			This.conn.Close()
-		}()
-	}
-	This.conn = nil
-	This.status = "close"
-	return true
-}
-
-func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog, error) {
+// 将数据放到 list 里,假如满足条件，则合并提交数据到ck里
+func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType,*pluginDriver.PluginDataType, error) {
 	var n int
-	This.p.Data.Data = append(This.p.Data.Data, data)
+	if retry == false {
+		This.p.Data.Data = append(This.p.Data.Data, data)
+	}
 	n = len(This.p.Data.Data)
 	if This.p.BatchSize <= n {
-		return This.Commit()
+		return This.AutoCommit()
 	}
-	return nil, nil
+	return nil, nil,nil
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog, error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog, error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog, error) {
-	return This.sendToCacheList(data)
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType) (*pluginDriver.PluginBinlog, error) {
-	return nil, nil
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	return nil, nil, nil
 }
 
+func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	n := len(This.p.Data.Data)
+	if n == 0 {
+		return data,nil,nil
+	}
+	n0 := n / This.p.BatchSize
+	if len(This.p.Data.CommitData) - 1 < n0 {
+		This.p.Data.CommitData = append(This.p.Data.CommitData,data)
+	}else{
+		This.p.Data.CommitData[n0] = data
+	}
+	return nil, nil, nil
+}
+
+func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
+	return This.AutoCommit()
+}
+
+// 获取 sql stmt
 func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 	var stmt dbDriver.Stmt
 	switch Type {
@@ -444,7 +467,7 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 		sql := "INSERT INTO " + This.p.ckDatakey + " (" + fields + ") VALUES (" + values + ")"
 		stmt, This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil {
-			log.Println("clickhouse getStmt insert err:", This.conn.err)
+			log.Println("clickhouse getStmt insert err:", This.conn.err,"sql:",sql)
 		}
 		break
 	case "delete":
@@ -476,6 +499,7 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 	return stmt
 }
 
+// 将 使用的标签数据转换成相对应的值
 func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key string) interface{} {
 	if key == "" {
 		return nil
@@ -510,17 +534,8 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key
 	return ""
 }
 
-func (This *Conn) getMySQLData2(data map[string]interface{}, key string) interface{} {
-	if _, ok := data[key]; ok {
-		return data[key]
-	}
-	if key == "{$Timestamp}" {
-		return time.Now().Unix()
-	}
-	return key
-}
-
-func (This *Conn) Commit() (b *pluginDriver.PluginBinlog, e error) {
+// 合并数据，提交到  ck里
+func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
 	defer func() {
 		if err := recover(); err != nil {
 			e = fmt.Errorf(string(debug.Stack()))
@@ -531,11 +546,15 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog, e error) {
 		This.ReConnect()
 	}
 	if This.conn.err != nil {
-		return nil, This.conn.err
+		log.Println(" This.conn.err:", This.conn.err)
+		return nil,nil, This.conn.err
+	}
+	if This.err != nil {
+		log.Println("This.err:",This.err)
 	}
 	n := len(This.p.Data.Data)
 	if n == 0 {
-		return nil, nil
+		return nil,nil, nil
 	}
 	i := time.Now().UnixNano()
 	if i >= This.p.nowBifrostDataVersion {
@@ -545,26 +564,33 @@ func (This *Conn) Commit() (b *pluginDriver.PluginBinlog, e error) {
 		n = This.p.BatchSize
 	}
 	list := This.p.Data.Data[:n]
-	if This.p.AutoCreateTable == true{
-		This.AutoCreateTableCommit(list,n)
+	if This.p.AutoCreateTable == true {
+		ErrData = This.AutoCreateTableCommit(list,n)
 	}else{
-		This.NotCreateTableCommit(list,n)
+		ErrData = This.NotCreateTableCommit(list,n)
 	}
-	if This.err != nil {
-		log.Println("This.err", This.err)
-		return nil, This.err
+	// 假如数据不能丢，才需要 判断 是否有err，如果可以丢，直接错过数据
+	if This.err != nil && This.p.BifrostMustBeSuccess {
+		return nil,ErrData, This.err
 	}
+	var binlogEvent *pluginDriver.PluginDataType
 	if len(This.p.Data.Data) <= int(This.p.BatchSize) {
-		This.p.Data.Data = make([]*pluginDriver.PluginDataType, 0)
+		binlogEvent = This.p.Data.CommitData[0]
+		//log.Println("binlogEvent:",*binlogEvent)
+		This.p.Data = NewTableData()
 	} else {
 		This.p.Data.Data = This.p.Data.Data[n:]
+		if len(This.p.Data.CommitData) > 0 {
+			binlogEvent = This.p.Data.CommitData[0]
+			This.p.Data.CommitData = This.p.Data.CommitData[1:]
+		}
 	}
-
-	return &pluginDriver.PluginBinlog{list[n-1].BinlogFileNum, list[n-1].BinlogPosition}, nil
+	This.p.SkipBinlogData = nil
+	return binlogEvent, nil,nil
 }
 
 // 自动创建表的提交
-func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n int)  {
+func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
 	dataMap := make(map[string][]*pluginDriver.PluginDataType,0)
 	var ok bool
 	for _,PluginData := range list {
@@ -585,45 +611,68 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType,n in
 		}
 		This.p.Field = p.Field
 		This.p.ckDatakey = p.CkSchemaAndTable
-		This.conn.conn.Begin()
-		This.CommitLogMod_Append(data, len(data))
-		if This.err != nil {
-			This.conn.conn.Rollback()
+		var tx driver.Tx
+		tx,This.conn.err = This.conn.conn.Begin()
+		if This.conn.err != nil {
+			This.err = This.conn.err
+		}
+		errData = This.CommitLogMod_Append(data, len(data))
+		//假如连接本身有异常的情况下,则执行 rollback
+		if This.conn.err != nil {
+			tx.Rollback()
+			This.err = This.conn.err
 			break
 		}
-		This.conn.err = This.conn.conn.Commit()
-		This.err = This.conn.err
+		// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
+		This.conn.err = tx.Commit()
 		if This.err != nil {
 			break
 		}
 	}
+	return
 }
 
 // 非自动创建表的提交
-func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType,n int)  {
-	_, This.conn.err = This.conn.conn.Begin()
+func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
+	var tx driver.Tx
+	tx,This.conn.err = This.conn.conn.Begin()
 	if This.conn.err != nil {
 		return
 	}
 	switch This.p.SyncType {
 	case SYNCMODE_LOG_APPEND:
-		This.CommitLogMod_Append(list, n)
+		errData = This.CommitLogMod_Append(list, n)
 		break
 	case SYNCMODE_NORMAL, SYNCMODE_LOG_UPDATE:
-		This.CommitNormal(list, n)
+		errData = This.CommitNormal(list, n)
 		break
 	default:
 		This.err = fmt.Errorf("clickhoue SyncType:%s ,not found! ", This.p.SyncType)
 		break
 	}
 	if This.conn.err != nil {
+		tx.Rollback()
 		This.err = This.conn.err
-	}
-	if This.err != nil {
-		This.conn.conn.Rollback()
 		return
 	}
-	This.conn.err = This.conn.conn.Commit()
-	This.err = This.conn.err
+	This.conn.err = tx.Commit()
 	return
+}
+
+// 设置跳过的位点
+func (This *Conn) Skip (SkipData *pluginDriver.PluginDataType) error {
+	This.p.SkipBinlogData = SkipData
+	return nil
+}
+
+func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
+	if This.p.SkipBinlogData != nil {
+		if This.p.SkipBinlogData.BinlogFileNum > data.BinlogFileNum {
+			return true
+		}
+		if This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition >= data.BinlogPosition {
+			return true
+		}
+	}
+	return false
 }

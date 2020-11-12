@@ -12,6 +12,7 @@ func main() {
 	service.AddFunction("Update", serverdo.Update)
 	service.AddFunction("Delete", serverdo.Delete)
 	service.AddFunction("Query", serverdo.Query)
+	service.AddFunction("Commit", serverdo.Commit)
 	service.AddFunction("Check", serverdo.Check)
 	service.Start()
 }

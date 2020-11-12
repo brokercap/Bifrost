@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e error)  {
+func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType) {
 	deleteDataMap := make(map[interface{}]pluginDriver.PluginDataType,0)
 	insertDataMap := make(map[interface{}]pluginDriver.PluginDataType,0)
 	var ok bool
@@ -166,23 +166,33 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType,n int) (e err
 		if stmt == nil {
 			goto errLoop
 		}
-		for _, data := range insertDataMap {
-			val := make([]dbDriver.Value, 0)
-			for _, v := range This.p.Field {
-				var toV interface{}
-				toV, This.err = CkDataTypeTransfer(This.getMySQLData(&data,0,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
+		LOOP: for _, data := range insertDataMap {
+				val := make([]dbDriver.Value, 0)
+				for _, v := range This.p.Field {
+					var toV interface{}
+					toV, This.err = CkDataTypeTransfer(This.getMySQLData(&data,0,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
+					if This.err != nil {
+						if This.CheckDataSkip(&data) {
+							This.err = nil
+							continue LOOP
+						}
+						errData = &data
+						stmt.Close()
+						goto errLoop
+					}
+					val = append(val, toV)
+				}
+				_, This.err = stmt.Exec(val)
 				if This.err != nil {
+					if This.CheckDataSkip(&data) {
+						This.err = nil
+						continue LOOP
+					}
+					errData = &data
+					log.Println("plugin clickhouse insert exec err:",This.err," data:",val)
 					stmt.Close()
 					goto errLoop
 				}
-				val = append(val, toV)
-			}
-			_, This.err = stmt.Exec(val)
-			if This.err != nil {
-				log.Println("plugin clickhouse insert exec err:",This.err," data:",val)
-				stmt.Close()
-				goto errLoop
-			}
 		}
 		stmt.Close()
 	}

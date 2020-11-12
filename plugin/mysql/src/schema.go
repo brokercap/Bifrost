@@ -2,90 +2,11 @@ package src
 
 import (
 	"database/sql/driver"
-	"github.com/brokercap/Bifrost/manager/xgo"
-	"net/http"
-	"encoding/json"
-	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"log"
 	"fmt"
+	"strconv"
 )
-
-func init()  {
-	xgo.AddRoute("/bifrost/mysql/tableinfo",getmysqlTableFields)
-	xgo.AddRoute("/bifrost/mysql/schemalist",getmysqlSchemaList)
-	xgo.AddRoute("/bifrost/mysql/tablelist",getmysqlSchemaTableList)
-	xgo.AddRoute("/bifrost/mysql/createsql",getmysqlCreateSQL)
-}
-
-func getmysqlSchemaList(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	c := NewMysqlDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetSchemaList()
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
-}
-
-func getmysqlSchemaTableList(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	schema := req.Form.Get("schema")
-	c := NewMysqlDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetSchemaTableList(schema)
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
-}
-
-
-func getmysqlTableFields(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	schema := req.Form.Get("schema")
-	TableName := req.Form.Get("table_name")
-	c := NewMysqlDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	m := c.GetTableFields(schema,TableName)
-	b,_:=json.Marshal(m)
-	w.Write(b)
-	return
-}
-
-func getmysqlCreateSQL(w http.ResponseWriter,req *http.Request)  {
-	req.ParseForm()
-	ToServerKey := req.Form.Get("toserverkey")
-	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
-	if toServerInfo == nil{
-		w.Write([]byte(ToServerKey+" no found"))
-		return
-	}
-	schema := req.Form.Get("schema")
-	TableName := req.Form.Get("table_name")
-	c := NewMysqlDBConn(toServerInfo.ConnUri)
-	defer c.Close()
-	showCreateSQL := c.ShowTableCreate(schema,TableName)
-	w.Write([]byte(showCreateSQL))
-	return
-}
 
 func NewMysqlDBConn(uri string) *mysqlDB {
 	c := &mysqlDB{
@@ -252,13 +173,13 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 		if dest[8] == nil{
 			NUMERIC_PRECISION 	= nil
 		}else{
-			t := dest[8].(uint64)
+			t,_ := strconv.ParseUint(fmt.Sprint(dest[8]), 10, 64)
 			NUMERIC_PRECISION 	= &t
 		}
 		if dest[9] == nil{
 			NUMERIC_SCALE 	= nil
 		}else{
-			t := dest[9].(uint64)
+			t,_ := strconv.ParseUint(fmt.Sprint(dest[9]), 10, 64)
 			NUMERIC_SCALE 	= &t
 		}
 

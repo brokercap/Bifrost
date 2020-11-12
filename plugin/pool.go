@@ -1,116 +1,147 @@
 package plugin
 
 import (
-	"strconv"
 	"log"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"runtime/debug"
 	"time"
 	"sync"
+	"fmt"
 )
 
-type toServerChanContent struct {
-	key  		string
-	conn		driver.ConnFun
+type ToServerConn struct {
+	id			int
+	toServerKey string
+	conn		driver.Driver
+	updateTime  int64
 }
 
 var l sync.RWMutex
 
-var ToServerConnList map[string]map[string]driver.ConnFun
-var toServerChanMap map[string]chan *toServerChanContent
+var ToServerConnList map[string]map[int]*ToServerConn
+var toServerChanMap map[string]chan *ToServerConn
 
 func init()  {
-	toServerChanMap = make(map[string]chan *toServerChanContent,0)
-	ToServerConnList = make(map[string]map[string]driver.ConnFun)
+	toServerChanMap = make(map[string]chan *ToServerConn,0)
+	ToServerConnList = make(map[string]map[int]*ToServerConn)
 }
 
-func GetPlugin(ToServerKey string)  (driver.ConnFun, string){
+func (This *ToServerConn) GetConn() driver.Driver {
+	return This.conn
+}
+
+func (This *ToServerConn) checkClose(t *pluginStorage.ToServer) {
+	if t.UpdateTime != This.updateTime {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("ToServerKey:", This.toServerKey, "close recover:", err, string(debug.Stack()))
+			}
+			This.updateTime = t.UpdateTime
+		}()
+		This.conn.Close()
+	}
+}
+
+func GetPlugin(ToServerKey string)  (toServerConn *ToServerConn) {
 	t := pluginStorage.GetToServerInfo(ToServerKey)
 	if t == nil{
 		log.Println("ToServer:",ToServerKey," no exsit,start error")
-		return nil,""
+		return nil
 	}
-	var toServerChanContentData *toServerChanContent
 	t.Lock()
-	if t.AvailableConn > 0 {
+	// 有空闲连接,并且空闲连接大于 配置的最小连接数的时候，直接从空闲连接中拿取
+	if t.AvailableConn >= t.MinConn {
 		t.AvailableConn--
 		t.Unlock()
 		//这里为什么不需要timeout,是因为前面加了lock 判断空闲连接数
-		toServerChanContentData = <-toServerChanMap[ToServerKey]
-		return toServerChanContentData.conn,toServerChanContentData.key
+		toServerConn = <-toServerChanMap[ToServerKey]
+		toServerConn.checkClose(t)
+		return toServerConn
 	}
-	if t.MaxConn > t.CurrentConn{
+	// 在没有空闲连接的情况，并且 连接数还没达最大值，则直接创建连新
+	if t.MaxConn > t.CurrentConn {
+		// 这里要提前先 释放 t.Unloc 的锁，减少锁等待等问题
+		// 这里先 给 CurrentConn +1
+		// 待后面 startPlugin 失败的情况下，再 -1，保留数据是准确的
 		t.CurrentConn++
 		t.Unlock()
-		f,stringKey := startPlugin(ToServerKey)
-		if f == nil{
+		toServerConn = startPlugin(ToServerKey)
+		if toServerConn == nil{
 			t.Lock()
 			t.CurrentConn--
 			t.Unlock()
 		}
-		return f,stringKey
+		return toServerConn
 	}
 	t.Unlock()
+	// 执行到了，说明 没有空闲连接 并且 连接数也达最大值了，那只有阻塞等待 其他地方释放连接进来了
+	// 阻塞等待连接，也只等待 5 秒，超过这个数，则直接返回 nil, 让上一层去决定是否要重新获取
 	timer := time.NewTimer(5 * time.Second)
 	select {
-	case toServerChanContentData = <-toServerChanMap[ToServerKey]:
+	case toServerConn = <-toServerChanMap[ToServerKey]:
 		break
 	case <- timer.C:
 		break
 	}
 	timer.Stop()
-	if toServerChanContentData == nil{
-		return nil,""
+	if toServerConn == nil{
+		return nil
 	}
 	t.Lock()
 	t.AvailableConn--
 	t.Unlock()
-	return toServerChanContentData.conn,toServerChanContentData.key
+	toServerConn.checkClose(t)
+	return toServerConn
 }
 
-func startPlugin(key string) (driver.ConnFun,string) {
+func startPlugin(ToServerKey string) (toServerConn *ToServerConn) {
 	l.Lock()
-	if _, ok := ToServerConnList[key]; !ok {
-		ToServerConnList[key] = make(map[string]driver.ConnFun)
-		toServerChanMap[key] = make(chan *toServerChanContent,500)
+	if _, ok := toServerChanMap[ToServerKey]; !ok {
+		ToServerConnList[ToServerKey] = make(map[int]*ToServerConn)
+		toServerChanMap[ToServerKey] = make(chan *ToServerConn,512)
 	}
 	l.Unlock()
 
-	t := pluginStorage.GetToServerInfo(key)
+	t := pluginStorage.GetToServerInfo(ToServerKey)
 	if t == nil{
-		return nil,""
+		return nil
 	}
-	var F driver.ConnFun
-	var stringKey string
-	F = driver.Open(t.PluginName,t.ConnUri)
+	var F driver.Driver
+	var ConnId int
+	F = driver.Open(t.PluginName,&t.ConnUri)
 	if F == nil{
-		return nil,""
+		return nil
 	}
 	t.Lock()
 	t.LastID++
-	stringKey = strconv.Itoa(t.LastID)
+	ConnId = t.LastID
 	t.Unlock()
-
+	toServerConn = &ToServerConn{
+		id:ConnId,
+		toServerKey:ToServerKey,
+		conn:F,
+		updateTime:t.UpdateTime,
+	}
 	l.Lock()
-	ToServerConnList[key][stringKey] = F
+	ToServerConnList[ToServerKey][ConnId] = toServerConn
 	l.Unlock()
-	return F,stringKey
+	return
 }
 
-func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
+func BackPlugin(ToServerConn *ToServerConn) bool {
 	defer func() {
 		if err := recover();err !=nil{
-			log.Println(string(debug.Stack()))
+			log.Printf("BackPlugin ToServerKey:%s recover err:%s debug:%s",ToServerConn.toServerKey,fmt.Sprint(err),string(debug.Stack()))
 			return
 		}
 	}()
-	t := pluginStorage.GetToServerInfo(ToServerKey)
+	t := pluginStorage.GetToServerInfo(ToServerConn.toServerKey)
 	if t == nil{
 		return true
 	}
 	t.Lock()
-	if t.CurrentConn > t.MaxConn{
+	if t.CurrentConn > t.MaxConn {
 		t.CurrentConn--
 		func(){
 			defer func() {
@@ -120,13 +151,18 @@ func BackPlugin(ToServerKey string,key string,toServer driver.ConnFun) bool {
 				}
 			}()
 			//调用插件函数,关闭连接,这里防止插件代码写得有问题,抛异常,所以这里需要recover一次
-			ToServerConnList[ToServerKey][key].Close()
+			ToServerConn.conn.Close()
 		}()
-		delete(ToServerConnList[ToServerKey],key)
+
+		l.Lock()
+		delete(ToServerConnList[ToServerConn.toServerKey],ToServerConn.id)
 		l.Unlock()
+
 	}else{
 		t.AvailableConn++
-		toServerChanMap[ToServerKey] <- &toServerChanContent{key:key,conn:toServer}
+		l.RLock()
+		toServerChanMap[ToServerConn.toServerKey] <- ToServerConn
+		l.RUnlock()
 	}
 	t.Unlock()
 	return true

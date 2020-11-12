@@ -9,7 +9,7 @@ import (
 )
 
 type Plugin struct {
-	pluginObj driver.ConnFun
+	pluginObj driver.Driver
 	param map[string]interface{}
 	pluginParamObj interface{}
 	err error
@@ -19,7 +19,7 @@ type Plugin struct {
 
 func NewPlugin(name string,url string) *Plugin {
 	return &Plugin{
-		pluginObj:driver.Open(name,url),
+		pluginObj:driver.Open(name,&url),
 		param:nil,
 		pluginParamObj:nil,
 		eventType:-1,
@@ -101,7 +101,7 @@ func (This *Plugin) DoTestStart(n uint)  error{
 			break
 		}
 
-		var binlog *driver.PluginBinlog
+		var lastSuccessCommitData *driver.PluginDataType
 		var err error
 		var n0 int = 0
 		var opName string
@@ -109,33 +109,27 @@ func (This *Plugin) DoTestStart(n uint)  error{
 			switch intN {
 			case 0:
 				opName = "insert"
-				binlog, err = This.pluginObj.Insert(data)
+				lastSuccessCommitData,_, err = This.pluginObj.Insert(data,false)
 				break
 			case 1:
 				opName = "update"
-				binlog, err = This.pluginObj.Update(data)
+				lastSuccessCommitData,_, err = This.pluginObj.Update(data,false)
 				break
 			case 2:
 				opName = "delete"
-				binlog, err = This.pluginObj.Del(data)
+				lastSuccessCommitData,_, err = This.pluginObj.Del(data,false)
 				break
 			case 3:
 				opName = "sql"
-				binlog, err = This.pluginObj.Query(data)
+				lastSuccessCommitData,_, err = This.pluginObj.Query(data,false)
 				break
 			default:
-				opName = "commit"
-				if n == 0 {
-					time.Sleep(1)
-				}
-				data = nil
-				binlog, err = This.pluginObj.Commit()
 				break
 			}
 
 			if err == nil{
 				if This.debug {
-					log.Println("success(", i, ") ", opName, " binlog:", binlog, " data:", data)
+					log.Println("success(", i, ") ", opName, " lastSuccessCommitData:", *lastSuccessCommitData, " data:", data)
 				}
 				break
 			}
@@ -149,7 +143,8 @@ func (This *Plugin) DoTestStart(n uint)  error{
 		}
 	}
 
-	This.pluginObj.Commit()
+	This.pluginObj.Commit(e.GetTestCommitData(),false)
+	This.pluginObj.TimeOutCommit()
 
 	return nil
 }
@@ -218,16 +213,16 @@ func (This *Plugin) DoTestStartForSpeed(n uint)  error{
 
 		switch intN {
 		case INSERT:
-			_, err = This.pluginObj.Insert(data)
+			_,_, err = This.pluginObj.Insert(data,false)
 			break
 		case UPDATE:
-			_, err = This.pluginObj.Update(data)
+			_,_, err = This.pluginObj.Update(data,false)
 			break
 		case DELETE:
-			_, err = This.pluginObj.Del(data)
+			_,_, err = This.pluginObj.Del(data,false)
 			break
 		case SQLTYPE:
-			_, err = This.pluginObj.Query(data)
+			_,_, err = This.pluginObj.Query(data,false)
 			break
 		default:
 			break
@@ -238,7 +233,8 @@ func (This *Plugin) DoTestStartForSpeed(n uint)  error{
 		}
 	}
 
-	This.pluginObj.Commit()
+	This.pluginObj.Commit(e.GetTestCommitData(),false)
+	This.pluginObj.TimeOutCommit()
 
 	return nil
 }

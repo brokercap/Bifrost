@@ -17,7 +17,7 @@
                         </h5>
 
                         <div style="float: left; margin-top: -10px; margin-left: 10px">
-                            <select class="form-control" name="dbname" id="dbname">
+                            <select class="form-control" name="DbName" id="DbName">
                                 <option value="" > 数据源 </option>
                             {{range $i, $name := .DbList}}
                                 <option value="{{$name}}"> {{$name}} </option>
@@ -27,14 +27,14 @@
                         </div>
 
                         <div style="float: left; margin-top: -10px; margin-left: 10px">
-                            <select class="form-control" name="schema" id="schema">
+                            <select class="form-control" name="SchemaName" id="SchemaName">
                                 <option value="" > 库 </option>
                             </select>
 
                         </div>
 
                         <div style="float: left; margin-top: -10px; margin-left: 10px">
-                            <select class="form-control" name="tableName" id="tableName">
+                            <select class="form-control" name="TableName" id="TableName">
                                 <option value="" > 表 </option>
                             </select>
 
@@ -87,30 +87,30 @@
     flowObj.setAgetLength($("#selectLengthsAge").val());
 
 	$(function(){
-        $("#selectLengthsAge,#dbname,#schema,#tableName").change(
+        $("#selectLengthsAge,#DbName,#SchemaName,#TableName").change(
                 function(){
-                    var dbName = $("#dbname").val();
-                    var schema = $("#schema").val();
-                    var tableName = $("#tableName").val();
+                    var DbName = $("#DbName").val();
+                    var SchemaName = $("#SchemaName").val();
+                    var TableName = $("#TableName").val();
                     var flowType = $("#selectLengthsAge").val();
-                    flowObj.setDbName(dbName);
-                    flowObj.setTableName(tableName);
-                    flowObj.setSchema(schema);
+                    flowObj.setDbName(DbName);
+                    flowObj.setTableName(TableName);
+                    flowObj.setSchema(SchemaName);
                     flowObj.setAgetLength(flowType);
                     flowObj.getFlowData();
                 }
         );
 
-        $("#dbname").change(
+        $("#DbName").change(
             function () {
-                if ( $("#dbname").val() == ""){
+                if ( $("#DbName").val() == ""){
                     return;
                 }
                 $.post(
-                    "/bifrost/TableCount/flow/schema/list",
+                    "/bifrost/plugin/TableCount/flow/schema/list",
                     {
-                        dbname: $("#dbname").val(),
-                        schema: $("#schema").val()
+                        DbName: $("#DbName").val(),
+                        SchemaName: $("#SchemaName").val()
                     },
                     function (d, status) {
                         if (status != "success") {
@@ -120,7 +120,7 @@
                         for(var i in d){
                             html += "<option value=\""+d[i]+"\" > "+d[i]+" </option>";
                         }
-                        $("#schema").html(html);
+                        $("#SchemaName").html(html);
 
                     }, 'json')
             }
@@ -128,16 +128,16 @@
 
         );
 
-        $("#schema").change(
+        $("#SchemaName").change(
             function () {
-                if ($("#dbname").val() == ""){
+                if ($("#DbName").val() == ""){
                     return;
                 }
-                $.post(
-                    "/bifrost/TableCount/flow/table/list",
+                $.get(
+                    "/bifrost/plugin/TableCount/flow/table/list",
                     {
-                        dbname: $("#dbname").val(),
-                        schema: $("#schema").val(),
+                        DbName: $("#DbName").val(),
+                        SchemaName: $("#SchemaName").val(),
                     },
                     function (d, status) {
                         if (status != "success") {
@@ -147,7 +147,7 @@
                         for(var i in d){
                             html += "<option value=\""+d[i]+"\" > "+d[i]+" </option>";
                         }
-                        $("#tableName").html(html);
+                        $("#TableName").html(html);
 
                     }, 'json')
             }

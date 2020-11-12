@@ -30,8 +30,9 @@ CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,tes
  */
 
 func TestChechUri(t *testing.T){
-	myConn := MyPlugin.MyConn{}
-	if err := myConn.CheckUri(url);err!= nil{
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	if err := myConn.CheckUri();err!= nil{
 		log.Println("TestChechUri err:",err)
 	}else{
 		log.Println("TestChechUri success")
@@ -201,18 +202,19 @@ func getParam(SyncMode string)  map[string]interface{}{
 	return param
 }
 
-func getPluginConn(SyncMode string) pluginDriver.ConnFun {
-	myConn := MyPlugin.MyConn{}
-	conn := myConn.Open(url)
+func getPluginConn(SyncMode string) pluginDriver.Driver {
+	myConn := MyPlugin.NewConn()
+	myConn.SetOption(&url,nil)
+	myConn.Open()
 
-	p,err := conn.SetParam(getParam(SyncMode))
+	p,err := myConn.SetParam(getParam(SyncMode))
 	if err != nil{
 		log.Println("set param fatal err")
 		log.Fatal(err)
 	}
 
 	log.Println("p:",p)
-	return conn
+	return myConn
 }
 
 
@@ -225,14 +227,14 @@ func TestCommit(t *testing.T){
 
 	e := pluginTestData.NewEvent()
 
-	conn.Insert(e.GetTestInsertData())
-	conn.Del(e.GetTestDeleteData())
-	conn.Update(e.GetTestUpdateData())
-	conn.Insert(e.GetTestInsertData())
-	conn.Insert(e.GetTestInsertData())
-	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Del(e.GetTestDeleteData(),false)
+	conn.Update(e.GetTestUpdateData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
 
-	_,err2 := conn.Commit()
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -245,8 +247,8 @@ func TestInsertAndChekcData(t *testing.T){
 	conn := getPluginConn("Normal")
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
-	_,err2 := conn.Commit()
+	conn.Insert(insertdata,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -273,8 +275,8 @@ func TestInsertNullAndChekcData(t *testing.T){
 	e := pluginTestData.NewEvent()
 	e.SetIsNull(true)
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
-	_,err2 := conn.Commit()
+	conn.Insert(insertdata,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -300,11 +302,11 @@ func TestUpdateAndChekcData(t *testing.T){
 	conn := getPluginConn("Normal")
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
+	conn.Insert(insertdata,false)
 
 	updateData := e.GetTestUpdateData()
-	conn.Update(updateData)
-	_,err2 := conn.Commit()
+	conn.Update(updateData,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -330,14 +332,14 @@ func TestDelAndChekcData(t *testing.T){
 	conn := getPluginConn("Normal")
 	e := pluginTestData.NewEvent()
 	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata)
+	conn.Insert(insertdata,false)
 
 	updateData := e.GetTestUpdateData()
-	conn.Update(updateData)
+	conn.Update(updateData,false)
 
 	deleteData := e.GetTestDeleteData()
-	conn.Del(deleteData)
-	_,err2 := conn.Commit()
+	conn.Del(deleteData,false)
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}
@@ -501,23 +503,23 @@ func TestRandDataAndCheck(t *testing.T){
 		switch rand.Intn(3){
 		case 0:
 			eventData = e.GetTestInsertData()
-			conn.Insert(eventData)
+			conn.Insert(eventData,false)
 			break
 		case 1:
 			eventData = e.GetTestUpdateData()
-			conn.Update(eventData)
+			conn.Update(eventData,false)
 			break
 		case 2:
 			eventData = e.GetTestDeleteData()
-			conn.Del(eventData)
+			conn.Del(eventData,false)
 			break
 		case 3:
 			eventData = e.GetTestQueryData()
-			conn.Query(eventData)
+			conn.Query(eventData,false)
 			break
 		}
 	}
-	conn.Commit()
+	conn.TimeOutCommit()
 
 	count,err := getTableCount()
 	if err != nil{
@@ -563,14 +565,14 @@ func TestCommitBySymbol(t *testing.T){
 
 	e := pluginTestData.NewEvent()
 
-	conn.Insert(e.GetTestInsertData())
-	conn.Del(e.GetTestDeleteData())
-	conn.Update(e.GetTestUpdateData())
-	conn.Insert(e.GetTestInsertData())
-	conn.Insert(e.GetTestInsertData())
-	conn.Insert(e.GetTestInsertData())
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Del(e.GetTestDeleteData(),false)
+	conn.Update(e.GetTestUpdateData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
+	conn.Insert(e.GetTestInsertData(),false)
 
-	_,err2 := conn.Commit()
+	_,_,err2 := conn.TimeOutCommit()
 	if err2 != nil{
 		t.Fatal(err2)
 	}

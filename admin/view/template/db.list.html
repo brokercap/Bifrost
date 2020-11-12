@@ -1,0 +1,505 @@
+
+{{template "header" .}}
+		
+<script type="text/javascript">
+function formatDate(timestamp) {
+    if (timestamp == 0){
+        return "";
+    }
+    var now = new Date(timestamp*1000);
+    var year=now.getFullYear();
+    var month=now.getMonth()+1;
+    var date=now.getDate();
+    var hour=now.getHours();
+    var minute=now.getMinutes();
+    var second=now.getSeconds();
+    return year+"-"+month+"-"+date+" "+hour+":"+minute+":"+second;
+}
+</script>
+                <div class="ibox float-e-margins" >
+                  <div class="row">
+                  <div class="col-lg-8"></div>
+                        <div class="col-lg-4"></div>
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-lg-12">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h5>DBLIST</h5>
+                                    <div class="ibox-tools">
+                                        <a class="collapse-link">
+                                            <i class="fa fa-chevron-up"></i>
+                                        </a>
+                                        <a class="close-link">
+                                            <i class="fa fa-times"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="ibox-content">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>ConnectUri</th>
+                                                    <th>ConnStatus</th>
+                                                    <th>Position</th>
+                                                    <th>DB Postion</th>
+                                                    <th>MaxPosition</th>
+                                                    <th>ServerId</th>
+                                                    <th>ConnErr</th>
+                                                    <th>ChannelCount</th>
+                                                    <th>TableCount</th>
+                                                    <th>ReplicateDoDb</th>
+                                                    <th>OP</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="dbListContair">
+                                            	{{range $i, $v := .DBList}}
+                                                <tr>
+                                                    <td>{{$v.Name}}</td>
+                                                    <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
+                                                    <td>
+                                                        <strong class="conn_status">{{$v.ConnStatus}}</strong>
+                                                    	{{if eq $v.ConnStatus "closed"}}
+                                                        	{{if ne $v.ConnErr "running"}}
+                                                            	{{if eq $v.ConnErr ""}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
+                                                        		{{else if eq $v.ConnErr "close"}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
+                                                        		{{else}}        
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        		{{end}}
+                                                        	{{end}}
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "running"}}
+                                                        <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "stopped"}}
+                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "starting"}}
+                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
+                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                        {{end}}
+
+                                                    {{if eq $v.ConnStatus "closing"}}
+                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                    {{end}}
+
+                                                    </td>
+                                                    <td>
+                                                        <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
+                                                        <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
+
+                                                    {{if eq $v.ConnStatus "closed"}}
+                                                    {{if  eq $v.ConnErr ""}}
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
+                                                    {{else if eq $v.ConnErr "close"}}
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
+                                                    {{end}}
+                                                    {{end}}
+                                                    </td>
+
+                                                    <td>
+                                                        <p class="db_current_binlog"></p>
+                                                        <p class="db_current_postion"></p>
+                                                        <p class="db_postion_time_delay"></p>
+                                                        <p><button data-toggle="button" class="btn-sm btn-primary NewestPostionBtn" type="button">最新位点</button></p>
+                                                    </td>
+                                                    <td>
+                                                    {{if ne $v.MaxBinlogDumpFileName ""}}
+                                                        <p>{{$v.MaxBinlogDumpFileName}}</p>
+                                                        <p>{{$v.MaxBinlogDumpPosition}}</p>
+                                                    {{end}}
+                                                    </td>
+                                                    <td>{{$v.ServerId}}</td>
+                                                    <td>{{$v.ConnErr}}</td>
+                                                    <td>
+                                                    {{$v.ChannelCount}}
+                                                        <a href="/channel/index?DbName={{$v.Name}}">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">ChannelList</button>
+                                                        </a>
+                                                    </td>
+                                                    <td><span>{{$v.TableCount}}</span> &nbsp;
+                                                        <a href="/table/synclist/index?DbName={{$v.Name}}">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button" >同步列表</button>
+                                                        </a>
+                                                    </td>
+                                                    <td>{{range $dbName,$k := $v.ReplicateDoDb}}<p> {{$dbName}} </p> {{end}}</td>
+                                                    <td>
+
+                                                        <a href="/flow/index?DbName={{$v.Name}}" target="_blank">
+                                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                                        </a>
+
+                                                        <a href="/db/detail?DbName={{$v.Name}}">
+                                                        <button data-toggle="button" class="btn-sm btn-primary" type="button">Setting</button>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {{end}}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            
+            
+            
+            <div class="ibox float-e-margins" id="addAdminContair">
+            <div class="ibox-title">
+                <h5 id="opContairTitle">Add new DB</h5>
+                <div class="ibox-tools">
+                
+                    <a class="collapse-link">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                    <a class="close-link">
+                        <i class="fa fa-times"></i>
+                    </a>
+                </div>
+            </div>
+            <a name="newOrUpdateDB"></a><!--新增或者修改数据源-->
+            <div class="ibox-content">
+                <div class="row row-lg">
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Name：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="dbname" id="dbname" class="form-control" placeholder="Name"> <span class="help-block m-b-none">* 字母,30个字母以内</span>
+                    
+                            </div>
+                        </div>
+                        <div class="form-group" >
+                            <label class="col-sm-3 control-label">ConnUri：</label>
+                            <div class="col-sm-9" style=" position: relative">
+                                <div style="position: absolute; right: -200px; top: 0px;">
+
+                                    <input type="checkbox" value="1" name="CheckPrivilege" id="checkPrivilege" checked >
+                                    <label class="hover">
+                                        <div class="icheckbox_square-green hover" style="position: relative;"></div>验证是否有足够权限</label>
+
+                                    <button data-toggle="button" class="btn-sm btn-warning" id="checkUriBtn" type="button">Check</button>
+                                </div>
+
+                                <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri">
+
+
+                                <p><span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span></p>
+                                <p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
+                                <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限(不要勾选 验证是否有足够权限 选项)</span></p>
+                                <p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
+                                <p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">BinlogFileName：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="filename" id="filename" class="form-control" placeholder="BinlogFileName"> <span class="help-block m-b-none">*</span>
+                    
+                            </div>
+                        </div>
+                       <div class="form-group">
+                            <label class="col-sm-3 control-label">BinlogPosition：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="position" id="position" class="form-control" placeholder="BinlogPosition"> <span class="help-block m-b-none">*</span>
+                    
+                            </div>
+                        </div>
+                       
+                       <div class="form-group">
+                            <label class="col-sm-3 control-label">ServerId：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="serverid" id="serverid" class="form-control" placeholder="ServerId">
+                                <span class="help-block m-b-none">* 同一个数据库 serverId 不能重复</span>
+                    
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">MaxBinlogFileName：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="max_filename" id="max_filename" class="form-control" placeholder="BinlogFileName">
+                                <span class="help-block m-b-none">读取到的最大位移的文件名,和 MaxBinlogPosition 一起使用,到达最大位点后，则自动停止解析，不填则不限制</span>
+
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">MaxBinlogPosition：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="max_position" id="max_position" value="0" class="form-control" placeholder="BinlogPosition">
+                                <span class="help-block m-b-none">读取到的最大位移位置</span>
+
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display: none" id="update_toserver_contair">
+                            <label class="col-sm-3 control-label">同时更新ToServer：</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" name="update_toserver" id="update_toserver">
+                                    <option value="0">False</option>
+                                    <option value="1">True</option>
+                                </select>
+                                <span class="help-block m-b-none">
+                                    True：将所有表同步的位点强制更新,请查阅相关文档
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">&nbsp;</label>
+                            <div class="col-sm-9">
+                                <button data-toggle="button" class="btn-sm btn-primary" id="addNewDBBtn" type="button">提交</button>
+                    
+                            </div>
+                        </div>                        
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+{{template "footer" .}}
+
+<script type="text/javascript">
+    var dbUriChecked = false;
+    var isNewDB = true;
+    $("#uri").change(
+        function(){
+            dbUriChecked = false;
+            $("#checkUriBtn").show();
+        }
+    );
+
+    function getDBPostion(uri) {
+        var url = "/db/check_uri";
+        var MyData;
+        var checkPrivilege = $("#checkPrivilege").prop("checked");
+        var callback = function (data) {
+            MyData = data;
+        };
+        Ajax("POST",url,{Uri:uri,CheckPrivilege:checkPrivilege},callback,false);
+        return MyData;
+    }
+
+    function updateOpContairTitle(dbname) {
+        if( dbname == "" ) {
+            $("#opContairTitle").text("Add new DB");
+        }else{
+            $("#opContairTitle").text("Update DB : "+dbname);
+        }
+    }
+
+    $("#checkUriBtn").click(
+        function(){
+            var uri = $("#uri").val();
+            if (uri == ""){
+                return false;
+            }
+            var data = getDBPostion(uri);
+
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            if($("#filename").val() == ""){
+                $("#filename").val(data.data.BinlogFile);
+            }
+            if($("#position").val() == ""){
+                $("#position").val(data.data.BinlogPosition);
+            }
+            if($("#serverid").val() == ""){
+                $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
+            }
+            var success = true;
+            if(data.data.BinlogFormat.toLowerCase() != "row"){
+                success = false;
+                alert("binlog format 不是 ROW 格式, 依懒 ROW 格式数据同步将会无效，如果要修改成ROW格式，请修改 my.cnf 配置 binlog_format=ROW，再重启！");
+            }
+            if(data.data.BinlogRowImage.toLowerCase() != "full" && data.data.BinlogRowImage != ""){
+                success = false;
+                alert("binlog_row_image 参数 不是 full,依懒字段绑定关系的插件,数据同步将会失败，如果要修改成 binlog_row_image 参数，请修改 my.cnf 配置 binlog_row_image=FULL，再重启！");
+            }
+            if (success == true){
+                alert(data.msg);
+            }
+            dbUriChecked = true;
+            $("#checkUriBtn").hide();
+        }
+    );
+
+    $(".NewestPostionBtn").click(
+        function(){
+            var trObj = $(this).parent().parent().parent();
+            var url = "/db/get_last_position";
+            var dbname = trObj.children().eq(0).text();
+            var callback = function (data) {
+                if (data.status != 1){
+                    alert(data.msg);
+                    return;
+                }
+                trObj.children().eq(3).find(".db_last_binlog").text(data.data.BinlogFile);
+                trObj.children().eq(3).find(".db_last_position").text(data.data.BinlogPosition);
+                trObj.children().eq(3).find(".db_last_time").text(formatDate(data.data.BinlogTimestamp));
+
+                trObj.children().eq(4).find(".db_current_binlog").text(data.data.CurrentBinlogFile);
+                trObj.children().eq(4).find(".db_current_postion").text(data.data.CurrentBinlogPosition);
+                trObj.children().eq(4).find(".db_postion_time_delay").text("delay: "+data.data.DelayedTime+ " s");
+            };
+            Ajax("POST",url,{DbName: dbname},callback,true);
+        }
+
+    );
+$("#addNewDBBtn").click(
+	function(){
+	    if (dbUriChecked == false){
+	        alert("ConnUri no checked");
+            $("#uri").focus();
+	        return
+        }
+		var dbname = $("#dbname").val();
+		if(dbname=="" || dbname.length > 30){
+			 $("#dbname").focus();
+			 return false;
+		}
+		var uri = $("#uri").val();
+		var filename = $("#filename").val();
+		var position = parseInt($("#position").val());
+		var serverid = parseInt($("#serverid").val());
+		if( uri == "" || filename=="" || position=="" || serverid==""){
+			return
+		}
+        var max_filename = $("#max_filename").val();
+        var max_position = parseInt($("#max_position").val());
+        var update_toserver = 0;
+
+		if(isNaN(serverid) || serverid<1 ){
+			alert("serverId must be int");
+			$("#serverid").focus();
+			return
+		}
+		var url = "";
+        if(isNewDB){
+            url = "/db/add";
+            //判断 dbname 是否已经存在
+            var isHad = false;
+            $.each($("#dbListContair tr"),function(){
+                if($(this).find("td").eq(0).text() == dbname){
+                    isHad = true;
+                }
+            });
+            if(isHad){
+                alert(dbname+" is repeated");
+                $("#dbname").focus();
+                return;
+            }
+        }else{
+            url = "/db/update";
+            update_toserver = parseInt($("#update_toserver").val());
+        }
+        var callback = function (data) {
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            if (!confirm("添加成功! 是否跳转到设置数据表同步到目标库？")){
+                location.reload();
+            }else{
+                location.href = "/db/detail?DbName="+dbname;
+            }
+        };
+		var ajaxParam = { DbName: dbname,Uri:uri,BinlogFileName:filename,BinlogPosition:position,ServerId:serverid,MaxBinlogFileName:max_filename,MaxBinlogPosition:max_position,UpdateToServer:update_toserver};
+
+        Ajax("POST",url,ajaxParam,callback,true);
+	}
+);
+
+$(".updateDbBtn").click(
+    function () {
+        var trObj = $(this).parent().parent().parent();
+        var dbname =  trObj.children().eq(0).text();
+        var ConnUri =  trObj.children().eq(1).attr("title");
+        //var BinlogFileName =  trObj.children().eq(3).find("p").eq(0).text();
+        //var BinlogPosition =  trObj.children().eq(3).find("p").eq(1).text();
+        var MaxBinlogFileName =  trObj.children().eq(5).find("p").eq(0).text();
+        var MaxBinlogPosition =  trObj.children().eq(5).find("p").eq(1).text();
+        var ServerId =  trObj.children().eq(6).text();
+
+        updateOpContairTitle(dbname);
+        dbUriChecked = false
+        $("#dbname").attr("disabled","disabled");
+        $("#dbname").val(dbname);
+        $("#uri").val(ConnUri);
+        //$("#filename").val(BinlogFileName);
+        //$("#position").val(BinlogPosition);
+        $("#max_filename").val(MaxBinlogFileName);
+        if(MaxBinlogPosition==""){
+            $("#max_position").val(0);
+        }else{
+            $("#max_position").val(MaxBinlogPosition);
+        }
+        $("#serverid").val(ServerId);
+
+        isNewDB = false;
+        location.hash = "#newOrUpdateDB";
+        $("#update_toserver_contair").show();
+    }
+);
+
+function DoChangeDbStatus(obj,status){
+	if (status=="stop"){
+		if (!confirm("确定暂停么？暂停连接不会断开，但是业务将受影响")){
+			return
+		}
+	}
+	if (status=="del"){
+		if (!confirm("确定 删除 么？删除将不能恢复")){
+			return
+		}
+	}
+	var url = "/db/"+status;
+	var trObj = $(obj).parent().parent();
+	var dbname = trObj.children().eq(0).html();
+
+    if (status=="start"){
+        if( trObj.children().eq(9).find("span").text() == "0"){
+            if(!confirm(dbname +" 设置了数据同步的表个数为 0，不允许开启同步成功！是否跳转到同步配置页面？")){
+                return;
+            }else{
+                location.href = "/db/detail?DbName="+dbname;
+                return
+            }
+        }
+    }
+
+    var callback = function (data) {
+        if(!data.status){
+            alert(data.msg);
+            return false;
+        }
+        if (status == "del"){
+            trObj.remove();
+        }else{
+            location.reload();
+        }
+    };
+    Ajax("POST",url,{DbName: dbname},callback,true);
+}
+
+
+</script>

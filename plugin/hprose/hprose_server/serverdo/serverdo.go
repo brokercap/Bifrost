@@ -48,3 +48,9 @@ func Query(SchemaName string,TableName string,data interface{}) (e error) {
 	i++
 	return nil
 }
+
+func Commit(SchemaName string,TableName string,data interface{}) (e error) {
+	log.Println(i,"Commit","SchemaName:",SchemaName,"TableName:",TableName,"data:",data)
+	i++
+	return nil
+}

@@ -29,3 +29,17 @@ var PluginSyncRetrycTime int = 5
 
 // Bifrost 根目录文件夹绝对路径
 var BifrostDir string = ""
+
+var BifrostConfigFile string = ""
+
+var Listen string = "0.0.0.0:21036"
+
+var BifrostPidFile string = ""
+
+var BifrostLogDir string = ""
+
+var BifrostAdminTemplateDir string = ""
+
+var BifrostPluginTemplateDir string = ""
+
+var DynamicPlugin bool = false

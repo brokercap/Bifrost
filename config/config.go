@@ -17,8 +17,8 @@ package config
 
 import (
 	"bufio"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 )
@@ -29,10 +29,18 @@ func init() {
 	MyConf = make(map[string]map[string]string)
 }
 
-func LoadConf(conffile string) map[string]map[string]string {
+func DoLoadConf(conffile string) map[string]map[string]string {
+	if conffile == "" {
+		log.Println("no config file ")
+		return nil
+	}
 	var per map[string]map[string]string
 	per = make(map[string]map[string]string)
-	f, _ := os.Open(conffile)
+	f, err := os.Open(conffile)
+	if err != nil {
+		log.Println("open config file:",conffile, " err:",err )
+		os.Exit(1)
+	}
 	buf := bufio.NewReader(f)
 	stringKey := ""
 	for {
@@ -40,9 +48,9 @@ func LoadConf(conffile string) map[string]map[string]string {
 		line := strings.TrimSpace(l)
 		if err != nil {
 			if err != io.EOF {
-				fmt.Println("config file isn't exsit or file is nothing!")
-				os.Exit(1)
-				panic(err)
+				//fmt.Printf("config file:%s ; isn't exsit or file is nothing!",conffile)
+				//os.Exit(1)
+				//panic(err)
 				break
 			} else {
 				break
@@ -75,4 +83,18 @@ func GetConfigVal(module string, key string) string{
 		return ""
 	}
 	return MyConf[module][key]
+}
+
+func SetConfigVal(module string, key string,val string) {
+	if _,ok := MyConf[module];!ok{
+		MyConf[module] = make(map[string]string,0)
+	}
+	MyConf[module][key] = val
+}
+
+func DelConfig(module string, key string) {
+	if _,ok := MyConf[module];!ok{
+		return
+	}
+	delete(MyConf[module],key)
 }
