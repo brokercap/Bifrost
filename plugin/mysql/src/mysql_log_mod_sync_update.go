@@ -48,7 +48,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 				val[i+This.p.fieldCount] = toV
 			}
 
-			if checkOpMap(opMap,data.Rows[1][This.p.mysqlPriKey], "update") == true {
+			if checkOpMap(opMap,data.Rows[1][This.p.fromPriKey], "update") == true {
 				continue
 			}
 			stmt = This.getStmt(UPDATE)
@@ -64,7 +64,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
-			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
+			setOpMapVal(opMap,data.Rows[1][This.p.fromPriKey],nil,"update")
 			break
 		case "delete":
 			val := make([]dbDriver.Value,This.p.fieldCount*2)
@@ -82,7 +82,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 				//第几个字段 + 总字段数量 - 1  算出，on update 所在数组中的位置
 				val[i+This.p.fieldCount] = toV
 			}
-			if checkOpMap(opMap,data.Rows[0][This.p.mysqlPriKey], "delete") == false {
+			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "delete") == false {
 				stmt = This.getStmt(UPDATE)
 				if stmt == nil{
 					goto errLoop
@@ -96,7 +96,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 					log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 					goto errLoop
 				}
-				setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],nil,"delete")
+				setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],nil,"delete")
 			}
 			break
 		case "insert":
@@ -116,7 +116,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 				i++
 			}
 
-			if checkOpMap(opMap,data.Rows[0][This.p.mysqlPriKey], "insert") == true {
+			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "insert") == true {
 				continue
 			}
 			stmt = This.getStmt(REPLACE_INSERT)
@@ -132,7 +132,7 @@ func (This *Conn) CommitLogMod_Update(list []*pluginDriver.PluginDataType) (errD
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
-			setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],&val,"insert")
+			setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],&val,"insert")
 			break
 		}
 

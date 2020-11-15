@@ -47,7 +47,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				val[i+This.p.fieldCount] = toV
 			}
 
-			if checkOpMap(opMap,data.Rows[1][This.p.mysqlPriKey], "update") == true {
+			if checkOpMap(opMap,data.Rows[1][This.p.fromPriKey], "update") == true {
 				continue
 			}
 			stmt = This.getStmt(UPDATE)
@@ -63,7 +63,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
-			setOpMapVal(opMap,data.Rows[1][This.p.mysqlPriKey],nil,"update")
+			setOpMapVal(opMap,data.Rows[1][This.p.fromPriKey],nil,"update")
 			break
 		case "delete":
 			where := make([]dbDriver.Value,0)
@@ -83,7 +83,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				}
 				where = append(where,toV)
 			}
-			if checkOpMap(opMap,data.Rows[0][This.p.mysqlPriKey], "delete") == false {
+			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "delete") == false {
 				stmt = This.getStmt(DELETE)
 				if stmt == nil{
 					goto errLoop
@@ -97,7 +97,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
 					goto errLoop
 				}
-				setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],nil,"delete")
+				setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],nil,"delete")
 			}
 			break
 		case "insert":
@@ -121,7 +121,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				i++
 			}
 
-			if checkOpMap(opMap,data.Rows[0][This.p.mysqlPriKey], "insert") == true {
+			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "insert") == true {
 				continue
 			}
 			stmt = This.getStmt(REPLACE_INSERT)
@@ -137,7 +137,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				goto errLoop
 			}
-			setOpMapVal(opMap,data.Rows[0][This.p.mysqlPriKey],&val,"insert")
+			setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],&val,"insert")
 			break
 		}
 
