@@ -78,7 +78,7 @@ func (c *TableToServerController) Add() {
 		result.Msg = param.ToServerKey+" not exsit"
 		return
 	}
-	t := pluginDriver.Open(param.PluginName,toServerInfo.ConnUri)
+	t := pluginDriver.Open(param.PluginName,&toServerInfo.ConnUri)
 	if t == nil{
 		result.Msg = "plugin new error"
 		return
