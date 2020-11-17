@@ -1,18 +1,20 @@
 package controller
 
-var IndexHtml = `<!DOCTYPE html>
+var IndexHtml = `
+
+<!DOCTYPE html>
 <html>
 
 <head>
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mysqlTEst - Detail</title>
+    <title>mysqlLocalTest - Detail</title>
     <link rel="shortcut icon" href="favicon.ico">
     <link href="/css/bootstrap.min14ed.css?v=3.3.6" rel="stylesheet">
     <link href="/css/style.min862f.css?v=4.1.0" rel="stylesheet">
     <script src="/js/jquery.min.js?v=2.1.4"></script>
-    <script src="/js/Ajax.js?v=1.5.0"></script>
+    <script src="/js/ajax.js?v=1.6.0"></script>
 </head>
 
 <body class="gray-bg top-navigation">
@@ -104,22 +106,21 @@ $(function(){
 
 <link href="/css/plugins/bootstrap-table/bootstrap-table.min.css" rel="stylesheet" xmlns="http://www.w3.org/1999/html">
 <div >
-    <input type="hidden" value="mysqlTEst" id="DbName" />
+    <input type="hidden" value="mysqlLocalTest" id="DbName" />
     <div class="row">
         <div class="col-sm-2" id="MyWebLeft_1">
 
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
-                    <h5>mysqlTEst - Schema List</h5>
+                    <h5>mysqlLocalTest - Schema List</h5>
                 </div>
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
-                    {{range $i, $v := .DataBaseList}}
+                     {{range $i, $v := .DataBaseList}}
                         <a class="list-group-item" id="Schema-{{$v}}">
                             <h3 class="list-group-item-heading">{{$v}}</h3>
                         </a>
                     {{end}}
-                    
                     </div>
 
                 </div>
@@ -342,7 +343,7 @@ $(function(){
     <script type="text/javascript">
 
         
-        var DbName = "mysqlTEst";
+        var DbName = "mysqlLocalTest";
         
         var SchemaName = "";
         
@@ -609,7 +610,11 @@ $(function(){
                     }
                     var ErrorHtml = "";
                     if (v.Error != "" && v.Error != null){
-                        ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+v.ErrorWaitData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Miss</button></p>";
+                        var ErrData = "";
+                        if ( v.ErrorWaitData != null ) {
+                            ErrData = JSON.stringify(v.ErrorWaitData);
+                        }
+                        ErrorHtml = "<p>Err:"+v.Error+"</p><p>Data:"+ErrData+"</p><p><button data-toggle='button' class='btn-sm btn-primary' onClick='DealWaitErr(this,"+v.ToServerID+")' type='button'>Skip</button></p>";
                     }
                     var op = "<p>"+v.Status+"</p>";
                     if (v.Status == "stopped"){
@@ -817,7 +822,7 @@ $(function(){
             var doChangeToServer = function(){
                 if($("#addToServerKey").val()==null){
                     if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
-                        window.location.href = "/toserver/list";
+                        window.location.href = "/toserver/index";
                         return;
                     }else{
                         return;
@@ -874,13 +879,28 @@ $(function(){
                             return false;
                         }
                         var MustBeSuccess = $("#MustBeSuccess").val();
+                        if (MustBeSuccess == "true"){
+                            MustBeSuccess = true;
+                        }else{
+                            MustBeSuccess = false;
+                        }
                         var addToServerKey = $("#addToServerKey").val();
                         var fieldlist = [];
                         $.each($("#TableFieldsContair input:checkbox:checked"),function(){
                             fieldlist.push($(this).val());
                         });
 						var FilterQuery = $("#FilterQuery").val();
+                        if (FilterQuery == "true"){
+                            FilterQuery = true;
+                        }else{
+                            FilterQuery = false;
+                        }
 						var FilterUpdate = $("#FilterUpdate").val();
+                        if (FilterUpdate == "true"){
+                            FilterUpdate = true;
+                        }else{
+                            FilterUpdate = false;
+                        }
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                         var url = '/table/toserver/add';
                         var data = {
@@ -954,10 +974,28 @@ $(function(){
                             return false;
                         }
                         var MustBeSuccess = $("#MustBeSuccess").val();
+                        if (MustBeSuccess == "true"){
+                            MustBeSuccess = true;
+                        }else{
+                            MustBeSuccess = false;
+                        }
                         var addToServerKey = $("#addToServerKey").val();
-
+                        var fieldlist = [];
+                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                            fieldlist.push($(this).val());
+                        });
                         var FilterQuery = $("#FilterQuery").val();
+                        if (FilterQuery == "true"){
+                            FilterQuery = true;
+                        }else{
+                            FilterQuery = false;
+                        }
                         var FilterUpdate = $("#FilterUpdate").val();
+                        if (FilterUpdate == "true"){
+                            FilterUpdate = true;
+                        }else{
+                            FilterUpdate = false;
+                        }
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                         var url = '/table/toserver/add';
                         var data = {
@@ -1013,7 +1051,7 @@ $(function(){
                 }
                 $(thisButton).parent().parent().html("");
             };
-            Ajax("POST",{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:ToServerID,Index:index}, data,callback,false);
+            Ajax("POST",url,{DbName: DbName,SchemaName:SchemaName,TableName:TableName,ToServerId:parseInt(ToServerID),Index:parseInt(index)},callback,false);
         }
 
 
@@ -1086,7 +1124,7 @@ $(function(){
                     <tr>
                         <td align="right" height="50" width="20%">DB : </td>
                         <td style="text-indent:10px" >
-                            <input type="text" name="DbName" id="addTableDbName" class="form-control" placeholder="Database" value="mysqlTEst" disabled>
+                            <input type="text" name="DbName" id="addTableDbName" class="form-control" placeholder="Database" value="mysqlLocalTest" disabled>
                         </td>
                     </tr>
 
@@ -1162,7 +1200,7 @@ $(function(){
                     <tr>
                         <td align="right" height="50" width="20%">DB : </td>
                         <td style="text-indent:10px" >
-                            <input type="text" name="DbName" id="updateTableDbName" class="form-control" placeholder="Database" value="mysqlTEst" disabled>
+                            <input type="text" name="DbName" id="updateTableDbName" class="form-control" placeholder="Database" value="mysqlLocalTest" disabled>
                         </td>
                     </tr>
 
@@ -1304,50 +1342,40 @@ $(function(){
             if ( TableName == "*" ){
                 continue;
             }
-            $.ajax({
-                type : "post",
-                url : url,
-                data:{DbName: DbName, SchemaName: SchemaName, TableName: TableName, ChannelId: channelid,IgnoreTable:IgnoreTable},
-                async : false,  
-                dataType:"json",
-                success : function(data,status){
-                        if( status != 'success' ){
-                            alert("reqeust error, reqeust status : "+status);
-                            return false;
-                        }
-                    if(data.status){
-                        var tableDivId = md5(SchemaName + "_-" + TableName);
-                        if (TableName.indexOf("*") != -1){
+            var callback = function(data){
+                if(data.status){
+                    var tableDivId = md5(SchemaName + "_-" + TableName);
+                    if (TableName.indexOf("*") != -1){
 
-                            
-                            var html = "";
-                            var title = "";
-                            title = " title='Bind Channel : " + channelid + "' ";
-                            html += '<a class="list-group-item"><div class="tableDiv" title="' + TableName + '" id="' + tableDivId + '">';
-                            html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + SchemaName + '\',\'' + TableName + '\')">' + TableName + '</h5>';
-                            html += '<div class="right1">';
-                        	html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\',\''+v.IgnoreTable+'\')">多表</button></div>';
-                            html += '</div>';
-                            html += '<div class="right">';
-                            html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button></div>';
+                        
+                        var html = "";
+                        var title = "";
+                        title = " title='Bind Channel : " + channelid + "' ";
+                        html += '<a class="list-group-item"><div class="tableDiv" title="' + TableName + '" id="' + tableDivId + '">';
+                        html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + SchemaName + '\',\'' + TableName + '\')">' + TableName + '</h5>';
+                        html += '<div class="right1">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+TableName+'\',\''+IgnoreTable+'\')">多表</button></div>';
+                        html += '</div>';
+                        html += '<div class="right">';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button></div>';
 
-                            html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+TableName+"' style='width: 20px; height: 20px;' /></div>";
-                            html += '</div>';
-                            html +=	'</div></a>';
-                            $("#TableListContair").append(html);
+                        html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+TableName+"' style='width: 20px; height: 20px;' /></div>";
+                        html += '</div>';
+                        html +=	'</div></a>';
+                        $("#TableListContair").append(html);
 
-                            DataBaseMap.delete(SchemaName);
-                            showSchemaTableList("Schema-"+SchemaName);
-                        }else{
-                            var html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button>';
-                            $("#" + tableDivId + " .right .button").html(html);
-                            $("#" + tableDivId + " .right .input input").prop("checked",false);
-                        }
-
+                        DataBaseMap.delete(SchemaName);
+                        showSchemaTableList("Schema-"+SchemaName);
+                    }else{
+                        var html = '<button data-toggle="button" class="btn-danger btn-sm" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button>';
+                        $("#" + tableDivId + " .right .button").html(html);
+                        $("#" + tableDivId + " .right .input input").prop("checked",false);
                     }
-                    batchDelOrAddTableResultFun(TableName +" ADD Result:"+data.msg,1);
+
                 }
-            });
+                batchDelOrAddTableResultFun(TableName +" ADD Result:"+data.msg,1);
+            }
+            Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, ChannelId: parseInt(channelid),IgnoreTable:IgnoreTable},callback,false);
         }
         batchDelOrAddTableResultFun("添加完成",-2);
         $(obj).text("提交");
@@ -1368,23 +1396,13 @@ $(function(){
         var TableName = $("#updateTableName").val();
         var IgnoreTable = $("#updateTableIgnoreTable").val();
         var url = "/table/update";
-        $.ajax({
-            type : "post",
-            url : url,
-            data:{DbName: DbName, SchemaName: SchemaName, TableName: TableName, IgnoreTable:IgnoreTable},
-            async : false,  
-            dataType:"json",
-            success : function(data,status){
-                if( status != 'success' ){
-                    alert("reqeust error, reqeust status : "+status);
-                    return false;
-                }
-                alert(data.msg);
-                DataBaseMap.delete(SchemaName);
-                showSchemaTableList("Schema-"+SchemaName);
-                $("#updateTableDiv").modal('hide');
-            }
-        });
+        var callback = function(data){
+            alert(data.msg);
+            DataBaseMap.delete(SchemaName);
+            showSchemaTableList("Schema-"+SchemaName);
+            $("#updateTableDiv").modal('hide');
+        }
+        Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, IgnoreTable:IgnoreTable},callback,false);
     }
 
 </script>
@@ -1406,7 +1424,7 @@ $(function(){
                     <tr>
                         <td align="right" height="50" width="20%">DB : </td>
                         <td style="text-indent:10px" >
-                            <input type="text" name="DbName" id="addHisotryDbName" class="form-control" placeholder="Database" value="mysqlTEst" disabled>
+                            <input type="text" name="DbName" id="addHisotryDbName" class="form-control" placeholder="Database" value="mysqlLocalTest" disabled>
                         </td>
                     </tr>
 
@@ -1639,12 +1657,24 @@ $(function(){
     <div>
         <strong>Copyright</strong> <a href="http://www.xbifrost.com" target="_blank">xBifrost.com</a> &copy; 2020
         &nbsp;&nbsp;&nbsp;&nbsp;
-        By：<a href="http://www.xbifrost.com" target="_blank">jc3wish </a>  version: <span id="version_contair">v1.6.0-beta.01</span>
+        By：<a href="http://www.xbifrost.com" target="_blank">jc3wish </a>  version: <span id="version_contair">v1.6.0-beta.03</span>
 
     </div>
 </div>
 
 </body>
 </html>
+<script type="text/javascript">
+    $(function(){
+        $(":text").change(
+                function(){
+                    $(this).val($.trim($(this).val()));
+                }
+        );
+    });
+</script>
+<link href="/js/plugins/chardin.js/chardinjs.css" rel="stylesheet">
+<script src="/js/plugins/chardin.js/chardinjs.js?v0.2.0"></script>
+<script src="/js/guide.js?v1.2.1_20200516"></script>
 
 `
