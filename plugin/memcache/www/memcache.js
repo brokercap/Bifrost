@@ -1,5 +1,5 @@
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error"}
+	var result = {data:{},status:false,msg:"error",batchSupport:true}
     var data = {};
     var DataType = $("#Memcache_Plugin_Contair #Memcache_DataType").val();
     var KeyConfig = $("#Memcache_Plugin_Contair input[name='KeyConfig']").val();

@@ -93,7 +93,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 func (This *Conn) Connect() bool {
 	This.conn = memcache.New(*This.uri)
 	if This.conn == nil {
-		This.err = fmt.Errorf("memcache New failed",This.uri)
+		This.err = fmt.Errorf("memcache New failed",*This.uri)
 		return false
 	}
 	This.err = nil

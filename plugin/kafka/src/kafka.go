@@ -220,7 +220,11 @@ func (This *Conn) getMsg(data *pluginDriver.PluginDataType) (*sarama.ProducerMes
 }
 
 func (This *Conn) sendToList(data *pluginDriver.PluginDataType,retry bool,isCommit bool) (LastSuccessCommitData *pluginDriver.PluginDataType, Errdata *pluginDriver.PluginDataType, err error) {
-	if This.p.BatchSize > 1 || data == nil{
+	if data == nil && retry == true {
+		LastSuccessCommitData,err = This.sendToKafkaByBatch()
+		goto endErr
+	}
+	if This.p.BatchSize > 1 {
 		if retry == false {
 			var msg *sarama.ProducerMessage
 			msg , err = This.getMsg(data)

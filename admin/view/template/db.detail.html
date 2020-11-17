@@ -868,10 +868,28 @@
                             return false;
                         }
                         var MustBeSuccess = $("#MustBeSuccess").val();
+                        if (MustBeSuccess == "true"){
+                            MustBeSuccess = true;
+                        }else{
+                            MustBeSuccess = false;
+                        }
                         var addToServerKey = $("#addToServerKey").val();
-
+                        var fieldlist = [];
+                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                            fieldlist.push($(this).val());
+                        });
                         var FilterQuery = $("#FilterQuery").val();
+                        if (FilterQuery == "true"){
+                            FilterQuery = true;
+                        }else{
+                            FilterQuery = false;
+                        }
                         var FilterUpdate = $("#FilterUpdate").val();
+                        if (FilterUpdate == "true"){
+                            FilterUpdate = true;
+                        }else{
+                            FilterUpdate = false;
+                        }
                         var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
                         var url = '/table/toserver/add';
                         var data = {

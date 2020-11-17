@@ -77,15 +77,28 @@ type PluginParam struct {
 	SyncMode		SyncMode
 	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
 
-	Datakey			string
+	schemaAndTable	string
 	replaceInto		bool  // 记录当前表是否有replace into操作
 	PriKey			[]fieldStruct
 	toPriKey		string   // toMysql 主键字段
-	mysqlPriKey		string  //	对应 from mysql 的主键id
+	fromPriKey		string  //	对应 from mysql 的主键id
 	Data			*TableDataStruct
 	fieldCount		int
+	tableMap        map[string]*PluginParam0		// 需要自动创建ck表结构 创建之后表基本信息
+	toDatabaseMap	map[string]bool					// ck 里,database 列表信息，database name 做为key，用于缓存
+	AutoTable       bool							// 是否自动匹配数据表
 	stmtArr			[]dbDriver.Stmt
 	SkipBinlogData	*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
+}
+
+type PluginParam0 struct {
+	Field                   []fieldStruct
+	SchemaName              string
+	TableName               string
+	SchemaAndTable        	string
+	PriKey					[]fieldStruct 	// 主键对应关系
+	FromPriKey				string			// 源表的 主键 字段
+	ToPriKey				string			// 目标库的 主键 字段
 }
 
 
@@ -132,6 +145,15 @@ func (This *Conn) GetUriExample() string{
 	return "root:root@tcp(127.0.0.1:3306)/test"
 }
 
+func  (This *Conn) initTableInfo() {
+	if This.p.AutoTable == false {
+		This.initToMysqlTableFieldType()
+	}else{
+		This.p.tableMap = make(map[string]*PluginParam0, 0)
+		This.initToDatabaseMap()
+	}
+}
+
 func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	s,err := json.Marshal(p)
 	if err != nil{
@@ -145,17 +167,23 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	if param.BatchSize == 0{
 		param.BatchSize = 500
 	}
+	if param.Table == "" {
+		param.AutoTable = true
+	}
 	param.Data = NewTableData()
-	param.Datakey = "`"+param.Schema+"`.`"+param.Table+"`"
-	param.toPriKey = param.PriKey[0].ToField
-	param.mysqlPriKey = param.PriKey[0].FromMysqlField
+	if param.AutoTable == false {
+		param.schemaAndTable = "`" + param.Schema + "`.`" + param.Table + "`"
+		param.toPriKey = param.PriKey[0].ToField
+		param.fromPriKey = param.PriKey[0].FromMysqlField
+	}
 	param.stmtArr = make([]dbDriver.Stmt,4)
 	if param.SyncMode == ""{
 		param.SyncMode = SYNCMODE_NORMAL
 	}
+
 	This.p = &param
-	This.getCktFieldType()
-	return &param,nil
+	This.initTableInfo()
+	return This.p,nil
 }
 
 func (This *Conn) SetParam(p interface{}) (interface{},error){
@@ -171,7 +199,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 	}
 }
 
-func (This *Conn) getCktFieldType() {
+func (This *Conn) initToMysqlTableFieldType() {
 	defer func() {
 		if err := recover();err !=nil{
 			log.Println(string(debug.Stack()))
@@ -211,6 +239,96 @@ func (This *Conn) getCktFieldType() {
 	This.p.fieldCount = len(list)
 }
 
+func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*PluginParam0,error) {
+	defer func() {
+		if err := recover();err !=nil{
+			log.Println(string(debug.Stack()))
+			This.conn.err = fmt.Errorf(string(debug.Stack()))
+		}
+	}()
+	var SchemaName string
+	if This.p.Schema == "" {
+		SchemaName = data.SchemaName
+	}else{
+		SchemaName = This.p.Schema
+	}
+	key := "`"+SchemaName + "`.`" + data.TableName+"`"
+	if _, ok := This.p.tableMap[key]; ok {
+		return This.p.tableMap[key],nil
+	}
+	fields := This.conn.GetTableFields(data.SchemaName,data.TableName)
+	if This.conn.err != nil {
+		This.err = This.conn.err
+		return nil,This.err
+	}
+	if len(fields) == 0{
+		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit",data.SchemaName,data.TableName)
+		return nil,This.err
+	}
+	fieldList := make([]fieldStruct,len(fields))
+	priKeyList := make([]fieldStruct,0)
+	var fromPriKey,toPriKey string
+	var ok bool
+	for i,v:=range fields{
+		var fromFieldName string
+		if _,ok = data.Rows[0][v.COLUMN_NAME];!ok {
+			switch v.COLUMN_NAME {
+			case "binlog_event_type":
+				fromFieldName = "{$EventType}"
+				break
+			case "binlog_timestamp", "binlogtimestamp":
+				fromFieldName = "{$BinlogTimestamp}"
+				break
+			case "binlogfilenum","binlog_filenum":
+				fromFieldName = "{$BinlogFileNum}"
+				break
+			case "binlogposition","binlog_position":
+				fromFieldName = "{$BinlogPosition}"
+				break
+			default:
+				fromFieldName = v.COLUMN_NAME
+				break
+			}
+		}else{
+			fromFieldName = v.COLUMN_NAME
+		}
+		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:v.COLUMN_DEFAULT }
+		if strings.ToLower(v.EXTRA) == "auto_increment" {
+			field.ToFieldDefault = nil
+			priKeyList = append(priKeyList,field)
+			fromPriKey = v.COLUMN_NAME
+			toPriKey = v.COLUMN_NAME
+		}
+		fieldList[i] = field
+	}
+	p := &PluginParam0 {
+		Field: fieldList,
+		PriKey: priKeyList,
+		SchemaName: data.SchemaName,
+		TableName: data.TableName,
+		SchemaAndTable: key,
+		FromPriKey:fromPriKey,
+		ToPriKey: toPriKey,
+	}
+	This.p.tableMap[key] = p
+	return p,nil
+}
+
+// 查出 目标库 里所有database,放到 map 中，用于缓存
+func (This *Conn) initToDatabaseMap() {
+	This.p.toDatabaseMap = make(map[string]bool,0)
+	defer func() {
+		if err := recover();err != nil {
+			return
+		}
+	}()
+	SchemaList := This.conn.GetSchemaList()
+	for _,Name := range SchemaList {
+		This.p.toDatabaseMap[Name] = true
+	}
+	return
+}
+
 func (This *Conn) Connect() bool {
 	This.conn = NewMysqlDBConn(*This.uri)
 	if This.conn.err != nil{
@@ -230,8 +348,8 @@ func (This *Conn) ReConnect() bool {
 		This.conn.Close()
 	}
 	This.Connect()
-	if This.conn.err == nil{
-		This.getCktFieldType()
+	if This.conn.err == nil {
+		This.initTableInfo()
 	}
 	return  true
 }
@@ -371,45 +489,15 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 		n = This.p.BatchSize
 	}
 	list := This.p.Data.Data[:n]
-
-	This.conn.err = This.conn.Begin()
-	if This.conn.err != nil{
-		return nil,nil,This.conn.err
+	if This.p.AutoTable {
+		ErrData,e = This.AutoTableCommit(list)
+	}else{
+		ErrData,e = This.NotAutoTableCommit(list)
 	}
-	var errData *pluginDriver.PluginDataType
-	switch This.p.SyncMode {
-	case SYNCMODE_NORMAL:
-		errData = This.CommitNormal(list)
-		break
-	case SYNCMODE_LOG_UPDATE:
-		errData = This.CommitLogMod_Update(list)
-		break
-	case SYNCMODE_LOG_APPEND:
-		errData = This.CommitLogMod_Append(list)
-		break
-	default:
-		This.err = fmt.Errorf("同步模式ERROR:%s",This.p.SyncMode)
-		break
+	if e != nil {
+		log.Println("e:",e)
+		return
 	}
-
-	if This.conn.err != nil {
-		This.err = This.conn.err
-		//log.Println("plugin mysql conn.err",This.err)
-		return nil,errData,This.err
-	}
-	if This.err != nil{
-		This.conn.err = This.conn.Rollback()
-		log.Println("plugin mysql err",This.err)
-		return nil,errData,This.err
-	}
-
-	err2 := This.conn.Commit()
-	This.StmtClose()
-	if err2 != nil{
-		This.conn.err = err2
-		return nil,nil,This.conn.err
-	}
-
 	var binlogEvent *pluginDriver.PluginDataType
 	if len(This.p.Data.Data) <= int(This.p.BatchSize) {
 		binlogEvent = This.p.Data.CommitData[0]
@@ -423,6 +511,102 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	}
 	This.p.SkipBinlogData = nil
 	return binlogEvent,nil,nil
+}
+
+func (This *Conn) NotAutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData *pluginDriver.PluginDataType,e error) {
+	This.conn.err = This.conn.Begin()
+	if This.conn.err != nil{
+		return nil,This.conn.err
+	}
+	switch This.p.SyncMode {
+	case SYNCMODE_NORMAL:
+		ErrData = This.CommitNormal(list)
+		break
+	case SYNCMODE_LOG_UPDATE:
+		ErrData = This.CommitLogMod_Update(list)
+		break
+	case SYNCMODE_LOG_APPEND:
+		ErrData = This.CommitLogMod_Append(list)
+		break
+	default:
+		This.err = fmt.Errorf("同步模式ERROR:%s",This.p.SyncMode)
+		break
+	}
+	if This.conn.err != nil {
+		This.err = This.conn.err
+		//log.Println("plugin mysql conn.err",This.err)
+		return ErrData,This.err
+	}
+	if This.err != nil{
+		This.conn.err = This.conn.Rollback()
+		log.Println("plugin mysql err",This.err)
+		return ErrData,This.err
+	}
+	This.conn.err = This.conn.Commit()
+	This.StmtClose()
+	if This.conn.err != nil{
+		return nil,This.conn.err
+	}
+	return
+}
+
+// 自动创建表的提交
+func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData *pluginDriver.PluginDataType,e error) {
+	dataMap := make(map[string][]*pluginDriver.PluginDataType,0)
+	var ok bool
+	for _,PluginData := range list {
+		key := PluginData.SchemaName + "." + PluginData.TableName
+		if _,ok = dataMap[key];!ok {
+			dataMap[key] = make([]*pluginDriver.PluginDataType,0)
+		}
+		dataMap[key] = append(dataMap[key],PluginData)
+	}
+	for _,data := range dataMap {
+		p,err := This.getAutoTableFieldType(data[0])
+		if err != nil {
+			break
+		}
+		This.p.Field = p.Field
+		This.p.fieldCount = len(p.Field)
+		This.p.schemaAndTable = p.SchemaAndTable
+		This.p.PriKey = p.PriKey
+		This.p.toPriKey = p .ToPriKey
+		This.p.fromPriKey = p.FromPriKey
+		This.conn.err = This.conn.Begin()
+		if This.conn.err != nil {
+			This.err = This.conn.err
+			break
+		}
+		switch This.p.SyncMode {
+		case SYNCMODE_NORMAL:
+			ErrData = This.CommitNormal(data)
+			break
+		case SYNCMODE_LOG_UPDATE:
+			ErrData = This.CommitLogMod_Update(data)
+			break
+		case SYNCMODE_LOG_APPEND:
+			ErrData = This.CommitLogMod_Append(data)
+			break
+		default:
+			This.err = fmt.Errorf("同步模式ERROR:%s",This.p.SyncMode)
+			break
+		}
+		if This.conn.err != nil {
+			This.err = This.conn.err
+			break
+		}
+		if This.err != nil {
+			This.conn.err = This.conn.Rollback()
+			log.Println("plugin mysql err",This.err)
+			return ErrData,This.err
+		}
+		This.conn.err = This.conn.Commit()
+		This.StmtClose()
+		if This.conn.err != nil {
+			break
+		}
+	}
+	return
 }
 
 func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType string,defaultVal *string) (v dbDriver.Value,e error) {
@@ -578,7 +762,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 				values += ",?"
 			}
 		}
-		sql := "REPLACE INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
+		sql := "REPLACE INTO "+This.p.schemaAndTable+" ("+fields+") VALUES ("+values+")"
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
 			log.Println("mysql getStmt REPLACE_INSERT err:",This.conn.err,sql)
@@ -596,7 +780,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 				values += ",?"
 			}
 		}
-		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+")"
+		sql := "INSERT INTO "+This.p.schemaAndTable+" ("+fields+") VALUES ("+values+")"
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
 			log.Println("mysql getStmt INSERT err:",This.conn.err,sql)
@@ -611,7 +795,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 				where += " AND `"+v.ToField+"`=?"
 			}
 		}
-		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.Datakey+" WHERE "+where)
+		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare("DELETE FROM "+This.p.schemaAndTable+" WHERE "+where)
 		if This.conn.err != nil{
 			log.Println("mysql getStmt DELETE err:",This.conn.err)
 		}
@@ -631,7 +815,7 @@ func (This *Conn) getStmt(Type EventType) dbDriver.Stmt{
 				fields2 += ",`"+v.ToField+"`=?"
 			}
 		}
-		sql := "INSERT INTO "+This.p.Datakey+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
+		sql := "INSERT INTO "+This.p.schemaAndTable+" ("+fields+") VALUES ("+values+") ON DUPLICATE KEY UPDATE "+fields2
 		This.p.stmtArr[Type],This.conn.err = This.conn.conn.Prepare(sql)
 		if This.conn.err != nil{
 			log.Println("mysql getStmt INSERT ON DUPLICATE KEY UPDATE err:",This.conn.err,sql)

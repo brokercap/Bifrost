@@ -1,21 +1,11 @@
 function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"failed"}
+	var result = {data:{},status:false,msg:"failed",batchSupport:false}
 
 	var Table = $("#to_mysql_table").val();
     var Schema = $("#to_mysql_schema").val();
     var BatchSize = $("#MySQL_BatchSize").val();
     var NullTransferDefault = $("#MySQL_NullTransferDefault").val();
     var SyncMode = $("#MySQL_SyncMode").val();
-
-    if (Schema == ""){
-        result.msg = "请选择 数据库!";
-        return result;
-    }
-
-    if (Table == ""){
-        result.msg = "请选择 数据数据表!";
-        return result;
-    }
 
     if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)){
         result.msg = "BatchSize must be int!"
@@ -24,28 +14,31 @@ function doGetPluginParam(){
 
 	var PriKey = [];
 	var Field = [];
-
-    $.each($("#ToTableFieldsTable tr"),function () {
-        var to_field_name = $(this).find("input[name=to_field_name]").val();
-        var from_field_name = $(this).find("input[name=from_field_name]").val();
-
-        var d       = {};
-        d["ToField"]     = to_field_name;
-        d["FromMysqlField"]  = from_field_name;
-        if($(this).find("input[name=pri_checkbox]").is(':checked')) {
-            if (to_field_name == "" || from_field_name == "") {
-                result.msg = "PRI:" + to_field_name + " not empty";
-                return result;
+    // 选择了指定目标表的情况下，并且非日志模式同步情况下，必须指定哪一个目标表字段为主键
+    if ( Table != "" ) {
+        $.each($("#ToTableFieldsTable tr"),function () {
+            var to_field_name = $(this).find("input[name=to_field_name]").val();
+            var from_field_name = $(this).find("input[name=from_field_name]").val();
+            var d       = {};
+            d["ToField"]     = to_field_name;
+            d["FromMysqlField"]  = from_field_name;
+            if($(this).find("input[name=pri_checkbox]").is(':checked')) {
+                if (to_field_name == "" || from_field_name == "") {
+                    result.msg = "PRI:" + to_field_name + " not empty";
+                    return result;
+                }
+                PriKey.push(d);
             }
-            PriKey.push(d);
+            Field.push(d);
+        });
+        if (PriKey.length == 0 && SyncMode != 'LogAppend') {
+            result.msg = "请选择一个字段为主键！";
+            return result;
         }
-        Field.push(d);
-    });
-
-    if(PriKey.length == 0 && SyncMode != 'LogAppend'){
-        result.msg = "请选择一个字段为主键！";
-        return result;
+    }else{
+        result.batchSupport = true
     }
+
 
     $.each($("#TableFieldsContair input:checkbox"),function(){
         $(this).attr("checked",false);
