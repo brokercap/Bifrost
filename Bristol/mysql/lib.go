@@ -7,11 +7,11 @@ import (
 
 type tableStruct struct {
 	Pri 					[]*string
-	ColumnSchemaTypeList 	[]*column_schema_type
+	ColumnSchemaTypeList 	[]*ColumnInfo
 	needReload				bool
 }
 
-type column_schema_type struct {
+type ColumnInfo struct {
 	COLUMN_NAME        string
 	COLLATION_NAME     string
 	CHARACTER_SET_NAME string
@@ -19,12 +19,12 @@ type column_schema_type struct {
 	COLUMN_KEY         string
 	COLUMN_TYPE        string
 	NUMERIC_SCALE      string  //浮点数精确多少数
-	enum_values        []string
-	set_values         []string
-	is_bool            bool
-	is_primary         bool
-	unsigned 		   bool
-	auto_increment     bool
+	EnumValues         []string
+	SetValues          []string
+	IsBool             bool
+	IsPrimary          bool
+	Unsigned 		   bool
+	AutoIncrement      bool
 	COLUMN_DEFAULT	   string
 	DATA_TYPE		   string
 	CHARACTER_OCTET_LENGTH	uint64

@@ -73,7 +73,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	return
 }
 
-func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEvent, tableSchemaMap []*column_schema_type) (row map[string]interface{}, e error) {
+func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEvent, tableSchemaMap []*ColumnInfo) (row map[string]interface{}, e error) {
 	columnsCount := len(tableMap.columnTypes)
 	row = make(map[string]interface{})
 	bitfieldSize := (columnsCount + 7) / 8
@@ -96,19 +96,19 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_TINY:
 			var b byte
 			b, e = buf.ReadByte()
-			if tableSchemaMap[i].is_bool == true{
+			if tableSchemaMap[i].IsBool == true{
 				switch int(b) {
 				case 1:row[column_name] = true
 				case 0:row[column_name] = false
 				default:
-					if tableSchemaMap[i].unsigned == true{
+					if tableSchemaMap[i].Unsigned == true{
 						row[column_name] = uint8(b)
 					}else{
 						row[column_name] = int8(b)
 					}
 				}
 			}else{
-				if tableSchemaMap[i].unsigned == true{
+				if tableSchemaMap[i].Unsigned == true{
 					row[column_name] = uint8(b)
 				}else{
 					row[column_name] = int8(b)
@@ -117,7 +117,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			break
 
 		case FIELD_TYPE_SHORT:
-			if tableSchemaMap[i].unsigned{
+			if tableSchemaMap[i].Unsigned{
 				var short uint16
 				e = binary.Read(buf, binary.LittleEndian, &short)
 				row[column_name] = short
@@ -138,7 +138,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			break
 
 		case FIELD_TYPE_INT24:
-			if tableSchemaMap[i].unsigned {
+			if tableSchemaMap[i].Unsigned {
 				var bint uint64
 				bint, e = readFixedLengthInteger(buf, 3)
 				row[column_name] = uint32(bint)
@@ -162,7 +162,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 
 		case FIELD_TYPE_LONG:
-			if tableSchemaMap[i].unsigned {
+			if tableSchemaMap[i].Unsigned {
 				var long uint32
 				e = binary.Read(buf, binary.LittleEndian, &long)
 				row[column_name] = long
@@ -174,7 +174,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			break
 
 		case FIELD_TYPE_LONGLONG:
-			if tableSchemaMap[i].unsigned{
+			if tableSchemaMap[i].Unsigned{
 				var longlong uint64
 				e = binary.Read(buf, binary.LittleEndian, &longlong)
 				row[column_name] = longlong
@@ -376,10 +376,10 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			} else {
 				index = int(bytesToUint16(buf.Next(int(size))))
 			}
-			if index < 1 || len(tableSchemaMap[i].enum_values) < index{
+			if index < 1 || len(tableSchemaMap[i].EnumValues) < index{
 				row[column_name] = nil
 			}else{
-				row[column_name] = tableSchemaMap[i].enum_values[index-1]
+				row[column_name] = tableSchemaMap[i].EnumValues[index-1]
 			}
 			break
 
@@ -415,7 +415,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 					return ans
 					}
 
-			for i, val := range tableSchemaMap[i].set_values {
+			for i, val := range tableSchemaMap[i].SetValues {
 				s := index & mathPower(2,i)
 				if s > 0 {
 					result = append(result,val)
