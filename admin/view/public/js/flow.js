@@ -259,14 +259,14 @@ var FlowClass  = {
         var obj = this;
         this.ByteSizeSum = 0;
         this.CountSum = 0;
-        $.post(
+        $.get(
             "/flow/get",
             {
-                dbname: this.dbName,
-                schema: this.schema,
-                table_name: this.tableName,
-                channelid: this.ChanneId,
-                type: this.AgetLength,
+                DbName: this.dbName,
+                SchemaName: this.schema,
+                TableName: this.tableName,
+                ChannelId: this.ChanneId,
+                Type: this.AgetLength,
             },
             function (d, status) {
                 if (status != "success") {

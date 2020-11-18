@@ -194,7 +194,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				SchemaName:     parser.lastMapEvent.schemaName,
 				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
-				Pri:            parser.tableSchemaMap[rowsEvent.tableId].Pri,
+				Pri:			parser.tableSchemaMap[rowsEvent.tableId].Pri,
 			}
 		} else {
 			event = &EventReslut{
@@ -204,7 +204,6 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				SchemaName:     parser.lastMapEvent.schemaName,
 				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
-				Pri:            make([]*string, 0),
 			}
 		}
 		break
@@ -221,7 +220,6 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			SchemaName:     "",
 			TableName:      "",
 			Rows:           nil,
-			Pri:            nil,
 		}
 		break
 	default:
@@ -318,7 +316,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	//columeArr := make([]*tableStruct column_schema_type,0)
 	tableInfo := &tableStruct{
 		Pri:                  make([]*string, 0),
-		ColumnSchemaTypeList: make([]*column_schema_type, 0),
+		ColumnSchemaTypeList: make([]*ColumnInfo, 0),
 	}
 	for {
 		dest := make([]driver.Value, 10, 10)
@@ -415,16 +413,16 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			}
 		}
 
-		tableInfo.ColumnSchemaTypeList = append(tableInfo.ColumnSchemaTypeList, &column_schema_type{
+		tableInfo.ColumnSchemaTypeList = append(tableInfo.ColumnSchemaTypeList, &ColumnInfo{
 			COLUMN_NAME:            COLUMN_NAME,
 			COLUMN_KEY:             COLUMN_KEY,
 			COLUMN_TYPE:            COLUMN_TYPE,
-			enum_values:            enum_values,
-			set_values:             set_values,
-			is_bool:                isBool,
-			unsigned:               unsigned,
-			is_primary:             is_primary,
-			auto_increment:         auto_increment,
+			EnumValues:             enum_values,
+			SetValues:              set_values,
+			IsBool:                 isBool,
+			Unsigned:               unsigned,
+			IsPrimary:              is_primary,
+			AutoIncrement:          auto_increment,
 			CHARACTER_SET_NAME:     CHARACTER_SET_NAME,
 			COLLATION_NAME:         COLLATION_NAME,
 			NUMERIC_SCALE:          NUMERIC_SCALE,
@@ -518,28 +516,6 @@ func (parser *eventParser) GetTableId(database string, tablename string) (uint64
 		return 0,fmt.Errorf("not found key:%s",key)
 	}
 	return parser.tableNameMap[key],nil
-}
-
-func (parser *eventParser) GetQueryTableName(sql string) (string, string) {
-	sql = strings.Trim(sql, " ")
-	if len(sql) < 11 {
-		return "", ""
-	}
-	if strings.ToUpper(sql[0:11]) == "ALTER TABLE" {
-		sqlArr := strings.Split(sql, " ")
-		dbAndTable := strings.Replace(sqlArr[2], "`", "", -1)
-		i := strings.IndexAny(dbAndTable, ".")
-		var databaseName, tablename string
-		if i > 0 {
-			databaseName = dbAndTable[0:i]
-			tablename = dbAndTable[i+1:]
-		} else {
-			databaseName = ""
-			tablename = dbAndTable
-		}
-		return databaseName, tablename
-	}
-	return "", ""
 }
 
 func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error) {
@@ -643,6 +619,14 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 					}
 					if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
 						parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+					}
+					break
+				}
+				// 假如 drop database schemaName 这样的语句，只有 SchemaName，而没有 TableName的，则匹配是否要过滤整个库
+				if event.SchemaName != "" {
+					if parser.binlogDump.CheckReplicateDb(event.SchemaName, "*") == false {
+						parser.saveBinlog(event)
+						continue
 					}
 				}
 				break
