@@ -36,12 +36,6 @@
 <p>BOOL ( Int8 )</p>
 <p>&nbsp;</p>
 
-<p>LowerCaseTableNames 参数</p>
-
-<p>0(不转) : 按源字段名进行表建和库</p>
-<p>1(小写) : 建表的时候,将库名,表名,字段名转成小写</p>
-<p>2(大写) : 建表的时候,将库名,表名,字段名转成大写</p>
-<p>&nbsp;</p>
 
 <p><strong>连接配置</strong></p>
 
@@ -107,7 +101,6 @@
 <p>ClickHouse 18+ 版本</p>
 <p>假如源端是 decimal或者 varchar 等字符串类型, 目标端ClickHouse 是 Float32,Float64 或者 Decimal 类型,数据类型转换,可能存在精度精失的,如果要确保精度不丢失,ClickHouse 端使用 String 类型</p>
 <p>不支持 NULL 值字段，假如数据源为 Null ，将强制转换成 0, 0.00 或者 空字符串</p>
-<p>假如目标字段是Date,DateTime 类型，数据源为空字符串将强制转换成 时间默认值</p>
 <p>假如数据源是String类型，Ck表结构是 Int 或者 Float 类型，数据类型转换失败，并不报错，将强制转换成 0 或者 0.00</p>
 <p>BatchSize参数代表累积多少条数据刷一次数据到ClickHouse，假如一直没有数据从 MySQL 过来，则默认5秒超时，也会进行刷一次</p>
 <p>{$BifrostDataVersion} 标签的字段 必须为 Int64 或者 UInt64 数据类型</p>
