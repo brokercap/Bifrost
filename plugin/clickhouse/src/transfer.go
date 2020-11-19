@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"encoding/json"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func AllTypeToInt64(s interface{}) (int64, error) {
@@ -50,10 +51,13 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 			v = data
 			break
 		case string:
-			if data.(string) == "0000-00-00" {
+			switch data.(string) {
+			case "0000-00-00",""," ":
 				v = int16(0)
-			} else {
+				break
+			default:
 				v = data
+				break
 			}
 			break
 		default:
@@ -79,12 +83,15 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 			v = data
 			break
 		case string:
-			if data.(string) == "0000-00-00 00:00:00" {
+			switch data.(string) {
+			case "0000-00-00 00:00:00",""," ":
 				v = int32(0)
-			} else {
+				break
+			default:
 				loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
 				theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
 				v = theTime.Unix()
+				break
 			}
 			break
 		default:
@@ -365,11 +372,11 @@ func interfaceToFloat64(data interface{}) float64 {
 	return f1
 }
 
-func TransferToCreateTableSql(SchemaName, TableName string, data map[string]interface{}, Pri []*string) (sql string, ckField []fieldStruct) {
-	if data == nil || len(data) == 0 || len(Pri) == 0 {
+func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string, ckField []fieldStruct) {
+	if data.Rows == nil || len(data.Rows) == 0 || len(data.Pri) == 0 {
 		return "", nil
 	}
-	sql = "CREATE TABLE IF NOT EXISTS `" + SchemaName + "`.`" + TableName + "` ("
+	sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
 	ckField = make([]fieldStruct, 0)
 	var getToCkType = func(v interface{}) (toType string) {
 		var err error
@@ -461,20 +468,22 @@ func TransferToCreateTableSql(SchemaName, TableName string, data map[string]inte
 	priArr := make([]string, 0)
 	priMap := make(map[string]bool,0)
 	var toCkType string
-	for _, priK := range Pri {
-		priArr = append(priArr, *priK)
-		priMap[*priK] = true
-		toCkType = getToCkType(data[*priK])
-		addCkField(*priK,*priK,toCkType)
+	for _, priK := range data.Pri {
+		fileName0 := This.GetFieldName(*priK)
+		priArr = append(priArr, fileName0)
+		priMap[fileName0] = true
+		toCkType = getToCkType(data.Rows[0][*priK])
+		addCkField(fileName0,*priK,toCkType)
 	}
 	var ok bool
-	for fileName, v := range data {
-		if _,ok = priMap[fileName];ok {
+	for fileName, v := range data.Rows[0] {
+		fileName0 := This.GetFieldName(fileName)
+		if _,ok = priMap[fileName0];ok {
 			continue
 		}
 		toCkType = getToCkType(v)
 		toCkType = "Nullable("+toCkType+")"
-		addCkField(fileName,fileName,toCkType)
+		addCkField(fileName0,fileName,toCkType)
 	}
 	addCkField("bifrost_data_version","{$BifrostDataVersion}","Nullable(Int64)")
 	addCkField("binlog_event_type","{$EventType}","Nullable(String)")
@@ -482,7 +491,7 @@ func TransferToCreateTableSql(SchemaName, TableName string, data map[string]inte
 	return
 }
 
-func TransferToCreateDatabaseSql(SchemaName string) (sql string) {
+func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
 	sql = "CREATE DATABASE IF NOT EXISTS `"+SchemaName+"`"
 	return sql
 }

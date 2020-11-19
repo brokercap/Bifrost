@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"database/sql/driver"
+	"strings"
 )
 
 const VERSION = "v1.6.0"
@@ -63,6 +64,7 @@ type PluginParam struct {
 	AutoCreateTable         bool
 	NullNotTransferDefault 	bool  //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
 	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
+	LowerCaseTableNames		int8  // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
 	// 以上的数据是 界面配置的参数
 
 	// 以下的数据 是插件执行的时候，进行计算而来的
@@ -273,13 +275,34 @@ func (This *Conn) getCktFieldType() {
 	This.p.Field = Fields
 }
 
+func (This *Conn) GetFieldName(Name string) string {
+	switch This.p.LowerCaseTableNames {
+	case 0:
+		return Name
+	case 1:
+		return strings.ToLower(Name)
+	case 2:
+		return strings.ToUpper(Name)
+	default:
+		return Name
+	}
+}
+
+func (This *Conn) GetSchemaName(Name string) (SchemaName string) {
+	if This.p.CkSchema == "" {
+		SchemaName = This.GetFieldName(Name)
+	}else{
+		SchemaName = This.p.CkSchema
+	}
+	return
+}
 
 // 通过数据自动创建 ck 库
 func (This *Conn) CreateCkDatabase(SchemaName string) (err error){
 	if _,ok := This.p.ckDatabaseMap[SchemaName];ok {
 		return nil
 	}
-	sql := TransferToCreateDatabaseSql(SchemaName)
+	sql := This.TransferToCreateDatabaseSql(SchemaName)
 	This.conn.err = This.conn.Exec(sql,[]driver.Value{})
 	if This.conn.err != nil {
 		return  This.conn.err
@@ -290,7 +313,7 @@ func (This *Conn) CreateCkDatabase(SchemaName string) (err error){
 
 // 通过数据自动创建 ck 表
 func (This *Conn) CreateCkTable(data *pluginDriver.PluginDataType) (ckField []fieldStruct, err error){
-	sql, ckField2 := TransferToCreateTableSql(data.SchemaName, data.TableName, data.Rows[0], data.Pri)
+	sql, ckField2 := This.TransferToCreateTableSql(data)
 	if sql == "" {
 		return nil,nil
 	}
@@ -309,11 +332,20 @@ func (This *Conn) getAutoCreateCkTableFieldType(SchemaName,TableName string,data
 	}
 	var ok bool
 	ckField2 := make([]fieldStruct,0)
+
+	// 将 mysql 里的行数据,转成 小写key和字段名映射关系,用于判断 目标表里的字段和源表字段，能否对应上
+	// 比如目标表是 test_name ,但是源表是 Test_Name
+	var mysqlSourceData = make(map[string]string,0)
+	for fieldName, _ := range data {
+		mysqlSourceData[strings.ToLower(fieldName)] = fieldName
+	}
 	for _, v := range ckFields {
 		var MySQLFieldName string
 		// 假如 ck 表的中字段名,并不在传过来的数据中,则认为 源端中没有这个字段，
 		// 有一些保留字段,则自动用标签替换处理
-		if _,ok = data[v.Name];!ok {
+		// 这里将 ck 字段名也强转成小写作为key，用于判断是否和 mysql 里的字段,判断是否相等，这里不区分大小写，防止用户ck 建表是小写，但是 MySQL 里字段名是大写
+		var ckFieldName = strings.ToLower(v.Name)
+		if _,ok = mysqlSourceData[ckFieldName];!ok {
 			switch v.Name {
 			case "bifrost_data_version":
 				MySQLFieldName = "{$BifrostDataVersion}"
@@ -335,7 +367,7 @@ func (This *Conn) getAutoCreateCkTableFieldType(SchemaName,TableName string,data
 				break
 			}
 		}else{
-			MySQLFieldName = v.Name
+			MySQLFieldName = mysqlSourceData[ckFieldName]
 		}
 		ckField2 = append(ckField2,fieldStruct{CK:v.Name,MySQL:MySQLFieldName,CkType:v.Type})
 	}
@@ -352,21 +384,19 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	}()
 	var err error
 	var SchemaName string
-	if This.p.CkSchema == "" {
-		SchemaName = data.SchemaName
-	}else{
-		SchemaName = This.p.CkSchema
-	}
+	var TableName string
+	SchemaName = This.GetSchemaName(data.SchemaName)
 	This.CreateCkDatabase(SchemaName)
 	if This.conn.err != nil {
 		return nil,This.conn.err
 	}
-	key := "`"+SchemaName + "`.`" + data.TableName+"`"
+	TableName = This.GetFieldName(data.TableName)
+	key := "`"+SchemaName + "`.`" + TableName +"`"
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key],nil
 	}
 	var ckField []fieldStruct
-	ckField,_ = This.getAutoCreateCkTableFieldType(SchemaName,data.TableName,data.Rows[0])
+	ckField,_ = This.getAutoCreateCkTableFieldType(SchemaName,TableName,data.Rows[0])
 	if ckField == nil || len(ckField) == 0 {
 		ckField,err = This.CreateCkTable(data)
 	}
@@ -379,7 +409,7 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	p0 := &PluginParam0{
 		Field 				: ckField,
 		CkSchema 			: SchemaName,
-		CkTable  			: data.TableName,
+		CkTable  			: TableName,
 		CkSchemaAndTable 	: key,
 	}
 	This.p.tableMap[key] = p0

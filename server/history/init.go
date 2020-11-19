@@ -376,6 +376,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.Fields) > 0{
 		return
 	}
+	This.TablePriKey = ""
 	This.TableInfo = GetSchemaTableInfo(db,This.SchemaName,This.CurrentTableName)
 	//修改表记录总数，用于界面显示
 	This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableInfo.TABLE_ROWS
@@ -396,6 +397,10 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 				break
 			}
 		}
+	}
+	// 没有主键的情况下,不能使用 between 等方式查询
+	if This.TablePriKey == "" {
+		This.Property.LimitOptimize = 0
 	}
 	// 当总数小于100万的时候的时候，并且自增id 最大值和最小值 差值 的分页数  是 直接 limit 分页数的 2 倍以上的时候，采用常规 limit 分页
 	if This.Property.Where == "" && This.Property.LimitOptimize == 1 && This.TableInfo.TABLE_ROWS <= 1000000 && (This.TablePriKeyMaxId - This.TablePriKeyMinId) / uint64(This.Property.ThreadCountPer) > This.TableInfo.TABLE_ROWS / uint64(This.Property.ThreadCountPer) * 2 {
