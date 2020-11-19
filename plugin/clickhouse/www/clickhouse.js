@@ -7,7 +7,6 @@ function doGetPluginParam(){
     var BatchSize = $("#CK_BatchSize").val();
     var SyncType = $("#clickhouse_sync_type").val();
     var NullNotTransferDefault = $("#clickhouse_NullNotTransferDefault").val();
-    var LowerCaseTableNames = $("#clickhouse_LowerCaseTableNames").val();
     var AutoCreateTable = false;
     if (CkTable == ""){
         AutoCreateTable = true;
@@ -92,7 +91,6 @@ function doGetPluginParam(){
     result.data["BatchSize"]        = parseInt(BatchSize);
     result.data["SyncType"]         = SyncType;
     result.data["AutoCreateTable"]  = AutoCreateTable;
-    result.data["LowerCaseTableNames"] = parseInt(LowerCaseTableNames);
     if (NullNotTransferDefault == "true"){
         result.data["NullNotTransferDefault"] = true;
     }else{
@@ -106,7 +104,7 @@ function showClickHouseCreateSQL() {
         alert("请先选择 MYSQL 表");
         return;
     }
-    var tableName = getTableName();
+    var tableName = $("#tableToServerListContair").attr("table_name");
     var sql = getClickHouseTableCreateSQL(tableName);
 
     $("#showClickHouseCreateSQL .modal-title").html("ClickHouse CreateSQL For Table </br>"+tableName);
@@ -117,19 +115,6 @@ function showClickHouseCreateSQL() {
 function getClickHouseTableCreateSQL(tableName) {
 	var ddlSql = "";
 	var index = "";
-    var LowerCaseTableNames = $("#clickhouse_LowerCaseTableNames").val();
-    var getFieldName = function (Name) {
-        switch (LowerCaseTableNames) {
-            case "0":
-                return Name;
-            case "1":
-                return Name.toLowerCase();
-            case "2":
-                return Name.toUpperCase();
-            default:
-                return Name
-        }
-    };
     $.each($("#TableFieldsContair .fieldsname input"),
 		function () {
             var data = getTableFieldType($(this).val());
@@ -148,9 +133,9 @@ function getClickHouseTableCreateSQL(tableName) {
                 }
 
                 if(ddlSql == ""){
-                    ddlSql = getFieldName(data.COLUMN_NAME) + " " + Type;
+                    ddlSql = data.COLUMN_NAME+" "+Type;
                 }else{
-                    ddlSql +="," + getFieldName(data.COLUMN_NAME) +" " + Type;
+                    ddlSql +=","+data.COLUMN_NAME+" "+Type;
                 }
                 if(data.COLUMN_KEY == ""){
                     return
@@ -159,9 +144,9 @@ function getClickHouseTableCreateSQL(tableName) {
                     return
                 }
                 if(index == ""){
-                    index = getFieldName(data.COLUMN_NAME);
+                    index = data.COLUMN_NAME;
                 }else{
-                    index += "," + getFieldName(data.COLUMN_NAME);
+                    index += ","+data.COLUMN_NAME;
                 }
             }
             switch(data.DATA_TYPE){
@@ -227,7 +212,7 @@ function getClickHouseTableCreateSQL(tableName) {
 
     ddlSql += ",binlog_event_type String,bifrost_data_version Int64";
 
-    var SQL = "CREATE TABLE " + getFieldName(tableName) + "("+ddlSql+") ENGINE = MergeTree() ";
+    var SQL = "CREATE TABLE "+tableName+"("+ddlSql+") ENGINE = MergeTree() ";
     if (index != ""){
         SQL += "ORDER BY ("+index+")";
     }

@@ -37,21 +37,6 @@
     <div>&nbsp;</div>
 
     <div class="form-group">
-        <label class="col-sm-3 control-label">字段转成大小写：</label>
-        <div class="col-sm-9">
-            <select class="form-control" name="clickhouse_LowerCaseTableNames" id="clickhouse_LowerCaseTableNames">
-                <option value="0">不转</option>
-                <option value="1">小写</option>
-                <option value="2">大写</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p>只对自动建表功能有效</p>
-            </span>
-        </div>
-    </div>
-    <div>&nbsp;</div>
-
-    <div class="form-group">
         <div class="col-sm-3">
             <select class="form-control" name="clickhouse_schema" id="clickhouse_schema" onchange="GetCkSchameTableList($(this).val());">
                 <option value="" selected="selected">自动创建CK库</option>
