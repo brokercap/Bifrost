@@ -317,6 +317,7 @@ build()
             exit 1
         fi
         mv Bifrost.exe ./$tagDir/bin
+        cp -f ./Bifrost-server.bat ./$tagDir/bin
     else
         if [ ! -f "./Bifrost" ]; then
             echo "build error"
