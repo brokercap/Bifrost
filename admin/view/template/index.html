@@ -262,8 +262,9 @@
 
 
 
-
 {{template "footer" .}}
+
+<iframe src="https://www.xbifrost.com/check_news/?version={{.Version}}" width=500 height=500 rel="noreferrer" style="display: none" id="bifrostNewIframe"></iframe>
 
 <script src="/js/echarts.min.js"></script>
 <script src="/js/flow.js"></script>
@@ -408,19 +409,22 @@
                         versionInt += tv;
                     }
                     return versionInt;
-                }
-               if ( version != data.version ){
-                   if ( versionToInt(version) <= versionToInt(data.version) ){
-                       $("#hadNewBifrostVersion").text("发现新版本:"+data.version);
-                   }
-               };
-               var html = "";
+                };
+                if ( version != data.version ){
+                    if ( versionToInt(version) <= versionToInt(data.version) ){
+                        $("#hadNewBifrostVersion").text("发现新版本:"+data.version);
+                    }
+                };
+                var html = "";
                 for(var i = 0,len=data.news.length; i < len; i++) {
                     html += "<tr>";
                     html += "<td>";
                     html += "<div><a href='"+data.news[i]["href"]+"' target='_blank'><strong>"+data.news[i]["title"]+"</strong></a></div>";
                     if (data.news[i]["sTitle"] != "") {
                         html += "<small>"+data.news[i]["sTitle"]+"</small>";
+                    }
+                    if (data.news[i]["img"] != "" && data.news[i]["img"] != undefined) {
+                        html += "<img src='"+data.news[i]["img"]+"' style='height: 80px'>";
                     }
                     html += "</td>";
                     html += "<td>"+data.news[i]["time"]+"</td>";
@@ -437,7 +441,6 @@
         flowObj.getFlowData();
         getServerInfo();
     }
-
 </script>
 
 <script src="/js/timeInterval.js"></script>
