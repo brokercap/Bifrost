@@ -1,0 +1,1 @@
+Bifrost.exe -config ../etc/Bifrost.ini -data_dir ../data

@@ -133,6 +133,9 @@ func main() {
 			os.StartProcess(filePath,args,&os.ProcAttr{Files:[]*os.File{os.Stdin,os.Stdout,os.Stderr}})
 			return
 		}
+		if config.BifrostPidFile == "" {
+			config.BifrostPidFile = "./Bifrost.pid"
+		}
 	}
 
 	config.LoadConf(BifrostConfigFile)
@@ -181,7 +184,7 @@ func initLog(){
 
 func WritePid(){
 	if config.BifrostPidFile == "" {
-		panic("BifrostPidFile is empty!")
+		return
 	}
 	var err error
 	var pidFileFd *os.File
