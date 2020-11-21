@@ -409,8 +409,34 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriv
 	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return nil,nil,nil
+
+
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+	if This.p.AutoTable == false || data.Query == ""{
+		return nil,nil,nil
+	}
+	switch data.Query {
+	case "COMMIT","commit","BEGIN","begin":
+		return nil,nil,nil
+	default:
+		break
+	}
+	for {
+		LastSuccessCommitData, ErrData, err = This.AutoCommit()
+		if err != nil {
+			break
+		}
+		if len(This.p.Data.Data) == 0 {
+			newSql := This.TranferQuerySql(data)
+			_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
+			if This.conn.err != nil {
+				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+				return nil, data, This.conn.err
+			}
+			return data, nil, nil
+		}
+	}
+	return
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {

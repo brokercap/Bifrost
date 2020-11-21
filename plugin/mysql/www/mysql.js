@@ -21,6 +21,10 @@ function doGetPluginParam(){
             var from_field_name = $(this).find("input[name=from_field_name]").val();
             var d       = {};
             d["ToField"]     = to_field_name;
+            //假如没有配置任务同步,则代表这个表采用，默认值
+            if ( from_field_name == "" ){
+                return;
+            }
             d["FromMysqlField"]  = from_field_name;
             if($(this).find("input[name=pri_checkbox]").is(':checked')) {
                 if (to_field_name == "" || from_field_name == "") {
@@ -36,7 +40,7 @@ function doGetPluginParam(){
             return result;
         }
     }else{
-        result.batchSupport = true
+        result.batchSupport = true;
     }
 
 
@@ -209,3 +213,6 @@ function showMySQLCreateSQL() {
             $("#showMySQLCreateSQL").modal('show');
         });
 }
+
+// 设置不过滤 sql 事件, sql 将会提交到 mysql 插件来
+setPluginParamDefault("FilterQuery","false");
