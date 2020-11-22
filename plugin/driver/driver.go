@@ -34,7 +34,7 @@ type PluginDataType struct {
 	TableName      	string
 	BinlogFileNum 	int
 	BinlogPosition 	uint32
-	Pri				[]*string
+	Pri				[]string
 }
 
 func GetApiVersion() string{
@@ -167,6 +167,12 @@ func TransfeResult(val string, data *PluginDataType,rowIndex int) interface{} {
 			break
 		case "BinlogPosition":
 			val = strings.Replace(val, "{$BinlogPosition}", fmt.Sprint(data.BinlogPosition), -1)
+			break
+		case "BifrostNull":
+			if val == "{$BifrostNull}" {
+				return nil
+			}
+			val = strings.Replace(val, "{$BifrostNull}", "", -1)
 			break
 		default:
 			if rowIndex <= n && rowIndex >= 0 {
