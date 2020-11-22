@@ -37,7 +37,7 @@ type PluginParam struct {
 	indexName			string
 }
 
-func NewConn() pluginDriver.Driver{
+func NewConn() pluginDriver.Driver {
 	f := &Conn{status:"close",err:fmt.Errorf("close")}
 	return f
 }
@@ -66,7 +66,7 @@ func (This *Conn) CheckUri() error{
 	}
 }
 
-func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
+func (This *Conn) GetParam(p interface{}) (*PluginParam,error) {
 	s,err := json.Marshal(p)
 	if err != nil{
 		return nil,err
@@ -76,8 +76,8 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	if err2 != nil{
 		return nil,err2
 	}
-	if param.SchemaName == "" || param.TableName == "" || param.PrimaryKey == ""{
-		return nil,fmt.Errorf("SchemaName,TableName,PrimaryKey can't be empty")
+	if param.SchemaName == "" || param.TableName == "" {
+		return nil,fmt.Errorf("SchemaName,TableName can't be empty")
 	}
 	param.indexName = "bifrost_unique_index"
 	param.primaryKeys = strings.Split(param.PrimaryKey, ",")
@@ -86,7 +86,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 	return &param,nil
 }
 
-func (This *Conn) SetParam(p interface{}) (interface{},error){
+func (This *Conn) SetParam(p interface{}) (interface{},error) {
 	if p == nil{
 		return nil,fmt.Errorf("param is nil")
 	}
@@ -141,6 +141,13 @@ func (This *Conn) Close() bool {
 	return true
 }
 
+// 假如没有配置指定 PrimaryKey (mongodb 中的文档ID) 的时候，将 原表中的 Pri 主键当作 MongoDB 的文档ID
+func (This *Conn) initPrimaryKeys(data *pluginDriver.PluginDataType) {
+	if This.p.PrimaryKey == "" {
+		This.p.primaryKeys = data.Pri
+	}
+}
+
 func (This *Conn) createIndex(c *mgo.Collection) {
 	indexTableKey := c.Database.Name+"#"+c.Name
 	if _,ok := This.p.hadIndexMap[indexTableKey];!ok{
@@ -161,25 +168,28 @@ func (This *Conn) createIndex(c *mgo.Collection) {
 	}
 }
 
-func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool)(postion *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
+func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
 	if This.err != nil {
 		This.Connect()
 	}
 	if This.err != nil {
 		return nil,data,This.err
 	}
+	This.initPrimaryKeys(data)
+	if len(This.p.primaryKeys) == 0 {
+		return nil,data,fmt.Errorf("PrimaryKey is empty And Table No Pri!")
+	}
 	n := len(data.Rows)-1
 	SchemaName := fmt.Sprint(pluginDriver.TransfeResult(This.p.SchemaName, data, n))
 	TableName := fmt.Sprint(pluginDriver.TransfeResult(This.p.TableName, data, n))
-	if This.p.PrimaryKey == ""{
-		return nil,data,fmt.Errorf("PrimaryKey is empty")
-	}
+	/*
 	if _,ok := data.Rows[n][This.p.PrimaryKey];!ok{
 		return nil,data,fmt.Errorf("PrimaryKey "+ This.p.PrimaryKey +" is not exsit")
 	}
+	*/
 	defer func() {
 		if err := recover();err != nil{
-			postion = nil
+			LastSuccessCommitData = nil
 			e = fmt.Errorf(string(debug.Stack()))
 			This.err = e
 			log.Println(e)
@@ -203,23 +213,24 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool)(postion *
 	return nil,nil,nil
 }
 
-func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (postion *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
+func (This *Conn) Update(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
 	return This.Insert(data,retry)
 }
 
-func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (postion *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
+func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
 	if This.err != nil {
 		This.Connect()
 	}
 	if This.err != nil {
 		return nil,data,This.err
 	}
-	if This.p.PrimaryKey == ""{
-		return nil,data,fmt.Errorf("PrimaryKey is empty")
+	This.initPrimaryKeys(data)
+	if len(This.p.primaryKeys) == 0 {
+		return nil,data,fmt.Errorf("PrimaryKey is empty And Table No Pri!")
 	}
 	defer func() {
 		if err := recover();err != nil{
-			postion = nil
+			LastSuccessCommitData = nil
 			e = fmt.Errorf(string(debug.Stack()))
 			This.err = e
 			log.Println(string(debug.Stack()))
@@ -246,7 +257,7 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (postion *pl
 }
 
 func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
-	return nil,nil,nil
+	return data,nil,nil
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,e error) {
