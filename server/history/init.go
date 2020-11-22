@@ -243,7 +243,7 @@ type History struct {
 	TablePriKeyMinId	uint64		// 假如主键是自增id的情况下 这个值是当前自增id最小值
 	TablePriKeyMaxId	uint64		// 假如主键是自增id的情况下 这个值是当前自增id最大值
 	TablePriKey			string		// 主键字段
-	TablePriArr			[]*string
+	TablePriArr			[]string
 	ToServerList		[]*toServer
 	ToServerTheadCount	int16			// 实际正在运行的同步协程数
 	ToServerTheadGroup	*WaitGroup
@@ -382,10 +382,10 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableInfo.TABLE_ROWS
 
 	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.CurrentTableName)
-	This.TablePriArr = make([]*string,0)
+	This.TablePriArr = make([]string,0)
 	for _,v := range This.Fields{
 		if strings.ToUpper(*v.COLUMN_KEY) == "PRI"{
-			This.TablePriArr = append(This.TablePriArr,v.COLUMN_NAME)
+			This.TablePriArr = append(This.TablePriArr,*v.COLUMN_NAME)
 		}
 	}
 	//假如只有一个主键并且主键自增的情况，找出这个主键最小值和最大值，只支持 无符号的数字。有符号的不支持

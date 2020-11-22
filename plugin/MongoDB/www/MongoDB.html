@@ -21,7 +21,12 @@
     <label class="col-sm-3 control-label">PrimaryKey：</label>
     <div class="col-sm-9">
         <input type="text"  name="MongoDB_PrimaryKey" id="MongoDB_PrimaryKey" class="form-control" placeholder="">
-        <span class="help-block m-b-none">* 主键字段名,请选择输入主键字段名称</span>
+        <span class="help-block m-b-none">
+            MongoDB文档ID对应数据源中的字段名,一般填主键
+        </span>
+        <span class="help-block m-b-none">
+            为空，则自动别数据源中的主键
+        </span>
     </div>
 </div>
 

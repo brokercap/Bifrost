@@ -1,3 +1,24 @@
+v1.6.0-beta.04   2020-11-22
+===========================
+plugin mysql:
+1. 新增自动匹配表结构配置支持DDL 同步功能
+2. 在没有指定字段映射的字段,则不会同步数据,目标表需要自行设置默认值
+
+plugin clickhouse:
+1. 自动建表的时候，新增将表名,字段转成大写或者小写的配置
+
+plugin kafka:
+1. 修复同步到kafka在未达到batchsize不同步的bug
+
+plugin mongodb:
+1. plugin mongodb 支持自动识别源表主键
+
+Other:
+1. 对sql语句中指定schema.table 进行执行,Binlog 过滤库表以sql 中的库表为准
+2. 修复全量配置between查询的时候，及全量多个表中，其中有一个表没有主键，报找不到ID等字段 的bug
+3. 修复流量显示选择统计时间无效的bug
+4. plugin redis,memcache 支持批量配置
+
 v1.6.0-beta.02   2020-11-12
 ===========================
 1. 修复在提交mysql作为目标库的时候,部分mysql版本报错的bug

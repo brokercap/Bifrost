@@ -145,11 +145,11 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 
 }
 
-func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) pluginDriver.PluginDataType{
+func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) (pluginData *pluginDriver.PluginDataType) {
 	i := strings.IndexAny(data.BinlogFileName, ".")
 	intString := data.BinlogFileName[i+1:]
 	BinlogFileNum,_:=strconv.Atoi(intString)
-	return pluginDriver.PluginDataType{
+	pluginData = &pluginDriver.PluginDataType{
 		Timestamp:data.Header.Timestamp,
 		EventType:evenTypeName(data.Header.EventType),
 		SchemaName:data.SchemaName,
@@ -158,8 +158,9 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) p
 		BinlogFileNum:BinlogFileNum,
 		BinlogPosition:data.Header.LogPos,
 		Query:data.Query,
-		Pri: data.Pri,
+		Pri:data.Pri,
 	}
+	return
 }
 
 func (This *consume_channel_obj) consumeChannel() {
@@ -199,9 +200,9 @@ func (This *consume_channel_obj) consumeChannel() {
 			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
 			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
 			pluginData := This.transferToPluginData(&data)
-			This.sendToServerList(key,&pluginData,countNum,EventSize)
-			This.sendToServerList(AllTableKey,&pluginData,countNum,EventSize)
-			This.sendToServerList(AllSchemaAndTablekey,&pluginData,countNum,EventSize)
+			This.sendToServerList(key,pluginData,countNum,EventSize)
+			This.sendToServerList(AllTableKey,pluginData,countNum,EventSize)
+			This.sendToServerList(AllSchemaAndTablekey,pluginData,countNum,EventSize)
 
 			if This.db.killStatus == 1{
 				return

@@ -6,7 +6,7 @@ import (
 )
 
 type tableStruct struct {
-	Pri 					[]*string
+	Pri 					[]string
 	ColumnSchemaTypeList 	[]*ColumnInfo
 	needReload				bool
 }
@@ -46,7 +46,7 @@ type EventReslut struct {
 	TableName      string
 	BinlogFileName string
 	BinlogPosition uint32
-	Pri			   []*string
+	Pri			   []string
 }
 
 type callback func(data *EventReslut)

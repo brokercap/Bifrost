@@ -14,8 +14,8 @@ func TestTransfeResult(t *testing.T)  {
 	jsonData["json"][0] = make(map[string]string,0)
 	jsonData["json"][0]["testkey"] = "testVal"
 	id := "id"
-	Pri := make([]*string,1)
-	Pri[0] = &id
+	Pri := make([]string,1)
+	Pri[0] = id
 	Row := make(map[string]interface{},0)
 	Row["id"] = 1
 	Row["key1"] = "key1"

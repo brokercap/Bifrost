@@ -315,7 +315,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 	defer rows.Close()
 	//columeArr := make([]*tableStruct column_schema_type,0)
 	tableInfo := &tableStruct{
-		Pri:                  make([]*string, 0),
+		Pri:                  make([]string, 0),
 		ColumnSchemaTypeList: make([]*ColumnInfo, 0),
 	}
 	for {
@@ -432,7 +432,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		})
 
 		if strings.ToUpper(COLUMN_KEY) == "PRI" {
-			tableInfo.Pri = append(tableInfo.Pri, &COLUMN_NAME)
+			tableInfo.Pri = append(tableInfo.Pri, COLUMN_NAME)
 		}
 	}
 	if len(tableInfo.ColumnSchemaTypeList) == 0 {

@@ -469,11 +469,11 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 	priMap := make(map[string]bool,0)
 	var toCkType string
 	for _, priK := range data.Pri {
-		fileName0 := This.GetFieldName(*priK)
+		fileName0 := This.GetFieldName(priK)
 		priArr = append(priArr, fileName0)
 		priMap[fileName0] = true
-		toCkType = getToCkType(data.Rows[0][*priK])
-		addCkField(fileName0,*priK,toCkType)
+		toCkType = getToCkType(data.Rows[0][priK])
+		addCkField(fileName0,priK,toCkType)
 	}
 	var ok bool
 	for fileName, v := range data.Rows[0] {

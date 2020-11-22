@@ -16,10 +16,6 @@ function doGetPluginParam(){
         result.msg = "TableName can't be empty!";
         return result;
     }
-    if (PrimaryKey == ""){
-        result.msg = "PrimaryKey can't be empty!";
-        return result;
-    }
 
 	data["SchemaName"] = SchemaName;
 	data["TableName"] = TableName;

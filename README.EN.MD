@@ -21,8 +21,8 @@ Your star is the biggest support for Bifrost!!!
 * Mongodb
 * ClickHouse
 * MySQL
-* [Http](https://github.com/brokercap/Bifrost/blob/v1.1.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.1.x/hprose_server/tcp_server.go)
+* [Http](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -94,11 +94,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.6.0-beta.02/bifrost_v1.6.0-beta.02_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.6.0-beta.04/bifrost_v1.6.0-beta.04_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.6.0-beta.02_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.6.0-beta.04_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.6.0-beta.02_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.6.0-beta.04_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
