@@ -39,6 +39,7 @@ const (
 type PluginParam struct {
 	Timeout	int
 	ContentType HttpContentType
+	BifrostFilterQuery	    bool  // bifrost server 保留,是否过滤sql事件
 }
 
 func NewConn() pluginDriver.Driver{
@@ -202,6 +203,9 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriv
 }
 
 func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool)  (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
 	err := This.httpPost(data)
 	if err != nil{
 		This.err = err
@@ -211,6 +215,9 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool)  (*pluginD
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool)  (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
 	err := This.httpPost(data)
 	if err != nil{
 		This.err = err

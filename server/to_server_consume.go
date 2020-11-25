@@ -60,6 +60,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
  	//强制给参数 加入  BifrostMustBeSuccess 保留参数字段
 	if This.PluginParam != nil {
 		This.PluginParam["BifrostMustBeSuccess"] = This.MustBeSuccess
+		This.PluginParam["BifrostFilterQuery"] = This.FilterQuery
 	}
 	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db,This)
@@ -485,6 +486,7 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			BinlogFileNum:data.BinlogFileNum,
 			BinlogPosition:data.BinlogPosition,
 			Rows:make([]map[string]interface{},1),
+			Pri: data.Pri,
 		}
 		newData.Rows[0] = m
 	}else{
@@ -496,6 +498,7 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			BinlogFileNum:data.BinlogFileNum,
 			BinlogPosition:data.BinlogPosition,
 			Rows:make([]map[string]interface{},2),
+			Pri: data.Pri,
 		}
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})

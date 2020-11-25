@@ -54,6 +54,7 @@ type PluginParam struct {
 	Declare 			bool
 	expir               string
 	deliveryMode		uint8
+	BifrostFilterQuery	    bool  // bifrost server 保留,是否过滤sql事件
 }
 
 func NewConn() pluginDriver.Driver {
@@ -215,6 +216,9 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDr
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
 	LastSuccessCommitData,ErrData,err = This.sendToList(data)
 	if err == nil {
 		LastSuccessCommitData = data

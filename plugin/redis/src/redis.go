@@ -33,6 +33,7 @@ type PluginParam struct {
 	DataType 		string
 	ValConfig 		string
 	Type 			string
+	BifrostFilterQuery	    bool  // bifrost server 保留,是否过滤sql事件
 }
 
 func NewConn() driver.Driver{
@@ -239,6 +240,9 @@ func (This *Conn) Del(data *driver.PluginDataType,retry bool)(*driver.PluginData
 }
 
 func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
 	var Val string
 	var err error
 	if This.p.ValConfig != ""{
