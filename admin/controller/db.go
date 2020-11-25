@@ -296,10 +296,10 @@ func (c *DBController) GetLastPosition() {
 		result.Msg = data.DbName + " no exsit"
 		return
 	}
-	dbInfo := &dbInfoStruct{}
+	dbInfo := &dbInfoStruct{ NowTimestamp: uint32(time.Now().Unix()) }
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
 	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
-	dbInfo.BinlogTimestamp = uint32(dbObj.BinlogDumpTimestamp)
+	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
 	var f = func() (e error) {
 		e = nil
 		defer func() {
@@ -321,6 +321,9 @@ func (c *DBController) GetLastPosition() {
 		if MasterBinlogInfo.File != "" {
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
 			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
+			if dbInfo.BinlogTimestamp > 0 {
+				dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
+			}
 		} else {
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
