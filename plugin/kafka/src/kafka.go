@@ -38,7 +38,9 @@ type PluginParam struct {
 	BatchSize 		int
 	Timeout			int
 	RequiredAcks	sarama.RequiredAcks
+	BifrostFilterQuery	    bool  // bifrost server 保留,是否过滤sql事件
 	BifrostMustBeSuccess	bool  // bifrost server 保留,数据是否能丢
+
 
 	dataList		[]*sarama.ProducerMessage
 	commitBinlogList 		[]*pluginDriver.PluginDataType
@@ -227,11 +229,14 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType,retry bool,isComm
 	if This.p.BatchSize > 1 {
 		if retry == false {
 			var msg *sarama.ProducerMessage
-			msg , err = This.getMsg(data)
-			if err != nil {
-				goto endErr
+			// 假如 非 commit 事件 或者 没有过滤 sql 事件，则需要将数据放到  list 里
+			if !isCommit || !This.p.BifrostFilterQuery {
+				msg, err = This.getMsg(data)
+				if err != nil {
+					goto endErr
+				}
+				This.p.dataList = append(This.p.dataList, msg)
 			}
-			This.p.dataList = append(This.p.dataList, msg)
 			if isCommit {
 				n0 := len(This.p.dataList) / This.p.BatchSize
 				// 计算出 commit 提交是在哪一个 合并组里
@@ -247,6 +252,9 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType,retry bool,isComm
 			LastSuccessCommitData,err = This.sendToKafkaByBatch()
 		}
 	}else{
+		if isCommit && This.p.BifrostFilterQuery {
+			return LastSuccessCommitData,nil,nil
+		}
 		var msg *sarama.ProducerMessage
 		msg , err = This.getMsg(data)
 		if err != nil {
