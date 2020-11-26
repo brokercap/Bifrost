@@ -321,7 +321,7 @@ func (c *DBController) GetLastPosition() {
 		if MasterBinlogInfo.File != "" {
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
 			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
-			if dbInfo.BinlogTimestamp > 0 {
+			if dbInfo.BinlogTimestamp > 0 && dbInfo.BinlogFile != dbInfo.CurrentBinlogFile && dbInfo.BinlogPosition != dbInfo.CurrentBinlogPosition {
 				dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 			}
 		} else {
