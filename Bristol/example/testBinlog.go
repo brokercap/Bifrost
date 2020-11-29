@@ -36,6 +36,14 @@ func main() {
 	filename = "mysql-bin.000004"
 	position = 25051078
 
+	DBsource = "root:root@tcp(192.168.220.147:3307)/bifrost_test"
+	filename = "mysql-bin.000051"
+	position = 2223
+
+	DBsource = "root:root@tcp(192.168.220.147:3308)/bifrost_test"
+	filename = "mysql-bin.000021"
+	position = 2276
+
 	reslut := make(chan error, 1)
 	m := make(map[string]uint8, 0)
 	m["bifrost_test"] = 1

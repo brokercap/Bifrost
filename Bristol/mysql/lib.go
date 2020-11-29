@@ -31,7 +31,8 @@ type ColumnInfo struct {
 }
 
 type MysqlConnection interface {
-	DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error)
+	DumpBinlog(parser *eventParser, callbackFun callback) (driver.Rows, error)
+	DumpBinlogGtid(parser *eventParser, callbackFun callback) (driver.Rows, error)
 	Close() error
 	Ping() error
 	Prepare(query string) (driver.Stmt, error)
@@ -46,7 +47,9 @@ type EventReslut struct {
 	TableName      string
 	BinlogFileName string
 	BinlogPosition uint32
+	Gtid	   	   string
 	Pri			   []string
+	EventID		   uint64				// 事件ID
 }
 
 type callback func(data *EventReslut)

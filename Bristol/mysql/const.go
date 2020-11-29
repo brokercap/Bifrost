@@ -61,6 +61,9 @@ const (
 	COM_STMT_RESET
 	COM_SET_OPTION
 	COM_STMT_FETCH
+	COM_DAEMON
+	COM_BINLOG_DUMP_GTID
+	COM_END
 )
 
 type FieldType byte
@@ -185,12 +188,6 @@ const (
 
 type BinlogDumpStatus int8
 
-const (
-	BINLOG_DUMP_CLOSE  BinlogDumpStatus = 0
-	BINLOG_DUMP_STARTING BinlogDumpStatus = 1
-	BINLOG_DUMP_STOP BinlogDumpStatus = 2
-	BINLOG_DUMP_RUNNING BinlogDumpStatus = 3
-)
 
 type StatusFlag int8
 const (

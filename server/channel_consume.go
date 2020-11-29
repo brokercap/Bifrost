@@ -83,7 +83,19 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		ToServerInfo.Status = RUNNING
 	}
 	//修改toserver 对应最后接收的 位点信息
+	var lastQueueBinlog = &PositionStruct{
+		BinlogFileNum: pluginData.BinlogFileNum,
+		BinlogPosition: pluginData.BinlogPosition,
+		GTID: pluginData.Gtid,
+		Timestamp: pluginData.Timestamp,
+		EventID: pluginData.EventID,
+	}
+	ToServerInfo.LastQueueBinlog = lastQueueBinlog
+
+	// 支持到 1.8.x
 	ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition = pluginData.BinlogFileNum,pluginData.BinlogPosition
+
+	//ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition,ToServerInfo.LastBinlogGtid,ToServerInfo.LastBinlogEventID = pluginData.BinlogFileNum,pluginData.BinlogPosition,pluginData.Gtid,pluginData.EventID
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
@@ -94,7 +106,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	if ToServerInfo.LastBinlogKey == nil{
 		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
 	}
-	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
+	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,lastQueueBinlog)
 	if FileQueueStatus {
 		ToServerInfo.InitFileQueue(This.db.Name,pluginData.SchemaName,pluginData.TableName)
 		ToServerInfo.AppendToFileQueue(pluginData)
@@ -158,7 +170,9 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) (
 		BinlogFileNum:BinlogFileNum,
 		BinlogPosition:data.Header.LogPos,
 		Query:data.Query,
+		Gtid:data.Gtid,
 		Pri:data.Pri,
+		EventID: data.EventID,
 	}
 	return
 }
@@ -274,7 +288,7 @@ func (This *consume_channel_obj) sendToServerList0(toServerList []*ToServer,plug
 		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum {
 			continue
 		}
-		if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition {
+		if pluginData.Timestamp < toServerInfo.LastSuccessBinlog.Timestamp || (pluginData.BinlogFileNum == toServerInfo.LastSuccessBinlog.BinlogFileNum && toServerInfo.LastSuccessBinlog.BinlogPosition >= pluginData.BinlogPosition) {
 			continue
 		}
 		This.sendToServerResult(toServerInfo,pluginData)

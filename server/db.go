@@ -66,16 +66,16 @@ func init() {
 	DbList = make(map[string]*db, 0)
 }
 
-func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
+func AddNewDB(Name string, ConnectUri string, GTID string,binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
 	var r bool = false
 	DbLock.Lock()
 	if _, ok := DbList[Name]; !ok {
-		DbList[Name] = NewDb(Name, ConnectUri, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition,AddTime)
+		DbList[Name] = NewDb(Name, ConnectUri,GTID, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition,AddTime)
 		r = true
 	}
 	count.SetDB(Name)
 	DbLock.Unlock()
-	log.Println("Add db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition)
+	log.Println("Add db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition,"GTID:",GTID)
 	if r == true {
 		return DbList[Name]
 	} else {
@@ -83,7 +83,7 @@ func AddNewDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	}
 }
 
-func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64,updateToServer int8) error {
+func UpdateDB(Name string, ConnectUri string, GTID string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64,updateToServer int8) error {
 	DbLock.Lock()
 	defer DbLock.Unlock()
 	if _, ok := DbList[Name]; !ok {
@@ -115,7 +115,14 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	dbObj.maxBinlogDumpFileName = maxFileName
 	dbObj.maxBinlogDumpPosition = maxPosition
 	dbObj.AddTime = UpdateTime
-	log.Println("Update db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition)
+	if GTID == "" {
+		dbObj.gtid = GTID
+		dbObj.isGtid = false
+	}else{
+		dbObj.gtid = GTID
+		dbObj.isGtid = true
+	}
+	log.Println("Update db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition,"GTID:",GTID)
 	if updateToServer == 0{
 		return nil
 	}
@@ -123,7 +130,7 @@ func UpdateDB(Name string, ConnectUri string, binlogFileName string, binlogPosti
 	for key,t := range dbObj.tableMap{
 		for _,toServer:=range t.ToServerList{
 			log.Println("UpdateToServerBinlogPosition:",key," QueueMsgCount:",toServer.QueueMsgCount," old:",toServer.BinlogFileNum,toServer.BinlogPosition," new:",BinlogFileNum,binlogPostion)
-			toServer.UpdateBinlogPosition(BinlogFileNum,binlogPostion)
+			toServer.UpdateBinlogPosition(BinlogFileNum,binlogPostion,GTID,0)
 		}
 	}
 	return nil
@@ -169,9 +176,12 @@ type db struct {
 	LastChannelID      		int	`json:"LastChannelID"`
 	tableMap           		map[string]*Table `json:"TableMap"`
 	binlogDump         		*mysql.BinlogDump
+	isGtid					bool `json:"IsGtid"`
+	gtid					string `json:"Gtid"`
 	binlogDumpFileName 		string `json:"BinlogDumpFileName"`
 	binlogDumpPosition 		uint32 `json:"BinlogDumpPosition"`
 	binlogDumpTimestamp 	uint32 `json:"BinlogDumpTimestamp"`
+	lastEventID				uint64 `json:"LastEventID"`
 	replicateDoDb      		map[string]uint8 `json:"ReplicateDoDb"`
 	serverId           		uint32 `json:"ServerId"`
 	killStatus 				int
@@ -192,7 +202,10 @@ type DbListStruct struct {
 	TableCount         		int
 	BinlogDumpFileName 		string
 	BinlogDumpPosition 		uint32
+	IsGtid					bool
+	Gtid					string
 	BinlogDumpTimestamp		uint32
+	LastEventID				uint64
 	MaxBinlogDumpFileName 	string
 	MaxBinlogDumpPosition 	uint32
 	ReplicateDoDb      		map[string]uint8
@@ -216,6 +229,9 @@ func GetListDb() map[string]DbListStruct {
 			TableCount:				len(v.tableMap),
 			BinlogDumpFileName:		v.binlogDumpFileName,
 			BinlogDumpPosition:		v.binlogDumpPosition,
+			IsGtid:					v.isGtid,
+			Gtid:					v.gtid,
+			LastEventID:			v.lastEventID,
 			BinlogDumpTimestamp:	v.binlogDumpTimestamp,
 			MaxBinlogDumpFileName:	v.maxBinlogDumpFileName,
 			MaxBinlogDumpPosition:	v.maxBinlogDumpPosition,
@@ -246,6 +262,8 @@ func GetDbInfo(dbname string) *DbListStruct {
 			BinlogDumpFileName:		v.binlogDumpFileName,
 			BinlogDumpPosition:		v.binlogDumpPosition,
 			BinlogDumpTimestamp:	v.binlogDumpTimestamp,
+			Gtid:					v.gtid,
+			LastEventID:			v.lastEventID,
 			MaxBinlogDumpFileName:	v.maxBinlogDumpFileName,
 			MaxBinlogDumpPosition:	v.maxBinlogDumpPosition,
 			ReplicateDoDb:			v.replicateDoDb,
@@ -258,7 +276,11 @@ func NewDbByNull() *db {
 	return &db{}
 }
 
-func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
+func NewDb(Name string, ConnectUri string,GTID string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
+	var isGtid bool
+	if GTID != "" {
+		isGtid = true
+	}
 	return &db{
 		Name:               	Name,
 		ConnectUri:         	ConnectUri,
@@ -267,6 +289,8 @@ func NewDb(Name string, ConnectUri string, binlogFileName string, binlogPostion 
 		LastChannelID:			0,
 		channelMap:         	make(map[int]*Channel, 0),
 		tableMap:           	make(map[string]*Table, 0),
+		isGtid:					isGtid,
+		gtid:					GTID,
 		binlogDumpFileName: 	binlogFileName,
 		binlogDumpPosition: 	binlogPostion,
 		maxBinlogDumpFileName:	maxFileName,
@@ -417,33 +441,35 @@ func (db *db) Start() (b bool) {
 	switch db.ConnStatus {
 	case CLOSED:
 		db.ConnStatus = STARTING
-		var newPosition uint32 = 0
-		log.Println(db.Name,"Start(),and starting "," getRightBinlogPosition")
-		for i:=0;i<3;i++{
-			if db.ConnStatus == CLOSING{
+		if db.isGtid == false {
+			var newPosition uint32 = 0
+			log.Println(db.Name, "Start(),and starting ", " getRightBinlogPosition")
+			for i := 0; i < 3; i++ {
+				if db.ConnStatus == CLOSING {
+					break
+				}
+				newPosition = db.getRightBinlogPosition()
+				if newPosition > 0 {
+					break
+				}
+				time.Sleep(time.Duration(1) * time.Second)
+			}
+			if db.ConnStatus == CLOSING {
+				db.ConnStatus = CLOSED
+				db.ConnErr = "close"
 				break
 			}
-			newPosition = db.getRightBinlogPosition()
-			if newPosition > 0{
-				break
-			}
-			time.Sleep(time.Duration(1) * time.Second)
-		}
-		if db.ConnStatus == CLOSING{
-			db.ConnStatus = CLOSED
-			db.ConnErr = "close"
-			break
-		}
-		if newPosition == 0{
-			/*
+			if newPosition == 0 {
+				/*
 			db.ConnStatus = "close"
 			db.ConnErr = "binlog position error"
 			break
 			*/
-			log.Println("binlog poistion check failed,dbName:",db.Name,"current position:",db.binlogDumpFileName," ",db.binlogDumpPosition)
-		}else{
-			log.Println("binlog position change,dbName:", db.Name ," old:",db.binlogDumpFileName," ",db.binlogDumpPosition," new:",db.binlogDumpFileName," ",newPosition)
-			db.binlogDumpPosition = newPosition
+				log.Println("binlog poistion check failed,dbName:", db.Name, "current position:", db.binlogDumpFileName, " ", db.binlogDumpPosition)
+			} else {
+				log.Println("binlog position change,dbName:", db.Name, " old:", db.binlogDumpFileName, " ", db.binlogDumpPosition, " new:", db.binlogDumpFileName, " ", newPosition)
+				db.binlogDumpPosition = newPosition
+			}
 		}
 		reslut := make(chan error, 1)
 		db.binlogDump.UpdateUri(db.ConnectUri)
@@ -452,8 +478,12 @@ func (db *db) Start() (b bool) {
 			schemaName,TableName := GetSchemaAndTableBySplit(key)
 			db.AddReplicateDoDb(schemaName,TableName,false)
 		}
-		go	db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
-
+		db.binlogDump.SetNextEventID(db.lastEventID)
+		if db.isGtid == false {
+			go db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
+		}else{
+			go db.binlogDump.StartDumpBinlogGtid(db.gtid, db.serverId, reslut)
+		}
 		go db.monitorDump(reslut)
 		break
 	case STOPPED:
@@ -555,22 +585,28 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 }
 
 func (db *db) saveBinlog(){
-	FileName,Position,Timestamp := db.binlogDump.GetBinlog()
+	FileName,Position,Timestamp,GTID,LastEventID := db.binlogDump.GetBinlog()
 	if FileName == ""{
 		return
 	}
-	//db.Lock()
 	//保存位点,这个位点在重启 配置文件恢复的时候
-	//一个db有可能有多个channel，数据顺序不用担心，因为实际在重启的时候 会根据最小的 ToServerList 的位点进行自动替换
-	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp = FileName,Position,Timestamp
+	db.Lock()
+	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp,db.gtid,db.lastEventID = FileName,Position,Timestamp,GTID,LastEventID
+	db.Unlock()
 	if db.DBBinlogKey == nil{
 		db.DBBinlogKey = getDBBinlogkey(db)
 	}
-	//db.Unlock()
 	index := strings.IndexAny(FileName, ".")
 
 	BinlogFileNum,_ := strconv.Atoi(FileName[index+1:])
-	saveBinlogPosition(db.DBBinlogKey,BinlogFileNum,db.binlogDumpPosition)
+	var lastParseBinlog = &PositionStruct{
+		BinlogFileNum: BinlogFileNum,
+		BinlogPosition: Position,
+		GTID: GTID,
+		Timestamp: Timestamp,
+		EventID: LastEventID,
+	}
+	saveBinlogPosition(db.DBBinlogKey,lastParseBinlog)
 }
 
 func (db *db) IgnoreTableToMap(IgnoreTable string) map[string]bool{

@@ -23,6 +23,7 @@ import (
 	"log"
 	"runtime/debug"
 	"time"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 )
 
 type DBController struct {
@@ -41,6 +42,7 @@ type DbUpdateParam struct {
 	MaxBinlogPosition uint32
 	UpdateToServer    int8
 	CheckPrivilege	  bool
+	Gtid			  string
 }
 
 func (c *DBController) getParam() *DbUpdateParam {
@@ -88,8 +90,15 @@ func (c *DBController) Add() {
 		result.Msg = " param error!"
 		return
 	}
+	if data.Gtid != "" {
+		err := mysql.CheckGtid(data.Gtid)
+		if err != nil {
+			result.Msg = err.Error()
+			return
+		}
+	}
 	defer server.SaveDBConfigInfo()
-	server.AddNewDB(data.DbName, data.Uri, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix())
+	server.AddNewDB(data.DbName, data.Uri, data.Gtid, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix())
 	channel, _ := server.GetDBObj(data.DbName).AddChannel("default", 1)
 	if channel != nil {
 		channel.Start()
@@ -109,7 +118,14 @@ func (c *DBController) Update() {
 		result.Msg = " param error!"
 		return
 	}
-	err := server.UpdateDB(data.DbName, data.Uri, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix(), data.UpdateToServer)
+	if data.Gtid != "" {
+		err := mysql.CheckGtid(data.Gtid)
+		if err != nil {
+			result.Msg = err.Error()
+			return
+		}
+	}
+	err := server.UpdateDB(data.DbName, data.Uri, data.Gtid, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix(), data.UpdateToServer)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
@@ -211,6 +227,7 @@ func (c *DBController) CheckUri() {
 	type dbInfoStruct struct {
 		BinlogFile     string
 		BinlogPosition int
+		Gtid		   string
 		ServerId       int
 		BinlogFormat   string
 		BinlogRowImage string
@@ -245,6 +262,7 @@ func (c *DBController) CheckUri() {
 		if MasterBinlogInfo.File != "" {
 			dbInfo.BinlogFile = MasterBinlogInfo.File
 			dbInfo.BinlogPosition = MasterBinlogInfo.Position
+			dbInfo.Gtid = MasterBinlogInfo.Executed_Gtid_Set
 			dbInfo.ServerId = GetServerId(dbconn)
 			variablesMap := GetVariables(dbconn, "binlog_format")
 			BinlogRowImageMap := GetVariables(dbconn, "binlog_row_image")
@@ -276,8 +294,10 @@ func (c *DBController) GetLastPosition() {
 		BinlogFile            string
 		BinlogPosition        int
 		BinlogTimestamp       uint32
+		Gtid			      string
 		CurrentBinlogFile     string
 		CurrentBinlogPosition int
+		CurrentGtid			  string
 		NowTimestamp          uint32
 		DelayedTime           uint32
 	}
@@ -300,6 +320,7 @@ func (c *DBController) GetLastPosition() {
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
 	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
 	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
+	dbInfo.Gtid			  = dbObj.Gtid
 	var f = func() (e error) {
 		e = nil
 		defer func() {
@@ -321,7 +342,8 @@ func (c *DBController) GetLastPosition() {
 		if MasterBinlogInfo.File != "" {
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
 			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
-			if dbInfo.BinlogTimestamp > 0 && dbInfo.BinlogFile != dbInfo.CurrentBinlogFile && dbInfo.BinlogPosition != dbInfo.CurrentBinlogPosition {
+			dbInfo.CurrentGtid = MasterBinlogInfo.Executed_Gtid_Set
+			if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile &&  dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
 				dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 			}
 		} else {

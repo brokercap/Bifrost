@@ -523,9 +523,17 @@
                     var others = "";
 
                     others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
-                    others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.BinlogFileNum+"</p><p>BinlogPos: "+v.BinlogPosition+"</p>";
-                    others += "<p>LastBinlogFileNum: "+v.LastBinlogFileNum+"</p>";
-                    others += "<p title=\"队列最后一个位点\">LastBinlogPosition: "+v.LastBinlogPosition+"</p>";
+
+                    others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.LastSuccessBinlog.BinlogFileNum+"</p><p>BinlogPosition: "+v.LastSuccessBinlog.BinlogPosition+"</p>";
+                    others += "<p title=\"最后一个成功处理的GTID\">GTID: "+v.LastSuccessBinlog.GTID+"</p><p>Timestamp: "+v.LastSuccessBinlog.Timestamp+"</p>";
+                    others += "<p title=\"最后一个成功处理的EventID\">EventID: "+v.LastSuccessBinlog.EventID+"</p>";
+
+                    others += "<p>LastQueueFileNum: "+v.LastQueueBinlog.BinlogFileNum+"</p>";
+                    others += "<p title=\"队列最后一个位点\">LastQueuePosition: "+v.LastQueueBinlog.BinlogPosition+"</p>";
+                    others += "<p title=\"队列最后一个GTID\">LastQueueGTID: "+v.LastQueueBinlog.GTID+"</p>";
+                    others += "<p title=\"队列最后一个时间\">LastQueueTimestamp: "+v.LastQueueBinlog.Timestamp+"</p>";
+                    others += "<p title=\"队列最后一个EventID\">LastQueueEventID: "+v.LastQueueBinlog.EventID+"</p>";
+
                     others += "<p title=\"文件队列是否启用\">FileQueueStatus: "+v.FileQueueStatus+"</p>";
                     if ("QueueMsgCount" in v) {
                         others += "<p title=\"内存队列堆积多少条数据待同步\">QueueMsgCount: " + v.QueueMsgCount + "</p>";

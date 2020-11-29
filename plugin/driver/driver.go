@@ -34,7 +34,9 @@ type PluginDataType struct {
 	TableName      	string
 	BinlogFileNum 	int
 	BinlogPosition 	uint32
+	Gtid			string
 	Pri				[]string
+	EventID			uint64
 }
 
 func GetApiVersion() string{
