@@ -548,10 +548,10 @@ func (This *Event) GetJsonData() map[string][]map[string]interface{} {
 }
 
 
-func (This *Event) GetPri() []*string {
+func (This *Event) GetPri() []string {
 	var id  string = "id"
-	Pri := make([]*string,1)
-	Pri[0] = &id
+	Pri := make([]string,1)
+	Pri[0] = id
 	return Pri
 }
 
