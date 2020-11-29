@@ -1,6 +1,7 @@
 package src
 
 import (
+	"errors"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	//"github.com/garyburd/redigo/redis"
 	"github.com/go-redis/redis"
@@ -150,8 +151,10 @@ func (This *Conn) Connect() bool {
 	This.conn = universalClient
 	if This.conn == nil{
 		This.status = ""
+		This.err = errors.New("connect error")
 		return false
 	}else{
+		This.status = "running"
 		This.err = nil
 		return true
 	}
@@ -163,13 +166,17 @@ func (This *Conn) ReConnect() bool {
 			This.err = fmt.Errorf(fmt.Sprint(err))
 		}
 	}()
-	This.conn.Close()
+	if This.conn != nil {
+		This.conn.Close()
+	}
 	This.Connect()
 	return  true
 }
 
 func (This *Conn) Close() bool {
-	This.conn.Close()
+	if This.conn != nil {
+		This.conn.Close()
+	}
 	return true
 }
 
