@@ -119,12 +119,12 @@ func (This *Conn) Open() error{
 
 func (This *Conn) CheckUri() error{
 	This.Connect()
-	if This.err != nil{
-		return This.err
+	if This.conn.err != nil{
+		return This.conn.err
 	}
 	if This.conn == nil{
 		This.Close()
-		return fmt.Errorf("connect")
+		return fmt.Errorf("connect error")
 	}
 
 	var schemaList []string
@@ -331,7 +331,7 @@ func (This *Conn) initToDatabaseMap() {
 
 func (This *Conn) Connect() bool {
 	This.conn = NewMysqlDBConn(*This.uri)
-	if This.conn.err != nil{
+	if This.conn.err == nil{
 		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
 	}
 	return true
