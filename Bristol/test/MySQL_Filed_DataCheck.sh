@@ -26,8 +26,6 @@ fi
 
 echo mysqlVerion:$version
 
-/usr/bin/docker pull mysql:$version
-
 pwd=123456
 
 if [ "${version:0:1}" = "8" ];then
@@ -39,12 +37,15 @@ else
 tmp=${version:0:3}
 
 if [ "$tmp" = "5.6" ];then
-/usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM
+  /usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM
 
 echo "5.6 test"
 
+elif [ "$tmp" = "5.1" ]; then
+  /usr/bin/docker run -d --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai jc3wish/mysql:5.1.73
+  sleep 10
 else
-/usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+  /usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 fi
 
 sleep 5
@@ -75,7 +76,7 @@ echo $ip
 sleep 15
 
 
-$path/MySQL_Filed_DataCheck -u root -p $pwd -h $ip -database mysql -table "" -longstring false
+$path/MySQL_Filed_DataCheck -u root -p $pwd -h $ip -database bifrost_test -table "" -longstring false
 
 
 /usr/bin/docker stop $dockerName

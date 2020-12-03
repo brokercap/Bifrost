@@ -13,9 +13,10 @@ import (
 	"strings"
 	"math/rand"
 	"encoding/json"
+	regexp "regexp"
 )
 
-const VERSION  = "1.3.0"
+const VERSION  = "1.6.1"
 
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
@@ -163,6 +164,46 @@ func  GetRandomString(l int,cn int) string {
 	}
 	rand.Seed(time.Now().UnixNano())
 	return string(result1)+result2
+}
+
+func  GetTimeAndNsen(Value string,ColumnType string) string {
+	i := strings.Index(ColumnType,"(")
+	if i < 0 {
+		return Value
+	}
+	n,err := strconv.Atoi(ColumnType[i+1:len(ColumnType)-1])
+	if err != nil {
+		panic(err.Error() )
+	}
+	var Value0 string = "."
+	switch n {
+	case 1:
+		Value0 += fmt.Sprint(rand.Intn(9))
+		break
+	case 2:
+		v := rand.Intn(99)
+		Value0 += fmt.Sprintf("%0*d", 2,v)
+		break
+	case 3:
+		v := rand.Intn(999)
+		Value0 += fmt.Sprintf("%0*d", 3,v)
+		break
+	case 4:
+		v := rand.Intn(9999)
+		Value0 += fmt.Sprintf("%0*d", 4,v)
+		break
+	case 5:
+		v := rand.Intn(99999)
+		Value0 += fmt.Sprintf("%0*d", 5,v)
+		break
+	case 6:
+		v := rand.Intn(999999)
+		Value0 += fmt.Sprintf("%0*d", 5,v)
+		break
+	default:
+		panic("GetTimeAndNsen unknow ColumnType:"+ColumnType)
+	}
+	return Value+Value0
 }
 
 func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
@@ -437,6 +478,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				break
 			case "time":
 				Value := time.Now().Format("15:04:05")
+				Value = GetTimeAndNsen(Value,columnType.ColumnType)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -447,6 +489,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				break
 			case "datetime","timestamp":
 				Value := time.Now().Format("2006-01-02 15:04:05")
+				Value = GetTimeAndNsen(Value,columnType.ColumnType)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -620,7 +663,7 @@ func callback3(d *mysql.EventReslut) {
 		log.Println(" type and value is all right ")
 	}else{
 		for _, columnName := range errorFieldList{
-			log.Println(columnName,"value:",d.Rows[len(d.Rows)-1][columnName],"(",reflect.TypeOf(d.Rows[len(d.Rows)-1][columnName]),")"," != ",ColumnData[columnName].Value,"(",reflect.TypeOf(ColumnData[columnName].Value),")")
+			log.Println(columnName,"parser value:",d.Rows[len(d.Rows)-1][columnName],"(",reflect.TypeOf(d.Rows[len(d.Rows)-1][columnName]),")"," != ",ColumnData[columnName].Value,"(",reflect.TypeOf(ColumnData[columnName].Value),")")
 		}
 	}
 	os.Exit(0)
@@ -679,92 +722,95 @@ func main() {
 
 	fmt.Println("")
 
+	createTableSql := "CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
+		"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
+		"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
+		"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
+		"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
+		"`testint` int(11) NOT NULL DEFAULT '-4',"+
+		"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
+		"`testvarchar` varchar(10) NOT NULL,"+
+		"`testchar` char(2) NOT NULL,"+
+		"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
+		"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
+		"`testtime` time NOT NULL DEFAULT '00:00:00',"+
+		"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
+		"`testyear` year(4) NOT NULL DEFAULT '1989',"+
+		"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
+		"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
+		"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
+		"`testtext` text NOT NULL,"+
+		"`testblob` blob NOT NULL,"+
+		"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
+		"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
+		"`testmediumblob` mediumblob NOT NULL,"+
+		"`testlongblob` longblob NOT NULL,"+
+		"`testtinyblob` tinyblob NOT NULL,"+
+		"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
+		"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
+		"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
+		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
+		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"
+
+	reg, err := regexp.Compile("[^0-9.]+")
+	if err != nil {
+		log.Fatal(err)
+	}
+	MysqlVersionOld := MysqlVersion
+	MysqlVersion = reg.ReplaceAllString(MysqlVersion, "")
+	//MysqlVersion = strings.ReplaceAll(MysqlVersion,"-log","")
+	MysqlVerionArr := strings.Split(MysqlVersion,".")
+	bigVersion, _ := strconv.Atoi(MysqlVerionArr[0])
+	midVersion, _ := strconv.Atoi(MysqlVerionArr[1])
+	var lastVersion = 0
+	if len(MysqlVerionArr) == 3 {
+		lastVersion,_ = strconv.Atoi(MysqlVerionArr[2])
+	}
+	mysqlVersionInt := bigVersion * 1000 + midVersion * 100 + lastVersion
+	// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
+	log.Println("MysqlVersion:",MysqlVersionOld, mysqlVersionInt)
+
+	if mysqlVersionInt >= 5600 {
+		createTableSql += "`testtime2_1` time(1) NOT NULL DEFAULT '00:00:00.0',"+
+			"`testtime2_2` time(2) NOT NULL DEFAULT '00:00:00.00',"+
+			"`testtime2_3` time(3) NOT NULL DEFAULT '00:00:00.000',"+
+			"`testtime2_4` time(4) NOT NULL DEFAULT '00:00:00.0000',"+
+			"`testtime2_5` time(5) NOT NULL DEFAULT '00:00:00.00000',"+
+			"`testtime2_6` time(6) NOT NULL DEFAULT '00:00:00.000000',"+
+
+			"`testtimestamp2_1` timestamp(1) NOT NULL DEFAULT CURRENT_TIMESTAMP(1),"+
+			"`testtimestamp2_2` timestamp(2) NOT NULL DEFAULT CURRENT_TIMESTAMP(2),"+
+			"`testtimestamp2_3` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),"+
+			"`testtimestamp2_4` timestamp(4) NOT NULL DEFAULT CURRENT_TIMESTAMP(4),"+
+			"`testtimestamp2_5` timestamp(5) NOT NULL DEFAULT CURRENT_TIMESTAMP(5),"+
+			"`testtimestamp2_6` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),"+
+
+			"`testdatetime2_1` datetime(1) NOT NULL DEFAULT '0000-00-00 00:00:00.0',"+
+			"`testdatetime2_2` datetime(2) NOT NULL DEFAULT '0000-00-00 00:00:00.00',"+
+			"`testdatetime2_3` datetime(3) NOT NULL DEFAULT '0000-00-00 00:00:00.000',"+
+			"`testdatetime2_4` datetime(4) NOT NULL DEFAULT '0000-00-00 00:00:00.0000',"+
+			"`testdatetime2_5` datetime(5) NOT NULL DEFAULT '0000-00-00 00:00:00.00000',"+
+			"`testdatetime2_6` datetime(6) NOT NULL DEFAULT '0000-00-00 00:00:00.000000',"
+	}
+
+	if mysqlVersionInt >= 5700 {
+		createTableSql += "`test_json` json,"
+	}
+
+	createTableSql += "PRIMARY KEY (`id`)"+
+		") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
 
 	log.Println("load data start")
 	if *table == "" {
 		var sqlList = []string{
 			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `jc3wish_test`",
 			"DROP TABLE IF EXISTS `"+*database+"`.`binlog_field_test`",
-			"CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
-				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
-				"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
-				"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
-				"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
-				"`testint` int(11) NOT NULL DEFAULT '-4',"+
-				"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
-				"`testvarchar` varchar(10) NOT NULL,"+
-				"`testchar` char(2) NOT NULL,"+
-				"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
-				"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
-				"`testtime` time NOT NULL DEFAULT '00:00:00',"+
-				"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
-				"`testyear` year(4) NOT NULL DEFAULT '1989',"+
-				"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
-				"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
-				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
-				"`testtext` text NOT NULL,"+
-				"`testblob` blob NOT NULL,"+
-				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
-				"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
-				"`testmediumblob` mediumblob NOT NULL,"+
-				"`testlongblob` longblob NOT NULL,"+
-				"`testtinyblob` tinyblob NOT NULL,"+
-				"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
-				"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
-				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
-				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
-				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
-				"`test_json` json,"+
-				"PRIMARY KEY (`id`)"+
-				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8",
-		}
-		// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
-		bigVersionString := strings.Split(MysqlVersion,".")[0]
-		fmt.Println("bigVersionString:",bigVersionString)
-		bigVersion, _ := strconv.Atoi(bigVersionString)
-		fmt.Println("MysqlVersion[0:2]:",MysqlVersion[0:2])
-		if bigVersion < 8 && MysqlVersion[0:2] != "5.7" {
-			sqlList[1] = "CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
-				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
-				"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
-				"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
-				"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
-				"`testint` int(11) NOT NULL DEFAULT '-4',"+
-				"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
-				"`testvarchar` varchar(10) NOT NULL,"+
-				"`testchar` char(2) NOT NULL,"+
-				"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
-				"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
-				"`testtime` time NOT NULL DEFAULT '00:00:00',"+
-				"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
-				"`testyear` year(4) NOT NULL DEFAULT '1989',"+
-				"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
-				"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
-				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
-				"`testtext` text NOT NULL,"+
-				"`testblob` blob NOT NULL,"+
-				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
-				"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
-				"`testmediumblob` mediumblob NOT NULL,"+
-				"`testlongblob` longblob NOT NULL,"+
-				"`testtinyblob` tinyblob NOT NULL,"+
-				"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
-				"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
-				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
-				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
-				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
-				"PRIMARY KEY (`id`)"+
-				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
+			createTableSql,
 		}
 
 		log.Println("create table binlog_field_test start")
@@ -796,9 +842,9 @@ func main() {
 	fmt.Println("")
 
 	/*
-	for k,v:=range sqlValue{
-		log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
-	}
+		for k,v:=range sqlValue{
+			log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
+		}
 	*/
 
 	Result,err := stmt.Exec(sqlValue)
