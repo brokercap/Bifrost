@@ -166,44 +166,39 @@ func  GetRandomString(l int,cn int) string {
 	return string(result1)+result2
 }
 
-func  GetTimeAndNsen(Value string,ColumnType string) string {
-	i := strings.Index(ColumnType,"(")
+func  GetTimeAndNsen(ColumnDataType string) string {
+	ColumnDataType = strings.ToLower(ColumnDataType)
+	var timeFormat string
+	i := strings.Index(ColumnDataType,"(")
+	var columnType string
 	if i < 0 {
-		return Value
+		columnType = ColumnDataType
+	}else{
+		columnType = ColumnDataType[0:i]
 	}
-	n,err := strconv.Atoi(ColumnType[i+1:len(ColumnType)-1])
-	if err != nil {
-		panic(err.Error() )
-	}
-	var Value0 string = "."
-	switch n {
-	case 1:
-		Value0 += fmt.Sprint(rand.Intn(9))
-		break
-	case 2:
-		v := rand.Intn(99)
-		Value0 += fmt.Sprintf("%0*d", 2,v)
-		break
-	case 3:
-		v := rand.Intn(999)
-		Value0 += fmt.Sprintf("%0*d", 3,v)
-		break
-	case 4:
-		v := rand.Intn(9999)
-		Value0 += fmt.Sprintf("%0*d", 4,v)
-		break
-	case 5:
-		v := rand.Intn(99999)
-		Value0 += fmt.Sprintf("%0*d", 5,v)
-		break
-	case 6:
-		v := rand.Intn(999999)
-		Value0 += fmt.Sprintf("%0*d", 5,v)
-		break
+	switch columnType {
+	case "time":
+		timeFormat = "15:03:04"
+	case "timestamp","datetime":
+		timeFormat = "2006-01-02 15:03:04"
+	case "year":
+		timeFormat = "2006"
 	default:
-		panic("GetTimeAndNsen unknow ColumnType:"+ColumnType)
+		return ""
 	}
-	return Value+Value0
+	var n = 0
+	var err error
+	if i > 0 {
+		n,err = strconv.Atoi(ColumnDataType[i+1:len(ColumnDataType)-1])
+		if err != nil {
+			panic(err.Error() )
+		}
+	}
+	if n > 0 {
+		timeFormat += "." + fmt.Sprintf("%0*d",n,0)
+	}
+	value := time.Now().Format(timeFormat)
+	return value
 }
 
 func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
@@ -450,7 +445,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				rand.Seed(time.Now().UnixNano())
 
 				var n int
-				if *longstring == "true"{
+				if longstring == "true"{
 					if columnType.ColumnType == "longblob"{
 						n = rand.Intn(65535/4)
 					}else{
@@ -477,8 +472,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				data = append(data,Value)
 				break
 			case "time":
-				Value := time.Now().Format("15:04:05")
-				Value = GetTimeAndNsen(Value,columnType.ColumnType)
+				Value := GetTimeAndNsen(columnType.ColumnType)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -488,8 +482,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				data = append(data,Value)
 				break
 			case "datetime","timestamp":
-				Value := time.Now().Format("2006-01-02 15:04:05")
-				Value = GetTimeAndNsen(Value,columnType.ColumnType)
+				Value := GetTimeAndNsen(columnType.ColumnType)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -608,12 +601,13 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 }
 
 var ColumnData map[string]*Column
-var table *string
-var database *string
-var longstring *string
+var table string
+var database string
+var longstring string
+var autoCreate bool
 
 func callback3(d *mysql.EventReslut) {
-	if d.TableName != *table{
+	if d.TableName != table{
 		log.Println(d)
 		return
 	}
@@ -672,20 +666,30 @@ func callback3(d *mysql.EventReslut) {
 func main() {
 
 	fmt.Println("VERSION:",VERSION)
-	userName := flag.String("u", "root", "-u root")
-	password := flag.String("p", "root", "-p password")
-	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
-	port := flag.String("P", "3306", "-P 3306")
-	database = flag.String("database", "test", "-database test")
-	table = flag.String("table", "binlog_field_test", "-table binlog_field_test")
-	longstring = flag.String("longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
+	var userName,password,host,port string
+	flag.StringVar(&userName,"u", "root", "-u root")
+	flag.StringVar(&password,"p", "root", "-p password")
+	flag.StringVar(&host,"h", "127.0.0.1", "-h 127.0.0.1")
+	flag.StringVar(&port,"P", "3306", "-P 3306")
+	flag.StringVar(&database,"database", "test", "-database test")
+	flag.StringVar(&table,"table", "binlog_field_test", "-table binlog_field_test")
+	flag.StringVar(&longstring,"longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
+	flag.BoolVar(&autoCreate,"autoCreate", true, "-autoCreate")
 	flag.Parse()
+	if autoCreate {
+		if table == "" {
+			table = "binlog_field_test"
+		}
+		if database == "" {
+			database = "bifrost_test"
+		}
+	}
 
 	var filename,dataSource string
 	var position uint32 = 0
 	var MyServerID uint32 = 0
 
-	dataSource = *userName+":"+*password+"@tcp("+*host+":"+*port+")/"+*database
+	dataSource = userName+":"+password+"@tcp("+host+":"+port+")/"+database
 	log.Println(dataSource," start connect")
 	db := DBConnect(dataSource)
 	if db == nil {
@@ -722,7 +726,7 @@ func main() {
 
 	fmt.Println("")
 
-	createTableSql := "CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
+	createTableSql := "CREATE TABLE `"+ database +"`.`"+ table +"` ("+
 		"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
 		"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
 		"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
@@ -806,10 +810,10 @@ func main() {
 		") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
 
 	log.Println("load data start")
-	if *table == "" {
+	if autoCreate {
 		var sqlList = []string{
-			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `jc3wish_test`",
-			"DROP TABLE IF EXISTS `"+*database+"`.`binlog_field_test`",
+			"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `"+ database +"`",
+			"DROP TABLE IF EXISTS `"+ database +"`.`"+ table +"`",
 			createTableSql,
 		}
 
@@ -819,9 +823,9 @@ func main() {
 			ExecSQL(db, sql)
 		}
 		log.Println("create table binlog_field_test over")
-		*table = "binlog_field_test"
+		table = "binlog_field_test"
 	}
-	sqlPre,sqlValue,tableInfo,columnList := GetSchemaTableFieldAndVal(db,*database,*table)
+	sqlPre,sqlValue,tableInfo,columnList := GetSchemaTableFieldAndVal(db,database,table)
 	if sqlPre == ""{
 		log.Println("GetSchemaTableFieldAndVal ,sql is empty")
 		os.Exit(0)
@@ -869,7 +873,7 @@ func main() {
 		},
 		nil,
 		nil)
-	BinlogDump.AddReplicateDoDb(*database,"binlog_field_test")
+	BinlogDump.AddReplicateDoDb(database,"binlog_field_test")
 	log.Println("Version:",VERSION)
 	log.Println("Bristol version:",mysql.VERSION)
 	log.Println("filename:",filename,"position:",position)
