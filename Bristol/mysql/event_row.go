@@ -350,7 +350,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			//row[column_name] = string(buf.Next(length+1))
 			/*
 				log.Println("======================")
-				log.Println("column_name:", column_name," length:",length)
+				log.println("column_name:", column_name," length:",length)
 				//log.Println("name:",tableMap.columnMetaData[i].name)
 				log.Println("size:",tableMap.columnMetaData[i].size)
 				log.Println("precision:",tableMap.columnMetaData[i].precision)
@@ -515,7 +515,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 				minute := int((timeInt % 10000) / 100)
 				second := int(timeInt % 100)
 				t := fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
-				//row[column_name] = tm.Format("15:04:05")
 				row[column_name] = t
 			}
 			break
@@ -553,12 +552,19 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 		case FIELD_TYPE_TIMESTAMP2:
 			var timestamp int32
 			binary.Read(buf, binary.BigEndian, &timestamp)
-			nsec := readNsec(buf, tableMap.columnMetaData[i].fsp)
-
-			tm := time.Unix(int64(timestamp), int64(nsec))
-			row[column_name] = tm.Format(TIME_FORMAT)
+			fsp := tableMap.columnMetaData[i].fsp
+			nsec := readNsec(buf, fsp)
+			tm := time.Unix(int64(timestamp), int64(nsec)*1000)
+			var timeFormat1 = TIME_FORMAT
+			if fsp > 0 {
+				timeFormat1 += "."
+				for ii := 0; ii < int(fsp); ii++ {
+					timeFormat1 += "9"
+				}
+			}
+			row[column_name] = tm.Format(timeFormat1)
+			// log.Println("FIELD_TYPE_TIMESTAMP2:", tm, timeFormat1, row[column_name])
 			break
-
 		case FIELD_TYPE_DATETIME:
 			var t int64
 			e = binary.Read(buf, binary.LittleEndian, &t)
@@ -655,7 +661,16 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 
 	nsec := readNsec(buf, fsp)
 	// log.Println("read_datetime2 nsec:", nsec)
-	data = time.Date(year, month, int(days), int(hours), int(minute), int(second), nsec, time.UTC).Format(TIME_FORMAT)
+	var timeFormat1 = TIME_FORMAT
+	if fsp > 0 {
+		timeFormat1 += "."
+		for ii := 0; ii < int(fsp); ii++ {
+			timeFormat1 += "9"
+		}
+	}
+
+	data = time.Date(year, month, int(days), int(hours), int(minute), int(second), nsec*1000, time.UTC).Format(timeFormat1)
+	// log.Println("read_datetime2:", nsec, timeFormat1, data)
 	return
 }
 
@@ -670,14 +685,14 @@ FSP	Storage
 4,5 3 bytes
 */
 func readNsec(buf *bytes.Buffer, fsp uint8) int {
-	log.Println("read_datetime2 fsp:", fsp)
+	// log.Println("read_datetime2 fsp:", fsp)
 
 	nsec := 0
 	switch fsp {
 	case 1, 2:
 		var c byte
 		binary.Read(buf, binary.BigEndian, &c)
-		log.Println("read_datetime2 c:", c)
+		// log.Println("read_datetime2 c:", c)
 
 		nsec = int(uint(c) * 10000)
 	case 3, 4:
