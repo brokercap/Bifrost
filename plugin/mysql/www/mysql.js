@@ -7,6 +7,12 @@ function doGetPluginParam(){
     var NullTransferDefault = $("#MySQL_NullTransferDefault").val();
     var SyncMode = $("#MySQL_SyncMode").val();
 
+    if( Table != "" && SyncMode == "NoSyncData" ) {
+        result.msg = "不同步数据模式,只支持 自动表结构匹配表 模式!";
+        result.batchSupport = true;
+        return result;
+    }
+
     if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)){
         result.msg = "BatchSize must be int!"
         return result;

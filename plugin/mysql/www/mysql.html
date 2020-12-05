@@ -13,11 +13,13 @@
                 <option value="Normal" selected>普通模式</option>
                 <option value="LogUpdate">日志模式-修改</option>
                 <option value="LogAppend">日志模式-追加</option>
+                <option value="NoSyncData">不同步数据</option>
             </select>
             <span class="help-block m-b-none">
                 <p><strong>普通模式：</strong>源insert,update,delete, 目标库也对应insert,update,delete</p>
                 <p><strong>日志模式-修改：</strong>源delete, 目标库将转成 update, 目标库需要额外新增一个字段，用于标记删除</p>
                 <p><strong>日志模式-追加：</strong>源的所有操作，将转成 insert 追加的方式写到目标库</p>
+                <p><strong>不同步数据：</strong>数据将不同步,并且设置数据表自动匹配模式,及FilterQuery:False , 只进行 SQl 模式同步(DDL)</p>
                 <p>新增的字段，请参考 文档 的标签配合使用</p>
             </span>
         </div>
