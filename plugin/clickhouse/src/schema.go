@@ -133,3 +133,27 @@ func (This *ClickhouseDB) GetTableFields(SchemaName,TableName string) (data []ck
 	return
 }
 
+
+func (This *ClickhouseDB) GetVersion() (Version string) {
+	This.conn.Begin()
+	stmt, err := This.conn.Prepare("SELECT version()")
+	if err == nil{
+		defer stmt.Close()
+	}
+	rows, err := stmt.Query([]driver.Value{})
+	if err != nil {
+		This.err = err
+		This.conn.Commit()
+		return
+	}
+
+	defer rows.Close()
+	row := make([]driver.Value, 1)
+
+	for rows.Next(row) == nil {
+		Version = row[0].(string)
+	}
+	This.err = This.conn.Commit()
+	return
+}
+
