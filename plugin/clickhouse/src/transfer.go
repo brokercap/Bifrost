@@ -488,7 +488,8 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 				default:
 					// 0000-00-00 00:00:00.000000
 					toType = "String"
-					if This.ckVersion >= 20000000 {
+					// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
+					if This.ckVersion >= 2000000000 {
 						if n > 19 && n <= 26 {
 							nsec := fmt.Sprintf("%0*d", n-20, 0)
 							_, err = time.Parse("2006-01-02 15:04:05."+nsec, v.(string))

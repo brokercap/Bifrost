@@ -7,7 +7,6 @@ import (
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
-	"math"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -134,13 +133,14 @@ func (This *Conn) InitVersion0(versionStr string) int {
 			log.Printf("clickhouse version:%s to int err: %s",versionStr,err.Error())
 			return 0
 		}
-		vArr[i] = v0
+		if i <= 3 {
+			vArr[i] = v0
+		}
 	}
-	n := len(vArr)
-	for i,v := range vArr {
-		v0 := v * int(math.Pow(10,float64(((n-i-1)*2))))
-		versionInt += v0
-	}
+	versionInt = vArr[0] * 100000000
+	versionInt += vArr[1] * 1000000
+	versionInt += vArr[2] * 10000
+	versionInt += vArr[3]
 	return versionInt
 }
 

@@ -798,9 +798,10 @@ func TestConn_InitVersion0(t *testing.T) {
 
 	str3 := "19.13.3"
 	v3 := obj.InitVersion0(str3)
-	if v3 == 19130300 {
+	if v3 == 1913030000 {
 		t.Log("str3:",str3," ==> ",v3)
 		t.Log("success")
+	}else{
+		t.Fatal("str3:",str3," ==> ",v3)
 	}
-	t.Fatal("str3:",str3," ==> ",v3)
 }
