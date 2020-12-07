@@ -198,6 +198,14 @@ func  GetTimeAndNsen(ColumnDataType string) string {
 		timeFormat += "." + fmt.Sprintf("%0*d",n,0)
 	}
 	value := time.Now().Format(timeFormat)
+	i = strings.Index(value,".")
+	if i > 0 {
+		rand.Seed(time.Now().UnixNano())
+		if rand.Intn(2) >= 1 {
+			value = strings.Replace(value,value[i:i+2],".0",1)
+			value = value[0:len(value)-1]+"0"
+		}
+	}
 	return value
 }
 
@@ -664,7 +672,6 @@ func callback3(d *mysql.EventReslut) {
 }
 
 func main() {
-
 	fmt.Println("VERSION:",VERSION)
 	var userName,password,host,port string
 	flag.StringVar(&userName,"u", "root", "-u root")
