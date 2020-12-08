@@ -1,5 +1,7 @@
 module github.com/brokercap/Bifrost
 
+go 1.15
+
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/Shopify/sarama v1.26.4
