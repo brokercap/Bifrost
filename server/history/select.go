@@ -143,6 +143,27 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 					json.Unmarshal([]byte(dest[i].(string)),&d)
 					m[*v.COLUMN_NAME] = d
 					break
+				case "timestamp","datetime","time":
+					if v.Fsp == 0 {
+						break
+					}
+					val := dest[i].(string)
+					i := strings.Index(val,".")
+					if i < 0 {
+						m[*v.COLUMN_NAME] = val + "." + fmt.Sprintf("%0*d",v.Fsp,0)
+						break
+					}
+					n := len(val[i+1:])
+					if n == v.Fsp {
+						m[*v.COLUMN_NAME] = val
+						break
+					}
+					if n < v.Fsp {
+						m[*v.COLUMN_NAME] = val + fmt.Sprintf("%0*d",v.Fsp-n,0)
+					}else{
+						m[*v.COLUMN_NAME] = val[0:len(val) - n + v.Fsp]
+					}
+
 				default:
 					m[*v.COLUMN_NAME] = dest[i]
 					break
