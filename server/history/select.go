@@ -145,6 +145,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 					break
 				case "timestamp","datetime","time":
 					if v.Fsp == 0 {
+						m[*v.COLUMN_NAME] = dest[i]
 						break
 					}
 					val := dest[i].(string)
