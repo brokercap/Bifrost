@@ -1,16 +1,18 @@
 package src
 
 import (
+	"database/sql/driver"
 	dbDriver "database/sql/driver"
 	"encoding/json"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
+	"math"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
-	"database/sql/driver"
-	"strings"
 )
 
 const VERSION = "v1.6.0"
@@ -94,6 +96,7 @@ type Conn struct {
 	status string
 	p      *PluginParam
 	conn   *ClickhouseDB
+	ckVersion int
 	err    error
 }
 
@@ -101,7 +104,44 @@ func (This *Conn) Connect() bool {
 	if This.conn == nil {
 		This.conn = NewClickHouseDBConn(*This.uri)
 	}
+	This.InitVersion()
 	return true
+}
+
+func (This *Conn) InitVersion() {
+	defer func() {
+		if err := recover(); err != nil {
+			return
+		}
+	}()
+	if This.conn == nil {
+		return
+	}
+	versionStr := This.conn.GetVersion()
+	if versionStr == "" {
+		return
+	}
+	This.ckVersion = This.InitVersion0(versionStr)
+}
+
+func (This *Conn) InitVersion0(versionStr string) int {
+	versionArr := strings.Split(versionStr,".")
+	var versionInt = 0
+	var vArr = make([]int,4)
+	for i, ver := range versionArr {
+		v0,err :=  strconv.Atoi(ver)
+		if err != nil {
+			log.Printf("clickhouse version:%s to int err: %s",versionStr,err.Error())
+			return 0
+		}
+		vArr[i] = v0
+	}
+	n := len(vArr)
+	for i,v := range vArr {
+		v0 := v * int(math.Pow(10,float64(((n-i-1)*2))))
+		versionInt += v0
+	}
+	return versionInt
 }
 
 func (This *Conn) ReConnect() bool {

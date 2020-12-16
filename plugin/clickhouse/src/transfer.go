@@ -88,10 +88,18 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 				v = int32(0)
 				break
 			default:
+				if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
+					v = int64(0)
+				}else{
+					v = data
+				}
+				break
+				/*
 				loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
 				theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
 				v = theTime.Unix()
 				break
+				*/
 			}
 			break
 		default:
@@ -103,6 +111,41 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 				v = int32(i64)
 			} else {
 				v = int32(0)
+			}
+			break
+		}
+		break
+	case "DateTime64", "Nullable(DateTime64)":
+		if data == nil {
+			v = int32(0)
+			break
+		}
+		switch data.(type) {
+		case int32:
+			v = int64(data.(int32))
+			break
+		case int64:
+			v = data
+			break
+		case string:
+			switch data.(string){
+			case ""," ":
+				v = int64(0)
+				break
+			default:
+				if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
+					v = int64(0)
+				}else{
+					v = data
+				}
+				break
+			}
+			break
+		default:
+			var err error
+			v, err = AllTypeToInt64(data)
+			if err != nil {
+				return 0, err
 			}
 			break
 		}
@@ -416,7 +459,8 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 				toType = "String"
 				break
 			case reflect.String:
-				switch len(v.(string))  {
+				n := len(v.(string))
+				switch n {
 				case 19:
 					if v.(string) == "0000-00-00 00:00:00" {
 						toType = "DateTime"
@@ -442,7 +486,17 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 					}
 					break
 				default:
+					// 0000-00-00 00:00:00.000000
 					toType = "String"
+					if This.ckVersion >= 20000000 {
+						if n > 19 && n <= 26 {
+							nsec := fmt.Sprintf("%0*d", n-20, 0)
+							_, err = time.Parse("2006-01-02 15:04:05."+nsec, v.(string))
+							if err == nil {
+								toType = "DateTime64(" + fmt.Sprint(n-20) + ")"
+							}
+						}
+					}
 					break
 				}
 				break
