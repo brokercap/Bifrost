@@ -128,6 +128,9 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				}
 				break
 			case QUERY_EVENT:
+				if event.Query == "COMMIT" {
+					break
+				}
 				//only return replicateDoDb, any sql may be use db.table query
 				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
