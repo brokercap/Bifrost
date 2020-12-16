@@ -594,7 +594,6 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 					break
 				}
 			}
-
 			switch event.Header.EventType {
 			//这里要判断一下如果是row事件
 			//在map event的时候已经判断过了是否要过滤，所以判断一下 parser.filterNextRowEvent 是否为true
@@ -606,6 +605,9 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 				break
 			case QUERY_EVENT:
 				//only return replicateDoDb, any sql may be use db.table query
+				if event.Query == "COMMIT" {
+					break
+				}
 				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName

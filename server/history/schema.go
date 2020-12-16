@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"fmt"
+	"strings"
 )
 
 func DBConnect(uri string) mysql.MysqlConnection{
@@ -31,6 +32,7 @@ type TableStruct struct {
 	DATA_TYPE			*string
 	NUMERIC_PRECISION	*uint64
 	NUMERIC_SCALE		*uint64
+	Fsp					int				// time,timestamp,datetime 毫秒保存的精度
 }
 
 func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string) []TableStruct{
@@ -110,6 +112,20 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 			}
 		}
 
+		var fsp int
+		switch strings.ToLower(DATA_TYPE) {
+		case "timestamp","datetime","time":
+			columnDataType := strings.ToLower(COLUMN_TYPE)
+			i := strings.Index(columnDataType,"(")
+			if i <= 0 {
+				break
+			}
+			fsp,_ = strconv.Atoi(columnDataType[i+1:len(columnDataType)-1])
+			break
+		default:
+			break
+		}
+
 		FieldList = append(FieldList,TableStruct{
 			COLUMN_NAME:	&COLUMN_NAME,
 			COLUMN_DEFAULT:	COLUMN_DEFAULT,
@@ -121,6 +137,7 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection,schema string,table string
 			DATA_TYPE:		&DATA_TYPE,
 			NUMERIC_PRECISION:NUMERIC_PRECISION,
 			NUMERIC_SCALE:	NUMERIC_SCALE,
+			Fsp:			fsp,
 		})
 	}
 	return FieldList

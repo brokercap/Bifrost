@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.0"
-const BIFROST_VERION = "v1.6.0"
+const VERSION  = "v1.6.1"
+const BIFROST_VERION = "v1.6.1"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -41,6 +41,7 @@ const (
 	SYNCMODE_NORMAL SyncMode = "Normal"
 	SYNCMODE_LOG_UPDATE SyncMode = "LogUpdate"
 	SYNCMODE_LOG_APPEND SyncMode = "LogAppend"
+	SYNCMODE_NO_SYNC_DATA SyncMode = "NoSyncData"
 )
 
 type fieldStruct struct {
@@ -385,14 +386,18 @@ func (This *Conn) Close() bool {
 	return true
 }
 
-func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error){
+func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
 	var n int
 	if retry == false {
 		This.p.Data.Data = append(This.p.Data.Data, data)
 	}
 	n = len(This.p.Data.Data)
 	if This.p.BatchSize <= n{
-		return This.AutoCommit()
+		LastSuccessCommitData,ErrData,err = This.AutoCommit()
+		if LastSuccessCommitData != nil {
+			This.p.SkipBinlogData = nil
+		}
+		return
 	}
 	return nil,nil,nil
 }
@@ -427,13 +432,22 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 			break
 		}
 		if len(This.p.Data.Data) == 0 {
+			if This.CheckDataSkip(data) {
+				This.p.SkipBinlogData = nil
+				return data, nil, nil
+			}
 			newSql := This.TranferQuerySql(data)
+			if This.conn.err != nil {
+				This.ReConnect()
+			}
+			if This.conn.err != nil {
+				return nil,nil,This.conn.err
+			}
 			_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
 			if This.conn.err != nil {
 				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
 				return nil, data, This.conn.err
 			}
-			return data, nil, nil
 		}
 	}
 	return
@@ -453,8 +467,12 @@ func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginD
 	return nil, nil, nil
 }
 
-func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
-	return This.AutoCommit()
+func (This *Conn) TimeOutCommit() (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+	LastSuccessCommitData,ErrData,err = This.AutoCommit()
+	if LastSuccessCommitData != nil {
+		This.p.SkipBinlogData = nil
+	}
+	return
 }
 
 func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType,index int,key string) interface{} {
@@ -505,6 +523,11 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	if n == 0{
 		return nil,nil,nil
 	}
+	if This.p.SyncMode == SYNCMODE_NO_SYNC_DATA {
+		binlogEvent := This.p.Data.CommitData[len(This.p.Data.CommitData)-1]
+		This.p.Data = NewTableData()
+		return binlogEvent,nil,nil
+	}
 	if This.conn.err != nil {
 		This.ReConnect()
 	}
@@ -535,7 +558,6 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 			This.p.Data.CommitData = This.p.Data.CommitData[1:]
 		}
 	}
-	This.p.SkipBinlogData = nil
 	return binlogEvent,nil,nil
 }
 
@@ -590,13 +612,13 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 	for _,data := range dataMap {
 		p,err := This.getAutoTableFieldType(data[0])
 		if err != nil {
-			break
+			return data[0],e
 		}
 		This.p.Field = p.Field
 		This.p.fieldCount = len(p.Field)
 		This.p.schemaAndTable = p.SchemaAndTable
 		This.p.PriKey = p.PriKey
-		This.p.toPriKey = p .ToPriKey
+		This.p.toPriKey = p.ToPriKey
 		This.p.fromPriKey = p.FromPriKey
 		This.conn.err = This.conn.Begin()
 		if This.conn.err != nil {

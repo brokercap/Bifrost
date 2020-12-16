@@ -1047,14 +1047,23 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				if e != nil {
 					return
 				}
-
-				if num == 0 {
+				switch num {
+				case 0:
 					row[i] = "00:00:00"
-				} else {
+				case 8:
 					row[i] = fmt.Sprintf("%02d:%02d:%02d",
 						data[pos+6],
 						data[pos+7],
 						data[pos+8])
+				case 12:
+					row[i] = fmt.Sprintf(
+						"%02d:%02d:%02d.%06d",
+						data[pos+6],
+						data[pos+7],
+						data[pos+8],
+						bytesToUint24(data[pos+9:pos+12]))
+				default:
+					return fmt.Errorf("Invalid time-packet length %d", num)
 				}
 				pos += n + int(num)
 				break
@@ -1076,10 +1085,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 						bytesToUint16(data[pos:pos+2]),
 						data[pos+2],
 						data[pos+3])
-				default:
-					if num < 7 {
-						return fmt.Errorf("Invalid datetime-packet length %d", num)
-					}
+				case 7:
 					row[i] = fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d",
 						bytesToUint16(data[pos:pos+2]),
 						data[pos+2],
@@ -1087,6 +1093,18 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 						data[pos+4],
 						data[pos+5],
 						data[pos+6])
+				case 11:
+					row[i] = fmt.Sprintf(
+						"%04d-%02d-%02d %02d:%02d:%02d.%06d",
+						bytesToUint16(data[pos:pos+2]),
+						data[pos+2],
+						data[pos+3],
+						data[pos+4],
+						data[pos+5],
+						data[pos+6],
+						bytesToUint32(data[pos+7:pos+11]))
+				default:
+					return fmt.Errorf("Invalid datetime-packet length %d", num)
 				}
 				pos += int(num)
 				break

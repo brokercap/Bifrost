@@ -134,7 +134,8 @@ func TestCkDataTypeTransfer(t *testing.T){
 
 func TestTransferToCreateTableSql(t *testing.T) {
 	data := pluginTestData.NewEvent().GetTestInsertData()
-	sql,ckField := MyPlugin.TransferToCreateTableSql(data.SchemaName,data.TableName,data.Rows[0],data.Pri)
+	obj := &MyPlugin.Conn{}
+	sql,ckField := obj.TransferToCreateTableSql(data)
 	t.Log(sql)
 	t.Log(ckField)
 	c := MyPlugin.NewClickHouseDBConn(url)
@@ -146,7 +147,8 @@ func TestTransferToCreateTableSql(t *testing.T) {
 }
 
 func TestTransferToCreateDatabaseSql(t *testing.T) {
-	sql := MyPlugin.TransferToCreateDatabaseSql("mytest2")
+	obj := &MyPlugin.Conn{}
+	sql := obj.TransferToCreateDatabaseSql("mytest2")
 	t.Log(sql)
 	c := MyPlugin.NewClickHouseDBConn(url)
 	err := c.Exec(sql,[]driver.Value{})
@@ -162,7 +164,8 @@ func TestDateStringTransfer(t *testing.T) {
 		var err error
 		var time0 time.Time
 		var Result string = "String"
-		switch len(str) {
+		var n = len(str)
+		switch n {
 		case 19:
 			time0, err = time.Parse("2006-01-02 15:04:05", str)
 			if err != nil {
@@ -180,6 +183,17 @@ func TestDateStringTransfer(t *testing.T) {
 			t.Log(time0.String())
 			break
 		default:
+			if n > 19 && n <= 26 {
+				nsec := fmt.Sprintf("%0*d", n - 20,0)
+				time0, err = time.Parse("2006-01-02 15:04:05."+nsec, str)
+				if err != nil {
+					return "String",err
+				}
+			}else{
+				return "String",err
+			}
+			Result = "DateTime64"
+			t.Log(time0.String())
 			break
 		}
 		return Result,err
@@ -188,17 +202,20 @@ func TestDateStringTransfer(t *testing.T) {
 	type result struct{
 		Val  string
 		Type string
+		IsErr bool
 	}
 
 	testArr := make([]result,0)
 	testArr = append(testArr,result{Val:"2006-01-08",Type:"Date"})
 	testArr = append(testArr,result{Val:"2006-01-08 00:05:20",Type:"DateTime"})
 	testArr = append(testArr,result{Val:"00:05:20",Type:"String"})
-	testArr = append(testArr,result{Val:"2006-01-32 00:05:20",Type:"String"})
+	testArr = append(testArr,result{Val:"2006-01-32 00:05:20",Type:"String",IsErr:true})
+	testArr = append(testArr,result{Val:"2006-01-08 00:05:20.123000",Type:"DateTime64"})
+	testArr = append(testArr,result{Val:"2006-01-08 00:05:20.123",Type:"DateTime64"})
 
 	for _,v := range testArr {
 		TypeName,err := f(v.Val)
-		if err != nil {
+		if err != nil && !v.IsErr {
 			t.Error(v.Val,"err:",err)
 			continue
 		}
@@ -208,4 +225,33 @@ func TestDateStringTransfer(t *testing.T) {
 		}
 		t.Log(v.Val,v.Type, "success")
 	}
+}
+
+func TestGetDateTimeWithMs(t *testing.T) {
+	var f = func(nsec int) string {
+		var format string
+		if nsec <= 0 {
+			format = "2006-01-02 15:03:04"
+		}else{
+			format = "2006-01-02 15:03:04." + fmt.Sprintf("%0*d",nsec,0)
+		}
+		t.Log("format:",format)
+		return time.Now().Format(format)
+	}
+	for i := 0 ; i < 7 ; i ++ {
+		t.Log(f(i))
+	}
+}
+
+func TestDateTimeWithMsFormat(t *testing.T) {
+	var str = "2020-12-05 17:16:09.160"
+	time0, err := time.Parse("2006-01-02 15:04:05.000", str)
+	if err != nil {
+		t.Fatal(err)
+	}
+	timeStr := time0.Format("2006-01-02 15:04:05.000")
+	if timeStr != str {
+		t.Fatal("error timeStr",timeStr," != ",str)
+	}
+	t.Log("timeStr == ",timeStr)
 }

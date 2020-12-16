@@ -13,9 +13,23 @@ import (
 	"strings"
 	"math/rand"
 	"encoding/json"
+	"regexp"
 )
 
-const VERSION  = "1.3.0"
+const VERSION  = "1.6.1"
+
+
+var errDataList []string
+
+func init()  {
+	errDataList = make([]string,0)
+}
+
+func proccessExit()  {
+	for _,logInfo := range errDataList {
+		log.Println(logInfo)
+	}
+}
 
 func DBConnect(uri string) mysql.MysqlConnection{
 	db := mysql.NewConnect(uri)
@@ -143,6 +157,7 @@ type Column struct {
 	SetValues []string
 	CharacterMaximumLength int
 	NumbericPrecision int
+	Fsp				  int
 	Value interface{}
 }
 
@@ -165,14 +180,41 @@ func  GetRandomString(l int,cn int) string {
 	return string(result1)+result2
 }
 
-func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
+func  GetTimeAndNsen(dataType string,fsp int) string {
+	var timeFormat string
+	switch dataType {
+	case "time":
+		timeFormat = "15:03:04"
+	case "timestamp","datetime":
+		timeFormat = "2006-01-02 15:03:04"
+	case "year":
+		timeFormat = "2006"
+	default:
+		return ""
+	}
+	if fsp > 0 {
+		timeFormat += "." + fmt.Sprintf("%0*d",fsp,0)
+	}
+	value := time.Now().Format(timeFormat)
+	i := strings.Index(value,".")
+	if i > 0 {
+		rand.Seed(time.Now().UnixNano())
+		if rand.Intn(2) >= 1 {
+			value = strings.Replace(value,value[i:i+2],".0",1)
+			value = value[0:len(value)-1]+"0"
+		}
+	}
+	return value
+}
+
+func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (autoIncrementField string,sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
 	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
 	data = make([]driver.Value,0)
 	stmt,err := db.Prepare(sql)
 	columnList := make([]Column,0)
 	if err !=nil{
 		log.Println(err)
-		return "", make([]driver.Value,0),columnData,columnList
+		return "","", make([]driver.Value,0),columnData,columnList
 	}
 	p := make([]driver.Value, 0)
 	//p = append(p,schema)
@@ -181,7 +223,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	defer rows.Close()
 	if err != nil {
 		log.Printf("%v\n", err)
-		return "", make([]driver.Value,0),columnData,columnList
+		return "","", make([]driver.Value,0),columnData,columnList
 	}
 	columnData = make(map[string]*Column,0)
 	var sqlk ,sqlv = "",""
@@ -242,6 +284,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			isBool = true
 		}
 		if EXTRA == "auto_increment"{
+			autoIncrementField = COLUMN_NAME
 			auto_increment = true
 		}
 		if strings.Contains(COLUMN_TYPE,"unsigned"){
@@ -281,6 +324,20 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			NUMERIC_PRECISION,_ = strconv.Atoi(fmt.Sprint(dest[10]))
 		}
 
+		var fsp int
+		switch strings.ToLower(DATA_TYPE) {
+		case "timestamp","datetime","time":
+			columnDataType := strings.ToLower(COLUMN_TYPE)
+			i := strings.Index(columnDataType,"(")
+			if i <= 0 {
+				break
+			}
+			fsp,_ = strconv.Atoi(columnDataType[i+1:len(columnDataType)-1])
+			break
+		default:
+			break
+		}
+
 		columnType := &Column{
 			ColumnName: COLUMN_NAME,
 			ColumnKey:COLUMN_KEY,
@@ -299,6 +356,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			SetValues:set_values,
 			CharacterMaximumLength:CHARACTER_MAXIMUM_LENGTH,
 			NumbericPrecision:NUMERIC_PRECISION,
+			Fsp:fsp,
 		}
 		columnData[COLUMN_NAME] = columnType
 		columnList = append(columnList,*columnType)
@@ -373,12 +431,12 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 						break
 					case "bigint":
 						if columnType.Unsigned == true{
-							Value = uint64(uint64(2)^64-1)
+							Value = 1844674407370955161
 						}else{
 							if randResult == 1{
-								Value = int64(int64(2)^63-1)
+								Value = 9223372036854775807
 							}else{
-								Value = int64(int64(-2)^63)
+								Value = -9223372036854775808
 							}
 						}
 						break
@@ -409,7 +467,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				rand.Seed(time.Now().UnixNano())
 
 				var n int
-				if *longstring == "true"{
+				if longstring == "true"{
 					if columnType.ColumnType == "longblob"{
 						n = rand.Intn(65535/4)
 					}else{
@@ -436,7 +494,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				data = append(data,Value)
 				break
 			case "time":
-				Value := time.Now().Format("15:04:05")
+				Value := GetTimeAndNsen(columnType.DataType,columnType.Fsp)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -446,7 +504,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				data = append(data,Value)
 				break
 			case "datetime","timestamp":
-				Value := time.Now().Format("2006-01-02 15:04:05")
+				Value := GetTimeAndNsen(columnType.DataType,columnType.Fsp)
 				columnType.Value = Value
 				data = append(data,Value)
 				break
@@ -532,13 +590,20 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				break
 			case "json":
 				m := make(map[string][]interface{},1)
+				m2 := make(map[string]interface{},0)
+				m3 := make(map[string]interface{},0)
+				m2["key2"] = GetRandomString(20,16)
+				m3["key2"] = false
 				m["key1"] = make([]interface{},0)
 				m["key1"] = append(m["key1"],2147483647)
 				m["key1"] = append(m["key1"],-2147483648)
 				m["key1"] = append(m["key1"],"2")
 				m["key1"] = append(m["key1"],nil)
 				m["key1"] = append(m["key1"],true)
-				m["key1"] = append(m["key1"],"我是一个中国人,我爱中国！")
+				m["key1"] = append(m["key1"],922337203685477)
+				m["key1"] = append(m["key1"],-922337203685477)
+				m["key1"] = append(m["key1"],m2)
+				m["key1"] = append(m["key1"],m3)
 				c,_ := json.Marshal(m)
 				columnType.Value = m
 				data = append(data,string(c))
@@ -561,16 +626,17 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	log.Println("sqlstring:",sqlstring)
 	log.Println("data:",len(data))
 	log.Println("columnData:",len(columnData))
-	return sqlstring,data,columnData,columnList
+	return autoIncrementField,sqlstring,data,columnData,columnList
 }
 
 var ColumnData map[string]*Column
-var table *string
-var database *string
-var longstring *string
+var table string
+var database string
+var longstring string
+var autoCreate bool
 
 func callback3(d *mysql.EventReslut) {
-	if d.TableName != *table{
+	if d.TableName != table{
 		log.Println(d)
 		return
 	}
@@ -580,13 +646,21 @@ func callback3(d *mysql.EventReslut) {
 		return
 	}
 
-	var AutoIncrementField string = ""
+	checkData(d.Rows[len(d.Rows)-1],"binlog parser")
+	proccessExit()
+	os.Exit(0)
+}
 
+func checkData(rowMap map[string]interface{},logPrefix string) (AutoIncrementField string,errorCheckDataList []string)  {
+	errorCheckDataList = make([]string,0)
 	var isAllRight bool = true
-	errorFieldList := make([]string,0)
-	for columnName,v := range d.Rows[len(d.Rows)-1]{
+	for columnName,v := range rowMap {
+		var logInfo string
+		var isTrue = true
 		if _,ok:= ColumnData[columnName];!ok{
-			log.Println("columnName:",columnName," not esxit")
+			isAllRight = false
+			logInfo = fmt.Sprintf(logPrefix+ " columnName:",columnName," not esxit")
+			errDataList = append(errDataList,logInfo)
 			continue
 		}
 		columnType := ColumnData[columnName]
@@ -595,54 +669,171 @@ func callback3(d *mysql.EventReslut) {
 			log.Println(columnName,"==",v," is AutoIncrement")
 			continue
 		}
-
-		if columnType.DataType == "json" || reflect.TypeOf(v) == reflect.TypeOf(columnType.Value) {
-			if fmt.Sprint(v) == fmt.Sprint(columnType.Value) {
-				log.Println(columnName, "==", v)
-			} else {
-				isAllRight = false
-				errorFieldList = append(errorFieldList, columnName)
-				//log.Println(columnName,"value:",v,"(",reflect.TypeOf(v),")"," != ",columnType.Value,"(",reflect.TypeOf(columnType.Value),")"+ " type is right")
+		switch columnType.DataType {
+		case "set":
+			setStr := strings.Replace(strings.Trim(fmt.Sprint(columnType.Value), "[]"), " ", ",", -1)
+			var setStrVal string
+			if reflect.TypeOf(v).Kind() == reflect.Slice {
+				setStrVal = strings.Replace(strings.Trim(fmt.Sprint(v), "[]"), " ", ",", -1)
+			}else{
+				setStrVal = fmt.Sprint(v)
 			}
-		} else {
+			if setStr != setStrVal {
+				isTrue = false
+			}
+			break
+		case "json":
+			c1,_ := json.Marshal(columnType.Value)
+			var c2 []byte
+			if reflect.TypeOf(v).Kind() != reflect.String {
+				c2,_ = json.Marshal(v)
+			}else{
+				var d interface{}
+				json.Unmarshal([]byte(v.(string)),&d)
+				c2,_ = json.Marshal(d)
+			}
+			if string(c1) == string(c2) {
+				log.Println(logPrefix,columnName, "==", v,"(",reflect.TypeOf(rowMap[columnName]),")",)
+			}else{
+				log.Println("columnType.Value:",string(c1))
+				log.Println("v:",string(c2))
+				isTrue = false
+			}
+			break
+		default:
+			if fmt.Sprint(v) == fmt.Sprint(columnType.Value) {
+				log.Println(logPrefix,columnName, "==", v)
+			}else{
+				isTrue = false
+			}
+			break
+		}
+		if isTrue == false {
 			isAllRight = false
-			errorFieldList = append(errorFieldList, columnName)
-			//log.Println(columnName,"value:",v,"(",reflect.TypeOf(v),")"," != ",columnType.Value,"(",columnType.Value,")"+ " type is error")
+			logInfo = fmt.Sprintf("%s %s value:%s ( %s ) != %s ( %s )",logPrefix, columnName,fmt.Sprint(rowMap[columnName]), reflect.TypeOf(rowMap[columnName]), ColumnData[columnName].Value,reflect.TypeOf(ColumnData[columnName].Value))
+			errDataList = append(errDataList,logInfo)
 		}
-
 	}
+	if isAllRight {
+		errDataList = append(errDataList,logPrefix + " type and value is all right !!!")
+	}
+	return
+}
 
-	if isAllRight == true{
-		fmt.Println("")
-		if AutoIncrementField != ""{
-			log.Println(AutoIncrementField,"==",d.Rows[len(d.Rows)-1][AutoIncrementField])
-		}
-		log.Println(" type and value is all right ")
+func GetTableData(db mysql.MysqlConnection, SchemaName,TableName string,AutoIncrementField string,AutoIncrementValue []string) ([]map[string]interface{},error)  {
+	var where string
+	if AutoIncrementField != "" && len(AutoIncrementValue) > 0 {
+		where = " AND "+ AutoIncrementField +" in ('"+strings.Replace(strings.Trim(fmt.Sprint(AutoIncrementValue), "[]"), " ", "','", -1)+"')"
 	}else{
-		for _, columnName := range errorFieldList{
-			log.Println(columnName,"value:",d.Rows[len(d.Rows)-1][columnName],"(",reflect.TypeOf(d.Rows[len(d.Rows)-1][columnName]),")"," != ",ColumnData[columnName].Value,"(",reflect.TypeOf(ColumnData[columnName].Value),")")
-		}
+		where = " LIMIT 1"
 	}
-	os.Exit(0)
+	sql := "SELECT * FROM `"+SchemaName+"`.`"+TableName+"` WHERE  1=1 " + where
+	stmt,err := db.Prepare(sql)
+	log.Println("sql:",sql)
+	if err != nil{
+		return nil,err
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err!=nil{
+		return nil,err
+	}
+	defer rows.Close()
+	fields := rows.Columns()
+	n := len(fields)
+
+	data := make([]map[string]interface{},0)
+	for {
+		m := make(map[string]interface{}, n)
+		dest := make([]driver.Value, n, n)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		for i, fieldName := range fields {
+			if dest[i] == nil{
+				m[fieldName] = nil
+				continue
+			}
+			columnInfo := ColumnData[fieldName]
+			switch strings.ToLower(columnInfo.DataType) {
+			case "time","datetime","timestamp":
+				if columnInfo.Fsp == 0 {
+					break
+				}
+				val := dest[i].(string)
+				i := strings.Index(val,".")
+				if i < 0 {
+					m[columnInfo.ColumnName] = val + "." + fmt.Sprintf("%0*d",columnInfo.Fsp,0)
+					break
+				}
+				n := len(val[i+1:])
+				if n == columnInfo.Fsp {
+					m[columnInfo.ColumnName] = val
+					break
+				}
+				if n < columnInfo.Fsp {
+					m[columnInfo.ColumnName] = val + fmt.Sprintf("%0*d",columnInfo.Fsp-n,0)
+				}else{
+					m[columnInfo.ColumnName] = val[0:len(val) - n + columnInfo.Fsp]
+				}
+				break
+			case "set":
+				m[fieldName] = strings.Split(fmt.Sprint(dest[i]),",")
+				break
+			default:
+				m[fieldName] = dest[i]
+				break
+			}
+		}
+		data = append(data,m)
+	}
+
+	return data,nil
+}
+
+func CheckSelectTableData(db mysql.MysqlConnection, SchemaName,TableName string,AutoIncrementField string,AutoIncrementValue []string)  {
+	data,err := GetTableData(db,SchemaName,TableName,AutoIncrementField,AutoIncrementValue)
+	if err != nil {
+		log.Fatal("CheckSelectTableData err:",err)
+	}
+	checkData(data[0],"select")
+	return
 }
 
 func main() {
-
 	fmt.Println("VERSION:",VERSION)
-	userName := flag.String("u", "root", "-u root")
-	password := flag.String("p", "root", "-p password")
-	host := flag.String("h", "127.0.0.1", "-h 127.0.0.1")
-	port := flag.String("P", "3306", "-P 3306")
-	database = flag.String("database", "test", "-database test")
-	table = flag.String("table", "binlog_field_test", "-table binlog_field_test")
-	longstring = flag.String("longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
+	var userName,password,host,port string
+	var CheckType int
+	// 0  select binlog 都验证
+	// 1  只验证 select
+	// 2  只验证 binlog
+	flag.StringVar(&userName,"u", "root", "-u root")
+	flag.StringVar(&password,"p", "root", "-p password")
+	flag.StringVar(&host,"h", "192.168.126.140", "-h 127.0.0.1")
+	flag.StringVar(&port,"P", "3306", "-P 3306")
+	flag.StringVar(&database,"database", "test", "-database test")
+	flag.StringVar(&table,"table", "binlog_field_test", "-table binlog_field_test")
+	flag.StringVar(&longstring,"longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
+	flag.BoolVar(&autoCreate,"autoCreate", true, "-autoCreate")
+	flag.IntVar(&CheckType,"CheckType", 0, "-CheckType")
+
 	flag.Parse()
+	if autoCreate {
+		if table == "" {
+			table = "binlog_field_test"
+		}
+		if database == "" {
+			database = "bifrost_test"
+		}
+	}
 
 	var filename,dataSource string
 	var position uint32 = 0
 	var MyServerID uint32 = 0
 
-	dataSource = *userName+":"+*password+"@tcp("+*host+":"+*port+")/"+*database
+	dataSource = userName+":"+password+"@tcp("+host+":"+port+")/"+database
 	log.Println(dataSource," start connect")
 	db := DBConnect(dataSource)
 	if db == nil {
@@ -679,92 +870,95 @@ func main() {
 
 	fmt.Println("")
 
+	createTableSql := "CREATE TABLE `"+ database +"`.`"+ table +"` ("+
+		"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
+		"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
+		"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
+		"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
+		"`testint` int(11) NOT NULL DEFAULT '-4',"+
+		"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
+		"`testvarchar` varchar(10) NOT NULL,"+
+		"`testchar` char(2) NOT NULL,"+
+		"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
+		"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
+		"`testtime` time NOT NULL DEFAULT '00:00:00',"+
+		"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
+		"`testyear` year(4) NOT NULL DEFAULT '1989',"+
+		"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
+		"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
+		"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
+		"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
+		"`testtext` text NOT NULL,"+
+		"`testblob` blob NOT NULL,"+
+		"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
+		"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
+		"`testmediumblob` mediumblob NOT NULL,"+
+		"`testlongblob` longblob NOT NULL,"+
+		"`testtinyblob` tinyblob NOT NULL,"+
+		"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
+		"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
+		"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
+		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
+		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"
+
+	reg, err := regexp.Compile("[^0-9.]+")
+	if err != nil {
+		log.Fatal(err)
+	}
+	MysqlVersionOld := MysqlVersion
+	MysqlVersion = reg.ReplaceAllString(MysqlVersion, "")
+	//MysqlVersion = strings.ReplaceAll(MysqlVersion,"-log","")
+	MysqlVerionArr := strings.Split(MysqlVersion,".")
+	bigVersion, _ := strconv.Atoi(MysqlVerionArr[0])
+	midVersion, _ := strconv.Atoi(MysqlVerionArr[1])
+	var lastVersion = 0
+	if len(MysqlVerionArr) == 3 {
+		lastVersion,_ = strconv.Atoi(MysqlVerionArr[2])
+	}
+	mysqlVersionInt := bigVersion * 1000 + midVersion * 100 + lastVersion
+	// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
+	log.Println("MysqlVersion:",MysqlVersionOld, mysqlVersionInt)
+
+	if mysqlVersionInt >= 5600 {
+		createTableSql += "`testtime2_1` time(1) NOT NULL DEFAULT '00:00:00.0',"+
+			"`testtime2_2` time(2) NOT NULL DEFAULT '00:00:00.00',"+
+			"`testtime2_3` time(3) NOT NULL DEFAULT '00:00:00.000',"+
+			"`testtime2_4` time(4) NOT NULL DEFAULT '00:00:00.0000',"+
+			"`testtime2_5` time(5) NOT NULL DEFAULT '00:00:00.00000',"+
+			"`testtime2_6` time(6) NOT NULL DEFAULT '00:00:00.000000',"+
+
+			"`testtimestamp2_1` timestamp(1) NOT NULL DEFAULT CURRENT_TIMESTAMP(1),"+
+			"`testtimestamp2_2` timestamp(2) NOT NULL DEFAULT CURRENT_TIMESTAMP(2),"+
+			"`testtimestamp2_3` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),"+
+			"`testtimestamp2_4` timestamp(4) NOT NULL DEFAULT CURRENT_TIMESTAMP(4),"+
+			"`testtimestamp2_5` timestamp(5) NOT NULL DEFAULT CURRENT_TIMESTAMP(5),"+
+			"`testtimestamp2_6` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),"+
+
+			"`testdatetime2_1` datetime(1) NOT NULL DEFAULT '0000-00-00 00:00:00.0',"+
+			"`testdatetime2_2` datetime(2) NOT NULL DEFAULT '0000-00-00 00:00:00.00',"+
+			"`testdatetime2_3` datetime(3) NOT NULL DEFAULT '0000-00-00 00:00:00.000',"+
+			"`testdatetime2_4` datetime(4) NOT NULL DEFAULT '0000-00-00 00:00:00.0000',"+
+			"`testdatetime2_5` datetime(5) NOT NULL DEFAULT '0000-00-00 00:00:00.00000',"+
+			"`testdatetime2_6` datetime(6) NOT NULL DEFAULT '0000-00-00 00:00:00.000000',"
+	}
+
+	if mysqlVersionInt >= 5700 {
+		createTableSql += "`test_json` json,"
+	}
+
+	createTableSql += "PRIMARY KEY (`id`)"+
+		") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
 
 	log.Println("load data start")
-	if *table == "" {
+	if autoCreate {
 		var sqlList = []string{
-			//"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `jc3wish_test`",
-			"DROP TABLE IF EXISTS `"+*database+"`.`binlog_field_test`",
-			"CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
-				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
-				"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
-				"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
-				"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
-				"`testint` int(11) NOT NULL DEFAULT '-4',"+
-				"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
-				"`testvarchar` varchar(10) NOT NULL,"+
-				"`testchar` char(2) NOT NULL,"+
-				"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
-				"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
-				"`testtime` time NOT NULL DEFAULT '00:00:00',"+
-				"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
-				"`testyear` year(4) NOT NULL DEFAULT '1989',"+
-				"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
-				"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
-				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
-				"`testtext` text NOT NULL,"+
-				"`testblob` blob NOT NULL,"+
-				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
-				"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
-				"`testmediumblob` mediumblob NOT NULL,"+
-				"`testlongblob` longblob NOT NULL,"+
-				"`testtinyblob` tinyblob NOT NULL,"+
-				"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
-				"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
-				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
-				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
-				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
-				"`test_json` json,"+
-				"PRIMARY KEY (`id`)"+
-				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8",
-		}
-		// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
-		bigVersionString := strings.Split(MysqlVersion,".")[0]
-		fmt.Println("bigVersionString:",bigVersionString)
-		bigVersion, _ := strconv.Atoi(bigVersionString)
-		fmt.Println("MysqlVersion[0:2]:",MysqlVersion[0:2])
-		if bigVersion < 8 && MysqlVersion[0:2] != "5.7" {
-			sqlList[1] = "CREATE TABLE `"+*database+"`.`binlog_field_test` ("+
-				"`id` int(11) unsigned NOT NULL AUTO_INCREMENT,"+
-				"`testtinyint` tinyint(4) NOT NULL DEFAULT '-1',"+
-				"`testsmallint` smallint(6) NOT NULL DEFAULT '-2',"+
-				"`testmediumint` mediumint(8) NOT NULL DEFAULT '-3',"+
-				"`testint` int(11) NOT NULL DEFAULT '-4',"+
-				"`testbigint` bigint(20) NOT NULL DEFAULT '-5',"+
-				"`testvarchar` varchar(10) NOT NULL,"+
-				"`testchar` char(2) NOT NULL,"+
-				"`testenum` enum('en1','en2','en3') NOT NULL DEFAULT 'en1',"+
-				"`testset` set('set1','set2','set3') NOT NULL DEFAULT 'set1',"+
-				"`testtime` time NOT NULL DEFAULT '00:00:00',"+
-				"`testdate` date NOT NULL DEFAULT '0000-00-00',"+
-				"`testyear` year(4) NOT NULL DEFAULT '1989',"+
-				"`testtimestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"+
-				"`testdatetime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',"+
-				"`testfloat` float(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdouble` double(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal` decimal(9,2) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal2` decimal(10,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal3` decimal(20,4) NOT NULL DEFAULT '0.00',"+
-				"`testdecimal4` decimal(30,5) NOT NULL DEFAULT '0.00',"+
-				"`testtext` text NOT NULL,"+
-				"`testblob` blob NOT NULL,"+
-				"`testbit` bit(8) NOT NULL DEFAULT b'0',"+
-				"`testbool` tinyint(1) NOT NULL DEFAULT '0',"+
-				"`testmediumblob` mediumblob NOT NULL,"+
-				"`testlongblob` longblob NOT NULL,"+
-				"`testtinyblob` tinyblob NOT NULL,"+
-				"`test_unsinged_tinyint` tinyint(4) unsigned NOT NULL DEFAULT '1',"+
-				"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2',"+
-				"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3',"+
-				"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
-				"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"+
-				"PRIMARY KEY (`id`)"+
-				") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
+			"CREATE DATABASE /*!32312 IF NOT EXISTS*/ `"+ database +"`",
+			"DROP TABLE IF EXISTS `"+ database +"`.`"+ table +"`",
+			createTableSql,
 		}
 
 		log.Println("create table binlog_field_test start")
@@ -773,9 +967,9 @@ func main() {
 			ExecSQL(db, sql)
 		}
 		log.Println("create table binlog_field_test over")
-		*table = "binlog_field_test"
+		table = "binlog_field_test"
 	}
-	sqlPre,sqlValue,tableInfo,columnList := GetSchemaTableFieldAndVal(db,*database,*table)
+	AutoIncrementField,sqlPre,sqlValue,tableInfo,columnList := GetSchemaTableFieldAndVal(db,database,table)
 	if sqlPre == ""{
 		log.Println("GetSchemaTableFieldAndVal ,sql is empty")
 		os.Exit(0)
@@ -796,9 +990,9 @@ func main() {
 	fmt.Println("")
 
 	/*
-	for k,v:=range sqlValue{
-		log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
-	}
+		for k,v:=range sqlValue{
+			log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
+		}
 	*/
 
 	Result,err := stmt.Exec(sqlValue)
@@ -806,10 +1000,23 @@ func main() {
 		log.Println(sqlValue)
 		log.Fatal("sql Exec",err)
 	}
-	log.Println("sql exec ResultL:",Result)
+	log.Println("sql exec Result:",Result)
 	log.Println("load data over")
 
 	ColumnData = tableInfo
+
+	AutoIncrementValue,err := Result.LastInsertId()
+	AutoIncrementValueArr := make([]string,0)
+	if err == nil {
+		AutoIncrementValueArr = append(AutoIncrementValueArr,fmt.Sprint(AutoIncrementValue))
+	}
+	defer proccessExit()
+	if CheckType <= 1 {
+		CheckSelectTableData(db, database, table, AutoIncrementField, AutoIncrementValueArr)
+		if CheckType == 1 {
+			return
+		}
+	}
 
 	reslut := make(chan error, 1)
 	BinlogDump := mysql.NewBinlogDump(
@@ -823,7 +1030,7 @@ func main() {
 		},
 		nil,
 		nil)
-	BinlogDump.AddReplicateDoDb(*database,"binlog_field_test")
+	BinlogDump.AddReplicateDoDb(database,"binlog_field_test")
 	log.Println("Version:",VERSION)
 	log.Println("Bristol version:",mysql.VERSION)
 	log.Println("filename:",filename,"position:",position)
