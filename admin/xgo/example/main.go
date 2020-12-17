@@ -1,13 +1,14 @@
 package main
 
-import "github.com/brokercap/xgo"
+import (
+	"github.com/brokercap/Bifrost/admin/xgo"
+	"github.com/brokercap/Bifrost/admin/xgo/example/manager"
+)
 
-import "github.com/brokercap/xgo/example/manager"
-
-func init()  {
-	xgo.AddRoute("/test",&manager.TestController{},"*:Post")
+func init() {
+	xgo.AddRoute("/test", &manager.TestController{}, "*:Post")
 }
 
-func main()  {
+func main() {
 	xgo.Start("0.0.0.0:9612")
 }

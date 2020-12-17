@@ -440,7 +440,7 @@ function buildHelp(){
     echo "--- build for linux|windows|freebsd|darwin"
     echo "./build.sh install ./targetdir linux"
     echo "--- build for linux ,and target is ./targetdir "
-    echo "./build clean"
+    echo "./build.sh clean"
     echo "--- clean build cache "
 }
 
