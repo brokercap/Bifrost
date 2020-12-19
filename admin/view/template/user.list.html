@@ -28,7 +28,10 @@ function formatDate(timestamp) {
                         <div class="col-lg-12">
                             <div class="ibox float-e-margins">
                                 <div class="ibox-title">
-                                    <h5>UserList</h5>
+                                    <h5>UserList  &nbsp;&nbsp;&nbsp;&nbsp;
+                                        <button data-toggle="button" class="btn-sm btn-primary" type="button" id="LoginLogBtn" style="margin-top: -10px">Login Log</button>
+                                        <a href="/refuseip/index"><button class="btn-sm btn-primary" type="button" style="margin-top: -10px">Refuse Ip Manager</button></a>
+                                    </h5>
                                     <div class="ibox-tools">
                                         <a class="collapse-link">
                                             <i class="fa fa-chevron-up"></i>
@@ -45,6 +48,7 @@ function formatDate(timestamp) {
                                                 <tr>
                                                     <th>Name</th>
                                                     <th>Group</th>
+                                                    <th>Host</th>
                                                     <th>AddTime</th>
                                                     <th>UpdateTime</th>
                                                     <th>OP</th>
@@ -55,6 +59,7 @@ function formatDate(timestamp) {
                                                 <tr>
                                                     <td>{{$v.Name}}</td>
                                                     <td>{{$v.Group}}</td>
+                                                    <td>{{$v.Host}}</td>
                                                     <td><script type="text/javascript">document.write(formatDate({{$v.AddTime}}));</script></td>
                                                     <td><script type="text/javascript">document.write(formatDate({{$v.UpdateTime}}));</script></td>
 
@@ -116,7 +121,12 @@ function formatDate(timestamp) {
                                 <input type="password" name="Password2" id="Password2" class="form-control" placeholder="Password"> <span class="help-block m-b-none">*</span>
                             </div>
                         </div>
-
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Host：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="Host" id="Host" class="form-control" placeholder="%"> <span class="help-block m-b-none">eg: 192.168.%</span>
+                            </div>
+                        </div>
                         <div class="form-group"  id="update_toserver_contair">
                             <label class="col-sm-3 control-label">Group：</label>
                             <div class="col-sm-9">
@@ -139,8 +149,30 @@ function formatDate(timestamp) {
                 </div>
             </div>
         </div>
-        
+
+
+<!--login log start-->
+<div class="modal inmodal fade" id="loginLogInfoDiv" tabindex="-1" role="dialog"  aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Login Log</h3>
+            </div>
+            <div class="modal-body" style="line-height: 200%">
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--login log over-->
+
 {{template "footer" .}}
+<script src="/js/bootstrap.min.js?v=3.3.6"></script>
+<script src="/js/plugins/bootstrap-table/bootstrap-table.min.js"></script>
 
 <script type="text/javascript">
 
@@ -154,12 +186,19 @@ $("#addNewUserBtn").click(
 		var Password = $("#Password").val();
         var Password2 = $("#Password2").val();
 		var Group = $("#Group").val();
+        var Host = $("#Host").val();
 		if( Password == "" || Password2 == "" || Group=="" ){
 			return
 		}
 		if( Password != Password2 ){
             alert("二次输入密码不匹配，请重新输入！");
             return;
+        }
+		if( Host != "" ) {
+		    if ( Host.split(".").length > 4 ) {
+		        alert("Host param is error!");
+		        return
+            }
         }
 
 		var url = "/user/update";
@@ -171,7 +210,7 @@ $("#addNewUserBtn").click(
             alert(data.msg);
             window.location.reload();
         };
-        Ajax("POST",url, { UserName: UserName,Password:Password,Group:Group},callback,true);
+        Ajax("POST",url, { UserName: UserName,Password:Password,Group:Group,Host:Host},callback,true);
 	}
 );
 
@@ -188,12 +227,14 @@ $(".updateUserBtn").click(
         var trObj = $(this).parent().parent();
         var UserName =  trObj.children().eq(0).text();
         var Group =  trObj.children().eq(1).text();
+        var Host =  trObj.children().eq(2).text();
 
         updateOpContairTitle(UserName);
 
         $("#UserName").attr("disabled","disabled");
         $("#UserName").val(UserName);
         $("#Group").val(Group);
+        $("#Host").val(Host);
         $("#update_toserver_contair").show();
     }
 );
@@ -217,5 +258,15 @@ $(".DelUserBtn").click(
         }
 );
 
+$("#LoginLogBtn").click(
+    function () {
+        var url = "/user/login/log";
+        var callback = function (data) {
+            $("#loginLogInfoDiv .modal-body").html(data.data);
+            $("#loginLogInfoDiv").modal('show');
+        };
+        Ajax("GET",url, {},callback,true);
+    }
+);
 
 </script>

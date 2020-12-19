@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"github.com/brokercap/Bifrost/server/user"
 	"io/ioutil"
+	"strings"
 )
 
 type UserController struct {
@@ -29,6 +30,7 @@ type UserParam struct {
 	UserName string
 	Password string
 	Group    string
+	Host	 string
 }
 
 func (c *UserController) getParam() *UserParam {
@@ -81,7 +83,11 @@ func (c *UserController) Update() {
 		result.Msg = " user_name and password not empty!"
 		return
 	}
-	err := user.UpdateUser(param.UserName, param.Password, param.Group)
+	if strings.Count(param.Host,".") > 3 {
+		result.Msg = " Host error!"
+		return
+	}
+	err := user.UpdateUser(param.UserName, param.Password, param.Group,param.Host)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
@@ -108,4 +114,18 @@ func (c *UserController) Delete() {
 		result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	}
 	return
+}
+
+func (c *UserController) LastLoginLog() {
+	result := ResultDataStruct{Status: 1, Msg: "success", Data: nil}
+	defer func() {
+		c.SetJsonData(result)
+		c.StopServeJSON()
+	}()
+	logInfo,err := user.GetLastLoginLog()
+	if err != nil {
+		result.Data = err.Error()
+	}else{
+		result.Data = logInfo
+	}
 }
