@@ -1,0 +1,81 @@
+
+{{template "header" .}}
+
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Refuse Ip List</h5>
+                    <div class="ibox-tools">
+                        <a class="collapse-link">
+                            <i class="fa fa-chevron-up"></i>
+                        </a>
+                        <a class="close-link">
+                            <i class="fa fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>IP</th>
+                                <th>Refuse Time</th>
+                                <th>OP</th>
+                            </tr>
+                            </thead>
+                            <tbody id="dbListContair">
+                            {{range $ip, $time := .RefuseIpMap}}
+                                <tr>
+                                    <td>{{$ip}}</td>
+                                    <td>{{$time}}</td>
+                                    <td>
+                                        <button data-toggle="button" class="btn-sm btn-danger DelIpBtn" type="button">Del</button>
+                                    </td>
+                                </tr>
+                            {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{{template "footer" .}}
+
+<script type="text/javascript">
+
+    $(".DelIpBtn").click(
+        function () {
+            var trObj = $(this).parent().parent();
+            var Ip =  trObj.children().eq(0).text();
+            if(!confirm("确定删除IP: "+Ip+ " ?")){
+                return false;
+            }
+            var url = "/refuseip/del";
+            var callback = function (data) {
+                if(!data.status){
+                    alert(data.msg);
+                    return false;
+                }
+                trObj.remove();
+            };
+            Ajax("POST",url, { Ip: Ip},callback,true);
+        }
+    );
+
+</script>

@@ -207,6 +207,28 @@ func InitParam(){
 	}
 	DelConfig("Bifrostd","plugin_sync_retry_time")
 
+	tmp = GetConfigVal("Bifrostd","refuse_ip_login_failed_count")
+	if  tmp != ""{
+		intA, err := strconv.Atoi(tmp)
+		if err == nil && intA >= 0{
+			RefuseIpLoginFailedCount = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.refuse_ip_login_failed_count type conversion to int err:",err)
+		}
+	}
+	DelConfig("Bifrostd","refuse_ip_login_failed_count")
+
+	tmp = GetConfigVal("Bifrostd","refuse_ip_timeout")
+	if  tmp != ""{
+		intA, err :=  strconv.ParseInt(tmp,10,64)
+		if err == nil && intA >= 0{
+			RefuseIpTimeOut = intA
+		}else{
+			log.Println("Bifrost.ini Bifrostd.refuse_ip_timeout type conversion to int64 err:",err)
+		}
+	}
+	DelConfig("Bifrostd","refuse_ip_timeout")
+
 	initTLSParam()
 }
 

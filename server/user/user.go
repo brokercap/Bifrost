@@ -7,6 +7,8 @@ import (
 	"log"
 	"fmt"
 	"time"
+	"errors"
+	"strings"
 )
 
 const USER_PREFIX  string = "bifrost_UserList_"
@@ -17,6 +19,7 @@ type UserInfo struct {
 	Name string
 	Password string
 	Group string
+	Host  string
 	AddTime int64
 	UpdateTime int64
 }
@@ -50,6 +53,7 @@ func InitUser()  {
 				Name:Name,
 				Password:Password,
 				Group:UserGroup,
+				Host: "%",
 				AddTime:time.Now().Unix(),
 				UpdateTime:time.Now().Unix(),
 			}
@@ -105,19 +109,19 @@ func DelUser(Name string) error {
 	return storage.DelKeyVal([]byte(key))
 }
 
-func AddUser(Name,Password,GroupName string ) error {
-	return UpdateUser(Name,Password,GroupName)
+func AddUser(Name,Password,GroupName string ,Host string) error {
+	return UpdateUser(Name,Password,GroupName,Host)
 }
 
-func UpdateUser(Name,Password,GroupName string ) error {
+func UpdateUser(Name,Password,GroupName string,Host string ) error {
 	if Name == "" || Password == ""{
 		return fmt.Errorf("Name and Password not be empty!")
 	}
 	OldUserInfo := GetUserInfo(Name)
-
 	User := &UserInfo{
 		Name:Name,
 		Password:Password,
+		Host: Host,
 		Group:getUserGroup(GroupName),
 	}
 	if OldUserInfo.Name == ""{
@@ -132,15 +136,76 @@ func UpdateUser(Name,Password,GroupName string ) error {
 	return storage.PutKeyVal([]byte(key),b)
 }
 
-func GetUserInfo(Name string) UserInfo {
+func GetUserInfo(Name string) *UserInfo {
 	b,err := storage.GetKeyVal([]byte(USER_PREFIX+Name))
 	if err != nil{
-		return UserInfo{}
+		return &UserInfo{}
 	}
 	var User UserInfo
 	err = json.Unmarshal(b,&User)
 	if err != nil{
-		return UserInfo{}
+		return &UserInfo{}
 	}
-	return User
+	return &User
+}
+
+func CheckUser(Name,Password string) (userInfo *UserInfo,err error) {
+	userInfo = GetUserInfo(Name)
+	if userInfo.Name == "" {
+		err = errors.New("user not exsit!")
+		return
+	}
+	if userInfo.Password != Password {
+		err = errors.New("password error!")
+		return
+	}
+	return
+}
+
+func CheckUserWithIP(Name,Password string,IP string ) (userInfo *UserInfo,err error) {
+	if IP != "127.0.0.1" && CheckRefuseIp(IP) {
+		return nil, errors.New("ip is refused")
+	}
+	userInfo,err = CheckUser(Name,Password)
+	if err != nil {
+		AddFailedIp(IP)
+		appendLoginLog("IP:%s UserName:%s Password:%s login failed",IP,Name,Password)
+		return
+	}
+	err = CheckUserHost(IP,userInfo.Host)
+	if userInfo.Group == "" {
+		userInfo.Group = "monitor"
+	}
+	if err != nil {
+		AddFailedIp(IP)
+		appendLoginLog("IP:%s UserName:%s CheckUserHost failed",IP,Name)
+	}else{
+		appendLoginLog("IP:%s UserName:%s login success",IP,Name)
+	}
+	return
+}
+
+func CheckUserHost(IP , Host string) (err error) {
+	if IP == Host {
+		return
+	}
+	switch Host {
+	case "","%":
+		return
+	default:
+		break
+	}
+	hostArr := strings.Split(Host,".")
+	ipArr := strings.Split(IP,".")
+	for i,v := range hostArr {
+		if v == "%" {
+			continue
+		}
+		if ipArr[i] == v {
+			continue
+		}
+		err = errors.New("No login permission!")
+		break
+	}
+	return
 }
