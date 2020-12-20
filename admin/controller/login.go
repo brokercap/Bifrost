@@ -41,18 +41,14 @@ func (c *LoginController) Login() {
 		return
 	}
 	var sessionID = c.Ctx.Session.StartSession(c.Ctx.ResponseWriter, c.Ctx.Request)
-	UserInfo := user.GetUserInfo(param.UserName)
-	if UserInfo.Password == param.Password {
-		GroupName := UserInfo.Group
-		if GroupName == "" {
-			GroupName = "monitor"
-		}
+	UserInfo,err := user.CheckUserWithIP(param.UserName,param.Password,c.GetRemoteIp())
+	if err == nil {
 		c.Ctx.Session.SetSessionVal(sessionID, "UserName", param.UserName)
 		c.Ctx.Session.SetSessionVal(sessionID, "Group", UserInfo.Group)
 		result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 		return
 	}
-	result.Msg = "user error"
+	result.Msg = err.Error()
 	return
 }
 
@@ -66,5 +62,4 @@ func (c *LoginController) Logout() {
 		c.SetJsonData(result)
 		c.StopServeJSON()
 	}
-
 }

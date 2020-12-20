@@ -97,6 +97,7 @@ func init()  {
 	xgo.Router("/user/list",&controller.UserController{},"*:List")
 	xgo.Router("/user/update",&controller.UserController{},"POST:Update")
 	xgo.Router("/user/del",&controller.UserController{},"POST,DELETE:Delete")
+	xgo.Router("/user/login/log",&controller.UserController{},"*:LastLoginLog")
 
 	//login
 	xgo.Router("/login/index",&controller.LoginController{},"*:Index")
@@ -145,4 +146,8 @@ func init()  {
 	xgo.Router("/plugin/list",&controller.PluginController{},"*:List")
 	xgo.Router("/plugin/reload",&controller.PluginController{},"*:Reload")
 
+	//refuseip
+	xgo.Router("/refuseip/index",&controller.RefuseIpController{},"*:Index")
+	xgo.Router("/refuseip/list",&controller.RefuseIpController{},"*:List")
+	xgo.Router("/refuseip/del",&controller.RefuseIpController{},"POST,DELETE:Del")
 }
