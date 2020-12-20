@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  sync:
+    image: golang:1.15.2
+    networks:
+      - share
+    ports:
+      - "21036:21036"
+    volumes:
+      - ./tags/v1.5.2-release/bifrost_v1.5.2-release_Linux-amd64-bin:/sync/bifrost
+      - ./:/raw
+    working_dir: /sync/bifrost/bin
+    entrypoint: ./Bifrost
+  redis-sync:
+    image: redis
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6380:6379"
+    networks:
+      - share
+    entrypoint: redis-server /usr/local/etc/redis/redis.conf
+networks:
+  share:
+    external:
+      name: ccshop-docker-compose_web-network

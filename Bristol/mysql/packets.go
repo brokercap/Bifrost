@@ -103,7 +103,7 @@ func (mc *mysqlConn) writePacket(data *[]byte) error {
 *                           Initialisation Process                            *
 ******************************************************************************/
 
-/* Handshake Initialization Packet 
+/* Handshake Initialization Packet
  Bytes                        Name
  -----                        ----
  1                            protocol_version
@@ -117,7 +117,7 @@ func (mc *mysqlConn) writePacket(data *[]byte) error {
  2                            server capabilities (two upper bytes)
  1                            length of the scramble
 10                            (filler)  always 0
- n                            rest of the plugin provided data (at least 12 bytes) 
+ n                            rest of the plugin provided data (at least 12 bytes)
  1                            \0 byte, terminating the second part of a scramble
 */
 func (mc *mysqlConn) readInitPacket() (e error) {
@@ -177,7 +177,7 @@ func (mc *mysqlConn) readInitPacket() (e error) {
 	return
 }
 
-/* Client Authentication Packet 
+/* Client Authentication Packet
 Bytes                        Name
 -----                        ----
 4                            client_flags
@@ -347,7 +347,7 @@ func (mc *mysqlConn) readResultOK() (e error) {
 	return
 }
 
-/* Error Packet 
+/* Error Packet
 Bytes                       Name
 -----                       ----
 1                           field_count, always = 0xff
@@ -379,7 +379,7 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) (e error) {
 	return
 }
 
-/* Ok Packet 
+/* Ok Packet
 Bytes                       Name
 -----                       ----
 1   (Length Coded Binary)   field_count, always = 0
@@ -419,13 +419,13 @@ func (mc *mysqlConn) handleOkPacket(data []byte) (e error) {
 	return
 }
 
-/* Result Set Header Packet 
+/* Result Set Header Packet
  Bytes                        Name
  -----                        ----
  1-9   (Length-Coded-Binary)  field_count
  1-9   (Length-Coded-Binary)  extra
 
-The order of packets for a result set is: 
+The order of packets for a result set is:
   (Result Set Header Packet)  the number of columns
   (Field Packets)             column descriptors
   (EOF Packet)                marker: end of Field Packets
@@ -556,7 +556,7 @@ func (mc *mysqlConn) readColumns(n int) (columns []mysqlField, e error) {
 		//	defaultVal, _, e = bytesToLengthCodedBinary(data[pos:])
 		//}
 
-		columns = append(columns, mysqlField{name: string(name), fieldType: fieldType, flags: flags, length:length})
+		columns = append(columns, mysqlField{name: string(name), fieldType: fieldType, flags: flags, length: length})
 	}
 
 	return
@@ -626,14 +626,14 @@ func (mc *mysqlConn) readUntilEOF() (count uint64, e error) {
 *                           Prepared Statements                               *
 ******************************************************************************/
 
-/* Prepare Result Packets 
+/* Prepare Result Packets
  Type Of Result Packet       Hexadecimal Value Of First Byte (field_count)
  ---------------------       ---------------------------------------------
 
  Prepare OK Packet           00
  Error Packet                ff
 
-Prepare OK Packet 
+Prepare OK Packet
  Bytes              Name
  -----              ----
  1                  0 - marker for OK packet
@@ -648,10 +648,10 @@ Prepare OK Packet
     a PREPARE_OK packet
     if "number of parameters" > 0
         (field packets) as in a Result Set Header Packet
-        (EOF packet) 
+        (EOF packet)
     if "number of columns" > 0
         (field packets) as in a Result Set Header Packet
-        (EOF packet) 
+        (EOF packet)
 
 */
 func (stmt mysqlStmt) readPrepareResultPacket() (columnCount uint16, e error) {
@@ -698,7 +698,7 @@ Bytes                Name
 1                    new_parameter_bound_flag
   if new_params_bound == 1:
 n*2                  type of parameters
-n                    values for the parameters 
+n                    values for the parameters
 */
 func (stmt mysqlStmt) buildExecutePacket(args *[]driver.Value) (e error) {
 	argsLen := len(*args)
@@ -719,13 +719,13 @@ func (stmt mysqlStmt) buildExecutePacket(args *[]driver.Value) (e error) {
 	var pv reflect.Value
 
 	var nullMask []byte
-	maskLen := (argsLen+7)/8
-	nullMask = make([]byte,maskLen)
+	maskLen := (argsLen + 7) / 8
+	nullMask = make([]byte, maskLen)
 	for i := 0; i < maskLen; i++ {
 		nullMask[i] = 0
 	}
 	for i = 0; i < stmt.paramCount; i++ {
-		// build nullBitMap	
+		// build nullBitMap
 		if (*args)[i] == nil {
 			nullMask[i/8] |= 1 << (uint(i) & 7)
 			paramTypes = append(paramTypes, []byte{
@@ -880,15 +880,15 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = byteToUint8(data[pos])
 				} else {
 					//row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
-					 b := int8(byteToUint8(data[pos]))
-					 //length == 1 是 tinyint(1)  bool值
-					if rc.columns[i].length == 1{
-						if b == 1{
+					b := int8(byteToUint8(data[pos]))
+					//length == 1 是 tinyint(1)  bool值
+					if rc.columns[i].length == 1 {
+						if b == 1 {
 							row[i] = true
-						}else{
+						} else {
 							row[i] = false
 						}
-					}else{
+					} else {
 						row[i] = b
 					}
 				}
@@ -906,16 +906,16 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				pos += 2
 				break
 
-			case  FIELD_TYPE_YEAR:
+			case FIELD_TYPE_YEAR:
 				row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
 				/*
-				if unsigned {
-					//row[i] = string(uintToByteStr(uint64(bytesToUint16(data[pos : pos+2]))))
-					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
-				} else {
-					//row[i] = string(intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2])))))
-					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
-				}
+					if unsigned {
+						//row[i] = string(uintToByteStr(uint64(bytesToUint16(data[pos : pos+2]))))
+						row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
+					} else {
+						//row[i] = string(intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2])))))
+						row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
+					}
 				*/
 				pos += 2
 				break
@@ -923,7 +923,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			case FIELD_TYPE_INT24, FIELD_TYPE_LONG:
 				if unsigned {
 					//row[i] = uintToByteStr(uint64(bytesToUint32(data[pos : pos+4])))
-					row[i] =bytesToUint32(data[pos : pos+4])
+					row[i] = bytesToUint32(data[pos : pos+4])
 				} else {
 					//row[i] = intToByteStr(int64(int32(bytesToUint32(data[pos : pos+4]))))
 					row[i] = int32(bytesToUint32(data[pos : pos+4]))
@@ -962,7 +962,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 				}
 				if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
 					row[i] = nil
-				}else{
+				} else {
 					row[i] = string(b)
 				}
 				pos += n
@@ -972,7 +972,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			case FIELD_TYPE_VARCHAR, FIELD_TYPE_ENUM,
 				FIELD_TYPE_SET, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
 				FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING,
-				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY,FIELD_TYPE_JSON:
+				FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY, FIELD_TYPE_JSON:
 				var b []byte
 				b, n, isNull, e = readLengthCodedBinary(data[pos:])
 				if e != nil {
@@ -981,7 +981,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 
 				if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
 					row[i] = nil
-				}else{
+				} else {
 					row[i] = string(b)
 				}
 				pos += n
@@ -996,7 +996,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = nil
 					break
 				}
-				var resp string = ""
+				var resp = ""
 				var bit uint
 				var end byte
 				end = 8

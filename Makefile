@@ -6,10 +6,9 @@ prefix=./target
 .PHONY: build-all
 build-all:
 	./build.sh init
-	./build.sh
 
 build:
-	./build.sh
+	./build.sh linux
 
 install:
 	./build.sh init
