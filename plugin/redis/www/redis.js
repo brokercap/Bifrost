@@ -1,42 +1,75 @@
-function doGetPluginParam(){
-	var result = {data:{},status:false,msg:"error",batchSupport:true}
-    var data = {};
-	var Type = $("#Redis_Plugin_Contair select[name='type']").val();
+function doGetPluginParam() {
+    var result = {data: {}, status: false, msg: "error", batchSupport: true}
+    var data = {}
 
-    var DataType = $("#Redis_Plugin_Contair #Redis_DataType").val();
-    var KeyConfig = $("#Redis_Plugin_Contair input[name='KeyConfig']").val();
-	var ValueConfig = $("#Redis_Plugin_Contair #ValueConfig").val();
-    if (KeyConfig==""){
-		result.msg = "Key must be not empty!"
-		return result
+    var type = $("#Redis_Plugin_Container #Plugin_type").val()
+    var keyConfig = $("#Redis_Plugin_Container #KeyConfig").val()
+    if (keyConfig === "") {
+        result.msg = "Key must be not empty!"
+        return result
     }
-    if (DataType == "string" && ValueConfig==""){
-		result.msg = "DataType==string,ValueConfig muest be!"
-        return result;
-    }
-	
-	var Expir = $("#Redis_Plugin_Contair input[name='Expir']").val();
+    data["KeyConfig"] = keyConfig
 
-    if (Expir != "" && Expir != null && isNaN(Expir)){
-		result.msg = "Expir must be int!"
-        return result;
+    if (type === "string") {
+        var expir = $("#Redis_Plugin_Container input[name='expir']").val()
+        if (!expir && isNaN(expir)) {
+            result.msg = "expired must be int!"
+            return result
+        }
+        data["expir"] = parseInt(expir)
+    } else {
+        delete data["expir"]
     }
-    data["KeyConfig"] = KeyConfig;
-    data["ValueConfig"] = ValueConfig;
-    data["Expir"] = parseInt(Expir);
-	data["DataType"] = DataType;
-	data["Type"] = Type;
-	result.data = data;
-	result.msg = "success";
-	result.status = true;
-    return result;
+
+    if (type === "hash") {
+        var fieldKeyConfig = $("#Redis_FieldKeyConfigContainer #FieldKeyConfig").val()
+        if (fieldKeyConfig === "") {
+            result.msg = "Hash FieldKey must be not empty!"
+            return result
+        }
+        data["FieldKeyConfig"] = fieldKeyConfig
+    } else {
+        delete data["FieldKeyConfig"]
+    }
+
+    if (type === "zset") {
+        var sortedConfig = $("#Redis_SortConfigContainer #SortConfig").val()
+        if (sortedConfig === "" ) {
+            result.msg = "sorted sets sort must be not empty!"
+            return result
+        }
+        data["SortedConfig"] = sortedConfig
+    } else {
+        delete data["SortedConfig"]
+    }
+
+    data["Type"] = type
+    result.batchSupport = false
+    result.data = data
+    result.msg = "success"
+    result.status = true
+    return result
 }
 
-function Redis_DataType_Change(){
-	var dataType = $("#Redis_DataType").val();
-	if(dataType == "string"){
-		$("#Redis_ValueConfigContair").show();
-	}else{
-		$("#Redis_ValueConfigContair").hide();
-	}
+function redisTypeChange() {
+    var type = $("#Plugin_type").val()
+    if (type === "hash") {
+        $("#Redis_FieldKeyConfigContainer").show()
+    } else {
+        $("#Redis_FieldKeyConfigContainer").hide()
+    }
+
+    if (type === "zset") {
+        $("#Redis_SortConfigContainer").show()
+    } else {
+        $("#Redis_SortConfigContainer").hide()
+    }
+
+    if (type === "string") {
+        $("#Redis_Expir").show()
+    } else {
+        $("#Redis_Expir").hide()
+    }
 }
+
+redisTypeChange()
