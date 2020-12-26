@@ -28,7 +28,7 @@ import (
 var StartTime = ""
 
 func init() {
-	StartTime = time.Now().Format("2006-01-03 15:04:05")
+	StartTime = time.Now().Format("2006-01-02 15:04:05")
 }
 
 type IndexController struct {

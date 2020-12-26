@@ -195,9 +195,12 @@ $("#addNewUserBtn").click(
             return;
         }
 		if( Host != "" ) {
-		    if ( Host.split(".").length > 4 ) {
-		        alert("Host param is error!");
-		        return
+            var HostArr = Host.split(",");
+            for(var i = 0,len = HostArr.length; i < len; i++) {
+                if ( HostArr[i].split(".").length > 4 ) {
+                    alert("Host param is error!");
+                    return
+                }
             }
         }
 

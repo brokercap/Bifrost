@@ -37,7 +37,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (errD
 			}
 			stmt = This.getStmt(INSERT)
 			if stmt == nil{
-				goto errLoop
+				return data
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil {
@@ -46,7 +46,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (errD
 					continue LOOP
 				}
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
-				goto errLoop
+				return data
 			}
 			break
 		case "insert","delete":
@@ -69,7 +69,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (errD
 			}
 			stmt = This.getStmt(INSERT)
 			if stmt == nil{
-				goto errLoop
+				return data
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil {
@@ -78,13 +78,11 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType) (errD
 					continue LOOP
 				}
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
-				goto errLoop
+				return data
 			}
 			break
 		}
 
 	}
-
-errLoop:
-	return nil
+	return
 }

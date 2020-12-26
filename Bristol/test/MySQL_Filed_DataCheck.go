@@ -18,11 +18,16 @@ import (
 
 const VERSION  = "1.6.1"
 
-
 var errDataList []string
+
+var defaultValBool bool
 
 func init()  {
 	errDataList = make([]string,0)
+	rand.Seed(time.Now().UnixNano())
+	if rand.Intn(3) == 1 {
+		defaultValBool = true
+	}
 }
 
 func proccessExit()  {
@@ -184,8 +189,22 @@ func  GetTimeAndNsen(dataType string,fsp int) string {
 	var timeFormat string
 	switch dataType {
 	case "time":
+		if defaultValBool {
+			if fsp > 0 {
+				return "00:00:00."+fmt.Sprintf("%0*d",fsp,0)
+			}else{
+				return "00:00:00"
+			}
+		}
 		timeFormat = "15:03:04"
 	case "timestamp","datetime":
+		if defaultValBool {
+			if fsp > 0 {
+				return "0000-00-00 00:00:00."+fmt.Sprintf("%0*d",fsp,0)
+			}else{
+				return "0000-00-00 00:00:00"
+			}
+		}
 		timeFormat = "2006-01-02 15:03:04"
 	case "year":
 		timeFormat = "2006"
@@ -226,7 +245,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		return "","", make([]driver.Value,0),columnData,columnList
 	}
 	columnData = make(map[string]*Column,0)
-	var sqlk ,sqlv = "",""
+	var sqlk ,sqlv_,sqlval = "","",""
 	for {
 		dest := make([]driver.Value, 11, 11)
 		err := rows.Next(dest)
@@ -613,17 +632,40 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 				break
 			}
 
+			valTmp := data[len(data)-1]
+			var sqlValTmp string
+			switch valTmp.(type) {
+			case float32:
+				sqlValTmp = strconv.FormatFloat(float64(valTmp.(float32)), 'E', -1, 32)
+			case float64:
+				sqlValTmp = strconv.FormatFloat(valTmp.(float64), 'E', -1, 64)
+			default:
+				sqlValTmp = strings.Replace(fmt.Sprint(valTmp),"'","",-1)
+				sqlValTmp = strings.Replace(sqlValTmp,"\"","",-1)
+				sqlValTmp = strings.Replace(sqlValTmp,"\\","",-1)
+			}
 			if sqlk == "" {
 				sqlk = "`" + columnType.ColumnName + "`"
-				sqlv = "?"
+				sqlv_ = "?"
+				if columnType.DataType == "bit" {
+					sqlval = sqlValTmp
+				}else{
+					sqlval = "'"+sqlValTmp+"'"
+				}
 			} else {
 				sqlk += ",`" + columnType.ColumnName + "`"
-				sqlv += ",?"
+				sqlv_ += ",?"
+				if columnType.DataType == "bit" {
+					sqlval += ","+sqlValTmp+""
+				}else{
+					sqlval += ",'"+sqlValTmp+"'"
+				}
 			}
 		}
 	}
-	sqlstring = "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlv+")"
-	log.Println("sqlstring:",sqlstring)
+	sqlstring = "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlv_+")"
+	sqlstring2 := "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlval+")"
+	log.Println("sqlstring:",sqlstring2)
 	log.Println("data:",len(data))
 	log.Println("columnData:",len(columnData))
 	return autoIncrementField,sqlstring,data,columnData,columnList

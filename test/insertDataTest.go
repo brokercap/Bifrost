@@ -14,6 +14,7 @@ import (
 )
 
 func main(){
+	var timeInterval int
 	host := flag.String("host", "192.168.126.140", "-host")
 	user := flag.String("user", "root", "-user")
 	pwd := flag.String("pwd", "root", "-pwd")
@@ -23,6 +24,7 @@ func main(){
 	count := flag.Int("count", 1000, "-count")
 	batchsize := flag.Int("batchsize", 50, "-batchsize")
 	conn := flag.Int("conn", 2, "-conn")
+	flag.IntVar(&timeInterval,"time_interval", 0, "-time_interval") // 单位毫秒
 	flag.Parse()
 	//root:root@tcp(10.40.2.41:3306)/test
 	dbstring := *user+":"+*pwd+"@tcp("+*host+":"+*port+")/"+*schema
@@ -39,7 +41,7 @@ func main(){
 			defer func() {
 				ws.Done()
 			}()
-			forInsert(dbstring,*schema,*table,n,*batchsize)
+			forInsert(dbstring,*schema,*table,n,*batchsize,timeInterval)
 		}()
 	}
 	ws.Wait()
@@ -245,7 +247,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	return
 }
 
-func forInsert(uri string,schema string,table string,count int,batchsize int){
+func forInsert(uri string,schema string,table string,count int,batchsize int,timeInterval int){
 	n := count / batchsize
 	if n == 0 {
 		n = 1
@@ -255,16 +257,21 @@ func forInsert(uri string,schema string,table string,count int,batchsize int){
 		batchsize = count
 	}
 	sql,_ := GetSchemaTableFieldAndVal(db,schema,table,batchsize)
-	stmt,err := db.Prepare(sql)
-	if err != nil{
-		log.Println("db Prepare err:",err)
+	var stmt driver.Stmt
+	var err error
+	stmt, err = db.Prepare(sql)
+	if err != nil {
+		log.Fatal("db Prepare err:", err)
 		return
 	}
-	for i:=0;i< n;i++{
+	for i:=0;i< n;i++ {
 		_, err2 := stmt.Exec([]driver.Value{})
 		if err2 != nil {
 			log.Println("db stmt err:", err2)
 			break
+		}
+		if timeInterval > 0 {
+			time.Sleep(time.Duration(timeInterval) * time.Millisecond)
 		}
 	}
 }

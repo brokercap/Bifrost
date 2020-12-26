@@ -51,8 +51,8 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				continue
 			}
 			stmt = This.getStmt(UPDATE)
-			if stmt == nil{
-				goto errLoop
+			if stmt == nil {
+				return data
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
@@ -61,7 +61,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 					continue LOOP
 				}
 				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
-				goto errLoop
+				return data
 			}
 			setOpMapVal(opMap,data.Rows[1][This.p.fromPriKey],nil,"update")
 			break
@@ -86,7 +86,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "delete") == false {
 				stmt = This.getStmt(DELETE)
 				if stmt == nil{
-					goto errLoop
+					return data
 				}
 				_,This.conn.err = stmt.Exec(where)
 				if This.conn.err != nil{
@@ -95,7 +95,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 						continue LOOP
 					}
 					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
-					goto errLoop
+					return data
 				}
 				setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],nil,"delete")
 			}
@@ -126,7 +126,7 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 			}
 			stmt = This.getStmt(REPLACE_INSERT)
 			if stmt == nil{
-				goto errLoop
+				return data
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
@@ -135,14 +135,11 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 					continue LOOP
 				}
 				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
-				goto errLoop
+				return data
 			}
 			setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],&val,"insert")
 			break
 		}
-
 	}
-
-errLoop:
-	return nil
+	return
 }
