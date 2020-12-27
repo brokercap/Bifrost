@@ -539,6 +539,10 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 		case FIELD_TYPE_TIMESTAMP:
 			timestamp := int64(bytesToUint32(buf.Next(4)))
+			if timestamp == 0 {
+				row[column_name] = "0000-00-00 00:00:00"
+				break
+			}
 			tm := time.Unix(timestamp, 0)
 			row[column_name] = tm.Format(TIME_FORMAT)
 			break
@@ -548,16 +552,20 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			binary.Read(buf, binary.BigEndian, &timestamp)
 			fsp := tableMap.columnMetaData[i].fsp
 			nsec := readNsec(buf, fsp)
-			tm := time.Unix(int64(timestamp), int64(nsec)*1000)
-			var timeFormat1 = TIME_FORMAT
-			if fsp > 0 {
-				timeFormat1 += "."
-				for ii := 0; ii < int(fsp); ii++ {
-					timeFormat1 += "0"
+			if timestamp == 0 {
+				if fsp > 0 {
+					row[column_name] = "0000-00-00 00:00:00."+fmt.Sprintf("%0*d",fsp,0)
+				}else{
+					row[column_name] = "0000-00-00 00:00:00"
 				}
+				break
 			}
-			row[column_name] = tm.Format(timeFormat1)
-			// log.Println("FIELD_TYPE_TIMESTAMP2:", tm, timeFormat1, row[column_name])
+			tm := time.Unix(int64(timestamp), int64(nsec)*1000)
+			if fsp > 0 {
+				row[column_name] = tm.Format(TIME_FORMAT+"."+fmt.Sprintf("%0*d",fsp,0))
+			}else{
+				row[column_name] = tm.Format(TIME_FORMAT)
+			}
 			break
 		case FIELD_TYPE_DATETIME:
 			var t int64
@@ -574,12 +582,11 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 
 			row[column_name] = time.Date(year, month, day, hour, minute, second, 0, time.UTC).Format(TIME_FORMAT)
 			if row[column_name] == "-0001-11-30 00:00:00" {
-				row[column_name] = "0000:00:00 00:00:00"
+				row[column_name] = "0000-00-00 00:00:00"
 			}
 			break
 
 		case FIELD_TYPE_DATETIME2:
-
 			row[column_name], e = read_datetime2(buf, tableMap.columnMetaData[i].fsp)
 			break
 		case FIELD_TYPE_JSON:
@@ -663,17 +670,14 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 	second := read_binary_slice(dataInt, 34, 6, 40)
 
 	nsec := readNsec(buf, fsp)
-	// log.Println("read_datetime2 nsec:", nsec)
 	var timeFormat1 = TIME_FORMAT
 	if fsp > 0 {
-		timeFormat1 += "."
-		for ii := 0; ii < int(fsp); ii++ {
-			timeFormat1 += "0"
-		}
+		timeFormat1 += "."+fmt.Sprintf("%0*d",fsp,0)
 	}
-
 	data = time.Date(year, month, int(days), int(hours), int(minute), int(second), nsec*1000, time.UTC).Format(timeFormat1)
-	// log.Println("read_datetime2:", nsec, timeFormat1, data)
+	if strings.Index(data,"-0001-11-30") == 0 {
+		return strings.Replace(data,"-0001-11-30","0000-00-00",1),nil
+	}
 	return
 }
 

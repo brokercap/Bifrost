@@ -58,9 +58,14 @@
                             </select>
                         </div>                                 
                 </div>
-                    
-                    <div class="ibox-content">
+
+                    <div class="ibox-content" style="position: relative">
                         <div class="echarts" id="morris-line-chart"></div>
+                        <div style="position: absolute; width: 40%; top:20px;">
+                            <div style="margin: 0 auto; width: 60%; text-align: center  ">
+                                <p><strong>Count：</strong> <span id="flow_count">0</span> &nbsp;&nbsp;&nbsp;&nbsp;<strong>DataSize：</strong> <span id="flow_bytesize">0</span> </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -90,6 +95,17 @@
     flowObj.setSchema(SchemaName);
     flowObj.setChanneId(ChanneId);
 
+    function getFlowDataCallBack() {
+        var count = flowObj.getCountSum();
+        var CountUint = flowObj.CountType;
+        var ByteSize = flowObj.getSize();
+        var ByteSizeUint = flowObj.ByteSizeType;
+
+        $("#flow_count").text(count + " " + CountUint);
+        $("#flow_bytesize").text(ByteSize + " " + ByteSizeUint);
+    }
+
+    flowObj.setCallBackFun(getFlowDataCallBack);
 	$(function(){
         $("#selectLengthsAge").change(
                 function(){

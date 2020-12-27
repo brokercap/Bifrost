@@ -276,27 +276,13 @@
     function getFlowDataCallBack() {
         var count = flowObj.getCountSum();
         var CountUint = flowObj.CountType;
-        var ByteSize = flowObj.getByteSizeSum();
-        var ByteSizeType = "Byte";
-        if (ByteSize >= 1024000) {
-            ByteSize = (ByteSize / 1024).toFixed(2)
-            ByteSizeType = "kb"
-        }
-
-        if (ByteSize >= 1024000000) {
-            ByteSize = (ByteSize / 1024000).toFixed(2)
-            ByteSizeType = "MB"
-        }
-
-        if (ByteSize >= 1024000000000) {
-            ByteSize = (ByteSize / 1024000000).toFixed(2)
-            ByteSizeType = "GB"
-        }
+        var ByteSize = flowObj.getSize();
+        var ByteSizeUint = flowObj.ByteSizeType;
 
         $("#flow_count .number").text(count);
         $("#flow_count .unit").text(CountUint);
         $("#flow_bytesize .number").text(ByteSize);
-        $("#flow_bytesize .unit").text(ByteSizeType);
+        $("#flow_bytesize .unit").text(ByteSizeUint);
     }
     flowObj.setCallBackFun(getFlowDataCallBack);
 

@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.1"
-const BIFROST_VERION = "v1.6.1"
+const VERSION  = "v1.6.3"
+const BIFROST_VERION = "v1.6.3"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -294,7 +294,7 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 			fromFieldName = v.COLUMN_NAME
 		}
 		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:v.COLUMN_DEFAULT }
-		if strings.ToLower(v.EXTRA) == "auto_increment" {
+		if strings.ToUpper(v.COLUMN_KEY) == "PRI" {
 			field.ToFieldDefault = nil
 			priKeyList = append(priKeyList,field)
 			fromPriKey = v.COLUMN_NAME
@@ -414,8 +414,6 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriv
 	return This.sendToCacheList(data,retry)
 }
 
-
-
 func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
 	if This.p.AutoTable == false || data.Query == ""{
 		return nil,nil,nil
@@ -448,6 +446,7 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
 				return nil, data, This.conn.err
 			}
+			break
 		}
 	}
 	return
@@ -464,6 +463,7 @@ func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginD
 	}else{
 		This.p.Data.CommitData[n0] = data
 	}
+	log.Println("Commit:",*data)
 	return nil, nil, nil
 }
 
@@ -641,7 +641,6 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 		}
 		if This.conn.err != nil {
 			This.err = This.conn.err
-			break
 		}
 		if This.err != nil {
 			This.conn.err = This.conn.Rollback()
@@ -744,6 +743,10 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 			break
 		case int64:
 			v = data.(int64)
+		case float64:
+			v = int64(data.(float64))
+		case float32:
+			v = int64(data.(float32))
 		default:
 			v, _ = strconv.ParseInt(fmt.Sprint(data),10,64)
 			break
@@ -774,20 +777,34 @@ func (This *Conn) dataTypeTransfer(data interface{},fieldName string,toDataType 
 		}
 		break
 	default:
-		switch reflect.TypeOf(data).Kind() {
-		case reflect.Array,reflect.Slice,reflect.Map:
-			var c []byte
-			c,e = json.Marshal(data)
-			if e != nil{
-				e = fmt.Errorf("field:%s ,data source type: %s , json.Marshal err: %s ",fieldName,reflect.TypeOf(data).Kind().String(),e.Error())
-				return
-			}
-			v = string(c)
-			break
-		default:
-			v = fmt.Sprint(data)
+		v,e = This.data2String(data)
+		if e != nil {
+			e = fmt.Errorf("field:%s ,%s",fieldName,e.Error())
 		}
 		break
+	}
+	return
+}
+
+func (This *Conn) data2String(data interface{}) (v string, e error) {
+	switch reflect.TypeOf(data).Kind() {
+	case reflect.String:
+		return data.(string),nil
+	case reflect.Array,reflect.Slice,reflect.Map:
+		var c []byte
+		c,e = json.Marshal(data)
+		if e != nil{
+			e = fmt.Errorf("data source type: %s , json.Marshal err: %s ",reflect.TypeOf(data).Kind().String(),e.Error())
+			return
+		}
+		v = string(c)
+		break
+	case reflect.Float32:
+		v = strconv.FormatFloat(float64(data.(float32)), 'E', -1, 32)
+	case reflect.Float64:
+		v = strconv.FormatFloat(data.(float64), 'E', -1, 64)
+	default:
+		v = fmt.Sprint(data)
 	}
 	return
 }
@@ -893,6 +910,9 @@ func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
 }
 
 func checkOpMap(opMap map[interface{}]*opLog,key interface{}, EvenType string) bool {
+	if key == "" {
+		return false
+	}
 	if _,ok := opMap[key];ok{
 		return true
 	}
