@@ -195,8 +195,25 @@ func CheckUserHost(IP , Host string) (err error) {
 	default:
 		break
 	}
-	hostArr := strings.Split(Host,".")
 	ipArr := strings.Split(IP,".")
+	var ok bool
+	for _,HostName := range strings.Split(Host,",") {
+		ok = CheckUserHost0(ipArr,HostName)
+		if ok {
+			return nil
+		}
+	}
+	return errors.New("No login permission!")
+}
+
+func CheckUserHost0(ipArr []string , Host string) bool {
+	switch Host {
+	case "%":
+		return true
+	default:
+		break
+	}
+	hostArr := strings.Split(Host,".")
 	for i,v := range hostArr {
 		if v == "%" {
 			continue
@@ -204,8 +221,7 @@ func CheckUserHost(IP , Host string) (err error) {
 		if ipArr[i] == v {
 			continue
 		}
-		err = errors.New("No login permission!")
-		break
+		return false
 	}
-	return
+	return true
 }

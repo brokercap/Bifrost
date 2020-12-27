@@ -1,6 +1,6 @@
 var FlowClass  = {
     CountType: "条",
-    ByteSizeType: "b",
+    ByteSizeType: "Byte",
     dbName: "",
     schema: "",
     tableName: "",
@@ -18,12 +18,19 @@ var FlowClass  = {
     maxCount:0,
     maxByteSize:0,
 
+    CountDivideNumber:1,
+    ByteSizeDivideNumber:1,
+
     getCountSum:function () {
         return this.CountSum;
     },
 
     getByteSizeSum:function () {
         return this.ByteSizeSum;
+    },
+
+    getSize:function () {
+        return (this.ByteSizeSum / this.ByteSizeDivideNumber).toFixed(2)
     },
 
     setDbName: function (dbName) {
@@ -140,38 +147,33 @@ var FlowClass  = {
         }
         this.Data = d;
 
-        var CountDivideNumber = 1;
-        var ByteSizeDivideNumber = 1;
-
-        if (this.maxCount > 500000) {
-            this.CountType = "k";
-            CountDivideNumber = 1000;
-        }
+        this.CountDivideNumber = 1;
+        this.ByteSizeDivideNumber = 1;
 
         if (this.maxByteSize >= 1024000) {
-            ByteSizeType = "kb";
-            ByteSizeDivideNumber = 1024;
+            this.ByteSizeType = "KB";
+            this.ByteSizeDivideNumber = 1024;
         }
 
-        if (d[0].ByteSize >= 1024000000) {
-            ByteSizeType = "MB"
-            ByteSizeDivideNumber = 1024 * 1024;
+        if (this.maxByteSize >= 1024000000) {
+            this.ByteSizeType = "MB"
+            this.ByteSizeDivideNumber = 1024 * 1024;
         }
 
-        if (d[0].ByteSize >= 1024000000000) {
-            ByteSizeType = "GB"
-            ByteSizeDivideNumber = 1024 * 1024 * 1024;
+        if (this.maxByteSize >= 1024000000000) {
+            this.ByteSizeType = "GB"
+            this.ByteSizeDivideNumber = 1024 * 1024 * 1024;
         }
 
-        var ByteLable = "ByteSize(" + ByteSizeType + ")";
-        var CountLable = "Count(" + CountType + ")";
+        var ByteLable = "ByteSize(" + this.ByteSizeType + ")";
+        var CountLable = "Count(" + this.CountType + ")";
         var e = echarts.init(document.getElementById(this.CanvasId));
         var a = this.init_data(ByteLable,CountLable);
 
         for( var i in d){
             a.xAxis[0].data.push(d[i].time);
-            a.series[0].data.push(d[i].Count/CountDivideNumber);
-            a.series[1].data.push((d[i].ByteSize / ByteSizeDivideNumber).toFixed(2));
+            a.series[0].data.push(d[i].Count / this.CountDivideNumber);
+            a.series[1].data.push((d[i].ByteSize / this.ByteSizeDivideNumber).toFixed(2));
         }
         e.setOption(a);
         $(window).resize(e.resize);
@@ -186,7 +188,7 @@ var FlowClass  = {
         var Count = -1;
         var ByteSize = -1;
         var lasttime = -1;
-        for (s in d) {
+        for (var s in d) {
             if (d[s].Time > 0) {
                 if (Count == -1) {
                     Count = d[s].Count;
@@ -237,17 +239,15 @@ var FlowClass  = {
 
     fullData: function (d) {
         var data = [];
-        for (s in d) {
+        this.ByteSizeSum = d[d.length-1].ByteSize - d[0].ByteSize;
+        this.CountSum = d[d.length-1].Count - d[0].Count;
+        for (var s in d) {
             if (d[s].Time != "") {
                 data.push({
                     time: this.TimeFormat(d[s].Time),
                     Count: d[s].Count,
                     ByteSize: d[s].ByteSize,
                 });
-
-                this.ByteSizeSum = d[s].ByteSize;
-                this.CountSum = d[s].Count;
-
                 this.maxCount = d[s].Count;
                 this.maxByteSize = d[s].ByteSize;
             }

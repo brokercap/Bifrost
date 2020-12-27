@@ -83,9 +83,11 @@ func (c *UserController) Update() {
 		result.Msg = " user_name and password not empty!"
 		return
 	}
-	if strings.Count(param.Host,".") > 3 {
-		result.Msg = " Host error!"
-		return
+	for _,Host := range strings.Split(param.Host,",") {
+		if strings.Count(Host,".") > 3 {
+			result.Msg = " Host error!"
+			return
+		}
 	}
 	err := user.UpdateUser(param.UserName, param.Password, param.Group,param.Host)
 	if err != nil {

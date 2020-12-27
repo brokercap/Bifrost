@@ -461,8 +461,8 @@
             batchDelOrAddTableResultFun("删除完成",-2);
         }
         function ChangeTableFlowBtnHref(SchemaName,TableName){
-            $("#tableFlowBtn").attr("href","/flow/index?DbName="+DbName+"&schema="+SchemaName+"&TableName="+TableName);
-            $("#tableHistoryListBtn").attr("href","/history/index?DbName="+DbName+"&schema="+SchemaName+"&TableName="+TableName);
+            $("#tableFlowBtn").attr("href","/flow/index?DbName="+DbName+"&SchemaName="+SchemaName+"&TableName="+TableName);
+            $("#tableHistoryListBtn").attr("href","/history/index?DbName="+DbName+"&SchemaName="+SchemaName+"&TableName="+TableName);
             $("#tableSelectShowDiv").show();
         }
 
