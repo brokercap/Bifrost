@@ -56,11 +56,11 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				if This.CheckDataSkip(data) {
 					This.conn.err = nil
 					continue LOOP
 				}
-				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
 				return data
 			}
 			setOpMapVal(opMap,data.Rows[1][This.p.fromPriKey],nil,"update")
@@ -90,11 +90,11 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				}
 				_,This.conn.err = stmt.Exec(where)
 				if This.conn.err != nil{
+					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
 					if This.CheckDataSkip(data) {
 						This.conn.err = nil
 						continue LOOP
 					}
-					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
 					return data
 				}
 				setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],nil,"delete")
@@ -130,11 +130,11 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 			}
 			_,This.conn.err = stmt.Exec(val)
 			if This.conn.err != nil{
+				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				if This.CheckDataSkip(data) {
 					This.conn.err = nil
 					continue LOOP
 				}
-				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
 				return data
 			}
 			setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],&val,"insert")
