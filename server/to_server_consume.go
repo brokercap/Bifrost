@@ -76,9 +76,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		if ThreadCountDecrDone == false{
 			This.ThreadCount--
 		}
-		This.cosumerPluginParamArr[MyConsumerId] = nil
-		if This.ThreadCount == 0{
+		if This.ThreadCount == 0 {
 			This.cosumerPluginParamArr = nil
+		}else{
+			This.cosumerPluginParamArr[MyConsumerId] = nil
 		}
 		This.Unlock()
 	}()
