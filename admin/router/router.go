@@ -76,6 +76,7 @@ func init()  {
 
 	//docs
 	xgo.Router("/docs",&controller.DocsController{},"*:Index")
+	xgo.Router("/api/docs",&controller.DocsController{},"*:ApiDocIndex")
 
 	//flow
 	xgo.Router("/flow/index",&controller.FlowController{},"*:Index")
