@@ -55,6 +55,7 @@ func init()  {
 	xgo.Router("/db/table/fields",&controller.DBController{},"*:GetTableFields")
 	xgo.Router("/db/table/list",&controller.DBController{},"*:TableList")
 	xgo.Router("/db/table/createsql",&controller.DBController{},"*:ShowCreateSQL")
+	xgo.Router("/db/version/get",&controller.DBController{},"*:GetVersion")
 
 
 	//backup
