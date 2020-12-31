@@ -61,7 +61,7 @@ func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
 	parser.tableMap = make(map[uint64]*TableMapEvent)
 	parser.tableNameMap = make(map[string]uint64)
 	parser.tableSchemaMap = make(map[uint64]*tableStruct)
-	parser.eventDo = make([]bool, 36, 36)
+	parser.eventDo = make([]bool, 164, 164)
 	parser.ServerId = 21036
 	parser.connectionId = ""
 	parser.maxBinlogFileName = ""

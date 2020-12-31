@@ -166,6 +166,18 @@ const (
 	GTID_EVENT //33
 	ANONYMOUS_GTID_EVENT //34
 	PREVIOUS_GTIDS_EVENT //35
+	TRANSACTION_CONTEXT_EVENT // 36
+	VIEW_CHANGE_EVENT		  // 37
+	XA_PREPARE_LOG_EVENT	  // 38
+)
+
+
+const (
+	// MariaDB event starts from 160
+	MARIADB_ANNOTATE_ROWS_EVENT EventType = 160 + iota
+	MARIADB_BINLOG_CHECKPOINT_EVENT
+	MARIADB_GTID_EVENT
+	MARIADB_GTID_LIST_EVENT
 )
 
 type eventFlag uint16
@@ -181,15 +193,6 @@ const (
 	LOG_EVENT_IGNORABLE_F
 	LOG_EVENT_NO_FILTER_F
 	LOG_EVENT_MTS_ISOLATE_F
-)
-
-type BinlogDumpStatus int8
-
-const (
-	BINLOG_DUMP_CLOSE  BinlogDumpStatus = 0
-	BINLOG_DUMP_STARTING BinlogDumpStatus = 1
-	BINLOG_DUMP_STOP BinlogDumpStatus = 2
-	BINLOG_DUMP_RUNNING BinlogDumpStatus = 3
 )
 
 type StatusFlag int8
