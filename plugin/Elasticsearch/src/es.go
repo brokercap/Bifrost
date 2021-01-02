@@ -39,6 +39,7 @@ type TableDataStruct struct {
 type PluginParam struct {
 	EsIndexName          string          `json: "EsIndexName"`
 	PrimaryKey           string          `json: "PrimaryKey"`
+	Mapping              string          `json: "Mapping"`
 	primaryKeys          []string        `json: "primaryKeys"`
 	hadMapping           map[string]bool `json: "hadMapping"`
 	BifrostMustBeSuccess bool            `json: "BifrostMustBeSuccess"` // bifrost server 保留,数据是否能丢
@@ -212,12 +213,17 @@ func (This *Conn) doCreateMapping() {
 		resp, err := This.conn.GetMapping(EsIndexName)
 
 		if err == nil && resp.Mapping != nil {
-			if res, ok := resp.Mapping[EsIndexName]; ok && res.Mappings.DateDetection { // hadMapping
+			if res, ok := resp.Mapping[EsIndexName]; ok { // hadMapping
+				if res.Mappings.DateDetection {
+					This.p.hadMapping[EsIndexName] = true
+					return
+				}
+				_ = This.conn.UpdateMapping(EsIndexName)
 				This.p.hadMapping[EsIndexName] = true
 				return
 			}
 		}
-		_ = This.conn.CreateMapping(EsIndexName)
+		_ = This.conn.CreateMapping(EsIndexName, This.p.Mapping)
 		This.p.hadMapping[EsIndexName] = true
 	}
 }

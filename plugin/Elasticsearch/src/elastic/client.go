@@ -363,7 +363,7 @@ func (c *Client) DoBulk(url string, items []*BulkRequest) (*BulkResponse, error)
 }
 
 // CreateMapping creates a ES mapping.
-func (c *Client) CreateMapping(index string) error {
+func (c *Client) CreateMapping(index string, mappings ...string) error {
 	reqURL := fmt.Sprintf("%s://%s/%s/", c.Protocol, c.Addr,
 		url.QueryEscape(index),
 	)
@@ -382,6 +382,31 @@ func (c *Client) CreateMapping(index string) error {
       "yyyy-MM-dd HH:mm:ss.SSSSSS"
     ]
   }
+}`
+	if len(mappings) > 0 && mappings[0] != "" { // 用户自定义mapping
+		mapping = mappings[0]
+	}
+	_, err := c.Do("PUT", reqURL, nil, mapping)
+	return errors.Trace(err)
+}
+
+// UpdateMapping Updates a ES mapping.
+func (c *Client) UpdateMapping(index string) error {
+	reqURL := fmt.Sprintf("%s://%s/%s/_mappings", c.Protocol, c.Addr,
+		url.QueryEscape(index),
+	)
+	mapping := `{
+    "date_detection": true,
+    "dynamic_date_formats": [
+      "yyyy-MM-dd",
+      "yyyy-MM-dd HH:mm:ss",
+      "yyyy-MM-dd HH:mm:ss.S",
+      "yyyy-MM-dd HH:mm:ss.SS",
+      "yyyy-MM-dd HH:mm:ss.SSS",
+      "yyyy-MM-dd HH:mm:ss.SSSS",
+      "yyyy-MM-dd HH:mm:ss.SSSSS",
+      "yyyy-MM-dd HH:mm:ss.SSSSSS"
+    ]
 }`
 	_, err := c.Do("PUT", reqURL, nil, mapping)
 	return errors.Trace(err)

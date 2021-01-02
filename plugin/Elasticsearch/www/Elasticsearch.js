@@ -4,6 +4,7 @@ function doGetPluginParam() {
 
   var EsIndexName = $("#Elasticsearch_IndexName").val();
   var PrimaryKey = $("#Elasticsearch_PrimaryKey").val();
+  var Mapping = $("#Elasticsearch_Mapping").val();
   var BatchSize = $("#ES_BatchSize").val();
 
   if (EsIndexName == "") {
@@ -16,6 +17,7 @@ function doGetPluginParam() {
   }
   data["EsIndexName"] = EsIndexName;
   data["PrimaryKey"] = PrimaryKey;
+  data["Mapping"] = Mapping;
   data["BatchSize"] = parseInt(BatchSize);
 
   result.data = data;

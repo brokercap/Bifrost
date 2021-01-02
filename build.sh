@@ -179,10 +179,10 @@ function checkOrDownloadGoEnv(){
    fi
 }
 
-# 兼容 travis 自动编译测试, travis 不需要自动判断是否存在 go 环境
-if [[ "$1" != "travis" ]];then
-  checkOrDownloadGoEnv
-fi
+# # 兼容 travis 自动编译测试, travis 不需要自动判断是否存在 go 环境
+# if [[ "$1" != "travis" ]];then
+#   checkOrDownloadGoEnv
+# fi
 
 checkGoVersion
 
