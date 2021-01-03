@@ -60,7 +60,10 @@ function formatDate(timestamp) {
                                             <tbody id="dbListContair">
                                             	{{range $i, $v := .DBList}}
                                                 <tr>
-                                                    <td>{{$v.Name}}</td>
+                                                    <td>
+                                                        <p class="DbName">{{$v.Name}}</p>
+                                                        <p class="Version"><button data-toggle="button" class="btn-sm btn-primary GetVersionBtn" type="button">Version</button></p>
+                                                    </td>
                                                     <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
@@ -359,7 +362,7 @@ function formatDate(timestamp) {
         function(){
             var trObj = $(this).parent().parent().parent();
             var url = "/db/get_last_position";
-            var dbname = trObj.children().eq(0).text();
+            var dbname =  trObj.children().eq(0).find(".DbName").text();
             var callback = function (data) {
                 if (data.status != 1){
                     alert(data.msg);
@@ -447,7 +450,7 @@ $("#addNewDBBtn").click(
 $(".updateDbBtn").click(
     function () {
         var trObj = $(this).parent().parent().parent();
-        var dbname =  trObj.children().eq(0).text();
+        var dbname =  trObj.children().eq(0).find(".DbName").text();
         var ConnUri =  trObj.children().eq(1).attr("title");
         //var BinlogFileName =  trObj.children().eq(3).find("p").eq(0).text();
         //var BinlogPosition =  trObj.children().eq(3).find("p").eq(1).text();
@@ -476,6 +479,21 @@ $(".updateDbBtn").click(
     }
 );
 
+$(".GetVersionBtn").click(
+    function () {
+        var trObj = $(this).parent().parent().parent();
+        var dbname =  trObj.children().eq(0).find(".DbName").text();
+        var callback = function (data) {
+            if(!data.status){
+                alert(data.msg);
+                return false;
+            }
+            trObj.children().eq(0).find(".Version").html(data.data);
+        };
+        Ajax("GET","/db/version/get",{DbName: dbname},callback,true);
+    }
+);
+
 function DoChangeDbStatus(obj,status){
 	if (status=="stop"){
 		if (!confirm("确定暂停么？暂停连接不会断开，但是业务将受影响")){
@@ -489,7 +507,7 @@ function DoChangeDbStatus(obj,status){
 	}
 	var url = "/db/"+status;
 	var trObj = $(obj).parent().parent();
-	var dbname = trObj.children().eq(0).html();
+    var dbname =  trObj.children().eq(0).find(".DbName").text();
 
     if (status=="start"){
         if( trObj.children().eq(9).find("span").text() == "0"){

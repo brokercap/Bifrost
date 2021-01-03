@@ -46,9 +46,8 @@ type ToServer struct {
 	ThreadCount                   int16                  // 消费线程数量
 	FileQueueUsableCount          uint32                 // 在开始文件队列的配置下，每次写入 ToServerChan 后 ，在 FileQueueUsableCountTimeDiff 时间内 队列都是满的次数
 	FileQueueUsableCountStartTime int64                  // 开始统计 FileQueueUsableCount 计算的时间
-	CosumerPluginParamMap         map[uint16]interface{} `json:"-"` // 用以区分多个消费者的身份
-	CosumerIdInrc                 uint16                 // 消费者自增id
 	statusChan                    chan bool
+	cosumerPluginParamArr		  []interface{}			  `json:"-"` // 用以区分多个消费者的身份
 }
 
 

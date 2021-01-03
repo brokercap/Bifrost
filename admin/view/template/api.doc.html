@@ -1,0 +1,974 @@
+{{template "header" .}}
+<style type="text/css">
+blockquote { font-size: 10px; background: #333; color: #1d9d74}
+td { line-height: 200%; padding: 0 10px}
+</style>
+<div class="ibox float-e-margins" >
+    <div class="row">
+        <div class="col-lg-8"></div>
+        <div class="col-lg-4"></div>
+    </div>
+
+    <div class="col-sm-12">
+        <div class="ibox float-e-margins">
+            <div class="ibox-title">
+                <h5>Bifrost Management HTTP API</h5>
+                <div class="ibox-tools">
+                    <a class="collapse-link">
+                        <i class="fa fa-chevron-up"></i>
+                    </a>
+                    <a class="close-link">
+                        <i class="fa fa-times"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="ibox-content">
+
+                <h2>Introduction</h2>
+
+                <p><span style="color:#444444">All require HTTP basic authentication . The default user is Bifrost/Bifrost123.</span></p>
+                <p>&nbsp;</p>
+
+                <h2>Examples</h2>
+
+                <p><span style="color:#444444">Get db list :</span></p>
+
+                <blockquote>
+                    <p>[root@localhost ~]# curl -i -u Bifrost:Bifrost123 -k https://127.0.0.1:21036/db/list<br />
+                        HTTP/1.1 200 OK<br />
+                        Date: Wed, 30 Dec 2020 11:41:59 GMT<br />
+                        Content-Length: 399<br />
+                        Content-Type: text/plain; charset=utf-8</p>
+
+                    <p>{&quot;mysql5.7&quot;:{&quot;Name&quot;:&quot;mysql5.7&quot;,&quot;ConnectUri&quot;:&quot;root:root@tcp(172.17.0.2:3306)/mysql&quot;,&quot;ConnStatus&quot;:&quot;running&quot;,&quot;ConnErr&quot;:&quot;running&quot;,&quot;ChannelCount&quot;:1,&quot;LastChannelID&quot;:1,&quot;TableCount&quot;:1,&quot;BinlogDumpFileName&quot;:&quot;mysql-bin.000006&quot;,&quot;BinlogDumpPosition&quot;:826,&quot;BinlogDumpTimestamp&quot;:1609240241,&quot;MaxBinlogDumpFileName&quot;:&quot;&quot;,&quot;MaxBinlogDumpPosition&quot;:0,&quot;ReplicateDoDb&quot;:{&quot;bifrost_test&quot;:1},&quot;ServerId&quot;:103,&quot;AddTime&quot;:1609139290}}</p>
+                </blockquote>
+
+                <p>del&nbsp;refuse ip</p>
+
+                <blockquote>
+                    <p>[root@localhost ~]# curl -i -u Bifrost:Bifrost123 -k -H &quot;content-type:application/json&quot; -XDELETE -d&#39;{&quot;Ip&quot;:&quot;191.168.220.101&quot;}&#39; https://127.0.0.1:21036/refuseip/del<br />
+                        HTTP/1.1 200 OK<br />
+                        Date: Wed, 30 Dec 2020 11:45:31 GMT<br />
+                        Content-Length: 40<br />
+                        Content-Type: text/plain; charset=utf-8</p>
+
+                    <p>{&quot;status&quot;:1,&quot;msg&quot;:&quot;success&quot;,&quot;data&quot;:null}</p>
+                </blockquote>
+
+                <p>&nbsp;</p>
+
+                <h2>Reference</h2>
+
+                <table border="1" cellpadding="1" cellspacing="1">
+                    <tbody>
+                    <tr>
+                        <td><strong>GET</strong></td>
+                        <td><strong>PUT</strong></td>
+                        <td><strong>DELETE</strong></td>
+                        <td><strong>POST</strong></td>
+                        <td><strong>Administrator</strong></td>
+                        <td><strong>Path</strong></td>
+                        <td><strong>Description |&nbsp; eg</strong></td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/overview</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/serverMonitor</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/freeOSMemory</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/allocs</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/block</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/heap</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/goroutine</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/threadcreate</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/mutex</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/cmdline</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/profile</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/symbol</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/debug/pprof/trace</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>/db/check_uri</td>
+                        <td>
+                            <p>check privilege and get db current poisiton</p>
+
+                            <p>param like:&nbsp;{&quot;Uri&quot;:&quot;xxtest:xxtest@tcp(10.0.3.31:3306)/mysql&quot;,&quot;CheckPrivilege&quot;:true}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/add</td>
+                        <td>
+                            <p>add datasource</p>
+
+                            <p>param like:&nbsp;</p>
+
+                            <p>{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Uri&quot;:&quot;xxtest:xxtest@tcp(10.0.3.31:3306)/mysql&quot;,&quot;BinlogFileName&quot;:&quot;mysql-bin.000818&quot;,&quot;BinlogPosition&quot;:229327754,&quot;ServerId&quot;:76,&quot;MaxBinlogFileName&quot;:&quot;&quot;,&quot;MaxBinlogPosition&quot;:0}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/update</td>
+                        <td>param like : {&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Uri&quot;:&quot;xxtest:xxtest@tcp(10.0.3.31:3306)/mysql&quot;,&quot;BinlogFileName&quot;:&quot;mysql-bin.000818&quot;,&quot;BinlogPosition&quot;:229327754,&quot;ServerId&quot;:76,&quot;MaxBinlogFileName&quot;:&quot;&quot;,&quot;MaxBinlogPosition&quot;:0,&quot;UpdateToServer&quot;:0}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/stop</td>
+                        <td>{&quot;DbName&quot;:&quot;dbTestName&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/start</td>
+                        <td>{&quot;DbName&quot;:&quot;dbTestName&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/close</td>
+                        <td>{&quot;DbName&quot;:&quot;dbTestName&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/db/del</td>
+                        <td>{&quot;DbName&quot;:&quot;dbTestName&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/db/list</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>/db/get_last_position</td>
+                        <td>
+                            <p>get datasource current position,and vs last binlog parser position</p>
+
+                            <p>{&quot;DbName&quot;:&quot;dbTestName&quot;}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/db/table/fields</td>
+                        <td>get table fields list info<br />
+                            url like :<br />
+                            /db/table/fields?DbName=dbTestName&amp;SchemaName=databaseName&amp;TableName=tableName</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/db/table/list</td>
+                        <td>
+                            <p>url like:</p>
+
+                            <p>/db/table/list?DbName=dbTestName&amp;SchemaName=databaseName</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/db/table/createsql</td>
+                        <td>
+                            <p>show create table,&nbsp; url like:</p>
+
+                            <p>/db/table/createsql?DbName=dbTestName&amp;SchemaName=databaseName&amp;TableName=tableName</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/db/version/get</td>
+                        <td>
+                            <p>get db version,&nbsp; url like:</p>
+
+                            <p>/db/version/get?DbName=dbTestName</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/channel/list</td>
+                        <td>url like :&nbsp;/channel/list?DbName=dbTestName</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/channel/add</td>
+                        <td>
+                            <p>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;ChannelName&quot;:&quot;default&quot;,&quot;CosumerCount&quot;:1}</p>
+
+                            <p>result like :&nbsp;{&quot;status&quot;: 1, &quot;msg&quot;: &quot;success&quot;, data: 1}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/channel/stop</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;ChannelId&quot;:1}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/channel/start</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;ChannelId&quot;:1}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/channel/close</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;ChannelId&quot;:1}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/channel/del</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;ChannelId&quot;:1}</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/channel/table/index</td>
+                        <td>url like :&nbsp;/channel/table/index?DbName=dbTestName&amp;ChannelId=1</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/channel/table/list</td>
+                        <td>url like :&nbsp;/channel/table/list?DbName=dbTestName&amp;ChannelId=1</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/table/list</td>
+                        <td>
+                            <p>get database table list ,and table sync info</p>
+
+                            <p>url like :&nbsp;/table/list?DbName=dbTestName</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/add</td>
+                        <td>
+                            <p>add table to bifrost, to binlog parser</p>
+
+                            <p>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ChannelId&quot;:1,&quot;IgnoreTable&quot;:&quot;&quot;}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/update</td>
+                        <td>
+                            <p>update table config&nbsp;IgnoreTable</p>
+
+                            <p>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;IgnoreTable&quot;:&quot;binlog_field_test_1&quot;}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/del</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/table/toserver/list</td>
+                        <td>
+                            <p>get table sync</p>
+
+                            <p>&nbsp;</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/add</td>
+                        <td>
+                            <p>param like :</p>
+
+                            <p>{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerKey&quot;:&quot;TableCountTest&quot;,&quot;PluginName&quot;:&quot;TableCount&quot;,&quot;MustBeSuccess&quot;:true,&quot;FilterQuery&quot;:false,&quot;FilterUpdate&quot;:true,&quot;FieldList&quot;:[],&quot;PluginParam&quot;:{}}</p>
+
+                            <p>result :&nbsp;{&quot;status&quot;:1,&quot;msg&quot;:&quot;success&quot;,&quot;data&quot;:1}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/start</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerId&quot;:1,&quot;Index&quot;:0}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/stop</td>
+                        <td>param like :&nbsp; {&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerId&quot;:1,&quot;Index&quot;:0}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/del</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerId&quot;:1,&quot;Index&quot;:0}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/deal</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerId&quot;:1,&quot;Index&quot;:0}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/table/synclist/list</td>
+                        <td>url like :&nbsp; /table/synclist/list?DbName=&amp;SchemaName=&amp;TableName=&amp;ChannelId=&amp;SyncStatus=&amp;ToServerKey</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/toserver/list</td>
+                        <td>dest server&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/toserver/add</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;ToServerKey&quot;:&quot;2RedisTest&quot;,&quot;PluginName&quot;:&quot;redis&quot;,&quot;ConnUri&quot;:&quot;172.17.0.5:6379&quot;,&quot;MaxConn&quot;:20,&quot;MinConn&quot;:0,Notes:&quot;2RedisTest&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/toserver/update</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;ToServerKey&quot;:&quot;2RedisTest&quot;,&quot;PluginName&quot;:&quot;redis&quot;,&quot;ConnUri&quot;:&quot;172.17.0.5:6379&quot;,&quot;MaxConn&quot;:20,&quot;MinConn&quot;:0,Notes:&quot;2RedisTest&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/toserver/del</td>
+                        <td>param like :&nbsp; {&quot;ToServerKey&quot;:&quot;2RedisTest&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>/toserver/check_uri</td>
+                        <td>param like :&nbsp; {&quot;ConnUri&quot;:&quot;172.17.0.5:6379&quot;,&quot;PluginName&quot;:&quot;redis&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/history/list</td>
+                        <td>url like :&nbsp; /history/list?DbName=&amp;SchemaName=&amp;TableName=&amp;Status=</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/history/add</td>
+                        <td>
+                            <p>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;TableNames&quot;:&quot;binlog_field_test_1;binlog_field_test_2;&quot;,&quot;Property&quot;:{&quot;ThreadNum&quot;:1,&quot;ThreadCountPer&quot;:1000,&quot;Where&quot;:&quot;&quot;,&quot;LimitOptimize&quot;:1,&quot;SyncThreadNum&quot;:1},&quot;ToserverIds&quot;:[1]}</p>
+
+                            <p>result :&nbsp;{&quot;status&quot;:1,&quot;msg&quot;:&quot;success&quot;,&quot;data&quot;:2}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/history/del</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Id&quot;:2}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/history/start</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Id&quot;:2}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/history/stop</td>
+                        <td>param like : {&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Id&quot;:2}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/history/kill</td>
+                        <td>param like : {&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;Id&quot;:2}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/history/check_where</td>
+                        <td>param like :&nbsp;{&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;TableNames&quot;:&quot;binlog_field_test_1;binlog_field_test_2;&quot;,&quot;Property&quot;:{&quot;Where&quot;:&quot;id&gt;1000&quot;}}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/table/toserver/filequeue/update</td>
+                        <td>
+                            <p>start file queue</p>
+
+                            <p>param like : {&quot;DbName&quot;:&quot;dbTestName&quot;,&quot;SchemaName&quot;:&quot;bifrost_test&quot;,&quot;TableName&quot;:&quot;binlog_field_test_*&quot;,&quot;ToServerId&quot;:1,&quot;Index&quot;:0}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/table/toserver/filequeue/getinfo</td>
+                        <td>url like :&nbsp;&nbsp;/table/toserver/filequeue/getinfo?DbName=dbTestName&amp;SchemaName=databaseName&amp;TableName=tableName&amp;ToServerId=&amp;Index=</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/user/list</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/user/update</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;UserName&quot;:&quot;userName&quot;,&quot;Password&quot;:&quot;Password123&quot;,&quot;Group&quot;:&quot;administrator&quot;,&quot;Host&quot;:&quot;192.168.%,172.17.0.2&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/user/del</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;UserName&quot;:&quot;userName&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/user/login/log</td>
+                        <td>get all user login log (max 8Kb)，return html content</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>/dologin</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;UserName&quot;:&quot;userName&quot;,&quot;Password&quot;:&quot;Password123&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/logout</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/warning/config/list</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/warning/config/add</td>
+                        <td>
+                            <p>param like : {&quot;Type&quot;:&quot;Email&quot;,&quot;Param&quot;:{}}</p>
+
+                            <p>result : {&quot;status&quot;:1,&quot;msg&quot;:&quot;success&quot;,&quot;data&quot;:&quot;bifrost_warning_config_1&quot;}</p>
+
+                            <p>&nbsp;</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/warning/config/del</td>
+                        <td>param like :&nbsp;&nbsp;{&quot;Type&quot;:&quot;Email&quot;,&quot;Param&quot;:{}}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>/warning/config/check</td>
+                        <td>param like : {&quot;Type&quot;:&quot;Email&quot;,&quot;Param&quot;:{}}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/plugin/list</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/refuseip/list</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/refuseip/del</td>
+                        <td>param like : {&quot;Ip&quot;:&quot;192.168.220.101&quot;}</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/flow/get</td>
+                        <td>url like :&nbsp;&nbsp;/flow/get??DbName=&amp;SchemaName=&amp;TableName=ChannelId=&amp;Type=tenminute</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+
+                    <tr>
+                        <td>x</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>/backup/export</td>
+                        <td>backup config</td>
+                    </tr>
+
+                    <tr>
+                        <td> </td>
+                        <td></td>
+                        <td>&nbsp;</td>
+                        <td>x</td>
+                        <td>x</td>
+                        <td>/backup/import</td>
+                        <td>import backup config</td>
+                    </tr>
+                    </tbody>
+                </table>
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{{template "footer" .}}

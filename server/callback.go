@@ -37,7 +37,7 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		break
 	case mysql.XID_EVENT:
 		db.CallbackDoCommit(data)
-		break
+		return
 	default:
 		break
 	}

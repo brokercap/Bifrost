@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.3"
-const BIFROST_VERION = "v1.6.3"
+const VERSION  = "v1.6.4"
+const BIFROST_VERION = "v1.6.4"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -463,7 +463,6 @@ func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginD
 	}else{
 		This.p.Data.CommitData[n0] = data
 	}
-	log.Println("Commit:",*data)
 	return nil, nil, nil
 }
 

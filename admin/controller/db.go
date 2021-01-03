@@ -359,3 +359,24 @@ func (c *DBController) GetLastPosition() {
 	}
 	return
 }
+
+// 获取mysql version
+func (c *DBController) GetVersion() {
+	result := ResultDataStruct{Status: 0, Msg: "error", Data: nil}
+	defer func() {
+		c.SetJsonData(result)
+		c.StopServeJSON()
+	}()
+	DbName := c.Ctx.Request.Form.Get("DbName")
+	dbObj := server.GetDbInfo(DbName)
+	if dbObj == nil {
+		result.Msg = DbName + " no exsit"
+		return
+	}
+	dbconn := DBConnect(dbObj.ConnectUri)
+	if dbconn == nil {
+		result.Msg = "db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！"
+		return
+	}
+	result = ResultDataStruct{Status: 1, Msg: "success", Data: GetMySQLVersion(dbconn)}
+}
