@@ -1,3 +1,11 @@
+v1.6.4-release   2021-01-03
+===========================
+1. 修复一个全量任务设置多线程同步造成的致命bug
+2. fixed TRANSACTION_CONTEXT_EVENT,VIEW_CHANGE_EVENT,XA_PREPARE_LOG_EVENT filter error
+3. add mysql version show
+4. add http api doc
+5. web view update and other bugs fixed
+
 v1.6.3-release   2020-12-27
 ===========================
 1. 修复plugin mysql 主键非自增的时候丢数据的bug
