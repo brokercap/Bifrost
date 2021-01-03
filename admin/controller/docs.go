@@ -28,3 +28,8 @@ func (c *DocsController) Index() {
 	c.SetData("Title", "docs")
 	c.AddAdminTemplate("docs.html","header.html","footer.html")
 }
+
+func (c *DocsController) ApiDocIndex() {
+	c.SetData("Title", "api_docs")
+	c.AddAdminTemplate("api.doc.html","header.html","footer.html")
+}

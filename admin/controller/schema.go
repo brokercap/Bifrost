@@ -411,3 +411,31 @@ func ShowTableCreate(db mysql.MysqlConnection, schema, table string) string {
 	}
 	return createSQL
 }
+
+func GetMySQLVersion(db mysql.MysqlConnection) string {
+	sql := "SELECT version()"
+	stmt, err := db.Prepare(sql)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("sql:%s, err:%v\n", sql, err)
+		return ""
+	}
+	defer rows.Close()
+	var version string
+	for {
+		dest := make([]driver.Value, 1, 1)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		version = dest[0].(string)
+		break
+	}
+	return version
+}

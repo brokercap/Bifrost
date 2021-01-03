@@ -263,15 +263,14 @@ func (c *HistoryController) CheckWhere() {
 		c.StopServeJSON()
 	}()
 	var err error
-	var Property history.HistoryProperty
-	if Property.Where == "" {
+	if param.Property.Where == "" {
 		result = ResultDataStruct{Status: 1, Msg: "success", Data: param.Id}
 		return
 	}
-	err = history.CheckWhere(param.DbName, param.SchemaName, param.TableName, Property.Where)
+	err = history.CheckWhere(param.DbName, param.SchemaName, param.TableName, param.Property.Where)
 	if err != nil {
 		result.Msg = err.Error()
 		return
 	}
-	result = ResultDataStruct{Status: 1, Msg: "success", Data: param.Id}
+	result = ResultDataStruct{Status: 1, Msg: "success", Data: 0}
 }

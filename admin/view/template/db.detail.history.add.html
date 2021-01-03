@@ -217,7 +217,7 @@
                         alert(data.msg);
                     }
                 };
-                var ajaxParam =  {DbName:DbName,SchemaName:SchemaName,TableName:TableName,TableNames:TableNames,property:Property,ToserverIds:ToServerIds};
+                var ajaxParam =  {DbName:DbName,SchemaName:SchemaName,TableName:TableName,TableNames:TableNames,Property:Property,ToserverIds:ToServerIds};
                 Ajax("POST",url, ajaxParam,callback,true);
             }
     );

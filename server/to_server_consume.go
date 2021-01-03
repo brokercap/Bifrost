@@ -48,16 +48,15 @@ func (This *ToServer) ConsumeToServer(db *db,SchemaName string,TableName string)
 }
 
 func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName string) {
-	var MyConsumerId uint16
+	var MyConsumerId int
 	This.Lock()
-	if This.CosumerPluginParamMap == nil{
-		This.CosumerPluginParamMap = make(map[uint16]interface{},0)
+	if This.cosumerPluginParamArr == nil{
+		This.cosumerPluginParamArr = make([]interface{},0)
 	}
 	This.ThreadCount++
-	MyConsumerId = This.CosumerIdInrc
-	This.CosumerPluginParamMap[MyConsumerId] = nil
- 	This.CosumerIdInrc++
- 	//强制给参数 加入  BifrostMustBeSuccess 保留参数字段
+	This.cosumerPluginParamArr = append(This.cosumerPluginParamArr,nil)
+	MyConsumerId = len(This.cosumerPluginParamArr) - 1
+	//强制给参数 加入  BifrostMustBeSuccess 保留参数字段
 	if This.PluginParam != nil {
 		This.PluginParam["BifrostMustBeSuccess"] = This.MustBeSuccess
 		This.PluginParam["BifrostFilterQuery"] = This.FilterQuery
@@ -77,9 +76,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 		if ThreadCountDecrDone == false{
 			This.ThreadCount--
 		}
-		delete(This.CosumerPluginParamMap,MyConsumerId)
-		if This.ThreadCount == 0{
-			This.CosumerIdInrc = 0
+		if This.ThreadCount == 0 {
+			This.cosumerPluginParamArr = nil
+		}else{
+			This.cosumerPluginParamArr[MyConsumerId] = nil
 		}
 		This.Unlock()
 	}()
@@ -309,9 +309,9 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 						break
 					} else {
 						/*
-						if i == 0{
-							log.Println("PopFileQueue first: ",*data0)
-						}
+							if i == 0{
+								log.Println("PopFileQueue first: ",*data0)
+							}
 						*/
 						// 这里为什么要判断一下位点，是因为文件队列是要整个文件的数据都被从加载到内存后才会 删除文件
 						// 那有一种可能，一个文件还没被完全加载完，进程就被重启了呢？那重启后，是不是旧的数据会被重新读取吗？
@@ -545,22 +545,20 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 }
 
 //从插件实例池中获取一个插件实例
-func (This *ToServer) getPluginAndSetParam(MyConsumerId uint16) (PluginConn *plugin.ToServerConn,err error) {
+func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin.ToServerConn,err error) {
 	PluginConn = plugin.GetPlugin(This.ToServerKey)
 	if PluginConn == nil{
 		return nil,fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
-	This.RLock()
-	defer This.RUnlock()
-	if This.CosumerPluginParamMap[MyConsumerId] == nil {
-		This.CosumerPluginParamMap[MyConsumerId],err = PluginConn.GetConn().SetParam(This.PluginParam)
+	if This.cosumerPluginParamArr[int(MyConsumerId)] == nil {
+		This.cosumerPluginParamArr[int(MyConsumerId)],err = PluginConn.GetConn().SetParam(This.PluginParam)
 	}else{
-		_, err = PluginConn.GetConn().SetParam(This.CosumerPluginParamMap[MyConsumerId])
+		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[int(MyConsumerId)])
 	}
 	return
 }
 
-func (This *ToServer) timeOutCommit(MyConsumerId uint16) ( LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType, err error) {
+func (This *ToServer) timeOutCommit(MyConsumerId int) ( LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType, err error) {
 	defer func() {
 		if err2 := recover();err2 != nil {
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
@@ -580,7 +578,7 @@ func (This *ToServer) timeOutCommit(MyConsumerId uint16) ( LastSuccessCommitData
 }
 
 /*跳过位点*/
-func (This *ToServer) SkipBinlog(MyConsumerId uint16,SkipErrData *pluginDriver.PluginDataType) (err error){
+func (This *ToServer) SkipBinlog(MyConsumerId int,SkipErrData *pluginDriver.PluginDataType) (err error){
 	defer func() {
 		if err2 := recover();err2 != nil {
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
@@ -598,7 +596,7 @@ func (This *ToServer) SkipBinlog(MyConsumerId uint16,SkipErrData *pluginDriver.P
 }
 
 
-func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyConsumerId uint16,retry bool) ( lastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error){
+func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyConsumerId int,retry bool) ( lastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error){
 	defer func() {
 		if err2 := recover();err2 != nil{
 			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
