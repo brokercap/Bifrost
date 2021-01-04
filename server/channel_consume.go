@@ -172,6 +172,7 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) (
 		Query:data.Query,
 		Gtid:data.Gtid,
 		Pri:data.Pri,
+		ColumnMapping: data.ColumnMapping,
 		EventID: data.EventID,
 	}
 	return

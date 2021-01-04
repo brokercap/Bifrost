@@ -381,6 +381,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							Rows:make([]map[string]interface{},1),
 							Gtid: data.Gtid,
 							Pri: data.Pri,
+							ColumnMapping: data.ColumnMapping,
 							EventID: data.EventID,
 						}
 						if n0 == n1{
@@ -409,6 +410,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							Rows:make([]map[string]interface{},2),
 							Gtid: data.Gtid,
 							Pri: data.Pri,
+							ColumnMapping: data.ColumnMapping,
 							EventID: data.EventID,
 						}
 						if n0 == n1-2{
@@ -505,6 +507,7 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			Rows:make([]map[string]interface{},1),
 			Gtid: data.Gtid,
 			Pri: data.Pri,
+			ColumnMapping: data.ColumnMapping,
 			EventID: data.EventID,
 		}
 		newData.Rows[0] = m
@@ -519,6 +522,7 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			Rows:make([]map[string]interface{},2),
 			Gtid: data.Gtid,
 			Pri: data.Pri,
+			ColumnMapping: data.ColumnMapping,
 			EventID: data.EventID,
 		}
 		m_before := make(map[string]interface{})

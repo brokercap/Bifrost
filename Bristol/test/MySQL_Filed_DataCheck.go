@@ -16,7 +16,7 @@ import (
 	"regexp"
 )
 
-const VERSION  = "1.6.1"
+const VERSION  = "1.7.0"
 
 var errDataList []string
 
@@ -163,6 +163,7 @@ type Column struct {
 	CharacterMaximumLength int
 	NumbericPrecision int
 	Fsp				  int
+	IsNullable string
 	Value interface{}
 }
 
@@ -227,7 +228,7 @@ func  GetTimeAndNsen(dataType string,fsp int) string {
 }
 
 func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table string) (autoIncrementField string,sqlstring string, data []driver.Value,columnData map[string]*Column,ColumnList []Column){
-	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
+	sql := "SELECT COLUMN_NAME,COLUMN_KEY,COLUMN_TYPE,CHARACTER_SET_NAME,COLLATION_NAME,NUMERIC_SCALE,EXTRA,COLUMN_DEFAULT,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,IS_NULLABLE FROM `information_schema`.`COLUMNS` WHERE TABLE_SCHEMA = '"+schema+"' AND  table_name = '"+table+"'"
 	data = make([]driver.Value,0)
 	stmt,err := db.Prepare(sql)
 	columnList := make([]Column,0)
@@ -247,7 +248,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	columnData = make(map[string]*Column,0)
 	var sqlk ,sqlv_,sqlval = "","",""
 	for {
-		dest := make([]driver.Value, 11, 11)
+		dest := make([]driver.Value, 12, 12)
 		err := rows.Next(dest)
 		if err != nil {
 			break
@@ -264,6 +265,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		var DATA_TYPE string
 		var CHARACTER_MAXIMUM_LENGTH int
 		var NUMERIC_PRECISION int
+		var IS_NULLABLE string
 
 		COLUMN_NAME = fmt.Sprint(dest[0])
 		COLUMN_KEY = fmt.Sprint(dest[1])
@@ -356,6 +358,11 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 		default:
 			break
 		}
+		if dest[11] == nil{
+			IS_NULLABLE = "NO"
+		}else{
+			IS_NULLABLE = dest[11].(string)
+		}
 
 		columnType := &Column{
 			ColumnName: COLUMN_NAME,
@@ -376,6 +383,7 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 			CharacterMaximumLength:CHARACTER_MAXIMUM_LENGTH,
 			NumbericPrecision:NUMERIC_PRECISION,
 			Fsp:fsp,
+			IsNullable:IS_NULLABLE,
 		}
 		columnData[COLUMN_NAME] = columnType
 		columnList = append(columnList,*columnType)

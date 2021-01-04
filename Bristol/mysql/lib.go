@@ -9,6 +9,7 @@ type tableStruct struct {
 	Pri 					[]string
 	ColumnSchemaTypeList 	[]*ColumnInfo
 	needReload				bool
+	ColumnMapping			map[string]string
 }
 
 type ColumnInfo struct {
@@ -49,6 +50,7 @@ type EventReslut struct {
 	BinlogPosition uint32
 	Gtid	   	   string
 	Pri			   []string
+	ColumnMapping  map[string]string
 	EventID		   uint64				// 事件ID
 }
 

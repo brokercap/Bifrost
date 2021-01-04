@@ -16,7 +16,7 @@ import (
 	"math/rand"
 )
 
-var url string = "tcp://192.168.220.148:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://192.168.220.158:9000?Database=test&debug=true&compress=1"
 var engine  string = "MergeTree()"
 
 

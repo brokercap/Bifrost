@@ -254,6 +254,7 @@ type History struct {
 	TableCountSuccess	int		// 已经成功的表数量
 	selectStatus		bool	// 拉数据协程状态，true 为已拉完
 	SelectRowsCount		uint64	// 成功拉取多少条数据
+	ColumnMapping		map[string]string		// 表字段类型
 }
 
 func Start(dbName string,ID int) error {
@@ -329,8 +330,11 @@ func (This *History) Start() error {
 		for {
 			This.CurrentTableName = This.TableNameArr[This.TableCountSuccess].TableName
 			This.Lock()
-			if This.Status == HISTORY_STATUS_SELECT_STOPING || This.Status == HISTORY_STATUS_KILLED  || This.Status == HISTORY_STATUS_SELECT_STOPED {
+			switch This.Status {
+			case HISTORY_STATUS_HALFWAY,HISTORY_STATUS_SELECT_STOPING,HISTORY_STATUS_SELECT_STOPED,HISTORY_STATUS_KILLED :
 				This.Unlock()
+				return
+			default:
 				break
 			}
 			This.NowStartI = 0
@@ -346,10 +350,14 @@ func (This *History) Start() error {
 					This.Status = HISTORY_STATUS_HALFWAY
 				}
 			}
-			if This.Status == HISTORY_STATUS_HALFWAY {
+			This.Lock()
+			switch This.Status {
+			case HISTORY_STATUS_HALFWAY,HISTORY_STATUS_SELECT_STOPING,HISTORY_STATUS_SELECT_STOPED,HISTORY_STATUS_KILLED :
+				This.Unlock()
+				return
+			default:
 				break
 			}
-			This.Lock()
 			This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableNameArr[This.TableCountSuccess].SelectCount
 			This.TableCountSuccess++
 			This.Unlock()
@@ -360,13 +368,6 @@ func (This *History) Start() error {
 		}
 	}()
 
-	return nil
-}
-
-func (This *History) Stop() error {
-	This.Lock()
-	This.Status = "killed"
-	This.Unlock()
 	return nil
 }
 
@@ -383,10 +384,59 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 
 	This.Fields = GetSchemaTableFieldList(db,This.SchemaName,This.CurrentTableName)
 	This.TablePriArr = make([]string,0)
+	This.ColumnMapping = make(map[string]string,0)
 	for _,v := range This.Fields{
 		if strings.ToUpper(*v.COLUMN_KEY) == "PRI"{
 			This.TablePriArr = append(This.TablePriArr,*v.COLUMN_NAME)
 		}
+		var columnMappingType string
+		switch *v.DATA_TYPE {
+		case "tinyint":
+			if strings.Index(*v.COLUMN_TYPE,"unsigned") >= 0 {
+				columnMappingType = "uint8"
+			} else {
+				if *v.COLUMN_TYPE == "tinyint(1)" {
+					columnMappingType = "bool"
+				}else{
+					columnMappingType = "int8"
+				}
+			}
+		case "smallint":
+			if strings.Index(*v.COLUMN_TYPE,"unsigned") >= 0 {
+				columnMappingType = "uint16"
+			} else {
+				columnMappingType = "int16"
+			}
+		case "mediumint":
+			if strings.Index(*v.COLUMN_TYPE,"unsigned") >= 0 {
+				columnMappingType = "uint24"
+			} else {
+				columnMappingType = "int24"
+			}
+		case "int":
+			if strings.Index(*v.COLUMN_TYPE,"unsigned") >= 0 {
+				columnMappingType = "uint32"
+			} else {
+				columnMappingType = "int32"
+			}
+		case "bigint":
+			if strings.Index(*v.COLUMN_TYPE,"unsigned") >= 0 {
+				columnMappingType = "uint64"
+			} else {
+				columnMappingType = "int64"
+			}
+		case "numeric" :
+			columnMappingType = strings.Replace(*v.COLUMN_TYPE,"numeric","decimal",1)
+		case "real" :
+			columnMappingType = strings.Replace(*v.COLUMN_TYPE,"real","double",1)
+		default:
+			columnMappingType = *v.COLUMN_TYPE
+			break
+		}
+		if v.IS_NULLABLE != nil && *v.IS_NULLABLE != "NO"  {
+			columnMappingType = "Nullable("+columnMappingType+")"
+		}
+		This.ColumnMapping[*v.COLUMN_NAME] = columnMappingType
 	}
 	//假如只有一个主键并且主键自增的情况，找出这个主键最小值和最大值，只支持 无符号的数字。有符号的不支持
 	if len(This.TablePriArr) > 0{
