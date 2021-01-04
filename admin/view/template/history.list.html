@@ -15,12 +15,12 @@
                 <div class="ibox-title">
                     <h5>
                         History List
-                    {{if ne .TableName ""}}
-                    {{.TableName}} -
-                    {{end}}
-                    {{if ne .SchemaName ""}}
-                    {{.SchemaName}} -
-                    {{end}}
+                        {{if ne .TableName ""}}
+                            {{.TableName}} -
+                        {{end}}
+                        {{if ne .SchemaName ""}}
+                            {{.SchemaName}} -
+                        {{end}}
 
                     </h5>
 
@@ -28,9 +28,9 @@
                     <div style="float: left; margin-top: -10px; margin-left: 10px">
                         <select class="form-control" name="DbName" id="DbName" {{if ne .SchemaName ""}}disabled{{end}}>
                             <option value="" > 数据源 </option>
-                        {{range $i, $db := .DbList}}
-                            <option value="{{$db.Name}}"> {{$db.Name}} </option>
-                        {{end}}
+                            {{range $i, $db := .DbList}}
+                                <option value="{{$db.Name}}"> {{$db.Name}} </option>
+                            {{end}}
                         </select>
 
                     </div>
@@ -38,9 +38,9 @@
 
                     <div style="float: left; margin-top: -10px; margin-left: 10px">
                         <select class="form-control" name="status" id="status">
-                        {{range $i, $status := .StatusList}}
-                            <option value="{{$status}}"> {{$status}} </option>
-                        {{end}}
+                            {{range $i, $status := .StatusList}}
+                                <option value="{{$status}}"> {{$status}} </option>
+                            {{end}}
                         </select>
 
                     </div>
@@ -80,106 +80,106 @@
                             </thead>
                             <tbody>
                             {{range $i, $v := .HistoryList}}
-                            <tr id="ToServer_{{$i}}">
-                                <td>{{$v.ID}}</td>
-                                <td>{{$v.DbName}}</td>
-                                <td>{{$v.SchemaName}}</td>
-                                <td>
-                                <p>{{$v.TableName}}</p>
-                                    {{if ne $v.TableName $v.TableNames}}
-                                        {{range $k,$tableInfo := $v.TableNameArr}}
-                                            {{if eq $k $v.TableCountSuccess }}
-                                            <p style="color: #F00; font-weight: bold" title="current table select ( RowsCount / SelectedCount )">{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}})</p>
-                                            {{end}}
-                                            {{if lt $k $v.TableCountSuccess }}
-                                                <p style="color: #1ab394" title="select over ( RowsCount / SelectedCount )" >{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}}) </p>
-                                            {{end}}
-                                            {{if gt $k $v.TableCountSuccess }}
-                                                <p>{{$tableInfo.TableName}}</p>
+                                <tr id="ToServer_{{$i}}">
+                                    <td>{{$v.ID}}</td>
+                                    <td>{{$v.DbName}}</td>
+                                    <td>{{$v.SchemaName}}</td>
+                                    <td>
+                                        <p>{{$v.TableName}}</p>
+                                        {{if ne $v.TableName $v.TableNames}}
+                                            {{range $k,$tableInfo := $v.TableNameArr}}
+                                                {{if eq $k $v.TableCountSuccess }}
+                                                    <p style="color: #F00; font-weight: bold" title="current table select ( RowsCount / SelectedCount )">{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}})</p>
+                                                {{end}}
+                                                {{if lt $k $v.TableCountSuccess }}
+                                                    <p style="color: #1ab394" title="select over ( RowsCount / SelectedCount )" >{{$tableInfo.TableName}} ({{$tableInfo.RowsCount}} / {{$tableInfo.SelectCount}}) </p>
+                                                {{end}}
+                                                {{if gt $k $v.TableCountSuccess }}
+                                                    <p>{{$tableInfo.TableName}}</p>
+                                                {{end}}
                                             {{end}}
                                         {{end}}
-                                    {{end}}
-                                </td>
-                                <td>
-                                    <p>CurrentTableName：{{$v.CurrentTableName}}</p>
-                                    <p>TableCount：{{$v.TableCount}}</p>
-                                    <p>SuccessCount：{{$v.TableCountSuccess}}</p>
-                                    <p title="已经成功拉取条数">SelectRowsCount：{{$v.SelectRowsCount}}</p>
-                                </td>
-                                <td>
-                                    <p>ThreadNum: {{$v.Property.ThreadNum}}</p>
-                                    <p>ThreadCountPer: {{$v.Property.ThreadCountPer}}</p>
-                                    <p>LimitOptimize: {{$v.Property.LimitOptimize}}</p>
-                                    <p>Where:</p>
-                                    <p>{{$v.Property.Where}}</p>
-                                </td>
-                                <td>{{$v.NowStartI}}</td>
-                                <td>
-                                    {{range $k,$poolInfo := $v.ThreadPool}}
-                                    <p>Num:{{$poolInfo.Num}}</p>
-                                    <p>NowStartI:{{$poolInfo.NowStartI}}</p>
-                                    <p>Error:{{$poolInfo.Error}}</p>
-                                        <p>&nbsp;</p>
-                                    {{end}}
+                                    </td>
+                                    <td>
+                                        <p>CurrentTableName：{{$v.CurrentTableName}}</p>
+                                        <p>TableCount：{{$v.TableCount}}</p>
+                                        <p>SuccessCount：{{$v.TableCountSuccess}}</p>
+                                        <p title="已经成功拉取条数">SelectRowsCount：{{$v.SelectRowsCount}}</p>
+                                    </td>
+                                    <td>
+                                        <p>ThreadNum: {{$v.Property.ThreadNum}}</p>
+                                        <p>ThreadCountPer: {{$v.Property.ThreadCountPer}}</p>
+                                        <p>LimitOptimize: {{$v.Property.LimitOptimize}}</p>
+                                        <p>Where:</p>
+                                        <p>{{$v.Property.Where}}</p>
+                                    </td>
+                                    <td>{{$v.NowStartI}}</td>
+                                    <td>
+                                        {{range $k,$poolInfo := $v.ThreadPool}}
+                                            <p>Num:{{$poolInfo.Num}}</p>
+                                            <p>NowStartI:{{$poolInfo.NowStartI}}</p>
+                                            <p>Error:{{$poolInfo.Error}}</p>
+                                            <p>&nbsp;</p>
+                                        {{end}}
 
-                                </td>
-                                <td>
-                                {{ $len := len $v.ToServerList }}
-                                {{if eq $len 0}}
-                                    {{$v.ToServerIDList}}
-                                {{else}}
-                                    {{range $k,$toServer := $v.ToServerList}}
-                                        <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
-                                        <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
-                                        <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
-                                        <p>Error:{{$toServer.ToServerInfo.Error}}</p>
-                                    {{end}}
-                                {{end}}
-                                </td>
-                                <td>{{$v.ToServerTheadCount}}</td>
-                                <td>
-                                {{range $k,$toServer := $v.ToServerList}}
-                                    <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
-                                    <p>ToServerKey:{{$toServer.ToServerInfo.ToServerKey}}</p>
-                                    <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
-                                    <p>QueueMsgCount:{{$toServer.ToServerInfo.QueueMsgCount}}</p>
-                                    <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
-                                    <p>Error:{{$toServer.ToServerInfo.Error}}</p>
-                                    <p>ErrorWaitData:{{$toServer.ToServerInfo.ErrorWaitData}}</p>
-                                    <p>&nbsp;</p>
-                                {{end}}
+                                    </td>
+                                    <td>
+                                        {{ $len := len $v.ToServerList }}
+                                        {{if eq $len 0}}
+                                            {{$v.ToServerIDList}}
+                                        {{else}}
+                                            {{range $k,$toServer := $v.ToServerList}}
+                                                <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
+                                                <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
+                                                <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
+                                                <p>Error:{{$toServer.ToServerInfo.Error}}</p>
+                                            {{end}}
+                                        {{end}}
+                                    </td>
+                                    <td>{{$v.ToServerTheadCount}}</td>
+                                    <td>
+                                        {{range $k,$toServer := $v.ToServerList}}
+                                            <p>ToServerID:{{$toServer.ToServerInfo.ToServerID}}</p>
+                                            <p>ToServerKey:{{$toServer.ToServerInfo.ToServerKey}}</p>
+                                            <p>PluginName:{{$toServer.ToServerInfo.PluginName}}</p>
+                                            <p>QueueMsgCount:{{$toServer.ToServerInfo.QueueMsgCount}}</p>
+                                            <p>ThreadCount:{{$toServer.ToServerInfo.ThreadCount}}</p>
+                                            <p>Error:{{$toServer.ToServerInfo.Error}}</p>
+                                            <p>ErrorWaitData:{{$toServer.ToServerInfo.ErrorWaitData}}</p>
+                                            <p>&nbsp;</p>
+                                        {{end}}
 
-                                </td>
-                                <td>{{$v.StartTime}}</td>
-                                <td>{{$v.OverTime}}</td>
-                                <td>{{$v.Status}}</td>
-                                <td>
-                                <p>
-                                    {{if eq $v.Status "running"}}
-                                        <button data-toggle="button" class="btn-sm btn-warning stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'stop')" >Stop</button>
-                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
-                                    {{else if eq $v.Status "stoping"}}
-                                        <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
-                                    {{else if eq $v.Status "stoped"}}
-                                        <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
-                                        <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
-                                    {{else}}
-                                        <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
-                                        <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
-                                    {{end}}
-                                </p>
+                                    </td>
+                                    <td>{{$v.StartTime}}</td>
+                                    <td>{{$v.OverTime}}</td>
+                                    <td>{{$v.Status}}</td>
+                                    <td>
+                                        <p>
+                                            {{if eq $v.Status "running"}}
+                                                <button data-toggle="button" class="btn-sm btn-warning stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'stop')" >Stop</button>
+                                                <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                            {{else if eq $v.Status "stoping"}}
+                                                <button data-toggle="button" class="btn-sm btn-danger stopBtn" type="button" onclick="DoChangeHistoryStatus(this,'kill')" >Kill</button>
+                                            {{else if eq $v.Status "stoped"}}
+                                                <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
+                                                <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
+                                            {{else}}
+                                                <button data-toggle="button" class="btn-sm btn-danger delBtn" type="button" onclick="DoChangeHistoryStatus(this,'del')" >Del</button>
+                                                <button data-toggle="button" class="btn-sm btn-primary startBtn" type="button" onclick="DoChangeHistoryStatus(this,'start')" >Start</button>
+                                            {{end}}
+                                        </p>
 
                                         <p>
-                                        <a href="/db/detail?DbName={{$v.DbName}}&schema={{$v.SchemaName}}&TableName={{$v.TableName}}">
-                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
-                                        </a>
+                                            <a href="/db/detail?DbName={{$v.DbName}}&SchemaName={{$v.SchemaName}}&TableName={{$v.TableName}}">
+                                                <button data-toggle="button" class="btn-sm btn-primary" type="button">Detail</button>
+                                            </a>
 
-                                        <a href="/flow/index?DbName={{$v.DbName}}&schema={{$v.SchemaName}}&TableName={{$v.TableName}}">
-                                            <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
-                                        </a>
+                                            <a href="/flow/index?DbName={{$v.DbName}}&SchemaName={{$v.SchemaName}}&TableName={{$v.TableName}}">
+                                                <button data-toggle="button" class="btn-sm btn-primary" type="button">Flow</button>
+                                            </a>
                                         </p>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
                             {{end}}
                             </tbody>
                         </table>
@@ -203,7 +203,7 @@
 <script type="text/javascript">
     var TableName="{{.TableName}}";
     var SchemaName = "{{.SchemaName}}";
-    
+
     function DoRefresh() {
         var DbName = $("#DbName").val();
         var status = $("#status").val();
@@ -212,9 +212,9 @@
 
     $(function() {
         $("#DbName,#status").change(
-                function () {
-                    DoRefresh();
-                }
+            function () {
+                DoRefresh();
+            }
         );
     });
 
@@ -236,7 +236,7 @@
         }
         var url = "/history/"+status;
         var trObj = $(obj).parent().parent().parent();
-        var DbName = trObj.children().eq(1).html();                                                                
+        var DbName = trObj.children().eq(1).html();
         var Id = trObj.children().eq(0).html();
         var callback = function (data) {
             if(!data.status){
