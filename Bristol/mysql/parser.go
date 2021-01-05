@@ -210,7 +210,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		if err != nil {
 			log.Println("row event err:", err)
 		}
-		if _, ok := parser.tableSchemaMap[rowsEvent.tableId]; ok {
+		if tableInfo, ok := parser.tableSchemaMap[rowsEvent.tableId]; ok {
 			event = &EventReslut{
 				Header:         rowsEvent.header,
 				BinlogFileName: parser.currentBinlogFileName,
@@ -218,7 +218,8 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				SchemaName:     parser.lastMapEvent.schemaName,
 				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
-				Pri:			parser.tableSchemaMap[rowsEvent.tableId].Pri,
+				Pri:			tableInfo.Pri,
+				ColumnMapping:  tableInfo.ColumnMapping,
 			}
 		} else {
 			event = &EventReslut{
@@ -246,7 +247,6 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			Rows:           nil,
 			Gtid:			parser.gtid,
 		}
-		log.Println("XID_EVENT:",event.Gtid)
 		break
 	default:
 		var genericEvent *GenericEvent
