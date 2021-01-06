@@ -152,3 +152,52 @@ func TestPluginDataType_MarshalJSON3(t *testing.T) {
 	}
 	t.Log(string(b))
 }
+
+func TestDeepCopy(t *testing.T) {
+	row0 := make(map[string]interface{},0)
+	row0["id"] = uint64(1)
+	row0["int64"] = int64(9007199254740992)
+	row0["uint64"] = uint64(9007199254740993)
+	row0["float32"] = float32(8823.22)
+	row0["float64"] = float64(98823.22)
+	row0["string"] = "sdfsdfsdf中国人"
+	row0["set"] = []string{"aa","bb"}
+
+	ColumnMapping := make(map[string]string,0)
+	ColumnMapping["id"] = "uint64"
+	ColumnMapping["int64"] = "int64"
+	ColumnMapping["uint64"] = "Nullable(uint64)"
+	ColumnMapping["float32"] = "float"
+	ColumnMapping["float64"] = "double"
+	ColumnMapping["string"] = "varchar(200)"
+	ColumnMapping["set"] = "set(\"aa\",\"bb\",\"cc\")"
+
+	data0 := &PluginDataType{
+		Timestamp 		: uint32(time.Now().Unix()),
+		EventType 		: "insert",
+		Rows            : []map[string]interface{}{row0},
+		Query          	: "",
+		SchemaName     	: "bifrost_test",
+		TableName      	: "json_test",
+		BinlogFileNum 	: 0,
+		BinlogPosition 	: 0,
+		ColumnMapping	: ColumnMapping,
+	}
+
+	_, err := json.Marshal(data0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	switch data0.Rows[0]["id"].(type) {
+	case uint64:
+		t.Log("id type uint64","success")
+		break
+	default:
+		t.Fatal("id type uint64 != " , reflect.ValueOf(data0.Rows[0]["id"]).Kind())
+	}
+
+	t.Log(data0)
+
+	t.Log("success")
+}

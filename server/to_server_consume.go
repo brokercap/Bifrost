@@ -575,10 +575,12 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 	if PluginConn == nil{
 		return nil,fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
-	if This.cosumerPluginParamArr[int(MyConsumerId)] == nil {
-		This.cosumerPluginParamArr[int(MyConsumerId)],err = PluginConn.GetConn().SetParam(This.PluginParam)
+	This.Lock()
+	defer This.Unlock()
+	if This.cosumerPluginParamArr[MyConsumerId] == nil {
+		This.cosumerPluginParamArr[MyConsumerId],err = PluginConn.GetConn().SetParam(This.PluginParam)
 	}else{
-		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[int(MyConsumerId)])
+		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[MyConsumerId])
 	}
 	return
 }
@@ -665,4 +667,3 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyCons
 	}
 	return
 }
-

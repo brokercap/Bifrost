@@ -54,14 +54,14 @@ type consume_channel_obj struct {
 	sync.RWMutex
 	db      *db
 	c       *Channel
-	connMap map[string]pluginDriver.Driver
+	SchemaName string
+	TableName string
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
 	return &consume_channel_obj{
 		db:      c.db,
 		c:       c,
-		connMap: make(map[string]pluginDriver.Driver, 0),
 	}
 }
 
@@ -142,7 +142,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		case <-timer.C:
 			ToServerInfo.Lock()
 			defer ToServerInfo.Unlock()
-			ToServerInfo.InitFileQueue(This.db.Name, pluginData.SchemaName, pluginData.TableName)
+			ToServerInfo.InitFileQueue(This.db.Name, This.SchemaName, This.TableName)
 			ToServerInfo.AppendToFileQueue(pluginData)
 			ToServerInfo.FileQueueStatus = true
 			//log.Println("start FileQueueStatus = true;",*pluginData)
@@ -215,8 +215,11 @@ func (This *consume_channel_obj) consumeChannel() {
 			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
 			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
 			pluginData := This.transferToPluginData(&data)
+			This.SchemaName,This.TableName = pluginData.SchemaName,pluginData.TableName
 			This.sendToServerList(key,pluginData,countNum,EventSize)
+			This.SchemaName,This.TableName = pluginData.SchemaName,"*"
 			This.sendToServerList(AllTableKey,pluginData,countNum,EventSize)
+			This.SchemaName,This.TableName = "*","*"
 			This.sendToServerList(AllSchemaAndTablekey,pluginData,countNum,EventSize)
 
 			if This.db.killStatus == 1{

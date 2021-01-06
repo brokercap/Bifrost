@@ -9,11 +9,16 @@ import (
 	"strings"
 )
 
+func init()  {
+	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
+}
+
 // 深度拷贝对象
 func DeepCopy(dst, src interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
-	return err
+		return err
 	}
 	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
@@ -38,39 +43,39 @@ func (c *PluginDataType) MarshalJSON() (b []byte, err error) {
 	var ok bool
 	var mappingType string
 	/*
-	for _, row := range data.Rows {
-		for key,val := range row {
-			if val == nil {
-				continue
-			}
-			if mappingType,ok = data.ColumnMapping[key];ok {
-				switch mappingType {
-				case "uint64","Nullable(uint64)":
-					row[key] = fmt.Sprint(val)
-				case "int64","Nullable(int64)":
-					row[key] = fmt.Sprint(val)
-				case "uint32","Nullable(uint32)":
-					row[key] = fmt.Sprint(val)
-				case "int32","Nullable(int32)","int24","Nullable(int24)":
-					row[key] = fmt.Sprint(val)
-				case "uint16","Nullable(uint16)":
-					row[key] = fmt.Sprint(val)
-				case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
-					row[key] = fmt.Sprint(val)
-				case "uint8","Nullable(uint8)":
-					row[key] = fmt.Sprint(val)
-				case "int8","Nullable(int8)":
-					row[key] = fmt.Sprint(val)
-				default:
-					if strings.Index(mappingType,"bit") >= 0 {
+		for _, row := range data.Rows {
+			for key,val := range row {
+				if val == nil {
+					continue
+				}
+				if mappingType,ok = data.ColumnMapping[key];ok {
+					switch mappingType {
+					case "uint64","Nullable(uint64)":
 						row[key] = fmt.Sprint(val)
+					case "int64","Nullable(int64)":
+						row[key] = fmt.Sprint(val)
+					case "uint32","Nullable(uint32)":
+						row[key] = fmt.Sprint(val)
+					case "int32","Nullable(int32)","int24","Nullable(int24)":
+						row[key] = fmt.Sprint(val)
+					case "uint16","Nullable(uint16)":
+						row[key] = fmt.Sprint(val)
+					case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
+						row[key] = fmt.Sprint(val)
+					case "uint8","Nullable(uint8)":
+						row[key] = fmt.Sprint(val)
+					case "int8","Nullable(int8)":
+						row[key] = fmt.Sprint(val)
+					default:
+						if strings.Index(mappingType,"bit") >= 0 {
+							row[key] = fmt.Sprint(val)
+							break
+						}
 						break
 					}
-					break
 				}
 			}
 		}
-	}
 	*/
 
 	var key string

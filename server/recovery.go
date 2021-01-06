@@ -360,7 +360,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 						}
 						// 假如没有找到数据，或者文件队列里的最后一条数据，位点 对不上 ToServer里保存的数据，则认为数据是有异常的，则需要将 FileQueueStatus 修改为  false,清空文件队列数据
 						// 假如文件队列里最后一条数据和当前同步记录的进入 这个同步最后一个位点数据 相等，则不进行位点计算，随便其他 同步位点怎么来
-						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastBinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastBinlogPosition {
+						if lastDataEvent == nil || lastDataEvent.BinlogFileNum != toServerObj.LastQueueBinlog.BinlogFileNum || lastDataEvent.BinlogPosition != toServerObj.LastQueueBinlog.BinlogPosition {
 							toServerObj.FileQueueStatus = false
 						}
 					}
@@ -428,7 +428,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 			//假如key val存储中DB 的位点值存在 取大值
 			DBBinlog0 := CompareBinlogPositionAndReturnGreater(DBBinlog,DBLastBinlogPositionFromDB)
 			if DBBinlog0 == DBLastBinlogPositionFromDB {
-				log.Println("recovery binlog change4:",dbInfo.Name, " old BinlogFileNum:",LastDBBinlogFileNum," BinlogPosition:",db.binlogDumpPosition," GTID:",db.gtid, " new BinlogFileNum:",DBLastBinlogPositionFromDB.BinlogFileNum," BinlogPosition:",DBLastBinlogPositionFromDB.BinlogPosition," GITD:",DBLastBinlogPositionFromDB.GTID)
+				log.Println("recovery DBBinlog change:",dbInfo.Name, " old BinlogFileNum:",LastDBBinlogFileNum," BinlogPosition:",db.binlogDumpPosition," GTID:",db.gtid, " new BinlogFileNum:",DBLastBinlogPositionFromDB.BinlogFileNum," BinlogPosition:",DBLastBinlogPositionFromDB.BinlogPosition," GITD:",DBLastBinlogPositionFromDB.GTID)
 				DBBinlog = DBBinlog0
 			}
 		}
@@ -455,6 +455,7 @@ func recoveryData(data map[string]dbSaveInfo,isStop bool){
 		if LastBinlog.GTID != "" {
 			db.gtid = LastBinlog.GTID
 		}
+		db.binlogDumpPosition = LastBinlog.BinlogPosition
 		db.lastEventID = LastBinlog.EventID
 
 		//如果是性能测试配置，强制修改位点
