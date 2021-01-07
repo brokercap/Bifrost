@@ -550,6 +550,8 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 	if PluginConn == nil{
 		return nil,fmt.Errorf("Get Plugin:"+This.PluginName+" ToServerKey:"+ This.ToServerKey+ " err,return nil")
 	}
+	This.Lock()
+	defer This.Unlock()
 	if This.cosumerPluginParamArr[int(MyConsumerId)] == nil {
 		This.cosumerPluginParamArr[int(MyConsumerId)],err = PluginConn.GetConn().SetParam(This.PluginParam)
 	}else{
