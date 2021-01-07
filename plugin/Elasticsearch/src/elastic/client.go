@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -206,7 +205,7 @@ func (r *BulkRequest) bulk(buf *bytes.Buffer) error {
 
 	buf.Write(data)
 	buf.WriteByte('\n')
-	log.Println("data:", string(data))
+	// log.Println("data:", string(data))
 
 	switch r.Action {
 	case ActionDelete:
@@ -232,7 +231,7 @@ func (r *BulkRequest) bulk(buf *bytes.Buffer) error {
 		buf.Write(data)
 		buf.WriteByte('\n')
 	}
-	log.Println("data:", string(data))
+	// log.Println("data:", string(data))
 
 	return nil
 }
@@ -466,6 +465,20 @@ func (c *Client) Get(index string, id string) (*Response, error) {
 		url.QueryEscape(id))
 
 	return c.Do("GET", reqURL, nil)
+}
+
+// Get gets the item by ids.
+func (c *Client) GetMany(index string, ids []string) (*Response, error) {
+	reqURL := fmt.Sprintf("%s://%s/%s/_search", c.Protocol, c.Addr,
+		url.QueryEscape(index),
+	)
+
+	data := map[string]interface{}{"query": map[string]interface{}{
+		"terms": map[string]interface{}{
+			"id": ids,
+		},
+	}}
+	return c.Do("POST", reqURL, data)
 }
 
 // Update creates or updates the data

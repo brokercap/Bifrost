@@ -1,7 +1,6 @@
 package src
 
 import (
-	"database/sql/driver"
 	"fmt"
 	"log"
 	"math"
@@ -14,12 +13,13 @@ import (
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
+	"github.com/gogf/gf/frame/g"
 )
 
-var myConn Conn
+var myConn *Conn
 var conn pluginDriver.Driver
 var event *pluginTestData.Event
-var SchemaName = "bifrost_test"
+var SchemaName = "2bifrost_test"
 var TableName = "binlog_field_test"
 var EsIndexName = "{$SchemaName}--{$TableName}"
 var Url = "http://localhost:9200?user=root&password=rootroot"
@@ -32,7 +32,7 @@ func testBefore() {
 	event.SetSchema(SchemaName)
 	event.SetTable(TableName)
 	event.SetNoUint64(true)
-
+	myConn = conn.(*Conn)
 }
 
 func getParam(args ...bool) map[string]interface{} {
@@ -40,7 +40,7 @@ func getParam(args ...bool) map[string]interface{} {
 		"PrimaryKey":           "id",        //            string
 		"EsIndexName":          EsIndexName, //             string
 		"BifrostMustBeSuccess": true,        //  bool  // bifrost server 保留,数据是否能丢
-		"BatchSize":            15,          //             int
+		"BatchSize":            2,           //             int
 	}
 	return param
 }
@@ -161,68 +161,62 @@ func TestInsertNullAndChekcData(t *testing.T) {
 	e.SetIsNull(true)
 	insertdata := e.GetTestInsertData()
 	conn.Insert(insertdata, false)
+
 	_, _, err2 := conn.TimeOutCommit()
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-
+	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(insertdata.Rows[0]["id"]))
 	// c := NewClickHouseDBConn(url)
 	// dataList := c.GetTableDataList(insertdata.SchemaName, insertdata.TableName, "id="+fmt.Sprint(insertdata.Rows[0]["id"]))
-
-	// for k, v := range dataList {
-	// 	t.Log("k:", k)
-	// 	for key, val := range v {
-	// 		t.Log(key, val)
-	// 	}
-	// }
+	for k, v := range dataList.ResponseItem.Source {
+		t.Log("k, v:", k, v)
+	}
 	t.Log("success")
 }
 
 func TestCommitAndCheckData(t *testing.T) {
 	testBefore()
 	initSyncParam()
-	event := pluginTestData.NewEvent()
+
 	eventData := event.GetTestInsertData()
+	conn.Insert(eventData, true)
+	// g.Dump("eventData", eventData)
 	eventData = event.GetTestUpdateData()
 	conn.Update(eventData, false)
-	//conn.Insert(eventData)
 	_, _, err2 := conn.TimeOutCommit()
 	if err2 != nil {
 		t.Fatal(err2)
 	}
 
-	// m := eventData.Rows[len(eventData.Rows)-1]
-	// time.Sleep(1 * time.Second)
+	m := eventData.Rows[len(eventData.Rows)-1]
+	time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
-	// dataList := c.GetTableDataList(eventData.SchemaName, eventData.TableName, "id="+fmt.Sprint(m["id"]))
+	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(eventData.Rows[0]["id"]))
 
-	// if len(dataList) == 0 {
-	// 	t.Fatal("select data len == 0")
-	// }
+	resultData := make(map[string][]string, 0)
+	resultData["ok"] = make([]string, 0)
+	resultData["error"] = make([]string, 0)
 
-	// resultData := make(map[string][]string, 0)
-	// resultData["ok"] = make([]string, 0)
-	// resultData["error"] = make([]string, 0)
+	checkDataRight(m, dataList.ResponseItem.Source, resultData)
 
-	// checkDataRight(m, dataList[0], resultData)
+	for _, v := range resultData["ok"] {
+		t.Log(v)
+	}
 
-	// for _, v := range resultData["ok"] {
-	// 	t.Log(v)
-	// }
+	for _, v := range resultData["error"] {
+		t.Error(v)
+	}
 
-	// for _, v := range resultData["error"] {
-	// 	t.Error(v)
-	// }
-
-	// if len(resultData["error"]) == 0 {
-	// 	t.Log("test over;", "data is all right")
-	// } else {
-	// 	t.Error("test over;", " some data is error")
-	// }
+	if len(resultData["error"]) == 0 {
+		t.Log("test over;", "data is all right")
+	} else {
+		t.Error("test over;", " some data is error")
+	}
 
 }
 
-func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, resultData map[string][]string) {
+func checkDataRight(m map[string]interface{}, destMap map[string]interface{}, resultData map[string][]string) {
 	for columnName, v := range destMap {
 		if _, ok := m[columnName]; !ok {
 			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " not exsit"))
@@ -254,15 +248,29 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 			if math.Abs(floatDest-floatSource) < 0.05 {
 				result = true
 			}
+			// g.Dump("floatDest,floatSource", floatDest, floatSource, math.Abs(floatDest-floatSource) < 0.05)
 			break
 
 		default:
 			switch v.(type) {
 			//这里需要去一次空格对比,因为有可能源是 带空格的字符串
-			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64:
-				if strings.Trim(fmt.Sprint(v), " ") == strings.Trim(fmt.Sprint(m[columnName]), " ") {
+			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
+				a, _ := strconv.Atoi(strings.Trim(fmt.Sprint(v), " "))
+				b, _ := strconv.Atoi(strings.Trim(fmt.Sprint(m[columnName]), " "))
+				g.Dump("a,b", a, b)
+
+				if a == b {
 					result = true
 				}
+				break
+			case float32, float64:
+				//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
+				floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
+				floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
+				if math.Abs(floatDest-floatSource) < 0.05 {
+					result = true
+				}
+				// g.Dump("floatDest,floatSource", floatDest, floatSource, math.Abs(floatDest-floatSource) < 0.05)
 				break
 			case time.Time:
 				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
@@ -272,8 +280,11 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 				}
 				break
 			default:
+
 				if fmt.Sprint(v) == fmt.Sprint(m[columnName]) {
 					result = true
+				} else {
+					g.Dump("v,m[columnName]", v, m[columnName], reflect.TypeOf(v), reflect.TypeOf(m[columnName]))
 				}
 				break
 			}
@@ -292,74 +303,84 @@ func TestRandDataAndCheck(t *testing.T) {
 
 	var n int = 1000
 
-	e := pluginTestData.NewEvent()
-
 	testBefore()
 
 	initSyncParam()
-
 	for i := 0; i < n; i++ {
 		var eventData *pluginDriver.PluginDataType
 		rand.Seed(time.Now().UnixNano() + int64(i))
 		switch rand.Intn(3) {
 		case 0:
-			eventData = e.GetTestInsertData()
+			eventData = event.GetTestInsertData()
 			conn.Insert(eventData, false)
 			break
 		case 1:
-			eventData = e.GetTestUpdateData()
+			eventData = event.GetTestUpdateData()
 			conn.Update(eventData, false)
 			break
 		case 2:
-			eventData = e.GetTestDeleteData()
+			eventData = event.GetTestDeleteData()
 			conn.Del(eventData, false)
 			break
 		case 3:
-			eventData = e.GetTestQueryData()
+			eventData = event.GetTestQueryData()
 			conn.Query(eventData, false)
 			break
 		}
 	}
 	conn.TimeOutCommit()
+	dataMap := event.GetDataMap()
+	g.Dump("dataMap ", len(dataMap))
 
+	ids := []string{}
+	for id := range dataMap {
+		ids = append(ids, fmt.Sprint(id))
+	}
+	g.Dump("ids ", len(ids))
+	g.Dump("ids ", len(ids))
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
 
+	time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
-	// dataList := c.GetTableDataList(SchemaName, TableName, "")
+	dataList, _ := myConn.conn.GetMany(myConn.p.EsIndexName, ids)
 
-	// count := uint64(len(dataList))
-	// if count != uint64(len(e.GetDataMap())) {
-	// 	for k, v := range e.GetDataMap() {
-	// 		t.Log(k, " ", v)
-	// 	}
-	// 	t.Fatal("ck Table Count:", count, " != srcDataCount:", len(e.GetDataMap()))
-	// }
+	count := uint64(len(dataList.ResponseItem.Source))
+	g.Dump("count ", count)
 
-	// destMap := make(map[string]map[string]driver.Value, 0)
+	if count != uint64(len(dataMap)) {
+		for k, v := range dataMap {
+			_, _ = k, v
+			// t.Log(k, " ", v)
+		}
+		t.Fatal("ck Table Count:", count, " != srcDataCount:", len(dataMap))
+	}
 
-	// for _, v := range dataList {
-	// 	destMap[fmt.Sprint(v["id"])] = v
-	// }
+	destMap := make(map[string]map[string]interface{}, 0)
 
-	// for _, data := range e.GetDataMap() {
-	// 	id := fmt.Sprint(data["id"])
-	// 	checkDataRight(data, destMap[id], resultData)
-	// }
+	for _, v := range dataList.ResponseItem.Source {
+		vv := v.(map[string]interface{})
+		destMap[fmt.Sprint(vv["id"])] = vv
+	}
 
-	// for _, v := range resultData["ok"] {
-	// 	t.Log(v)
-	// }
-	// if len(resultData["error"]) > 0 {
-	// 	for _, v := range resultData["error"] {
-	// 		t.Error(v)
-	// 	}
-	// }
+	for _, data := range dataMap {
+		id := fmt.Sprint(data["id"])
+		checkDataRight(data, destMap[id], resultData)
+	}
 
-	// t.Log("ck Table Count:", count, " srcDataCount:", len(e.GetDataMap()))
+	for _, v := range resultData["ok"] {
+		t.Log(v)
+	}
+	if len(resultData["error"]) > 0 {
+		for _, v := range resultData["error"] {
+			t.Error(v)
+		}
+	}
 
-	// t.Log("test over")
+	t.Log("ck Table Count:", count, " srcDataCount:", len(dataMap))
+
+	t.Log("test over")
 }
 
 //模拟正式环境刷数据
@@ -385,6 +406,8 @@ func TestCommitAndCheckData2(t *testing.T) {
 	testBefore()
 	initSyncParam()
 	event := pluginTestData.NewEvent()
+	event.SetNoUint64(true)
+
 	eventData := event.GetTestInsertData()
 	eventData.Rows[0]["testint"] = "1334　"
 	conn.Insert(eventData, false)

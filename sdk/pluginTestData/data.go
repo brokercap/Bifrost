@@ -213,10 +213,10 @@ func (This *Event) SetNoUint64(yes bool) *Event {
 			if tmp[ii].Unsigned && "bigint" == tmp[ii].DataType {
 				continue
 			}
+
 			This.ColumnList = append(This.ColumnList, tmp[ii])
 		}
 	}
-
 	return This
 }
 
@@ -345,9 +345,12 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 	columnData := make(map[string]interface{}, 0)
 
 	defer func() {
+		// g.Dump("columnData", columnData)
+
 		This.setDataToMap(columnData)
 	}()
 	for _, columnType := range columnList {
+
 		rand.Seed(time.Now().UnixNano())
 		var randResult int
 		if rand.Intn(2) >= 1 {
@@ -404,6 +407,7 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 			columnType.Value = nil
 			data = append(data, nil)
 			columnData[columnType.ColumnName] = columnType.Value
+
 		} else {
 			switch columnType.DataType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":

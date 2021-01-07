@@ -8,6 +8,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/gmallard/stompngo v1.0.11
 	github.com/go-redis/redis v6.15.5+incompatible
+	github.com/gogf/gf v1.15.0
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
@@ -15,7 +16,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
-	golang.org/x/sys v0.0.0-20181116152217-5ac8a444bdc5 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 )
 
