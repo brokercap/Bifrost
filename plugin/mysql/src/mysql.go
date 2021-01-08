@@ -257,13 +257,13 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key],nil
 	}
-	fields := This.conn.GetTableFields(data.SchemaName,data.TableName)
+	fields := This.conn.GetTableFields(SchemaName,data.TableName)
 	if This.conn.err != nil {
 		This.err = This.conn.err
 		return nil,This.err
 	}
 	if len(fields) == 0{
-		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit",data.SchemaName,data.TableName)
+		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit",SchemaName,data.TableName)
 		return nil,This.err
 	}
 	fieldList := make([]fieldStruct,len(fields))
@@ -305,7 +305,7 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 	p := &PluginParam0 {
 		Field: fieldList,
 		PriKey: priKeyList,
-		SchemaName: data.SchemaName,
+		SchemaName: SchemaName,
 		TableName: data.TableName,
 		SchemaAndTable: key,
 		FromPriKey:fromPriKey,
