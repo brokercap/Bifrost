@@ -257,7 +257,7 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key],nil
 	}
-	fields := This.conn.GetTableFields(data.SchemaName,data.TableName)
+	fields := This.conn.GetTableFields(SchemaName,data.TableName)
 	if This.conn.err != nil {
 		This.err = This.conn.err
 		return nil,This.err
