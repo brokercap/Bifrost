@@ -24,17 +24,43 @@ func (This *Conn) getAutoTableSqlSchemaAndTable(name string,DefaultSchemaName st
 		}
 		TableName = dbAndTable
 	}
+	// 实际运行过程测试出 解析出来的 sql 中 SchemaName 和 TableName 是有换行符的,需要过滤掉，要不然拼出来的sql,会出问题
+	SchemaName = strings.Trim(SchemaName, "\r\n")
+	SchemaName = strings.Trim(SchemaName, "\n")
+	SchemaName = strings.Trim(SchemaName, "\r")
+	TableName = strings.Trim(TableName,"\r\n")
+	TableName = strings.Trim(TableName,"\n")
+	TableName = strings.Trim(TableName,"\r")
 	return
 }
 
+//去除连续的两个空格
+func (This *Conn) ReplaceTwoReplace(sql string) string {
+	for {
+		if strings.Index(sql,"  ") >= 0 {
+			sql = strings.Replace(sql,"  "," ",-1)
+		}else{
+			return sql
+		}
+	}
+}
+
 func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql string) {
-	sql := strings.ToUpper(data.Query)
+	Query := strings.Trim(data.Query," ")
+	// 变量 sql 是就不用拼接最后的  可执行 sql的，所以可以全部转成大写
+	sql := strings.ToUpper(Query)
+	// 防止连续多空格
+	// RENAME      TABLE tablename to tablename2
+	// Create   Table
+	// create      database
+	sql = This.ReplaceTwoReplace(sql)
 	var SchemaName,TableName string
 
 	// ALTER TABLE tableName
 	// ALTER TABLE 不能使用 IF EXISTS
 	if strings.Index(sql,"ALTER TABLE") == 0 {
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[2],data.SchemaName)
 		sqlArr[2] = "`" + SchemaName + "`.`" + TableName +"`"
 		newSql = strings.Join(sqlArr, " ")
@@ -43,7 +69,8 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 
 	// TRUNCATE TABLE tableName
 	if strings.Index(sql,"TRUNCATE TABLE") == 0 {
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 		var tableNameIndex = 2
 		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[tableNameIndex],data.SchemaName)
 		var schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
@@ -57,7 +84,8 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 	// CREATE TABLE IF `tableName`(
 	if strings.Index(sql,"CREATE TABLE") == 0 {
 		var schemaAndTable = ""
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 
 		// 假如 存在 IF NOT EXISTS 则代表表名是按 空格分割过后的数组里 第6个，也就是下标 5
 		var tableNameIndex = 2
@@ -73,7 +101,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			if tableNameIndex == 2 {
 				schemaAndTable = " IF NOT EXISTS " + schemaAndTable
 			}
-			newSql = strings.Replace(data.Query,tmpTableName+"(",schemaAndTable+"(",1)
+			newSql = strings.Replace(Query,tmpTableName+"(",schemaAndTable+"(",1)
 		}else{
 			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[tableNameIndex],data.SchemaName)
 			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
@@ -81,14 +109,15 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			if tableNameIndex == 2 {
 				schemaAndTable = " IF NOT EXISTS " + schemaAndTable
 			}
-			newSql = strings.Replace(data.Query,sqlArr[tableNameIndex],schemaAndTable,1)
+			newSql = strings.Replace(Query,sqlArr[tableNameIndex],schemaAndTable,1)
 		}
 		goto End
 	}
 
 	// CREATE DATABASE IF NOT EXISTS databaseName
 	if strings.Index(sql,"CREATE DATABASE") == 0 {
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 		if strings.Index(sql,"IF NOT EXISTS") < 0 {
 			SchemaName = sqlArr[2]
 		}else{
@@ -105,17 +134,18 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			To		string
 		}
 		/*
-		RENAME TABLE `test3` TO `test2`,`test2` TO `test4`;
+			RENAME TABLE `test3` TO `test2`,`test2` TO `test4`;
 
-		==>
+			==>
 
-		`test3` TO `test2`,`test2` TO `test4`;
+			`test3` TO `test2`,`test2` TO `test4`;
 
-		==> ["`test3` TO `test2`","`test2` TO `test4`"]
+			==> ["`test3` TO `test2`","`test2` TO `test4`"]
 
 		*/
 		// 这里要 trim 两次空格，防止  RENAME TABLE `test3` TO `test2`,`test2` TO `test4`   ; 这种情况
-		sql0 := strings.Trim(strings.Trim(strings.Trim(data.Query[12:]," "),";")," ")
+		Query = This.ReplaceTwoReplace(Query)
+		sql0 := strings.Trim(strings.Trim(strings.Trim(Query[12:]," "),";")," ")
 		ReNameTableArr := make([]TableInfo,0)
 		sqlArr := strings.Split(sql0, ",")
 		for _, reNameInfo := range sqlArr {
@@ -130,7 +160,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			ReNameTableArr = append(ReNameTableArr,TableTmp)
 		}
 		if len(ReNameTableArr) == 0 {
-			log.Println("plugin mysql rename ddl transfer err!, sql :",data.Query)
+			log.Println("plugin mysql rename ddl transfer err!, sql :",Query)
 			return
 		}
 		for _,t := range ReNameTableArr{
@@ -148,7 +178,8 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 
 	// DROP TABLE IF EXISTS tableName
 	if strings.Index(sql,"DROP TABLE") == 0  {
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 		var tableNameIndex = 2
 		if strings.Index(sql,"IF EXISTS") > 0 {
 			tableNameIndex = 4
@@ -165,7 +196,8 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 
 	// DROP DATABASE IF EXISTS databaseName
 	if strings.Index(sql,"DROP DATABASE") == 0 {
-		sqlArr := strings.Split(data.Query, " ")
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
 		if strings.Index(sql,"IF EXISTS") < 0 {
 			SchemaName = sqlArr[2]
 		}else{
@@ -178,32 +210,47 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		// INSERT INTO Table
 		// DELETE FROM Table
 		// REPLACE INTO Table
-		var tableNameIndex = 1
+		var tableNameIndex = 0
+		// insert,update,replace 字符串后第几个非空的字符串，才是第表名
+		var x = 1
 		switch sql[0:6] {
 		case "UPDATE":
 			break
 		case "INSERT","DELETE","REPLAC":
-			tableNameIndex = 2
+			x = 2
 			break
 		default:
 			return
 		}
-		sqlArr := strings.Split(data.Query, " ")
+		// 这里不能使用 ReplaceTwoReplace 将  两个空格转成一个空格再进行计算 ，因为实际 insert 或者 update 等的内容里是值有可能是 两个空格的内容
+		// 这里采用 遍历 的方式，找第一个或者第二个非空的字段串，当作是表名
+		sqlArr := strings.Split(Query, " ")
+		var tmpX = 0
+		for i := 1;i < len(sqlArr) ; i++ {
+			var tmp = strings.Trim(sqlArr[i]," ")
+			if tmp == "" || tmp == " " {
+				continue
+			}
+			tmpX++
+			if tmpX == x {
+				tableNameIndex = i
+				break
+			}
+		}
 		tmpTableName := sqlArr[tableNameIndex]
 		var schemaAndTable string
 		if strings.Index(tmpTableName,"(") > 0 {
 			tmpTableName = strings.Split(tmpTableName,"(")[0]
 			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
 			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
-			newSql = strings.Replace(data.Query,tmpTableName+"(",schemaAndTable+"(",1)
+			newSql = strings.Replace(Query,tmpTableName+"(",schemaAndTable+"(",1)
 		}else{
 			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
 			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
-			newSql = strings.Replace(data.Query,tmpTableName,schemaAndTable,1)
+			newSql = strings.Replace(Query,tmpTableName,schemaAndTable,1)
 		}
 	}
 
-	End:
-		return
+End:
+	return
 }
-
