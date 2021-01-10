@@ -347,6 +347,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			noData = false
 			CheckStatusFun()
 			warningStatus = false
+			timer.Stop()
 			switch data.EventType {
 			case "sql":
 				forSendData(data)
@@ -414,6 +415,7 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 			SaveBinlog()
 			break
 		case <-timer.C:
+			timer.Stop()
 			LastSuccessData, ErrData,errs = This.timeOutCommit(MyConsumerId)
 			if errs == nil {
 				if lastErrTime > 0 {
