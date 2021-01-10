@@ -53,8 +53,8 @@ func (This *Queue) Pop() (content []byte,e error){
 
 //获取最后一条数据
 func (This *Queue) ReadLast() (content []byte,e error){
-	l.Lock()
-	defer l.Unlock()
+	This.Lock()
+	defer This.Unlock()
 	if This.maxId == -1{
 		return
 	}

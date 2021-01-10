@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.4"
-const BIFROST_VERION = "v1.6.4"
+const VERSION  = "v1.6.5"
+const BIFROST_VERION = "v1.6.5"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
