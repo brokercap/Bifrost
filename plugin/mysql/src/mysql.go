@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.4"
-const BIFROST_VERION = "v1.6.4"
+const VERSION  = "v1.6.5"
+const BIFROST_VERION = "v1.6.5"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -257,13 +257,13 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key],nil
 	}
-	fields := This.conn.GetTableFields(data.SchemaName,data.TableName)
+	fields := This.conn.GetTableFields(SchemaName,data.TableName)
 	if This.conn.err != nil {
 		This.err = This.conn.err
 		return nil,This.err
 	}
 	if len(fields) == 0{
-		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit",data.SchemaName,data.TableName)
+		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit",SchemaName,data.TableName)
 		return nil,This.err
 	}
 	fieldList := make([]fieldStruct,len(fields))
@@ -305,7 +305,7 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 	p := &PluginParam0 {
 		Field: fieldList,
 		PriKey: priKeyList,
-		SchemaName: data.SchemaName,
+		SchemaName: SchemaName,
 		TableName: data.TableName,
 		SchemaAndTable: key,
 		FromPriKey:fromPriKey,
@@ -339,12 +339,13 @@ func (This *Conn) Connect() bool {
 }
 
 func (This *Conn) ReConnect() bool {
+	defer func() {
+		if err := recover();err !=nil{
+			This.conn.err = fmt.Errorf(fmt.Sprint(err)+" debug:"+string(debug.Stack()))
+			This.err = This.conn.err
+		}
+	}()
 	if This.conn != nil{
-		defer func() {
-			if err := recover();err !=nil{
-				This.conn.err = fmt.Errorf(fmt.Sprint(err)+" debug:"+string(debug.Stack()))
-			}
-		}()
 		This.closeStmt0()
 		This.conn.Close()
 	}
@@ -516,6 +517,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 			e = fmt.Errorf(string(debug.Stack()))
 			log.Println(string(debug.Stack()))
 			This.conn.err = e
+			This.err = e
 		}
 	}()
 	n := len(This.p.Data.Data)

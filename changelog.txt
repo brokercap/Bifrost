@@ -1,3 +1,13 @@
+v1.6.5-release   2021-01-10
+===========================
+1. fixed mysql desc SchemaName error bug
+2. fixed mysql ddl tansfer error bug
+3. fixed history task may recovry bug
+4. fixed history flow href error
+5. mysql plugin error update
+6. fixed may  time out contine bug
+7. other bug fixed
+
 v1.6.4-release   2021-01-03
 ===========================
 1. 修复一个全量任务设置多线程同步造成的致命bug
