@@ -2,6 +2,7 @@ package src
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"log"
 
@@ -61,7 +62,7 @@ func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errD
 		reqs = append(reqs, reqs2...)
 	}
 
-	for i := n - 1; i >= 0; i-- {
+	for i := 0; i <= n-1; i++ {
 		v := list[i]
 		normalFun(v, reqs)
 	}
@@ -151,23 +152,55 @@ func (This *Conn) getDocID(row map[string]interface{}) (id interface{}, err erro
 	return
 }
 
+func (This *Conn) AddRetryCount() (res bool) {
+	for {
+		TempInt := atomic.LoadInt64(&This.RetryCount)
+		Result := atomic.CompareAndSwapInt64(&This.RetryCount, TempInt, TempInt+1)
+		if Result == true {
+			fmt.Println(TempInt, " Try to CAS: ", Result)
+			if TempInt > 2 { // 2
+				res = false
+				This.RetryCount = 0
+				return
+			}
+			res = true
+			break
+		} else {
+			fmt.Println(TempInt, " Try to CAS: ", Result)
+		}
+	}
+	return
+}
+
 // doBulkSync doBulkSync
 func (This *Conn) doBulkSync(reqs []*elastic.BulkRequest) error {
-	if len(reqs) == 0 {
-		return nil
-	}
 
-	if resp, err := This.conn.Bulk(reqs); err != nil {
-		log.Printf("sync docs err %v \n", err)
-		return errors.Trace(err)
-	} else if resp.Code/100 == 2 || resp.Errors {
-		for i := 0; i < len(resp.Items); i++ {
-			for action, item := range resp.Items[i] {
-				if len(item.Error) > 0 {
-					log.Printf("%s index: %s, type: %s, id: %s, status: %d, error: %s\n",
-						action, item.Index, item.Type, item.ID, item.Status, item.Error)
+	for ii := 0; ii < 5; ii++ {
+
+		if len(reqs) == 0 {
+			return nil
+		}
+
+		if resp, err := This.conn.Bulk(reqs); err != nil {
+			log.Printf("sync docs err %v \n", err)
+			return errors.Trace(err)
+		} else if resp.Code/100 == 2 || resp.Errors {
+			reqs1 := []*elastic.BulkRequest{}
+			reqsMap := map[interface{}]*elastic.BulkRequest{}
+			for i := range reqs {
+				reqsMap[fmt.Sprint(reqs[i].ID)] = reqs[i]
+			}
+			for i := 0; i < len(resp.Items); i++ {
+				for action, item := range resp.Items[i] {
+					if len(item.Error) > 0 {
+						log.Printf("%s index: %s, type: %s, id: \"%s\", status: %d, error: %s\n",
+							action, item.Index, item.Type, item.ID, item.Status, item.Error)
+						reqs1 = append(reqs1, reqsMap[item.ID])
+						// g.Dump("reqsMap[item.ID]", reqsMap[item.ID], item.ID)
+					}
 				}
 			}
+			reqs = reqs1
 		}
 	}
 

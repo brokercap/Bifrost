@@ -121,7 +121,7 @@ func (s *elasticTester) TestMapping() {
 	s.assertEaqual(resp.Mapping[index].Mappings.DateDetection, true)
 	resp, err = s.c.GetMapping(index)
 
-	if res, ok:=resp.Mapping[index];ok && res.Mappings.DateDetection {
+	if res, ok := resp.Mapping[index]; ok && res.Mappings.DateDetection {
 
 	}
 	// log.Println("GetMapping resp:", g.Export(resp))
@@ -138,4 +138,32 @@ func TestMapping(t *testing.T) {
 	tester := &elasticTester{}
 	tester.SetUpSuite(t)
 	tester.TestMapping()
+}
+
+func TestClient_GetMany(t *testing.T) {
+
+	type args struct {
+		index string
+		ids   []uint64
+	}
+	tests := []struct {
+		name string
+
+		args    args
+		want    *EsResponse
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{name: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tester := &elasticTester{}
+			tester.SetUpSuite(t)
+
+			c := tester.c
+			got, _ := c.GetMany("2bifrost_test--binlog_field_test", []uint64{320, 326, 319, 332, 330, 313, 315, 333})
+			fmt.Println("got", got)
+		})
+	}
 }

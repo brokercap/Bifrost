@@ -726,7 +726,7 @@ func (This *Event) deepCopy(dst, src interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
 
-func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType {
+func (This *Event) GetTestUpdateData(newData ...bool) *pluginDriver.PluginDataType {
 	Rows := make([]map[string]interface{}, 2)
 
 	//随机或者指定一个id获取一条随机生成的数据。用作为旧数据
@@ -734,7 +734,11 @@ func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType {
 	if This.idVal == 0 {
 		m = This.getRandDataFromMap(0)
 		if m == nil {
-			_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
+			if len(newData) == 0 {
+				_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
+			} else {
+				return nil
+			}
 		}
 	} else {
 		m = This.getRandDataFromMap(This.idVal)
@@ -761,14 +765,18 @@ func (This *Event) GetTestUpdateData() *pluginDriver.PluginDataType {
 	}
 }
 
-func (This *Event) GetTestDeleteData() *pluginDriver.PluginDataType {
+func (This *Event) GetTestDeleteData(newData ...bool) *pluginDriver.PluginDataType {
 	Rows := make([]map[string]interface{}, 1)
 
 	var m map[string]interface{}
 	if This.idVal == 0 {
 		m = This.getRandDataFromMap(0)
 		if m == nil {
-			_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
+			if len(newData) == 0 {
+				_, m = This.getSchemaTableFieldAndVal(This.ColumnList, INSERT)
+			} else {
+				return nil
+			}
 		}
 	} else {
 		m = This.getRandDataFromMap(This.idVal)

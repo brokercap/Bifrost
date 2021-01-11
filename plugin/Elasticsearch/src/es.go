@@ -30,6 +30,8 @@ type Conn struct {
 
 	err error
 	p   *PluginParam
+
+	RetryCount int64
 }
 
 type TableDataStruct struct {
@@ -232,7 +234,6 @@ func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData 
 
 	if len(list) > 0 {
 		This.p.EsIndexName = strings.ToLower(fmt.Sprint(pluginDriver.TransfeResult(This.p.EsIndexName, list[0], 0)))
-		// Invalid index name must be lowercase
 	}
 
 	This.doCreateMapping()

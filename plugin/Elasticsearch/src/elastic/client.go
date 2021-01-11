@@ -205,8 +205,9 @@ func (r *BulkRequest) bulk(buf *bytes.Buffer) error {
 
 	buf.Write(data)
 	buf.WriteByte('\n')
-	// log.Println("data:", string(data))
+	// fmt.Println("1==:", string(data))
 
+	data = []byte{}
 	switch r.Action {
 	case ActionDelete:
 		//nothing to do
@@ -231,7 +232,7 @@ func (r *BulkRequest) bulk(buf *bytes.Buffer) error {
 		buf.Write(data)
 		buf.WriteByte('\n')
 	}
-	// log.Println("data:", string(data))
+	// fmt.Println("2==:", string(data))
 
 	return nil
 }
@@ -320,6 +321,42 @@ func (c *Client) Do(method string, url string, body map[string]interface{}, body
 
 	if len(data) > 0 {
 		err = json.Unmarshal(data, &ret.ResponseItem)
+	}
+
+	return ret, errors.Trace(err)
+}
+
+// Do sends the request with body to ES.
+func (c *Client) DoSearch(method string, url string, body map[string]interface{}, bodyStr ...string) (*EsResponse, error) {
+	bodyData, err := json.Marshal(body)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	buf := bytes.NewBuffer(bodyData)
+	if body == nil {
+		buf = bytes.NewBuffer(nil)
+	}
+	if len(bodyStr) > 0 {
+		buf = bytes.NewBuffer([]byte(bodyStr[0]))
+	}
+
+	resp, err := c.DoRequest(method, url, buf)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	defer resp.Body.Close()
+
+	ret := new(EsResponse)
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if len(data) > 0 {
+		err = json.Unmarshal(data, &ret)
 	}
 
 	return ret, errors.Trace(err)
@@ -468,17 +505,20 @@ func (c *Client) Get(index string, id string) (*Response, error) {
 }
 
 // Get gets the item by ids.
-func (c *Client) GetMany(index string, ids []string) (*Response, error) {
+func (c *Client) GetMany(index string, ids []uint64) (*EsResponse, error) {
 	reqURL := fmt.Sprintf("%s://%s/%s/_search", c.Protocol, c.Addr,
 		url.QueryEscape(index),
 	)
 
 	data := map[string]interface{}{"query": map[string]interface{}{
+
 		"terms": map[string]interface{}{
 			"id": ids,
-		},
-	}}
-	return c.Do("POST", reqURL, data)
+		}},
+		"size": 10000,
+	}
+	// g.Dump("data", data)
+	return c.DoSearch("POST", reqURL, data)
 }
 
 // Update creates or updates the data

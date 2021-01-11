@@ -13,7 +13,6 @@ import (
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
-	"github.com/gogf/gf/frame/g"
 )
 
 var myConn *Conn
@@ -40,7 +39,7 @@ func getParam(args ...bool) map[string]interface{} {
 		"PrimaryKey":           "id",        //            string
 		"EsIndexName":          EsIndexName, //             string
 		"BifrostMustBeSuccess": true,        //  bool  // bifrost server 保留,数据是否能丢
-		"BatchSize":            2,           //             int
+		"BatchSize":            3,           //             int
 	}
 	return param
 }
@@ -180,8 +179,7 @@ func TestCommitAndCheckData(t *testing.T) {
 	initSyncParam()
 
 	eventData := event.GetTestInsertData()
-	conn.Insert(eventData, true)
-	// g.Dump("eventData", eventData)
+	conn.Insert(eventData, false)
 	eventData = event.GetTestUpdateData()
 	conn.Update(eventData, false)
 	_, _, err2 := conn.TimeOutCommit()
@@ -200,9 +198,9 @@ func TestCommitAndCheckData(t *testing.T) {
 
 	checkDataRight(m, dataList.ResponseItem.Source, resultData)
 
-	for _, v := range resultData["ok"] {
-		t.Log(v)
-	}
+	// for _, v := range resultData["ok"] {
+	// 	t.Log(v)
+	// }
 
 	for _, v := range resultData["error"] {
 		t.Error(v)
@@ -214,89 +212,6 @@ func TestCommitAndCheckData(t *testing.T) {
 		t.Error("test over;", " some data is error")
 	}
 
-}
-
-func checkDataRight(m map[string]interface{}, destMap map[string]interface{}, resultData map[string][]string) {
-	for columnName, v := range destMap {
-		if _, ok := m[columnName]; !ok {
-			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " not exsit"))
-		}
-		var result bool = false
-		switch m[columnName].(type) {
-		case bool:
-			if m[columnName].(bool) == true {
-				if fmt.Sprint(v) == "1" {
-
-					result = true
-				}
-			} else {
-				if fmt.Sprint(v) == "0" {
-					result = true
-				}
-			}
-			break
-		case []string:
-			sourceData := strings.Replace(strings.Trim(fmt.Sprint(m[columnName]), "[]"), " ", ",", -1)
-			if fmt.Sprint(v) == sourceData {
-				result = true
-			}
-			break
-		case float32, float64:
-			//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
-			floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
-			floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
-			if math.Abs(floatDest-floatSource) < 0.05 {
-				result = true
-			}
-			// g.Dump("floatDest,floatSource", floatDest, floatSource, math.Abs(floatDest-floatSource) < 0.05)
-			break
-
-		default:
-			switch v.(type) {
-			//这里需要去一次空格对比,因为有可能源是 带空格的字符串
-			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
-				a, _ := strconv.Atoi(strings.Trim(fmt.Sprint(v), " "))
-				b, _ := strconv.Atoi(strings.Trim(fmt.Sprint(m[columnName]), " "))
-				g.Dump("a,b", a, b)
-
-				if a == b {
-					result = true
-				}
-				break
-			case float32, float64:
-				//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
-				floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
-				floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
-				if math.Abs(floatDest-floatSource) < 0.05 {
-					result = true
-				}
-				// g.Dump("floatDest,floatSource", floatDest, floatSource, math.Abs(floatDest-floatSource) < 0.05)
-				break
-			case time.Time:
-				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
-				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
-				if descTime == fmt.Sprint(m[columnName]) || strings.Index(descTime, fmt.Sprint(m[columnName])) == 0 {
-					result = true
-				}
-				break
-			default:
-
-				if fmt.Sprint(v) == fmt.Sprint(m[columnName]) {
-					result = true
-				} else {
-					g.Dump("v,m[columnName]", v, m[columnName], reflect.TypeOf(v), reflect.TypeOf(m[columnName]))
-				}
-				break
-			}
-
-			break
-		}
-		if result {
-			resultData["ok"] = append(resultData["ok"], fmt.Sprint(columnName, " dest: ", v, "(", reflect.TypeOf(v), ")", " == ", m[columnName], "(", reflect.TypeOf(m[columnName]), ")"))
-		} else {
-			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " dest: ", v, "(", reflect.TypeOf(v), ")", " != ", m[columnName], "(", reflect.TypeOf(m[columnName]), ")"))
-		}
-	}
 }
 
 func TestRandDataAndCheck(t *testing.T) {
@@ -315,12 +230,16 @@ func TestRandDataAndCheck(t *testing.T) {
 			conn.Insert(eventData, false)
 			break
 		case 1:
-			eventData = event.GetTestUpdateData()
-			conn.Update(eventData, false)
+			eventData = event.GetTestUpdateData(true)
+			if eventData != nil {
+				conn.Update(eventData, false)
+			}
 			break
 		case 2:
-			eventData = event.GetTestDeleteData()
-			conn.Del(eventData, false)
+			eventData = event.GetTestDeleteData(true)
+			if eventData != nil {
+				conn.Del(eventData, false)
+			}
 			break
 		case 3:
 			eventData = event.GetTestQueryData()
@@ -330,14 +249,11 @@ func TestRandDataAndCheck(t *testing.T) {
 	}
 	conn.TimeOutCommit()
 	dataMap := event.GetDataMap()
-	g.Dump("dataMap ", len(dataMap))
 
-	ids := []string{}
+	ids := []uint64{}
 	for id := range dataMap {
-		ids = append(ids, fmt.Sprint(id))
+		ids = append(ids, id)
 	}
-	g.Dump("ids ", len(ids))
-	g.Dump("ids ", len(ids))
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
@@ -346,46 +262,43 @@ func TestRandDataAndCheck(t *testing.T) {
 	// c := NewClickHouseDBConn(url)
 	dataList, _ := myConn.conn.GetMany(myConn.p.EsIndexName, ids)
 
-	count := uint64(len(dataList.ResponseItem.Source))
-	g.Dump("count ", count)
+	count := uint64(len(dataList.Hits.Hits))
 
 	if count != uint64(len(dataMap)) {
 		for k, v := range dataMap {
 			_, _ = k, v
 			// t.Log(k, " ", v)
 		}
-		t.Fatal("ck Table Count:", count, " != srcDataCount:", len(dataMap))
+		t.Fatal("es Table Count:", count, " != srcDataCount:", len(dataMap))
 	}
-
 	destMap := make(map[string]map[string]interface{}, 0)
 
-	for _, v := range dataList.ResponseItem.Source {
-		vv := v.(map[string]interface{})
+	for _, v := range dataList.Hits.Hits {
+		vv := v.Source.(map[string]interface{})
 		destMap[fmt.Sprint(vv["id"])] = vv
 	}
-
 	for _, data := range dataMap {
 		id := fmt.Sprint(data["id"])
 		checkDataRight(data, destMap[id], resultData)
 	}
-
-	for _, v := range resultData["ok"] {
-		t.Log(v)
-	}
+	// for _, v := range resultData["ok"] {
+	// 	t.Log(v)
+	// }
 	if len(resultData["error"]) > 0 {
 		for _, v := range resultData["error"] {
 			t.Error(v)
 		}
 	}
 
-	t.Log("ck Table Count:", count, " srcDataCount:", len(dataMap))
+	t.Log("es Table Count:", count, " srcDataCount:", len(dataMap))
 
 	t.Log("test over")
 }
 
 //模拟正式环境刷数据
 func TestSyncLikeProduct(t *testing.T) {
-	p := pluginTestData.NewPlugin("elasticsearch", Url)
+	p := pluginTestData.NewPlugin("Elasticsearch", Url)
+
 	err0 := p.SetParam(getParam())
 	p.SetEventType(pluginTestData.INSERT)
 	if err0 != nil {
@@ -402,6 +315,7 @@ func TestSyncLikeProduct(t *testing.T) {
 	}
 }
 
+//TestCommitAndCheckData2 这个通不过， 不支持修改字段类型
 func TestCommitAndCheckData2(t *testing.T) {
 	testBefore()
 	initSyncParam()
@@ -409,41 +323,42 @@ func TestCommitAndCheckData2(t *testing.T) {
 	event.SetNoUint64(true)
 
 	eventData := event.GetTestInsertData()
-	eventData.Rows[0]["testint"] = "1334　"
+	eventData.Rows[0]["testint"] = "1334　" // 这个通不过， 不支持修改字段类型
 	conn.Insert(eventData, false)
 	_, _, err2 := conn.TimeOutCommit()
 	if err2 != nil {
 		t.Fatal(err2)
 	}
 
-	// m := eventData.Rows[len(eventData.Rows)-1]
+	m := eventData.Rows[len(eventData.Rows)-1]
 	// time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
 	// dataList := c.GetTableDataList(eventData.SchemaName, eventData.TableName, "id="+fmt.Sprint(m["id"]))
+	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(eventData.Rows[0]["id"]))
 
-	// if len(dataList) == 0 {
-	// 	t.Fatal("select data len == 0")
-	// }
+	if len(dataList.ResponseItem.Source) == 0 {
+		t.Fatal("select data len == 0")
+	}
 
-	// resultData := make(map[string][]string, 0)
-	// resultData["ok"] = make([]string, 0)
-	// resultData["error"] = make([]string, 0)
+	resultData := make(map[string][]string, 0)
+	resultData["ok"] = make([]string, 0)
+	resultData["error"] = make([]string, 0)
 
-	// checkDataRight(m, dataList[0], resultData)
+	checkDataRight(m, dataList.ResponseItem.Source, resultData)
 
 	// for _, v := range resultData["ok"] {
 	// 	t.Log(v)
 	// }
 
-	// for _, v := range resultData["error"] {
-	// 	t.Error(v)
-	// }
+	for _, v := range resultData["error"] {
+		t.Error(v)
+	}
 
-	// if len(resultData["error"]) == 0 {
-	// 	t.Log("test over;", "data is all right")
-	// } else {
-	// 	t.Error("test over;", " some data is error")
-	// }
+	if len(resultData["error"]) == 0 {
+		t.Log("test over;", "data is all right")
+	} else {
+		t.Error("test over;", " some data is error")
+	}
 
 }
 
@@ -471,5 +386,81 @@ func TestConn_GetVersion(t *testing.T) {
 			gotVersion, _ := This.GetVersion()
 			log.Println(gotVersion)
 		})
+	}
+}
+
+func checkDataRight(m map[string]interface{}, destMap map[string]interface{}, resultData map[string][]string) {
+	for columnName, v := range destMap {
+		if _, ok := m[columnName]; !ok {
+			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " not exsit"))
+		}
+		var result bool = false
+		switch m[columnName].(type) {
+		case []string:
+			// sourceData := strings.Replace(strings.Trim(fmt.Sprint(m[columnName]), "[]"), " ", ",", -1)
+			if fmt.Sprint(v) == fmt.Sprint(fmt.Sprint(m[columnName])) {
+				result = true
+			}
+			break
+		case float32, float64:
+			//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
+			floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
+			floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
+			if math.Abs(floatDest-floatSource) < 0.05 {
+				result = true
+			}
+			break
+
+		default:
+			switch v.(type) { // dest
+			//这里需要去一次空格对比,因为有可能源是 带空格的字符串
+			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
+				a, _ := strconv.Atoi(strings.Trim(fmt.Sprint(v), " "))
+				b, _ := strconv.Atoi(strings.Trim(fmt.Sprint(m[columnName]), " "))
+
+				if a == b {
+					result = true
+				}
+				break
+			case float32, float64:
+				//假如都是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
+				floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
+				floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
+				if math.Abs(floatDest-floatSource) < 0.05 {
+					result = true
+				}
+				break
+			case time.Time:
+				// 这里用包括关系 ，也是因为 es 读出来的时候，date和datetime类型都转成了time.Time 类型了
+				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
+				if descTime == fmt.Sprint(m[columnName]) || strings.Index(descTime, fmt.Sprint(m[columnName])) == 0 {
+					result = true
+				}
+				break
+			case map[string]interface{}:
+
+				if fmt.Sprint(v)[:10] == fmt.Sprint(m[columnName])[:10] {
+					result = true
+				} else {
+					fmt.Println("result = false, v,m[columnName] ", v, m[columnName], reflect.TypeOf(v), reflect.TypeOf(m[columnName]))
+				}
+				break
+			default:
+
+				if fmt.Sprint(v) == fmt.Sprint(m[columnName]) {
+					result = true
+				} else {
+					fmt.Println("result = false, v,m[columnName] ", fmt.Sprint(v), fmt.Sprint(m[columnName]), reflect.TypeOf(v), reflect.TypeOf(m[columnName]))
+				}
+				break
+			}
+
+			break
+		}
+		if result {
+			resultData["ok"] = append(resultData["ok"], fmt.Sprint(columnName, " dest: ", v, "(", reflect.TypeOf(v), ")", " == ", m[columnName], "(", reflect.TypeOf(m[columnName]), ")"))
+		} else {
+			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " dest: ", v, "(", reflect.TypeOf(v), ")", " != ", m[columnName], "(", reflect.TypeOf(m[columnName]), ")"))
+		}
 	}
 }
