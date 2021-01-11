@@ -28,12 +28,20 @@
         <label class="col-sm-3 control-label">mapping ：</label>
         <div class="col-sm-9">
             <textarea type="text" name="Elasticsearch_Mapping" id="Elasticsearch_Mapping" class="form-control"
-                placeholder="">
+                placeholder=""></textarea>
             <span class="help-block m-b-none">
                 Elasticsearch mapping
             </span>
             <span class="help-block m-b-none">
-                为空，则自动别数据中的时间/日期字段
+                为空，则自动别数据中的时间/日期字段 , 示例： `{
+                                                          "mappings": {
+                                                              "properties": {
+                                                                "tags": {
+                                                                   "type":  "keyword"
+                                                              }
+                                                            }
+                                                          }
+                                                        }`
             </span>
         </div>
     </div>
