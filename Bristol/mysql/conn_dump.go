@@ -132,7 +132,9 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 					break
 				}
 				//only return replicateDoDb, any sql may be use db.table query
-				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
+				var SchemaName,tableName string
+				var isRename bool
+				if SchemaName, tableName,isRename = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -143,8 +145,11 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 						parser.saveBinlog(event)
 						continue
 					}
-					if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
-						parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+					if isRename == false {
+						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
+							parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+
+						}
 					}
 					break
 				}
