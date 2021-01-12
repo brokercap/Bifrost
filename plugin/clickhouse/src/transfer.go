@@ -693,3 +693,29 @@ func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
 	sql = "CREATE DATABASE IF NOT EXISTS `"+SchemaName+"`"
 	return sql
 }
+
+func ReplaceBr(str string) string  {
+	str = strings.ReplaceAll(str, "\r\n"," ")
+	str = strings.ReplaceAll(str, "\n"," ")
+	str = strings.ReplaceAll(str, "\r"," ")
+	return str
+}
+
+//去除连续的两个空格
+func ReplaceTwoReplace(sql string) string {
+	for {
+		if strings.Index(sql,"  ") >= 0 {
+			sql = strings.ReplaceAll(sql,"  "," ")
+			//sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			break
+		}
+	}
+	for {
+		if strings.Index(sql,"	") >= 0 {
+			sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			return sql
+		}
+	}
+}
