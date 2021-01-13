@@ -16,6 +16,7 @@ limitations under the License.
 package controller
 
 import (
+	"github.com/brokercap/Bifrost/server/user"
 	"strings"
 	"net/http"
 	"github.com/brokercap/Bifrost/admin/xgo"
@@ -46,7 +47,6 @@ func (c *CommonController) Prepare()  {
 	}else{
 		c.normalAuthor()
 		c.Data["Version"] = config.VERSION
-
 	}
 }
 
@@ -57,25 +57,17 @@ func (c *CommonController) basicAuthor() bool{
 		c.StopServeJSON()
 		return false
 	}
-	pwd := config.GetConfigVal("user",UserName)
-	if pwd == Password{
-		GroupName := config.GetConfigVal("groups",UserName)
-		if GroupName != "administrator" && c.checkWriteRequest(c.Ctx.Request.RequestURI){
-			c.SetJsonData(ResultDataStruct{Status:-1,Msg:"user group : [ "+GroupName+" ] no authority",Data:nil})
-			c.StopServeJSON()
-			return false
-		}
-		return true
-	}else{
-		c.SetJsonData(ResultDataStruct{Status:-1,Msg:"Password error",Data:nil})
+	_,err := user.CheckUserWithIP(UserName,Password,c.GetRemoteIp())
+	if err != nil {
+		c.SetJsonData(ResultDataStruct{Status:-1,Msg:err.Error(),Data:nil})
 		c.StopServeJSON()
+		return false
 	}
-	return false
+	return true
 }
 
 func (c *CommonController)  normalAuthor() bool{
 	var sessionID= c.Ctx.Session.CheckCookieValid(c.Ctx.ResponseWriter, c.Ctx.Request)
-
 	if sessionID != "" {
 		if _,ok:=c.Ctx.Session.GetSessionVal(sessionID,"UserName");ok{
 			//非administrator用户 用户，没有写操作权限
