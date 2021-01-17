@@ -303,11 +303,10 @@ build()
     mkdir -p $tagDir/bin
 
     echo "$mode build starting "
-    if [[ $goarch != "none" ]];then
-        CGO_ENABLED=0 GOOS=$mode GOARCH=$goarch go build ./Bifrost.go
-    else
-        CGO_ENABLED=0 GOOS=$mode GOARCH=amd64 go build ./Bifrost.go
+    if [[ $goarch == "none" ]];then
+        goarch=amd64
     fi
+    CGO_ENABLED=0 GOOS=$mode GOARCH=$goarch go build -gcflags=-trimpath=$GOPATH -asmflags=-trimpath=$GOPATH -ldflags "-w -s" ./Bifrost.go
 
     echo "$mode build over "
 
