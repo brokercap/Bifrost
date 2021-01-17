@@ -600,3 +600,12 @@ func (parser *eventParser) GetTableId(database string, tablename string) (uint64
 	}
 	return parser.tableNameMap[key],nil
 }
+
+func (parser *eventParser) delTableId(database string, tablename string) {
+	key := database + "." + tablename
+	if tableId, ok := parser.tableNameMap[key]; ok {
+		delete(parser.tableSchemaMap, tableId)
+	}
+	delete(parser.tableNameMap, key)
+	return
+}
