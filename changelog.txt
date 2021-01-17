@@ -1,3 +1,8 @@
+v1.6.6-release   2021-01-17
+===========================
+1. fix rename table binlog parser error bug
+2. fix http basic auth bug
+
 v1.6.5-release   2021-01-10
 ===========================
 1. fixed mysql desc SchemaName error bug
