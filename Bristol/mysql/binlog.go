@@ -518,6 +518,15 @@ func (parser *eventParser) GetTableId(database string, tablename string) (uint64
 	return parser.tableNameMap[key],nil
 }
 
+func (parser *eventParser) delTableId(database string, tablename string) {
+	key := database + "." + tablename
+	if tableId, ok := parser.tableNameMap[key]; ok {
+		delete(parser.tableSchemaMap, tableId)
+	}
+	delete(parser.tableNameMap, key)
+	return
+}
+
 func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventParser, callbackFun callback, result chan error) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -608,7 +617,9 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 				if event.Query == "COMMIT" {
 					break
 				}
-				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
+				var SchemaName,tableName string
+				var isRename bool
+				if SchemaName, tableName,isRename = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -619,9 +630,15 @@ func (mc *mysqlConn) DumpBinlog(filename string, position uint32, parser *eventP
 						parser.saveBinlog(event)
 						continue
 					}
-					if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
-						parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+					if isRename {
+						// 假如 是rename 操作的 ddl,需要将 SchemaName,TableName 对应的缓存数据删除，因为表名变了，TableId 也变了
+						parser.delTableId(event.SchemaName, event.TableName)
+					}else{
+						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
+							parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+						}
 					}
+
 					break
 				}
 				// 假如 drop database schemaName 这样的语句，只有 SchemaName，而没有 TableName的，则匹配是否要过滤整个库

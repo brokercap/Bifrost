@@ -14,7 +14,7 @@ func (parser *eventParser) getAutoTableSqlSchemaAndTable(name string) (SchemaNam
 	return
 }
 
-func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string) {
+func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string,isRename bool) {
 	sql = strings.Trim(sql, " ")
 	switch sql {
 	case "COMMIT","BEGIN","commit","begin":
@@ -22,13 +22,40 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	default:
 		break
 	}
+
+	//将换行去除
+	sql = strings.ReplaceAll(sql, "\r\n","")
+	sql = strings.ReplaceAll(sql, "\n","")
+	sql = strings.ReplaceAll(sql, "\r","")
+	//去除连续的两个空格
+	for {
+		if strings.Index(sql,"  ") >= 0 {
+			sql = strings.ReplaceAll(sql,"  "," ")
+		}else{
+			break
+		}
+	}
+	for {
+		if strings.Index(sql,"	") >= 0 {
+			sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是tab
+		}else{
+			break
+		}
+	}
 	sqlUpper := strings.ToUpper(sql)
 
 	// ALTER TABLE tableName
-	// RENAME TABLE tableName
 	// TRUNCATE TABLE tableName
-	if strings.Index(sqlUpper,"ALTER TABLE") == 0 || strings.Index(sqlUpper,"RENAME TABLE") == 0 || strings.Index(sqlUpper,"TRUNCATE TABLE") == 0 {
+	if strings.Index(sqlUpper,"ALTER TABLE") == 0 || strings.Index(sqlUpper,"TRUNCATE TABLE") == 0 {
 		sqlArr := strings.Split(sql, " ")
+		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[2])
+		return
+	}
+
+	// RENAME TABLE tableName
+	if strings.Index(sqlUpper,"RENAME TABLE") == 0 {
+		sqlArr := strings.Split(sql, " ")
+		isRename = true
 		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[2])
 		return
 	}
