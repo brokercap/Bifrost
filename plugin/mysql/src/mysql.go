@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.5"
-const BIFROST_VERION = "v1.6.5"
+const VERSION  = "v1.7.0"
+const BIFROST_VERION = "v1.7.0"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -297,8 +297,10 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 		if strings.ToUpper(v.COLUMN_KEY) == "PRI" {
 			field.ToFieldDefault = nil
 			priKeyList = append(priKeyList,field)
-			fromPriKey = v.COLUMN_NAME
-			toPriKey = v.COLUMN_NAME
+			if fromPriKey == "" || v.EXTRA == "auto_increment" {
+				fromPriKey = v.COLUMN_NAME
+				toPriKey = v.COLUMN_NAME
+			}
 		}
 		fieldList[i] = field
 	}
