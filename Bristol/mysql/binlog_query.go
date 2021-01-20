@@ -112,29 +112,45 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 			SchemaName = sqlArr[4]
 		}
 		return
+	}
+
+	// 授权
+	if strings.Index(sqlUpper,"GRANT") == 0 {
+		SchemaName,TableName = "",""
+		return
+	}
+
+	// ALTER USER , CREATE USER
+	if strings.Index(sqlUpper,"ALTER USER") == 0 || strings.Index(sqlUpper,"CREATE USER") == 0 {
+		SchemaName,TableName = "",""
+		return
+	}
+
+	// UPDATE Table
+	// INSERT INTO Table
+	// DELETE FROM Table
+	// REPLACE INTO Table
+	var tableNameIndex = 0
+	switch sqlUpper[0:6] {
+	case "UPDATE":
+		tableNameIndex = 1
+		break
+	case "INSERT","DELETE","REPLAC":
+		tableNameIndex = 2
+		break
+	default:
+		return
+	}
+	if tableNameIndex == 0 {
+		return
+	}
+	sqlArr := strings.Split(sql, " ")
+	tmpTableName := sqlArr[tableNameIndex]
+	if strings.Index(tmpTableName,"(") > 0 {
+		tmpTableName = strings.Split(tmpTableName,"(")[0]
+		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
 	}else{
-		// UPDATE Table
-		// INSERT INTO Table
-		// DELETE FROM Table
-		// REPLACE INTO Table
-		var tableNameIndex = 1
-		switch sqlUpper[0:6] {
-		case "UPDATE":
-			break
-		case "INSERT","DELETE","REPLAC":
-			tableNameIndex = 2
-			break
-		default:
-			return
-		}
-		sqlArr := strings.Split(sql, " ")
-		tmpTableName := sqlArr[tableNameIndex]
-		if strings.Index(tmpTableName,"(") > 0 {
-			tmpTableName = strings.Split(tmpTableName,"(")[0]
-			SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
-		}else{
-			SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
-		}
+		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
 	}
 	return
 }
