@@ -1,7 +1,8 @@
 package src
 
 import (
-	"log"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -28,6 +29,24 @@ type AlterColumnInfo struct {
 	Comment   string
 }
 
+// 将sql 里 (,) 和  单引号，双引号 里包括的 逗号 先替换成  #@%
+// 感谢 @zeroone2005 正则表达式提供支持
+func TransferComma2Other(sql string) string {
+	re := regexp.MustCompile(`\((\d+?),(\d+?)\)`)
+	sql = re.ReplaceAllString(sql, "(${1}#@%${2})")
+	re = regexp.MustCompile(`'(.*?),(.*?)'`)
+	sql = re.ReplaceAllString(sql, "'$1#@%$2'")
+	re = regexp.MustCompile(`"(.*?),(.*?)"`)
+	sql = re.ReplaceAllString(sql, "\"$1#@%$2\"")
+	return sql
+}
+
+// 将 #@% 再替换回原来的 逗号
+func TransferOther2Comma(str string) string {
+	str = strings.ReplaceAll(str,"#@%",",")
+	return str
+}
+
 func NewAlterSQL(DefaultSchemaName,sql string,c *Conn) *AlterSQL {
 	return &AlterSQL{
 		DefaultSchemaName:DefaultSchemaName,
@@ -37,24 +56,22 @@ func NewAlterSQL(DefaultSchemaName,sql string,c *Conn) *AlterSQL {
 }
 
 func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string) {
-	sql0Arr := strings.Split(This.Sql, ",")
+	sql0 := TransferComma2Other(This.Sql)
+	sql0Arr := strings.Split(sql0, ",")
 	alterParamArr := make([]string,0)
 	for i,v := range sql0Arr {
 		v = ReplaceBr(v)
 		v = strings.Trim(v," ")
+		v = TransferOther2Comma(v)
+		UpperV := strings.ToUpper(v)
 		// 假如是第一个，则要去除  ALTER TABLE tableName
-		if i == 0 && strings.ToUpper(v[0:5]) == "ALTER"{
+		if i == 0 && strings.Index(UpperV,"ALTER TABLE") == 0 {
 			tmpArr := strings.Split(v," ")
 			SchemaName,TableName = This.c.getAutoTableSqlSchemaAndTable(tmpArr[2],This.DefaultSchemaName)
 			SchemaName = This.c.GetFieldName(SchemaName)
 			TableName = This.c.GetFieldName(TableName)
 			v = strings.Join(tmpArr[3:]," ")
 			v = strings.Trim(v," ")
-		}
-		UpperV := strings.ToUpper(v)
-		if strings.Index(UpperV,"DROP COLUMN") == 0 {
-			continue
-			//alterParamArr = append(alterParamArr,This.DropColumn(v))
 		}
 		if strings.Index(UpperV,"CHANGE") == 0 {
 			alterParamArr = append(alterParamArr,This.ChangeColumn(v))
@@ -64,9 +81,27 @@ func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string
 			alterParamArr = append(alterParamArr,This.AddColumn(v))
 			continue
 		}
+		/*
+		if strings.Index(UpperV,"DROP COLUMN") == 0 {
+			continue
+			//alterParamArr = append(alterParamArr,This.DropColumn(v))
+		}
 		if strings.Index(UpperV,"ADD INDEX") == 0 {
 			continue
 		}
+		if strings.Index(UpperV,"DROP PRIMARY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV,"ADD PRIMARY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV,"ADD FOREIGN KEY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV,"DROP FOREIGN KEY") == 0 {
+			continue
+		}
+		*/
 	}
 	if len(alterParamArr) == 0 {
 		return
@@ -108,7 +143,7 @@ func (This *AlterSQL) ChangeColumn(sql string) (destAlterSql string) {
 		}
 	}
 	if AlterColumn.Nullable == true {
-		ckType = "Nullable("+ckType+")"
+		ckType = " Nullable("+ckType+")"
 	}
 	destAlterSql = "modify column " + columnName + " " + ckType
 	if AlterColumn.Comment != "" {
@@ -142,7 +177,7 @@ func (This *AlterSQL) AddColumn(sql string) (destAlterSql string) {
 		}
 	}
 	if AlterColumn.Nullable == true {
-		ckType = "Nullable("+ckType+")"
+		ckType = " Nullable("+ckType+")"
 	}
 	destAlterSql = "add column " + columnName + " " + ckType
 	if AlterColumn.Comment != "" {
@@ -170,7 +205,6 @@ func (This *AlterSQL) GetColumnInfo(pArr []string) *AlterColumnInfo {
 				continue
 			}
 			key = UpperV
-			log.Println("start key:",key)
 			continue
 		}
 		if valFirst == "" {
@@ -240,7 +274,18 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 	case "bigint":
 		ckType = "Int64"
 	case "numeric","decimal":
-		ckType = "String"
+		if dataTypeParam == "" {
+			ckType = "Decimal(18,17)"
+		}else{
+			p := strings.Split(dataTypeParam,",")
+			M, _ := strconv.Atoi(strings.Trim(p[0],""))
+			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
+			if M > 18 {
+				ckType = "String"
+			}else{
+				ckType = "Decimal("+dataTypeParam+")"
+			}
+		}
 	case "real","double":
 		ckType = "Float64"
 	case "float":

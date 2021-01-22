@@ -541,6 +541,23 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 			toType = "DateTime"
 			break
 		}
+		if strings.Index(columnType, "decimal") >= 0 {
+			n := strings.Index(columnType,"(")
+			if n <= 0 {
+				toType = "Decimal(18,17)"
+				break
+			}
+			dataTypeParam := columnType[n+1:len(columnType)-1]
+			p := strings.Split(dataTypeParam,",")
+			M, _ := strconv.Atoi(strings.Trim(p[0],""))
+			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
+			if M > 18 {
+				toType = "String"
+			}else{
+				toType = "Decimal("+dataTypeParam+")"
+			}
+			break
+		}
 	}
 	if nullable {
 		if strings.Index(columnType,"Nullable") >= 0 {

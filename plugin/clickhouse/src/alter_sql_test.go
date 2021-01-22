@@ -24,11 +24,17 @@ func TestAlterSQL_AddColumn(t *testing.T) {
 }
 
 func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
-	sql := "  ALTER TABLE `test`.`book` "
-	sql += " DROP COLUMN `name`,"
-	sql += " CHANGE `number` `number` BIGINT(20) NOT NULL  COMMENT '馆藏数量',"
-	sql += " ADD COLUMN `f1` VARCHAR(200) NULL AFTER `number`,"
-	sql += " ADD  INDEX `sdfsdfsdf` (`number`);"
+	sql := `ALTER TABLE bifrost_test.mytest   
+  ADD COLUMN decimal_test DECIMAL(18,2) DEFAULT 0.00  NOT NULL AFTER varchartest,
+  ADD COLUMN float_test FLOAT(7,2) DEFAULT 0.00  NOT NULL AFTER decimal_test,
+  ADD COLUMN double_test DOUBLE(9,2) DEFAULT 0.00  NULL AFTER float_test COMMENT "ffs,ssf",
+  ADD COLUMN f1 VARCHAR(200) NULL AFTER double_test,
+  ADD COLUMN decimal_test_1 decimal(18,2) NULL AFTER f1,
+  ADD COLUMN decimal_test_2 decimal NULL AFTER decimal_test_1,
+  ADD COLUMN decimal_test_3 decimal(19,17) NULL AFTER decimal_test_2,
+  ADD  INDEX sdfsdfsdf (id),
+ COMMENT='mytest\'s test,';
+`
 
 	ckObj := &Conn{
 		p:&PluginParam{
@@ -83,4 +89,15 @@ func TestAlterSQL_GetColumnInfo(t *testing.T) {
 	if AlterColumnInfo.Default != nil {
 		t.Log("default:",*AlterColumnInfo.Default)
 	}
+}
+
+func TestTransferComma2Other(t *testing.T) {
+	sql := `ALTER TABLE bifrost_test.mytest   
+  ADD COLUMN decimal_test DECIMAL(18,2) DEFAULT 0.00  NOT NULL AFTER varchartest,
+  ADD COLUMN float_test FLOAT(7,2) DEFAULT 0.00  NOT NULL AFTER decimal_test,
+  ADD COLUMN double_test DOUBLE(9,2) DEFAULT 0.00  NULL AFTER float_test COMMENT "ffs,ssf",
+COMMENT='mytest\'s test,';
+`
+	sql = TransferComma2Other(sql)
+	t.Log(sql)
 }
