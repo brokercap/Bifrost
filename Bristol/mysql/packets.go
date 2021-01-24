@@ -300,6 +300,34 @@ func (mc *mysqlConn) writeCommandPacket(command commandType, args ...interface{}
 		arg = append(arg, uint32ToBytes(args[2].(uint32))...)
 		arg = append(arg, []byte(args[3].(string))...)
 
+	case COM_BINLOG_DUMP_GTID:
+		if len(args) != 3 {
+			return fmt.Errorf("Invalid arguments count (Got: %d Has: 1)", len(args))
+		}
+		GtidSet := NewMySQLGtidSet(args[0].(string))
+		var err error
+		err = GtidSet.Init()
+		if err != nil {
+			return err
+		}
+		GtidBody := GtidSet.Encode()
+		/**
+		binlog_flags 2
+		server_id 4
+		binlog_name_info_size 4
+		empty binlog name ""
+		binlog_pos_info_size 8
+		encoded_data_size 4
+		 */
+		fileNameByte := []byte("")
+		arg = append(arg, uint16ToBytes(args[1].(uint16))...)     // 2
+		arg = append(arg, uint32ToBytes(args[2].(uint32))...)     // 4
+		arg = append(arg, uint32ToBytes(uint32(len(fileNameByte)))...)  // 4
+		arg = append(arg, fileNameByte...)						  // ""
+		arg = append(arg, uint64ToBytes(4)...)				  // 8
+		arg = append(arg, uint32ToBytes(uint32(len(GtidBody)))...) // 4
+		arg = append(arg, GtidBody...)							  // body
+
 	default:
 		return fmt.Errorf("Unknown command: %d", command)
 	}

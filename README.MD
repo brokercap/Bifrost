@@ -1,6 +1,6 @@
 ## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
 
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.6.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.7.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 [English](https://github.com/brokercap/Bifrost/blob/v1.6.x/README.EN.MD)
@@ -12,14 +12,14 @@
 
 * Redis
 * MongoDB
-* ClickHouse
-* MySQL
+* ClickHouse(支持DDL)
+* MySQL(支持DDL)
 * Memcahe
 * RabbitMQ
 * ActiveMQ
 * Kafka
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
+* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.7.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.7.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -43,7 +43,11 @@
 
 * 支持 Email 及 微信企业号等**监控报警**功能
 
-* 提供第三方监控平台访问接口(Http Basic验证)
+* 提供第三方监控平台访问接口(Http Basic验证)[https://wiki.xbifrost.com/api/http_api/](https://wiki.xbifrost.com/api/http_api/)
+
+* MySQL,ClickHouse 插件支持  DDL 同步
+
+* 简单即可实现[插件开发](https://wiki.xbifrost.com/plugin/plugin_dev/)
 
 #### 源码下载
 
@@ -60,12 +64,12 @@ https://www.xbifrost.com/demo/goto.html
 
 密码  :  Bifrost123
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.7.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.7.x/diagram.png)
 
 
 #### MySQL 版本（经过测试）
@@ -95,11 +99,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.6.6-release/bifrost_v1.6.6-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.7.0-rc.01/bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.6.6-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.6.6-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.7.0-rc.01_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 

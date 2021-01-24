@@ -108,10 +108,20 @@
                                 <td>{{$v.PluginName}}</td>
                                 <td>{{$v.ToServerKey}}</td>
                                 <td>
-                                    <p title="最后一个成功处理的位点">BinlogNum: {{$v.BinlogFileNum}}</p>
-                                    <p>Position : {{$v.BinlogPosition}}</p>
-                                    <p title="队列最后一个位点">LastBinlogFileNum: {{$v.LastBinlogFileNum}}</p>
-                                    <p title="队列最后一个位点">LastBinlogPosition : {{$v.LastBinlogPosition}}</p>
+                                    <p title="最后一个成功处理的位点">BinlogNum: {{$v.LastSuccessBinlog.BinlogFileNum}}</p>
+                                    <p>Position : {{$v.LastSuccessBinlog.BinlogPosition}}</p>
+                                    <p>GTID : {{$v.LastSuccessBinlog.GTID}}</p>
+                                    <p>Timestamp : {{$v.LastSuccessBinlog.Timestamp}}</p>
+                                    <p>BinlogEventID : {{$v.LastSuccessBinlog.EventID}}</p>
+                                    <p></p>
+
+                                    <p title="队列最后一个位点">LastQueueFileNum: {{$v.LastQueueBinlog.BinlogFileNum}}</p>
+                                    <p title="队列最后一个位点">LastQueuePosition : {{$v.LastQueueBinlog.BinlogPosition}}</p>
+                                    <p title="队列最后一个GTID">LastQueueGTID : {{$v.LastQueueBinlog.GTID}}</p>
+                                    <p title="队列最后一个时间">LastQueueTimestamp : {{$v.LastQueueBinlog.Timestamp}}</p>
+                                    <p title="队列最后一个EventID">LastQueueEventID : {{$v.LastQueueBinlog.EventID}}</p>
+                                    <p></p>
+
                                     <p title="内存队列堆积多少条数据待同步">QueueMsgCount: {{$v.QueueMsgCount}}</p>
                                     <p title="非极端情况下,不要手工点击启动文件队列，进行启动">FileQueueStatus: {{$v.FileQueueStatus}}
                                         {{if eq $v.FileQueueStatus false}}

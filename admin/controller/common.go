@@ -47,7 +47,6 @@ func (c *CommonController) Prepare()  {
 	}else{
 		c.normalAuthor()
 		c.Data["Version"] = config.VERSION
-
 	}
 }
 
@@ -69,7 +68,6 @@ func (c *CommonController) basicAuthor() bool{
 
 func (c *CommonController)  normalAuthor() bool{
 	var sessionID= c.Ctx.Session.CheckCookieValid(c.Ctx.ResponseWriter, c.Ctx.Request)
-
 	if sessionID != "" {
 		if _,ok:=c.Ctx.Session.GetSessionVal(sessionID,"UserName");ok{
 			//非administrator用户 用户，没有写操作权限

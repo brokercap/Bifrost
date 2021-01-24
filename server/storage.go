@@ -11,14 +11,17 @@ import (
 	"time"
 )
 
-type positionStruct struct {
-	BinlogFileNum int
-	BinlogPosition uint32
+type PositionStruct struct {
+	BinlogFileNum   int
+	BinlogPosition  uint32
+	GTID			string
+	Timestamp		uint32
+	EventID			uint64
 }
 
 type TmpPositioinStruct struct {
 	sync.RWMutex
-	Data map[string]positionStruct
+	Data map[string]*PositionStruct
 }
 
 var toSaveDbConfigChan chan int8
@@ -54,7 +57,7 @@ func InitStorage(){
 		var i uint32 = 0
 		for i = 0; i < cachePoolCount; i++ {
 			TmpPositioin[i] = &TmpPositioinStruct{
-				Data: make(map[string]positionStruct, 0),
+				Data: make(map[string]*PositionStruct, 0),
 			}
 		}
 		go saveBinlogPositionToStorageFromCache()
@@ -71,7 +74,7 @@ func saveBinlogPositionToStorageFromCache()  {
 				Val, _ := json.Marshal(v)
 				storage.PutKeyVal([]byte(k) , Val)
 			}
-			t.Data = make(map[string]positionStruct,0)
+			t.Data = make(map[string]*PositionStruct,0)
 			t.Unlock()
 		}
 	}
@@ -79,25 +82,25 @@ func saveBinlogPositionToStorageFromCache()  {
 
 var crc_table *crc32.Table = crc32.MakeTable(0xD5828281)
 
-func saveBinlogPositionByCache(key []byte,BinlogFileNum int,BinlogPosition uint32)  {
+func saveBinlogPositionByCache(key []byte,t *PositionStruct)  {
 	if cachePoolCount <= 0{
-		saveBinlogPosition(key,BinlogFileNum,BinlogPosition)
+		saveBinlogPosition(key,t)
 		return
 	}
 	id := crc32.Checksum(key, crc_table) % cachePoolCount
 	TmpPositioin[id].Lock()
-	TmpPositioin[id].Data[string(key)]=positionStruct{BinlogFileNum,BinlogPosition}
+	TmpPositioin[id].Data[string(key)]= t
 	TmpPositioin[id].Unlock()
 }
 
-func getBinlogPositionByCache(key []byte) (positionStruct,error){
+func getBinlogPositionByCache(key []byte) (*PositionStruct,error){
 	id := crc32.Checksum(key, crc_table) % cachePoolCount
 	TmpPositioin[id].RLock()
 	defer TmpPositioin[id].RUnlock()
 	if _,ok:=TmpPositioin[id].Data[string(key)];ok{
 		return TmpPositioin[id].Data[string(key)],nil
 	}else{
-		return positionStruct{},fmt.Errorf("no found")
+		return &PositionStruct{},fmt.Errorf("no found")
 	}
 }
 
@@ -119,18 +122,17 @@ func getDBBinlogkey(db *db) []byte{
 	return []byte("binlog-db-"+db.Name+"-"+strconv.FormatInt(db.AddTime, 10))
 }
 
-func saveBinlogPosition(key []byte,BinlogFileNum int,BinlogPosition uint32) error {
-	f := positionStruct{BinlogFileNum,BinlogPosition}
-	Val,_ := json.Marshal(f)
+func saveBinlogPosition(key []byte,t *PositionStruct) error {
+	Val,_ := json.Marshal(t)
 	err := storage.PutKeyVal(key, Val)
 	return err
 }
 
-func getBinlogPosition(key []byte) (*positionStruct,error) {
+func getBinlogPosition(key []byte) (*PositionStruct,error) {
 	if cachePoolCount > 0 {
 		data0, err := getBinlogPositionByCache(key)
 		if err == nil {
-			return &data0, nil
+			return data0, nil
 		}
 	}
 	s, err := storage.GetKeyVal(key)
@@ -140,7 +142,7 @@ func getBinlogPosition(key []byte) (*positionStruct,error) {
 	if len(s) == 0{
 		return nil,fmt.Errorf("not found data")
 	}
-	var data positionStruct
+	var data PositionStruct
 	err2 := json.Unmarshal(s,&data)
 	if err2 != nil{
 		return nil,err2

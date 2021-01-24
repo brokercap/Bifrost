@@ -3,7 +3,7 @@
 
 ##### *Real time data synchronization, only use mouse .....*
 
-[中文](https://github.com/brokercap/Bifrost/blob/v1.6.x/README.MD)
+[中文](https://github.com/brokercap/Bifrost/blob/v1.7.x/README.MD)
 
 Binary [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)
 
@@ -19,9 +19,9 @@ Your star is the biggest support for Bifrost!!!
 * ActiveMQ
 * Kafka
 * Mongodb
-* ClickHouse
-* MySQL
-* [Http](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
+* ClickHouse(supported DDL)
+* MySQL(supported DDL)
+* [Http](https://github.com/brokercap/Bifrost/blob/v1.7.x/plugin/http/example/http_server/http_server.go)
 * [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
 
 ---
@@ -34,12 +34,12 @@ Your star is the biggest support for Bifrost!!!
 
 http://www.xbifrost.com/demo/
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.7.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.7.x/diagram.png)
 
 
 ### Points
@@ -56,6 +56,8 @@ http://www.xbifrost.com/demo/
 * Supported Email AND Wechat **warning**
 
 * Supported **Flow** display
+
+* Plugin MySQL and ClickHouse suppoted DDL
 
 
 ### MySQL version(after test)
@@ -94,11 +96,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.6.6-release/bifrost_v1.6.6-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.7.0-rc.01/bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.6.6-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.6.6-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.7.0-rc.01_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 

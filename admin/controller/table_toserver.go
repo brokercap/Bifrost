@@ -90,8 +90,6 @@ func (c *TableToServerController) Add() {
 		ToServerKey:    param.ToServerKey,
 		PluginName:     param.PluginName,
 		FieldList:      param.FieldList,
-		BinlogFileNum:  0,
-		BinlogPosition: 0,
 		PluginParam:    param.PluginParam,
 	}
 	SchemaName := tansferSchemaName(param.SchemaName)

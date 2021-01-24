@@ -1,3 +1,11 @@
+v1.7.0-rc.01   2021-01-24
+===========================
+1. gtid supported
+2. plugin ck ddl supported(add,change column)
+3. plugin ck decimal64 tansfer decimal64, decimal128 and decimal256 tansfer to String
+4. plugin mysql filter data auto_increment be first
+5. fix other bugs
+
 v1.6.6-release   2021-01-17
 ===========================
 1. fix rename table binlog parser error bug

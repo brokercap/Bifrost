@@ -1,13 +1,13 @@
 package src
 
 import (
+	"encoding/json"
+	"fmt"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"reflect"
+	"strconv"
 	"strings"
 	"time"
-	"reflect"
-	"fmt"
-	"strconv"
-	"encoding/json"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func AllTypeToInt64(s interface{}) (int64, error) {
@@ -103,10 +103,10 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 				}
 				break
 				/*
-				loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
-				theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
-				v = theTime.Unix()
-				break
+					loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
+					theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
+					v = theTime.Unix()
+					break
 				*/
 			}
 			break
@@ -119,45 +119,6 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 				v = int32(i64)
 			} else {
 				v = int32(0)
-			}
-			break
-		}
-		break
-	case "DateTime64", "Nullable(DateTime64)":
-		if data == nil {
-			v = int64(0)
-			break
-		}
-		switch data.(type) {
-		case int32:
-			v = int64(data.(int32))
-			break
-		case int64:
-			v = data
-			break
-		case float32:
-			v = int64(data.(float32))
-		case float64:
-			v = int64(data.(float64))
-		case string:
-			switch data.(string){
-			case ""," ":
-				v = int64(0)
-				break
-			default:
-				if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
-					v = int64(0)
-				}else{
-					v = data
-				}
-				break
-			}
-			break
-		default:
-			var err error
-			v, err = AllTypeToInt64(data)
-			if err != nil {
-				return 0, err
 			}
 			break
 		}
@@ -426,6 +387,47 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 		}
 		break
 	default:
+		//DateTime64
+		if strings.Contains(toDataType,"DateTime64") {
+			if data == nil {
+				v = int64(0)
+				break
+			}
+			switch data.(type) {
+			case int32:
+				v = int64(data.(int32))
+				break
+			case int64:
+				v = data
+				break
+			case float32:
+				v = int64(data.(float32))
+			case float64:
+				v = int64(data.(float64))
+			case string:
+				switch data.(string){
+				case ""," ":
+					v = int64(0)
+					break
+				default:
+					if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
+						v = int64(0)
+					}else{
+						v = data
+					}
+					break
+				}
+				break
+			default:
+				var err error
+				v, err = AllTypeToInt64(data)
+				if err != nil {
+					return 0, err
+				}
+				break
+			}
+			break
+		}
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
 			v = interfaceToFloat64(data)
@@ -471,97 +473,203 @@ func interfaceToFloat64(data interface{}) float64 {
 	return f1
 }
 
+func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) (toType string) {
+	toType = "String"
+	switch columnType {
+	case "uint64","Nullable(uint64)":
+		toType = "UInt64"
+	case "int64","Nullable(int64)":
+		toType = "Int64"
+	case "uint32","Nullable(uint32)","uint24","Nullable(uint24)":
+		toType = "UInt32"
+	case "int32","Nullable(int32)","int24","Nullable(int24)":
+		toType = "Int32"
+	case "uint16","Nullable(uint16)":
+		toType = "UInt16"
+	case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
+		toType = "Int16"
+	case "uint8","Nullable(uint8)":
+		toType = "UInt8"
+	case "int8","Nullable(int8)","bool","Nullable(bool)":
+		toType = "Int8"
+	case "float","Nullable(float)":
+		toType = "Float32"
+	case "double","Nullable(double)":
+		toType = "Float64"
+	case "date","Nullable(date)":
+		toType = "Date"
+	default:
+		if strings.Index(columnType,"double") >= 0 {
+			toType = "Float64"
+			break
+		}
+		if strings.Index(columnType,"float") >= 0 {
+			toType = "Float32"
+			break
+		}
+		if strings.Index(columnType,"bit") >= 0 {
+			toType = "Int64"
+			break
+		}
+		if strings.Index(columnType, "timestamp") >= 0 {
+			i := strings.Index(columnType, "timestamp(")
+			if i >= 0 {
+				// 0000-00-00 00:00:00.000000
+				// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
+				if This.ckVersion >= 2000000000 || This.ckVersion==0 {
+					nsecNum := strings.Split(columnType[i+10:], ")")[0]
+					toType = "DateTime64(" + nsecNum + ")"
+				}else {
+					toType = "String"
+				}
+				break
+			}
+			toType = "DateTime"
+			break
+		}
+		if strings.Index(columnType, "datetime") >= 0 {
+			i := strings.Index(columnType, "datetime(")
+			if i >= 0 {
+				if This.ckVersion >= 2000000000 || This.ckVersion==0 {
+					nsecNum := strings.Split(columnType[i+9:], ")")[0]
+					toType = "DateTime64(" + nsecNum + ")"
+				}else {
+					toType = "String"
+				}
+				break
+			}
+			toType = "DateTime"
+			break
+		}
+		if strings.Index(columnType, "decimal") >= 0 {
+			n := strings.Index(columnType,"(")
+			if n <= 0 {
+				toType = "Decimal(18,17)"
+				break
+			}
+			dataTypeParam := columnType[n+1:len(columnType)-1]
+			p := strings.Split(dataTypeParam,",")
+			M, _ := strconv.Atoi(strings.Trim(p[0],""))
+			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
+			if M > 18 {
+				toType = "String"
+			}else{
+				toType = "Decimal("+dataTypeParam+")"
+			}
+			break
+		}
+	}
+	if nullable {
+		if strings.Index(columnType,"Nullable") >= 0 {
+			toType = "Nullable("+toType+")"
+		}
+	}
+	return
+}
+
+func (This *Conn) TransferToCkTypeByColumnData(v interface{},nullable bool) (toType string) {
+	toType = "String"
+	var err error
+	if v != nil {
+		switch reflect.TypeOf(v).Kind() {
+		case reflect.Int8, reflect.Bool:
+			toType = "Int8"
+			break
+		case reflect.Uint8:
+			toType = "UInt8"
+			break
+		case reflect.Int16:
+			toType = "Int16"
+			break
+		case reflect.Uint16:
+			toType = "UInt16"
+			break
+		case reflect.Int32:
+			toType = "Int32"
+			break
+		case reflect.Uint32:
+			toType = "UInt32"
+			break
+		case reflect.Int, reflect.Int64:
+			toType = "Int64"
+			break
+		case reflect.Uint, reflect.Uint64:
+			toType = "UInt64"
+			break
+		case reflect.Float32:
+			toType = "Float32"
+			break
+		case reflect.Float64:
+			toType = "Float64"
+			break
+		case reflect.Map, reflect.Slice, reflect.Interface:
+			toType = "String"
+			break
+		case reflect.String:
+			n := len(v.(string))
+			switch n {
+			case 19:
+				if v.(string) == "0000-00-00 00:00:00" {
+					toType = "DateTime"
+					break
+				}
+				_, err = time.Parse("2006-01-02 15:04:05", v.(string))
+				if err == nil {
+					toType = "DateTime"
+				} else {
+					toType = "String"
+				}
+				break
+			case 10:
+				if v.(string) == "0000-00-00" {
+					toType = "Date"
+					break
+				}
+				_, err = time.Parse("2006-01-02", v.(string))
+				if err == nil {
+					toType = "Date"
+				} else {
+					toType = "String"
+				}
+				break
+			default:
+				// 0000-00-00 00:00:00.000000
+				// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
+				if This.ckVersion >= 2000000000 || This.ckVersion ==0 {
+					if n > 19 && n <= 26 {
+						nsec := fmt.Sprintf("%0*d", n-20, 0)
+						_, err = time.Parse("2006-01-02 15:04:05."+nsec, v.(string))
+						if err == nil {
+							toType = "DateTime64(" + fmt.Sprint(n-20) + ")"
+						}
+					}
+				}
+				break
+			}
+			break
+		default:
+			break
+		}
+	}
+	if nullable {
+		toType = "Nullable("+toType+")"
+	}
+	return
+}
+
 func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string, ckField []fieldStruct) {
 	if data.Rows == nil || len(data.Rows) == 0 || len(data.Pri) == 0 {
 		return "", nil
 	}
 	sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
 	ckField = make([]fieldStruct, 0)
-	var getToCkType = func(v interface{}) (toType string) {
-		var err error
-		toType = "String"
-		if v != nil {
-			switch reflect.TypeOf(v).Kind() {
-			case reflect.Int8, reflect.Bool:
-				toType = "Int8"
-				break
-			case reflect.Uint8:
-				toType = "UInt8"
-				break
-			case reflect.Int16:
-				toType = "Int16"
-				break
-			case reflect.Uint16:
-				toType = "UInt16"
-				break
-			case reflect.Int32:
-				toType = "Int32"
-				break
-			case reflect.Uint32:
-				toType = "UInt32"
-				break
-			case reflect.Int, reflect.Int64:
-				toType = "Int64"
-				break
-			case reflect.Uint, reflect.Uint64:
-				toType = "UInt64"
-				break
-			case reflect.Float32:
-				toType = "Float32"
-				break
-			case reflect.Float64:
-				toType = "Float64"
-				break
-			case reflect.Map, reflect.Slice, reflect.Interface:
-				toType = "String"
-				break
-			case reflect.String:
-				n := len(v.(string))
-				switch n {
-				case 19:
-					if v.(string) == "0000-00-00 00:00:00" {
-						toType = "DateTime"
-						break
-					}
-					_, err = time.Parse("2006-01-02 15:04:05", v.(string))
-					if err == nil {
-						toType = "DateTime"
-					} else {
-						toType = "String"
-					}
-					break
-				case 10:
-					if v.(string) == "0000-00-00" {
-						toType = "Date"
-						break
-					}
-					_, err = time.Parse("2006-01-02", v.(string))
-					if err == nil {
-						toType = "Date"
-					} else {
-						toType = "String"
-					}
-					break
-				default:
-					// 0000-00-00 00:00:00.000000
-					// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
-					if This.ckVersion >= 2000000000 {
-						if n > 19 && n <= 26 {
-							nsec := fmt.Sprintf("%0*d", n-20, 0)
-							_, err = time.Parse("2006-01-02 15:04:05."+nsec, v.(string))
-							if err == nil {
-								toType = "DateTime64(" + fmt.Sprint(n-20) + ")"
-							}
-						}
-					}
-					break
-				}
-				break
-			default:
-				break
+	var getToCkType = func(fieldName string,nullable bool) string {
+		if data.ColumnMapping != nil {
+			if columnType,ok := data.ColumnMapping[fieldName]; ok {
+				return This.TransferToCkTypeByColumnType(columnType,nullable)
 			}
 		}
-		return
+		return This.TransferToCkTypeByColumnData(data.Rows[0][fieldName],nullable)
 	}
 	var val = ""
 	var addCkField = func(ckFieldName,mysqlFieldName,ckType string) {
@@ -580,17 +688,16 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 		fileName0 := This.GetFieldName(priK)
 		priArr = append(priArr, fileName0)
 		priMap[fileName0] = true
-		toCkType = getToCkType(data.Rows[0][priK])
+		toCkType = getToCkType(priK,false)
 		addCkField(fileName0,priK,toCkType)
 	}
 	var ok bool
-	for fileName, v := range data.Rows[0] {
+	for fileName, _ := range data.Rows[0] {
 		fileName0 := This.GetFieldName(fileName)
 		if _,ok = priMap[fileName0];ok {
 			continue
 		}
-		toCkType = getToCkType(v)
-		toCkType = "Nullable("+toCkType+")"
+		toCkType = getToCkType(fileName,true)
 		addCkField(fileName0,fileName,toCkType)
 	}
 	addCkField("bifrost_data_version","{$BifrostDataVersion}","Nullable(Int64)")
@@ -602,4 +709,30 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
 	sql = "CREATE DATABASE IF NOT EXISTS `"+SchemaName+"`"
 	return sql
+}
+
+func ReplaceBr(str string) string  {
+	str = strings.ReplaceAll(str, "\r\n"," ")
+	str = strings.ReplaceAll(str, "\n"," ")
+	str = strings.ReplaceAll(str, "\r"," ")
+	return str
+}
+
+//去除连续的两个空格
+func ReplaceTwoReplace(sql string) string {
+	for {
+		if strings.Index(sql,"  ") >= 0 {
+			sql = strings.ReplaceAll(sql,"  "," ")
+			//sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			break
+		}
+	}
+	for {
+		if strings.Index(sql,"	") >= 0 {
+			sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			return sql
+		}
+	}
 }

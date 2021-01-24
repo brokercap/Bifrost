@@ -186,6 +186,7 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 				BinlogFileNum:	0,
 				BinlogPosition:	0,
 				Pri:			This.TablePriArr,
+				ColumnMapping:	This.ColumnMapping,
 			}
 
 			This.sendToServerResult(d)

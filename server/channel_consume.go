@@ -54,14 +54,14 @@ type consume_channel_obj struct {
 	sync.RWMutex
 	db      *db
 	c       *Channel
-	connMap map[string]pluginDriver.Driver
+	SchemaName string
+	TableName string
 }
 
 func NewConsumeChannel(c *Channel) *consume_channel_obj {
 	return &consume_channel_obj{
 		db:      c.db,
 		c:       c,
-		connMap: make(map[string]pluginDriver.Driver, 0),
 	}
 }
 
@@ -83,7 +83,19 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		ToServerInfo.Status = RUNNING
 	}
 	//修改toserver 对应最后接收的 位点信息
+	var lastQueueBinlog = &PositionStruct{
+		BinlogFileNum: pluginData.BinlogFileNum,
+		BinlogPosition: pluginData.BinlogPosition,
+		GTID: pluginData.Gtid,
+		Timestamp: pluginData.Timestamp,
+		EventID: pluginData.EventID,
+	}
+	ToServerInfo.LastQueueBinlog = lastQueueBinlog
+
+	// 支持到 1.8.x
 	ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition = pluginData.BinlogFileNum,pluginData.BinlogPosition
+
+	//ToServerInfo.LastBinlogFileNum,ToServerInfo.LastBinlogPosition,ToServerInfo.LastBinlogGtid,ToServerInfo.LastBinlogEventID = pluginData.BinlogFileNum,pluginData.BinlogPosition,pluginData.Gtid,pluginData.EventID
 	if ToServerInfo.ToServerChan == nil{
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To:     make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
@@ -94,7 +106,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 	if ToServerInfo.LastBinlogKey == nil{
 		ToServerInfo.LastBinlogKey = getToServerLastBinlogkey(This.db,ToServerInfo)
 	}
-	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,pluginData.BinlogFileNum,pluginData.BinlogPosition)
+	saveBinlogPositionByCache(ToServerInfo.LastBinlogKey,lastQueueBinlog)
 	if FileQueueStatus {
 		ToServerInfo.InitFileQueue(This.db.Name,pluginData.SchemaName,pluginData.TableName)
 		ToServerInfo.AppendToFileQueue(pluginData)
@@ -130,7 +142,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer,plugi
 		case <-timer.C:
 			ToServerInfo.Lock()
 			defer ToServerInfo.Unlock()
-			ToServerInfo.InitFileQueue(This.db.Name, pluginData.SchemaName, pluginData.TableName)
+			ToServerInfo.InitFileQueue(This.db.Name, This.SchemaName, This.TableName)
 			ToServerInfo.AppendToFileQueue(pluginData)
 			ToServerInfo.FileQueueStatus = true
 			//log.Println("start FileQueueStatus = true;",*pluginData)
@@ -158,7 +170,10 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) (
 		BinlogFileNum:BinlogFileNum,
 		BinlogPosition:data.Header.LogPos,
 		Query:data.Query,
+		Gtid:data.Gtid,
 		Pri:data.Pri,
+		ColumnMapping: data.ColumnMapping,
+		EventID: data.EventID,
 	}
 	return
 }
@@ -200,8 +215,11 @@ func (This *consume_channel_obj) consumeChannel() {
 			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
 			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
 			pluginData := This.transferToPluginData(&data)
+			This.SchemaName,This.TableName = pluginData.SchemaName,pluginData.TableName
 			This.sendToServerList(key,pluginData,countNum,EventSize)
+			This.SchemaName,This.TableName = pluginData.SchemaName,"*"
 			This.sendToServerList(AllTableKey,pluginData,countNum,EventSize)
+			This.SchemaName,This.TableName = "*","*"
 			This.sendToServerList(AllSchemaAndTablekey,pluginData,countNum,EventSize)
 
 			if This.db.killStatus == 1{
@@ -271,12 +289,17 @@ func (This *consume_channel_obj) sendToServerList0(toServerList []*ToServer,plug
 				continue
 			}
 		}
+		if pluginData.EventID < toServerInfo.LastSuccessBinlog.EventID {
+			continue
+		}
+		/*
 		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum {
 			continue
 		}
-		if pluginData.BinlogFileNum == toServerInfo.BinlogFileNum && toServerInfo.BinlogPosition >= pluginData.BinlogPosition {
+		if pluginData.Timestamp < toServerInfo.LastSuccessBinlog.Timestamp || (pluginData.BinlogFileNum == toServerInfo.LastSuccessBinlog.BinlogFileNum && toServerInfo.LastSuccessBinlog.BinlogPosition >= pluginData.BinlogPosition) {
 			continue
 		}
+		 */
 		This.sendToServerResult(toServerInfo,pluginData)
 	}
 }

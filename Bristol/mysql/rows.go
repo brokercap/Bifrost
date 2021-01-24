@@ -41,7 +41,13 @@ func (rows mysqlRows) Close() error {
 // unnecessary conversions.
 func (rows mysqlRows) Next(dest []driver.Value) error {
 	if len(rows.content.rows) > 0 {
-		for i := 0; i < cap(dest); i++ {
+		var n int
+		if len(rows.content.rows[0]) >= cap(dest) {
+			n = cap(dest)
+		}else{
+			n = len(rows.content.rows[0])
+		}
+		for i := 0; i < n; i++ {
 			dest[i] = rows.content.rows[0][i]
 			/*
 			rows.content.rows[0][i] ==

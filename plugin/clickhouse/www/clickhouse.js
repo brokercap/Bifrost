@@ -384,3 +384,6 @@ $("#TableFieldsContair p.fieldsname input:checkbox").click(
         var fieldName = $(this).val();
         $("#"+CK_OnFoucsInputId).val($.trim(fieldName));
 });
+
+// 设置不过滤 sql 事件, sql 将会提交到 mysql 插件来
+setPluginParamDefault("FilterQuery","false");

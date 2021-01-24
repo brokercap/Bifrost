@@ -61,7 +61,10 @@ func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
 				TableName:      TableName,
 				BinlogFileName: data.BinlogFileName,
 				BinlogPosition: data.BinlogPosition,
+				Gtid:			data.Gtid,
 				Pri:			data.Pri,
+				ColumnMapping:  data.ColumnMapping,
+				EventID:		data.EventID,
 			}
 			db.Callback0(data0)
 		}

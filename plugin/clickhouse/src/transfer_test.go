@@ -255,3 +255,30 @@ func TestDateTimeWithMsFormat(t *testing.T) {
 	}
 	t.Log("timeStr == ",timeStr)
 }
+
+func TestConn_TransferToCkTypeByColumnType(t *testing.T) {
+	type result struct{
+		Val  string
+		Type string
+		IsErr bool
+	}
+
+	testArr := make([]result,0)
+	testArr = append(testArr,result{Val:"date",Type:"Date"})
+	testArr = append(testArr,result{Val:"Nullable(timestamp(5))",Type:"Nullable(DateTime64(5))"})
+	testArr = append(testArr,result{Val:"time(5)",Type:"String"})
+	testArr = append(testArr,result{Val:"timestamp(5)",Type:"DateTime64(5)"})
+	testArr = append(testArr,result{Val:"datetime(5)",Type:"DateTime64(5)"})
+	testArr = append(testArr,result{Val:"Nullable(datetime(5))",Type:"Nullable(DateTime64(5))"})
+	testArr = append(testArr,result{Val:"uint64",Type:"UInt64"})
+
+	conn := &MyPlugin.Conn{}
+	for _,v := range testArr {
+		TypeName := conn.TransferToCkTypeByColumnType(v.Val,true)
+		if TypeName != v.Type {
+			t.Error(v.Val,TypeName, "!=",v.Type," ( need )")
+			continue
+		}
+		t.Log(v.Val,v.Type, "success")
+	}
+}

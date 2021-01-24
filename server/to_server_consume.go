@@ -139,10 +139,23 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 				return
 			}
 			//db.Lock()
-			This.BinlogFileNum,This.BinlogPosition = LastSuccessData.BinlogFileNum,LastSuccessData.BinlogPosition
+			//This.BinlogFileNum,This.BinlogPosition,This.BinlogTimestamp = LastSuccessData.BinlogFileNum,LastSuccessData.BinlogPosition,LastSuccessData.Timestamp
 			//db.Unlock()
 			//这里保存位点是为了刷到磁盘,这个位点在重启 配置文件恢复的时候，会根据最小的 ToServerList 的位点进行自动替换
-			saveBinlogPositionByCache(binlogKey, LastSuccessData.BinlogFileNum, LastSuccessData.BinlogPosition)
+			var LastSuccessBinlog = &PositionStruct{
+				BinlogFileNum: LastSuccessData.BinlogFileNum,
+				BinlogPosition: LastSuccessData.BinlogPosition,
+				GTID: LastSuccessData.Gtid,
+				Timestamp: LastSuccessData.Timestamp,
+				EventID: LastSuccessData.EventID,
+			}
+
+			This.LastSuccessBinlog = LastSuccessBinlog
+			saveBinlogPositionByCache(binlogKey, LastSuccessBinlog)
+
+			// 支持到 1.8.x
+			This.BinlogFileNum = LastSuccessData.BinlogFileNum
+			This.BinlogPosition = LastSuccessData.BinlogPosition
 		}
 	}
 	var fordo int8 = 0
@@ -367,7 +380,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							BinlogFileNum:0,
 							BinlogPosition:0,
 							Rows:make([]map[string]interface{},1),
+							Gtid: data.Gtid,
 							Pri: data.Pri,
+							ColumnMapping: data.ColumnMapping,
+							EventID: data.EventID,
 						}
 						if n0 == n1{
 							d.BinlogFileNum = data.BinlogFileNum
@@ -393,7 +409,10 @@ func (This *ToServer) consume_to_server(db *db,SchemaName string,TableName strin
 							BinlogFileNum:0,
 							BinlogPosition:0,
 							Rows:make([]map[string]interface{},2),
+							Gtid: data.Gtid,
 							Pri: data.Pri,
+							ColumnMapping: data.ColumnMapping,
+							EventID: data.EventID,
 						}
 						if n0 == n1-2{
 							d.BinlogFileNum = data.BinlogFileNum
@@ -488,7 +507,10 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			BinlogFileNum:data.BinlogFileNum,
 			BinlogPosition:data.BinlogPosition,
 			Rows:make([]map[string]interface{},1),
+			Gtid: data.Gtid,
 			Pri: data.Pri,
+			ColumnMapping: data.ColumnMapping,
+			EventID: data.EventID,
 		}
 		newData.Rows[0] = m
 	}else{
@@ -500,7 +522,10 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType)(newData *pl
 			BinlogFileNum:data.BinlogFileNum,
 			BinlogPosition:data.BinlogPosition,
 			Rows:make([]map[string]interface{},2),
+			Gtid: data.Gtid,
 			Pri: data.Pri,
+			ColumnMapping: data.ColumnMapping,
+			EventID: data.EventID,
 		}
 		m_before := make(map[string]interface{})
 		m_after := make(map[string]interface{})
@@ -554,10 +579,10 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 	}
 	This.Lock()
 	defer This.Unlock()
-	if This.cosumerPluginParamArr[int(MyConsumerId)] == nil {
-		This.cosumerPluginParamArr[int(MyConsumerId)],err = PluginConn.GetConn().SetParam(This.PluginParam)
+	if This.cosumerPluginParamArr[MyConsumerId] == nil {
+		This.cosumerPluginParamArr[MyConsumerId],err = PluginConn.GetConn().SetParam(This.PluginParam)
 	}else{
-		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[int(MyConsumerId)])
+		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[MyConsumerId])
 	}
 	return
 }
@@ -644,4 +669,3 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType,MyCons
 	}
 	return
 }
-

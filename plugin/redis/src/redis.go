@@ -67,8 +67,8 @@ func (This *Conn) CheckUri() error{
 	return nil
 }
 
-func getUriParam(uri string)(pwd string, network string, url string, database int){
-	i := strings.IndexAny(uri, "@")
+func GetUriParam(uri string)(pwd string, network string, url string, database int){
+	i := strings.LastIndex(uri, "@")
 	pwd = ""
 	if i > 0{
 		pwd = uri[0:i]
@@ -126,7 +126,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 }
 
 func (This *Conn) Connect() bool {
-	pwd,network,uri,database := getUriParam(*This.Uri)
+	pwd,network,uri,database := GetUriParam(*This.Uri)
 	if database < 0 {
 		This.err = fmt.Errorf("database must be in 0 and 16")
 		return false

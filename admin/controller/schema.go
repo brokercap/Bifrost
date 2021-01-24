@@ -256,7 +256,7 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct {
 	var Binlog_Ignore_DB string
 	var Executed_Gtid_Set string
 	for {
-		dest := make([]driver.Value, 4, 4)
+		dest := make([]driver.Value, 5, 5)
 		errs := rows.Next(dest)
 		if errs != nil {
 			return MasterBinlogInfoStruct{}
@@ -264,7 +264,11 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct {
 		File = dest[0].(string)
 		Binlog_Do_DB = dest[2].(string)
 		Binlog_Ignore_DB = dest[3].(string)
-		Executed_Gtid_Set = ""
+		if  dest[4] == nil {
+			Executed_Gtid_Set = ""
+		}else{
+			Executed_Gtid_Set = dest[4].(string)
+		}
 		PositonString := fmt.Sprint(dest[1])
 		Position, _ = strconv.Atoi(PositonString)
 		break

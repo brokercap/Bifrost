@@ -100,6 +100,7 @@ function formatDate(timestamp) {
                                                     <td>
                                                         <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
                                                         <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_gtid">{{$v.Gtid}}</p>
                                                         <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
 
                                                     {{if eq $v.ConnStatus "closed"}}
@@ -114,6 +115,7 @@ function formatDate(timestamp) {
                                                     <td>
                                                         <p class="db_current_binlog"></p>
                                                         <p class="db_current_postion"></p>
+                                                        <p class="db_current_gtid"></p>
                                                         <p class="db_postion_time_delay"></p>
                                                         <p><button data-toggle="button" class="btn-sm btn-primary NewestPostionBtn" type="button">最新位点</button></p>
                                                     </td>
@@ -208,6 +210,13 @@ function formatDate(timestamp) {
                                 <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限(不要勾选 验证是否有足够权限 选项)</span></p>
                                 <p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
                                 <p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">GTID：</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="gtid" id="gtid" class="form-control" placeholder="GTID">
+                                <p><span class="help-block m-b-none">假如配置了 GTID 的情况下,将自动启动GTID模式解析Binlog</span></p>
                             </div>
                         </div>
                         <div class="form-group">
@@ -320,6 +329,9 @@ function formatDate(timestamp) {
                 alert(data.msg);
                 return false;
             }
+            if($("#gtid").val() == ""){
+                $("#gtid").val(data.data.Gtid);
+            }
             if($("#filename").val() == ""){
                 $("#filename").val(data.data.BinlogFile);
             }
@@ -358,10 +370,12 @@ function formatDate(timestamp) {
                 }
                 trObj.children().eq(3).find(".db_last_binlog").text(data.data.BinlogFile);
                 trObj.children().eq(3).find(".db_last_position").text(data.data.BinlogPosition);
+                trObj.children().eq(3).find(".db_last_gtid").text(data.data.Gtid);
                 trObj.children().eq(3).find(".db_last_time").text(formatDate(data.data.BinlogTimestamp));
 
                 trObj.children().eq(4).find(".db_current_binlog").text(data.data.CurrentBinlogFile);
                 trObj.children().eq(4).find(".db_current_postion").text(data.data.CurrentBinlogPosition);
+                trObj.children().eq(4).find(".db_current_gtid").text(data.data.CurrentGtid);
                 trObj.children().eq(4).find(".db_postion_time_delay").text("delay: "+data.data.DelayedTime+ " s");
             };
             Ajax("POST",url,{DbName: dbname},callback,true);
@@ -381,6 +395,7 @@ $("#addNewDBBtn").click(
 			 return false;
 		}
 		var uri = $("#uri").val();
+        var gtid = $("#gtid").val();
 		var filename = $("#filename").val();
 		var position = parseInt($("#position").val());
 		var serverid = parseInt($("#serverid").val());
@@ -426,7 +441,7 @@ $("#addNewDBBtn").click(
                 location.href = "/db/detail?DbName="+dbname;
             }
         };
-		var ajaxParam = { DbName: dbname,Uri:uri,BinlogFileName:filename,BinlogPosition:position,ServerId:serverid,MaxBinlogFileName:max_filename,MaxBinlogPosition:max_position,UpdateToServer:update_toserver};
+		var ajaxParam = { DbName: dbname,Uri:uri,Gtid:gtid,BinlogFileName:filename,BinlogPosition:position,ServerId:serverid,MaxBinlogFileName:max_filename,MaxBinlogPosition:max_position,UpdateToServer:update_toserver};
 
         Ajax("POST",url,ajaxParam,callback,true);
 	}
