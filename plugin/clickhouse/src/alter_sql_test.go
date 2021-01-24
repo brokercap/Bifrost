@@ -67,6 +67,19 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	_,_,destAlterSql = c.Transfer2CkSQL()
 	t.Log("33:",destAlterSql)
 
+
+	sql = `ALTER TABLE binlog_field_test 
+  CHANGE testtinyint testtinyint INT UNSIGNED DEFAULT -1  NOT NULL,
+  CHANGE testvarchar testvarchar VARCHAR(60) CHARSET utf8 COLLATE utf8_general_ci NOT NULL,
+  ADD COLUMN testint2 INT(11) DEFAULT 0  NOT NULL   COMMENT 'test ok' AFTER test_json;
+`
+	Query = ReplaceBr(sql)
+	Query = ReplaceTwoReplace(Query)
+	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
+	destAlterSql = ""
+	c = NewAlterSQL("test",sql,ckObj)
+	_,_,destAlterSql = c.Transfer2CkSQL()
+	t.Log(destAlterSql)
 }
 
 func TestAlterSQL_GetColumnInfo(t *testing.T) {

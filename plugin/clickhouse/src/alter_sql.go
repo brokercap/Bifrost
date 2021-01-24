@@ -72,6 +72,7 @@ func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string
 			TableName = This.c.GetFieldName(TableName)
 			v = strings.Join(tmpArr[3:]," ")
 			v = strings.Trim(v," ")
+			UpperV = strings.ToUpper(v)
 		}
 		if strings.Index(UpperV,"CHANGE") == 0 {
 			alterParamArr = append(alterParamArr,This.ChangeColumn(v))
