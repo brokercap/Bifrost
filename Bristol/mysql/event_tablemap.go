@@ -165,9 +165,5 @@ func (parser *eventParser) parseTableMapEvent(buf *bytes.Buffer) (event *TableMa
 		err = io.EOF
 	}
 	event.nullBitmap = Bitfield(buf.Next(int((columnCount + 7) / 8)))
-	if parser.binlog_checksum {
-		buf.Next(4)
-	}
-
 	return
 }
