@@ -81,7 +81,7 @@
 
 <p><strong>自动匹配表</strong></p>
 
-<p>假如没有选择目标表名,则在同步的时候,按源表名和结构自动匹配表(并不会自动创建表),需要用户自行在目标库里,事先将 MySQL 源表结构导入目标库</p>
+<p>假如没有选择目标表名,则在同步的时候,按源表名和结构自动匹配表(<strong>并不会自动创建表</strong>),需要用户自行在目标库里,事先将 MySQL 源表结构导入目标库</p>
 
 <p>假如在选择了  FilterQuery ：False 的情况下, 源表的 DDL 操作, 目标库也会执行相应的 DDL 操作 ,请源库执行 DDL 操作的时候，尽可能不要  SchemaName.TableName 这种跨库SQL语句执行</p>
 <p>不需要 DDL 支持的情况下 设置 FilterQuery ：True </p>
@@ -115,16 +115,22 @@
         </tr>
 
         <tr>
-            <td>日志模式-修改(LogUpdate)</td>
+            <td>日志模式-追加(LogAppend)</td>
             <td>INSERT INTO</td>
             <td>INSERT INTO</td>
             <td>INSERT INTO</td>
+        </tr>
+        <tr>
+            <td>不同步数据(NoSyncData)</td>
+            <td>/</td>
+            <td>/</td>
+            <td>/</td>
         </tr>
 
     </table>
 </div>
 
-<p> </p>
+<p> 不同步数据(NoSyncData) 只是不同步数据,假如配置了  FilterQuery:False , 还是会同步 DDL 的</p>
 
 <p> </p>
 
