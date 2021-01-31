@@ -262,6 +262,7 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 	if n > 0 {
 		mysqlDataType = strings.ToLower(mysqlColumnType[0:n])
 		dataTypeParam = mysqlColumnType[n+1:len(mysqlColumnType)-1]
+		dataTypeParam = strings.Trim(dataTypeParam," ")
 	}else{
 		mysqlDataType = strings.ToLower(mysqlColumnType)
 	}
@@ -276,7 +277,7 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 		ckType = "Int64"
 	case "numeric","decimal":
 		if dataTypeParam == "" {
-			ckType = "Decimal(18,17)"
+			ckType = "Decimal(18,2)"
 		}else{
 			p := strings.Split(dataTypeParam,",")
 			M, _ := strconv.Atoi(strings.Trim(p[0],""))
@@ -292,12 +293,15 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 	case "float":
 		ckType = "Float32"
 	case "timestamp","datetime":
-		ckType = "DateTime"
 		if dataTypeParam != "" {
-			ckType += "("+dataTypeParam+")"
+			ckType = "DateTime64("+dataTypeParam+")"
+		}else{
+			ckType = "DateTime"
 		}
 	case "time":
 		ckType = "String"
+	case "date":
+		ckType = "Date"
 	default:
 		ckType = "String"
 	}

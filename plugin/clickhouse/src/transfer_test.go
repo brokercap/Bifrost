@@ -271,6 +271,10 @@ func TestConn_TransferToCkTypeByColumnType(t *testing.T) {
 	testArr = append(testArr,result{Val:"datetime(5)",Type:"DateTime64(5)"})
 	testArr = append(testArr,result{Val:"Nullable(datetime(5))",Type:"Nullable(DateTime64(5))"})
 	testArr = append(testArr,result{Val:"uint64",Type:"UInt64"})
+	testArr = append(testArr,result{Val:"decimal(3, 2)",Type:"Decimal(3,2)"})
+	testArr = append(testArr,result{Val:"Nullable(decimal( 18, 5))",Type:"Nullable(Decimal(18,5))"})
+	testArr = append(testArr,result{Val:"Nullable(decimal( 38, 5))",Type:"Nullable(String)"})
+	testArr = append(testArr,result{Val:"decimal( )",Type:"Decimal(18,2)"})
 
 	conn := &MyPlugin.Conn{}
 	for _,v := range testArr {

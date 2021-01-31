@@ -114,3 +114,40 @@ COMMENT='mytest\'s test,';
 	sql = TransferComma2Other(sql)
 	t.Log(sql)
 }
+
+func TestAlterSQL_GetTransferCkType(t *testing.T) {
+	type result struct{
+		Val  string
+		Type string
+		IsErr bool
+	}
+
+	testArr := make([]result,0)
+	testArr = append(testArr,result{Val:"date",Type:"Date"})
+	testArr = append(testArr,result{Val:"timestamp(5)",Type:"DateTime64(5)"})
+	testArr = append(testArr,result{Val:"time(5)",Type:"String"})
+	testArr = append(testArr,result{Val:"timestamp(5)",Type:"DateTime64(5)"})
+	testArr = append(testArr,result{Val:"datetime(5)",Type:"DateTime64(5)"})
+	testArr = append(testArr,result{Val:"datetime(6)",Type:"DateTime64(6)"})
+	testArr = append(testArr,result{Val:"bigint",Type:"Int64"})
+	testArr = append(testArr,result{Val:"decimal(3, 2)",Type:"Decimal(3, 2)"})
+	testArr = append(testArr,result{Val:"decimal( 18, 5)",Type:"Decimal(18, 5)"})
+	testArr = append(testArr,result{Val:"decimal( 38, 5)",Type:"String"})
+	testArr = append(testArr,result{Val:"decimal( )",Type:"Decimal(18,2)"})
+
+	ckObj := &Conn{
+		p:&PluginParam{
+			CkSchema:"",
+		},
+	}
+	c := NewAlterSQL("test","",ckObj)
+
+	for _,v := range testArr {
+		TypeName := c.GetTransferCkType(v.Val)
+		if TypeName != v.Type {
+			t.Error(v.Val,TypeName, "!=",v.Type," ( need )")
+			continue
+		}
+		t.Log(v.Val,v.Type, "success")
+	}
+}
