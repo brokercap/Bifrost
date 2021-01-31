@@ -46,9 +46,16 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 
 	// ALTER TABLE tableName
 	// TRUNCATE TABLE tableName
-	if strings.Index(sqlUpper,"ALTER TABLE") == 0 || strings.Index(sqlUpper,"TRUNCATE TABLE") == 0 {
+	if strings.Index(sqlUpper,"ALTER TABLE ") == 0 || strings.Index(sqlUpper,"TRUNCATE TABLE ") == 0 {
 		sqlArr := strings.Split(sql, " ")
 		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[2])
+		return
+	}
+
+	// TRUNCATE tableName
+	if strings.Index(sqlUpper,"TRUNCATE") == 0 {
+		sqlArr := strings.Split(sql, " ")
+		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[1])
 		return
 	}
 
@@ -114,6 +121,25 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 		return
 	}
 
+	// CREATE INDEX index_name ON table_name (column_name)
+	// CREATE UNIQUE INDEX index_name ON table_name (column_name)
+	var normalIndex = strings.Index(sqlUpper,"CREATE INDEX")
+	if normalIndex == 0 || strings.Index(sqlUpper,"CREATE UNIQUE INDEX") == 0 {
+		sqlArr := strings.Split(sql, " ")
+		var tableNameIndex = 4
+		if normalIndex != 0 {
+			tableNameIndex = 5
+		}
+		//CREATE INDEX indexName ON table(id int) 这种表名和( 相挨着的情况
+		if strings.Index(sqlArr[tableNameIndex],"(") > 0 {
+			tmpTableName := strings.Split(sqlArr[tableNameIndex], "(")[0]
+			SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
+		}else{
+			SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[tableNameIndex])
+		}
+		return
+	}
+
 	// 授权
 	if strings.Index(sqlUpper,"GRANT") == 0 {
 		SchemaName,TableName = "",""
@@ -131,6 +157,9 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	// DELETE FROM Table
 	// REPLACE INTO Table
 	var tableNameIndex = 0
+	if len(sqlUpper) < 6 {
+		return
+	}
 	switch sqlUpper[0:6] {
 	case "UPDATE":
 		tableNameIndex = 1
