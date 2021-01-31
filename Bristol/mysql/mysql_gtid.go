@@ -29,10 +29,6 @@ type MySQLGtid struct {
 	intervals []*Intervals
 }
 
-func (This *MySQLGtid) SetGtid(gtid string) {
-	This.Gtid = gtid
-}
-
 func (This *MySQLGtid) Parse() (err error) {
 	var RegularxEpression = `^([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})((?::[0-9-]+)+)$`
 	reqTagAll, _ := regexp.Compile(RegularxEpression)
@@ -96,26 +92,42 @@ func (This *MySQLGtid) Encode(w io.Writer) {
 	}
 }
 
+func (This *MySQLGtid) String() string {
+	return This.Gtid
+	/*
+	gtid := This.sid.String()
+	for _, v := range This.intervals {
+		gtid += fmt.Sprint(":%d-%d",v.Start,v.Stop)
+	}
+	return gtid
+	*/
+}
+
 func NewMySQLGtidSet(GtidStr string) *MySQLGtidSet {
-	gtidSet := &MySQLGtidSet{gtids: make([]*MySQLGtid, 0), GtidStr: GtidStr}
+	gtidSet := &MySQLGtidSet{gtids: make(map[string]*MySQLGtid, 0), GtidStr: GtidStr}
 	return gtidSet
 }
 
 type MySQLGtidSet struct {
-	gtids   []*MySQLGtid
+	gtids   map[string]*MySQLGtid
 	GtidStr string
 }
 
 func (This *MySQLGtidSet) Init() (err error) {
 	for _, gtidStr := range strings.Split(This.GtidStr, ",") {
-		gtid := NewMySQLGtid(gtidStr)
-		err = gtid.Parse()
+		gtidInfo := NewMySQLGtid(gtidStr)
+		err = gtidInfo.Parse()
 		if err != nil {
 			return err
 		}
-		This.gtids = append(This.gtids, gtid)
+		This.gtids[gtidInfo.sid.String()] = gtidInfo
 	}
 	return nil
+}
+
+func (This *MySQLGtidSet) ReInit() (err error) {
+	This.GtidStr = This.String()
+	return This.Init()
 }
 
 func (This *MySQLGtidSet) Encode() []byte {
@@ -127,10 +139,24 @@ func (This *MySQLGtidSet) Encode() []byte {
 	return buf.Bytes()
 }
 
-func CheckGtid(GTID string) error {
-	if GTID == "" {
-		return fmt.Errorf("GTID is empty!")
+func (This *MySQLGtidSet) String() string {
+	gtidStr := ""
+	for _,gtidInfo := range This.gtids {
+		if gtidStr == "" {
+			gtidStr = gtidInfo.String()
+		}else{
+			gtidStr += ","+gtidInfo.String()
+		}
 	}
-	gtid := NewMySQLGtidSet(GTID)
-	return gtid.Init()
+	return gtidStr
+}
+
+func (This *MySQLGtidSet) Update(gtid string) error {
+	gtidInfo := NewMySQLGtid(gtid)
+	err := gtidInfo.Parse()
+	if err != nil {
+		return err
+	}
+	This.gtids[gtidInfo.sid.String()] = gtidInfo
+	return nil
 }

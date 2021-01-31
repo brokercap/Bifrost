@@ -130,7 +130,7 @@ func (header *EventHeader) FlagNames() (names []string) {
 		names = append(names, "LOG_EVENT_MTS_ISOLATE_F")
 	}
 	if header.Flags & ^(LOG_EVENT_MTS_ISOLATE_F<<1-1) != 0 { // unknown flags
-		names = append(names, string(header.Flags & ^(LOG_EVENT_MTS_ISOLATE_F<<1-1)))
+		names = append(names, fmt.Sprint(header.Flags & ^(LOG_EVENT_MTS_ISOLATE_F<<1-1)))
 	}
 	return names
 }

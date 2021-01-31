@@ -38,10 +38,15 @@ func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (
 			return
 		}
 	}()
+	// 这里需要重新对 gtidSetInfo 重新做一次 ReInit 初始化
+	// 在gtid事件解析后，实际 gtidSetInfo update 操作的时候 ，可能只更新指定的gtid String，并没有整体进行更新
+	err := parser.gtidSetInfo.ReInit()
+	if err != nil {
+		return nil,err
+	}
 	// mysql gtid  87c74d71-2d6c-11eb-921a-0242ac110004:1-6"
-	// mariadb gtid [domain ID]-[server-id]-[sequence]
-	seq := strings.Split(parser.gtid,",")[0]
-	if strings.Count(strings.Split(seq,":")[1],"-") >= 2 {
+	// mariadb gtid domainId-serverId-sequence
+	if parser.dbType == DB_TYPE_MARIADB {
 		return mc.DumpBinlogMariaDBGtid(parser,callbackFun)
 	}else{
 		return mc.DumpBinlogMySQLGtid(parser,callbackFun)
@@ -51,7 +56,9 @@ func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (
 func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	ServerId := uint32(parser.ServerId) // Must be non-zero to avoid getting EOF packet
 	flags := uint16(0)
-	e := mc.writeCommandPacket(COM_BINLOG_DUMP_GTID, parser.gtid, flags, ServerId)
+	GtidBodyBytes := parser.gtidSetInfo.Encode()
+	//GtidBody := GtidSet.Encode()
+	e := mc.writeCommandPacket(COM_BINLOG_DUMP_GTID, GtidBodyBytes, flags, ServerId)
 	if e != nil {
 		parser.callbackErrChan <- e
 		return nil, e
@@ -59,8 +66,9 @@ func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callba
 	return mc.DumpBinlog0(parser,callbackFun)
 }
 
+
 func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
-	return nil,fmt.Errorf("Mariabdb is Not Supported")
+	return nil,fmt.Errorf("mariadb gtid not supported")
 }
 
 func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driver.Rows, error) {
@@ -131,6 +139,15 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				if event.Query == "COMMIT" {
 					break
 				}
+				// # Dumm
+				// # Dummy e
+				// # Dum
+				// # Dummy event replacing event type 16
+				// mariadb Dumm 内容事件,这种内容的事件，直接过滤掉，不展示给上层
+				if event.Query[0:1] == "#"{
+					continue
+				}
+
 				//only return replicateDoDb, any sql may be use db.table query
 				var SchemaName,tableName string
 				var isRename bool
