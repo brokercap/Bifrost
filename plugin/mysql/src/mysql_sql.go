@@ -124,11 +124,12 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		Query = This.ReplaceTwoReplace(Query)
 		sqlArr := strings.Split(Query, " ")
 		if strings.Index(sql,"IF NOT EXISTS") < 0 {
-			SchemaName = sqlArr[2]
+			sqlArr[1] = "DATABASE IF NOT EXISTS"
+			newSql = strings.Join(sqlArr, " ")
 		}else{
-			SchemaName = sqlArr[5]
+			newSql = Query
 		}
-		newSql = "CREATE DATABASE IF NOT EXISTS " + SchemaName + " ;"
+
 		goto End
 	}
 
