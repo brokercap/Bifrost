@@ -59,4 +59,12 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	queryEvent.Query =  `CREATE  INDEX index_name ON tableTestName(column_name)`
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
+
+	queryEvent.Query = "CREATE DATABASE /*!32312 IF NOT EXISTS*/ `bifrost_test`"
+	newSql = conn.TranferQuerySql(queryEvent)
+	t.Log(newSql)
+
+	queryEvent.Query = "CREATE DATABASE `bifrost_test`"
+	newSql = conn.TranferQuerySql(queryEvent)
+	t.Log(newSql)
 }
