@@ -51,6 +51,7 @@
                     <p>KILL 当前帐号binlog监控的异常连接</p>
                     <p>&nbsp;</p>
                     <p>根据以上SQL,如果是RDS等云产品,请自行确认是否有 <strong>监听Binlog的权限</strong>，<strong>KILL 当前帐号连接的权限</strong>,<strong>SET 权限</strong></p>
+                    <p>在 binlog 解析过程中,会对需要同步的表进行结构查询, 所以请事先给帐号设置好对需要同步的表的查询权限，并且添加数据源 CheckPrivilege 的时候是检测不出来的，需要用户自行关注</p>
 
                     <p>&nbsp;</p>
                     <h3>状态</h3>
