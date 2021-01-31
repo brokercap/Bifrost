@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.7.0"
-const BIFROST_VERION = "v1.7.0"
+const VERSION  = "v1.7.1"
+const BIFROST_VERION = "v1.7.1"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -438,6 +438,10 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 				return data, nil, nil
 			}
 			newSql := This.TranferQuerySql(data)
+			if newSql == "" {
+				log.Println("transfer sql error!",data)
+				return nil,data,fmt.Errorf("transfer sql error")
+			}
 			if This.conn.err != nil {
 				This.ReConnect()
 			}

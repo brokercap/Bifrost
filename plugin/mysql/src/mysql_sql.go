@@ -68,10 +68,15 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 	}
 
 	// TRUNCATE TABLE tableName
-	if strings.Index(sql,"TRUNCATE TABLE") == 0 {
+	if strings.Index(sql,"TRUNCATE") == 0 {
 		Query = This.ReplaceTwoReplace(Query)
 		sqlArr := strings.Split(Query, " ")
-		var tableNameIndex = 2
+		var tableNameIndex int
+		if strings.Index(sql,"TRUNCATE TABLE ") == 0 {
+			tableNameIndex = 2
+		}else{
+			tableNameIndex = 1
+		}
 		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[tableNameIndex],data.SchemaName)
 		var schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
 		sqlArr[tableNameIndex] = schemaAndTable
@@ -191,6 +196,30 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		}
 		sqlArr[tableNameIndex] = schemaAndTable
 		newSql = strings.Join(sqlArr, " ")
+		goto End
+	}
+
+	// CREATE INDEX index_name ON table_name (column_name)
+	// CREATE UNIQUE INDEX index_name ON table_name (column_name)
+	if strings.Index(sql,"CREATE INDEX") == 0 || strings.Index(sql,"CREATE UNIQUE INDEX") == 0 {
+		Query = This.ReplaceTwoReplace(Query)
+		sqlArr := strings.Split(Query, " ")
+		var tableNameIndex = 4
+		if strings.Index(sql,"CREATE INDEX") != 0 {
+			tableNameIndex = 5
+		}
+		var schemaAndTable string
+		//CREATE INDEX indexName ON table(id int) 这种表名和( 相挨着的情况
+		if strings.Index(sqlArr[tableNameIndex],"(") > 0 {
+			tmpTableName := strings.Split(sqlArr[tableNameIndex], "(")[0]
+			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
+			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
+			newSql = strings.Replace(Query,tmpTableName+"(",schemaAndTable+"(",1)
+		}else{
+			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[tableNameIndex],data.SchemaName)
+			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
+			newSql = strings.Replace(Query,sqlArr[tableNameIndex],schemaAndTable,1)
+		}
 		goto End
 	}
 
