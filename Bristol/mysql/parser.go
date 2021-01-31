@@ -2,43 +2,42 @@ package mysql
 
 import (
 	"bytes"
-	"strings"
-	"fmt"
 	"database/sql/driver"
+	"fmt"
 	"log"
 	"runtime/debug"
+	"strings"
 )
 
 type eventParser struct {
-	format 			   *FormatDescriptionEvent
-	tableMap           map[uint64]*TableMapEvent	// tableId 对应的最后一个 TableMapEvent 事件
-	tableNameMap       map[string]uint64			// schame.table 做为key 对应的tableId
-	tableSchemaMap     map[uint64]*tableStruct		// tableId 对应的表结构
-	dataSource         *string
-	connStatus         StatusFlag
-	conn               MysqlConnection
-	dumpBinLogStatus   StatusFlag
-	binlogFileName     string
+	format                *FormatDescriptionEvent
+	tableMap              map[uint64]*TableMapEvent // tableId 对应的最后一个 TableMapEvent 事件
+	tableNameMap          map[string]uint64         // schame.table 做为key 对应的tableId
+	tableSchemaMap        map[uint64]*tableStruct   // tableId 对应的表结构
+	dataSource            *string
+	connStatus            StatusFlag
+	conn                  MysqlConnection
+	dumpBinLogStatus      StatusFlag
+	binlogFileName        string
 	currentBinlogFileName string
-	binlogPosition     uint32
-	gtid			   string
-	binlogTimestamp    uint32
-	lastEventID		   uint64
-	maxBinlogFileName  string
-	maxBinlogPosition  uint32
-	eventDo            []bool
-	ServerId           uint32
-	connectionId       string
-	binlog_checksum    bool
-	filterNextRowEvent bool
-	binlogDump         *BinlogDump
-	lastMapEvent	   *TableMapEvent				// 保存最近一次 map event 解析出来的 tableId，用于接下来的 row event 解析使用，因为实际运行中发现，row event 解析出来 tableId 可能对不上。row event 紧跟在 map event 之后，row event 的时候，直接采用最后一次map event
-	callbackErrChan	   chan error
-	isGTID			   bool
-	nextEventID		   uint64						// 下一个事件ID, 不能修改
-	lastPrevtiousGTIDSMap map[string]Intervals		// 当前解析的 binlog 文件的 PrevtiousGTIDS 对应关系
+	binlogPosition        uint32
+	gtid                  string
+	binlogTimestamp       uint32
+	lastEventID           uint64
+	maxBinlogFileName     string
+	maxBinlogPosition     uint32
+	eventDo               []bool
+	ServerId              uint32
+	connectionId          string
+	binlog_checksum       bool
+	filterNextRowEvent    bool
+	binlogDump            *BinlogDump
+	lastMapEvent          *TableMapEvent // 保存最近一次 map event 解析出来的 tableId，用于接下来的 row event 解析使用，因为实际运行中发现，row event 解析出来 tableId 可能对不上。row event 紧跟在 map event 之后，row event 的时候，直接采用最后一次map event
+	callbackErrChan       chan error
+	isGTID                bool
+	nextEventID           uint64               // 下一个事件ID, 不能修改
+	lastPrevtiousGTIDSMap map[string]Intervals // 当前解析的 binlog 文件的 PrevtiousGTIDS 对应关系
 }
-
 
 func newEventParser(binlogDump *BinlogDump) (parser *eventParser) {
 	parser = new(eventParser)
@@ -62,7 +61,7 @@ func (parser *eventParser) getNextEventID() uint64 {
 }
 
 func (parser *eventParser) getGTIDSIDStart(sid string) int64 {
-	if _,ok := parser.lastPrevtiousGTIDSMap[sid];ok {
+	if _, ok := parser.lastPrevtiousGTIDSMap[sid]; ok {
 		return parser.lastPrevtiousGTIDSMap[sid].Start
 	}
 	return 1
@@ -70,7 +69,7 @@ func (parser *eventParser) getGTIDSIDStart(sid string) int64 {
 
 func (parser *eventParser) saveBinlog(event *EventReslut) {
 	switch event.Header.EventType {
-	case QUERY_EVENT,XID_EVENT:
+	case QUERY_EVENT, XID_EVENT:
 		if event.BinlogFileName == "" {
 			return
 		}
@@ -86,7 +85,7 @@ func (parser *eventParser) saveBinlog(event *EventReslut) {
 		parser.currentBinlogFileName = event.BinlogFileName
 		parser.lastEventID = event.EventID
 		parser.binlogDump.Unlock()
-	case GTID_EVENT,ANONYMOUS_GTID_EVENT:
+	case GTID_EVENT, ANONYMOUS_GTID_EVENT:
 		parser.binlogDump.Lock()
 		parser.binlogTimestamp = event.Header.Timestamp
 		parser.lastEventID = event.EventID
@@ -111,14 +110,14 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		return
 	case PREVIOUS_GTIDS_EVENT:
 		return
-	case GTID_EVENT,ANONYMOUS_GTID_EVENT:
+	case GTID_EVENT, ANONYMOUS_GTID_EVENT:
 		var GtidEvent *GTIDEvent
 		GtidEvent, err = parser.parseGTIDEvent(buf)
 		event = &EventReslut{
 			Header:         GtidEvent.header,
 			BinlogFileName: parser.currentBinlogFileName,
 			BinlogPosition: GtidEvent.header.LogPos,
-			Gtid:			fmt.Sprintf("%s:%d-%d",GtidEvent.SID36,parser.getGTIDSIDStart(GtidEvent.SID36),GtidEvent.GNO),
+			Gtid:           fmt.Sprintf("%s:%d-%d", GtidEvent.SID36, parser.getGTIDSIDStart(GtidEvent.SID36), GtidEvent.GNO),
 		}
 		break
 	case FORMAT_DESCRIPTION_EVENT:
@@ -173,11 +172,11 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			BinlogFileName: rotateEvent.filename,
 			BinlogPosition: rotateEvent.header.LogPos,
 		}
-		for _,v := range parser.tableSchemaMap {
+		for _, v := range parser.tableSchemaMap {
 			v.needReload = true
 		}
 		parser.saveBinlog(event)
-		log.Println(*parser.dataSource," ROTATE_EVENT ",event.BinlogFileName)
+		log.Println(*parser.dataSource, " ROTATE_EVENT ", event.BinlogFileName)
 		break
 	case TABLE_MAP_EVENT:
 		var table_map_event *TableMapEvent
@@ -191,7 +190,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		} else {
 			parser.filterNextRowEvent = false
 			_, ok := parser.tableSchemaMap[table_map_event.tableId]
-			if  !ok || ( parser.tableSchemaMap[table_map_event.tableId].needReload == true ) {
+			if !ok || (parser.tableSchemaMap[table_map_event.tableId].needReload == true) {
 				parser.GetTableSchema(table_map_event.tableId, table_map_event.schemaName, table_map_event.tableName)
 			}
 		}
@@ -218,7 +217,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 				SchemaName:     parser.lastMapEvent.schemaName,
 				TableName:      parser.lastMapEvent.tableName,
 				Rows:           rowsEvent.rows,
-				Pri:			tableInfo.Pri,
+				Pri:            tableInfo.Pri,
 				ColumnMapping:  tableInfo.ColumnMapping,
 			}
 		} else {
@@ -234,7 +233,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		break
 	case XID_EVENT:
 		var xidEvent *XIdEvent
-		xidEvent,err = parser.parseXidEvent(buf)
+		xidEvent, err = parser.parseXidEvent(buf)
 		if err != nil {
 			log.Println("xid event err:", err)
 		}
@@ -245,7 +244,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			SchemaName:     "",
 			TableName:      "",
 			Rows:           nil,
-			Gtid:			parser.gtid,
+			Gtid:           parser.gtid,
 		}
 		break
 	default:
@@ -280,9 +279,9 @@ func (parser *eventParser) ParserConnClose(lock bool) {
 	}
 	parser.connStatus = STATUS_CLOSED
 	if parser.conn != nil {
-		func(){
-			func(){
-				if err := recover();err != nil {
+		func() {
+			func() {
+				if err := recover(); err != nil {
 					return
 				}
 			}()
@@ -344,7 +343,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		Pri:                  make([]string, 0),
 		ColumnSchemaTypeList: make([]*ColumnInfo, 0),
 	}
-	ColumnMapping := make(map[string]string,0)
+	ColumnMapping := make(map[string]string, 0)
 	for {
 		dest := make([]driver.Value, 11, 11)
 		err := rows.Next(dest)
@@ -436,13 +435,15 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 				CHARACTER_OCTET_LENGTH = uint64(dest[9].(uint32))
 			case uint64:
 				CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+			case int64:
+				CHARACTER_OCTET_LENGTH = uint64(dest[9].(int64))
 			default:
 				CHARACTER_OCTET_LENGTH = 0
 			}
 		}
 		if dest[10] == nil {
 			IS_NULLABLE = "YES"
-		}else{
+		} else {
 			IS_NULLABLE = dest[10].(string)
 		}
 
@@ -476,7 +477,7 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			} else {
 				if COLUMN_TYPE == "tinyint(1)" {
 					columnMappingType = "bool"
-				}else{
+				} else {
 					columnMappingType = "int8"
 				}
 			}
@@ -504,16 +505,16 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 			} else {
 				columnMappingType = "int64"
 			}
-		case "numeric" :
-			columnMappingType = strings.Replace(COLUMN_TYPE,"numeric","decimal",1)
-		case "real" :
-			columnMappingType = strings.Replace(COLUMN_TYPE,"real","double",1)
+		case "numeric":
+			columnMappingType = strings.Replace(COLUMN_TYPE, "numeric", "decimal", 1)
+		case "real":
+			columnMappingType = strings.Replace(COLUMN_TYPE, "real", "double", 1)
 		default:
 			columnMappingType = COLUMN_TYPE
 			break
 		}
 		if IS_NULLABLE == "YES" {
-			columnMappingType = "Nullable("+columnMappingType+")"
+			columnMappingType = "Nullable(" + columnMappingType + ")"
 		}
 		ColumnMapping[COLUMN_NAME] = columnMappingType
 	}
@@ -593,12 +594,12 @@ func (parser *eventParser) KillConnect(connectionId string) (b bool) {
 	return true
 }
 
-func (parser *eventParser) GetTableId(database string, tablename string) (uint64,error) {
+func (parser *eventParser) GetTableId(database string, tablename string) (uint64, error) {
 	key := database + "." + tablename
 	if _, ok := parser.tableNameMap[key]; !ok {
-		return 0,fmt.Errorf("not found key:%s",key)
+		return 0, fmt.Errorf("not found key:%s", key)
 	}
-	return parser.tableNameMap[key],nil
+	return parser.tableNameMap[key], nil
 }
 
 func (parser *eventParser) delTableId(database string, tablename string) {
