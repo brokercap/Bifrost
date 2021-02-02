@@ -57,3 +57,15 @@ func TestEventParser_GetQueryTableName(t *testing.T) {
 		t.Errorf("TRUNCATE error: %s",sql)
 	}
 }
+
+func TestTransferNotes2Space(t *testing.T)  {
+	var sql string
+	sql = "rename /* gh-ost */ table `mydb`.`tab1` to `mydb`.`_tab1_del`, `mydb`.`_tab1_gho` to `mydb`.`tab1`"
+	sql = TransferNotes2Space(sql)
+	t.Log(sql)
+
+	sql = "rename /* " +
+		"gh-ost */ table `mydb`.`tab1` to `mydb`.`_tab1_del`, `mydb`.`_tab1_gho` to `mydb`.`tab1`"
+	sql = TransferNotes2Space(sql)
+	t.Log(sql)
+}

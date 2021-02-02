@@ -41,10 +41,12 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName
 	switch strings.ToUpper(Query[0:5]) {
 		// alter
 	case "ALTER":
+		Query = TransferNotes2Space(Query)
 		c := NewAlterSQL(data.SchemaName,Query,This)
 		SchemaName,TableName,newSql = c.Transfer2CkSQL()
 		// rename
 	case "RENAM":
+		Query = TransferNotes2Space(Query)
 		c := NewReNameSQL(data.SchemaName,Query,This)
 		SchemaName,TableName,newSql = c.Transfer2CkSQL()
 	default:

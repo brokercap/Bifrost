@@ -1,6 +1,9 @@
 package mysql
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 func (parser *eventParser) getAutoTableSqlSchemaAndTable(name string) (SchemaName,TableName string) {
 	dbAndTable := strings.Replace(name, "`", "", -1)
@@ -27,6 +30,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	sql = strings.ReplaceAll(sql, "\r\n","")
 	sql = strings.ReplaceAll(sql, "\n","")
 	sql = strings.ReplaceAll(sql, "\r","")
+	sql = TransferNotes2Space(sql)
 	//去除连续的两个空格
 	for {
 		if strings.Index(sql,"  ") >= 0 {
@@ -60,9 +64,9 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	}
 
 	// RENAME TABLE tableName
-	if strings.Index(sqlUpper,"RENAME TABLE") == 0 {
-		sqlArr := strings.Split(sql, " ")
+	if strings.Index(sqlUpper,"RENAME") == 0 {
 		isRename = true
+		sqlArr := strings.Split(sql, " ")
 		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[2])
 		return
 	}
@@ -182,4 +186,12 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(tmpTableName)
 	}
 	return
+}
+
+// 将sql 里 /* */ 注释内容给去掉
+// 感谢 @zeroone2005 正则表达式提供支持
+var replaceSqlNotesReq = regexp.MustCompile(`/\*(.*?)\*/`)
+func TransferNotes2Space(sql string) string {
+	sql = replaceSqlNotesReq.ReplaceAllString(sql, "")
+	return sql
 }

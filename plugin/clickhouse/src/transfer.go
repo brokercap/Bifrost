@@ -5,6 +5,7 @@ import (
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -741,4 +742,12 @@ func ReplaceTwoReplace(sql string) string {
 			return sql
 		}
 	}
+}
+
+// 将sql 里 /* */ 注释内容给去掉
+// 感谢 @zeroone2005 正则表达式提供支持
+var replaceSqlNotesReq = regexp.MustCompile(`/\*(.*?)\*/`)
+func TransferNotes2Space(sql string) string {
+	sql = replaceSqlNotesReq.ReplaceAllString(sql, "")
+	return sql
 }

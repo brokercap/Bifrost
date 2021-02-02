@@ -68,3 +68,33 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 }
+
+func TestConn_TranferDMLSql(t *testing.T) {
+	var newSql string
+
+	p := &PluginParam{
+		AutoTable:true,
+	}
+	conn := &Conn{}
+	conn.p = p
+	e := pluginTestData.NewEvent()
+	queryEvent := e.GetTestQueryData()
+
+	queryEvent.Query = "insert /* its is nots */ into tab values (1,2,3)"
+	newSql = conn.TranferDMLSql(queryEvent)
+	t.Log(newSql)
+
+	queryEvent.Query = "insert /*its is nots */ into tab values (1,2,3)"
+	newSql = conn.TranferDMLSql(queryEvent)
+	t.Log(newSql)
+
+	queryEvent.Query = "insert /*its is nots*/ into tab values (1,2,3)"
+	newSql = conn.TranferDMLSql(queryEvent)
+	t.Log(newSql)
+
+
+	queryEvent.Query = "insert    /*its is nots*/  into tab values (1,2,3)"
+	newSql = conn.TranferDMLSql(queryEvent)
+	t.Log(newSql)
+
+}

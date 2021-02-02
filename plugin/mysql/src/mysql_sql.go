@@ -2,6 +2,7 @@ package src
 
 import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"regexp"
 	"strings"
 	"log"
 )
@@ -34,6 +35,14 @@ func (This *Conn) getAutoTableSqlSchemaAndTable(name string,DefaultSchemaName st
 	return
 }
 
+// 将sql 里 /* */ 注释内容给去掉
+// 感谢 @zeroone2005 正则表达式提供支持
+var replaceSqlNotesReq = regexp.MustCompile(`/\*(.*?)\*/`)
+func (This *Conn)  TransferNotes2Space(sql string) string {
+	sql = replaceSqlNotesReq.ReplaceAllString(sql, "")
+	return sql
+}
+
 //去除连续的两个空格
 func (This *Conn) ReplaceTwoReplace(sql string) string {
 	for {
@@ -46,7 +55,13 @@ func (This *Conn) ReplaceTwoReplace(sql string) string {
 }
 
 func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql string) {
-	Query := strings.Trim(data.Query," ")
+	// 优先判断是否 DML 语句
+	newSql = This.TranferDMLSql(data)
+	if newSql != "" {
+		return
+	}
+	var Query = strings.Trim(data.Query," ")
+	Query = This.TransferNotes2Space(Query)
 	// 变量 sql 是就不用拼接最后的  可执行 sql的，所以可以全部转成大写
 	sql := strings.ToUpper(Query)
 	// 防止连续多空格
@@ -235,52 +250,67 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		}
 		newSql = "DROP DATABASE IF EXISTS " + SchemaName + ";"
 		goto End
-	}else{
-		// UPDATE Table
-		// INSERT INTO Table
-		// DELETE FROM Table
-		// REPLACE INTO Table
-		var tableNameIndex = 0
-		// insert,update,replace 字符串后第几个非空的字符串，才是第表名
-		var x = 1
-		switch sql[0:6] {
-		case "UPDATE":
-			break
-		case "INSERT","DELETE","REPLAC":
-			x = 2
-			break
-		default:
-			return
+	}
+End:
+	return
+}
+
+func (This *Conn) TranferDMLSql(data *pluginDriver.PluginDataType) (newSql string) {
+	var Query = strings.TrimLeft(data.Query," ")
+	var SchemaName,TableName string
+	// UPDATE Table
+	// INSERT INTO Table
+	// DELETE FROM Table
+	// REPLACE INTO Table
+	var tableNameIndex = 0
+	// insert,update,replace 字符串后第几个非空的字符串，才是第表名
+	var x = 1
+	switch strings.ToUpper(Query[0:6]) {
+	case "UPDATE":
+		break
+	case "INSERT","DELETE","REPLAC":
+		x = 2
+		break
+	default:
+		return
+	}
+	// 这里不能使用 ReplaceTwoReplace 将  两个空格转成一个空格再进行计算 ，因为实际 insert 或者 update 等的内容里是值有可能是 两个空格的内容
+	// 这里也不能用 TransferNotes2Space , 因为实际insert ,upadte 语句中，就包括 /* */ 内容
+	// 这里采用 遍历 的方式，找第一个或者第二个非空的字段串，当作是表名
+	sqlArr := strings.Split(Query, " ")
+	var tmpX = 0
+	var inNotes = false
+	for i := 1;i < len(sqlArr) ; i++ {
+		var tmp = strings.Trim(sqlArr[i]," ")
+		if tmp == "" || tmp == " " {
+			continue
 		}
-		// 这里不能使用 ReplaceTwoReplace 将  两个空格转成一个空格再进行计算 ，因为实际 insert 或者 update 等的内容里是值有可能是 两个空格的内容
-		// 这里采用 遍历 的方式，找第一个或者第二个非空的字段串，当作是表名
-		sqlArr := strings.Split(Query, " ")
-		var tmpX = 0
-		for i := 1;i < len(sqlArr) ; i++ {
-			var tmp = strings.Trim(sqlArr[i]," ")
-			if tmp == "" || tmp == " " {
-				continue
-			}
-			tmpX++
-			if tmpX == x {
-				tableNameIndex = i
-				break
-			}
+		if strings.Index(tmp,"/*") >= 0 {
+			inNotes = true
 		}
-		tmpTableName := sqlArr[tableNameIndex]
-		var schemaAndTable string
-		if strings.Index(tmpTableName,"(") > 0 {
-			tmpTableName = strings.Split(tmpTableName,"(")[0]
-			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
-			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
-			newSql = strings.Replace(Query,tmpTableName+"(",schemaAndTable+"(",1)
-		}else{
-			SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
-			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
-			newSql = strings.Replace(Query,tmpTableName,schemaAndTable,1)
+		if inNotes {
+			if strings.Index(tmp,"*/") >=0 {
+				inNotes = false
+			}
+			continue
+		}
+		tmpX++
+		if tmpX == x {
+			tableNameIndex = i
+			break
 		}
 	}
-
-End:
+	tmpTableName := sqlArr[tableNameIndex]
+	var schemaAndTable string
+	if strings.Index(tmpTableName,"(") > 0 {
+		tmpTableName = strings.Split(tmpTableName,"(")[0]
+		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
+		schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
+		newSql = strings.Replace(Query,tmpTableName+"(",schemaAndTable+"(",1)
+	}else{
+		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
+		schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
+		newSql = strings.Replace(Query,tmpTableName,schemaAndTable,1)
+	}
 	return
 }
