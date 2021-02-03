@@ -17,7 +17,7 @@ func (parser *eventParser) getAutoTableSqlSchemaAndTable(name string) (SchemaNam
 	return
 }
 
-func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string,isRename bool) {
+func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string,noReloadTableInfo bool) {
 	sql = strings.Trim(sql, " ")
 	switch sql {
 	case "COMMIT","BEGIN","commit","begin":
@@ -65,7 +65,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 
 	// RENAME TABLE tableName
 	if strings.Index(sqlUpper,"RENAME") == 0 {
-		isRename = true
+		noReloadTableInfo = true
 		sqlArr := strings.Split(sql, " ")
 		SchemaName,TableName = parser.getAutoTableSqlSchemaAndTable(sqlArr[2])
 		return
@@ -73,6 +73,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 
 	// DROP TABLE IF EXISTS tableName
 	if strings.Index(sqlUpper,"DROP TABLE") == 0 {
+		noReloadTableInfo = true
 		sqlArr := strings.Split(sql, " ")
 		var tableNameIndex = 2
 		if strings.Index(sqlUpper,"IF EXISTS") > 0 {
@@ -86,6 +87,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	// CREATE TABLE IF NOT EXISTS `tableName`(
 	// CREATE TABLE IF `tableName`(
 	if strings.Index(sqlUpper,"CREATE TABLE") == 0 {
+		noReloadTableInfo = true
 		sqlArr := strings.Split(sql, " ")
 
 		// 假如 存在 IF NOT EXISTS 则代表表名是按 空格分割过后的数组里 第6个，也就是下标 5
@@ -105,6 +107,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 
 	// CREATE DATABASE IF NOT EXISTS databaseName
 	if strings.Index(sqlUpper,"CREATE DATABASE") == 0 {
+		noReloadTableInfo = true
 		sqlArr := strings.Split(sql, " ")
 		if strings.Index(sqlUpper,"IF NOT EXISTS") < 0 {
 			SchemaName = sqlArr[2]
@@ -156,6 +159,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 		return
 	}
 
+	noReloadTableInfo = true
 	// UPDATE Table
 	// INSERT INTO Table
 	// DELETE FROM Table

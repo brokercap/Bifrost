@@ -150,8 +150,8 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 
 				//only return replicateDoDb, any sql may be use db.table query
 				var SchemaName,tableName string
-				var isRename bool
-				if SchemaName, tableName,isRename = parser.GetQueryTableName(event.Query); tableName != "" {
+				var noReloadTableInfo bool
+				if SchemaName, tableName,noReloadTableInfo = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -162,8 +162,8 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 						parser.saveBinlog(event)
 						continue
 					}
-					if isRename {
-						// 假如 是rename 操作的 ddl,需要将 SchemaName,TableName 对应的缓存数据删除，因为表名变了，TableId 也变了
+					if noReloadTableInfo {
+						// 假如 是rename,drop table 等操作 操作的 ddl,需要将 SchemaName,TableName 对应的缓存数据删除，因为表名变了，TableId 也变了
 						parser.delTableId(event.SchemaName, event.TableName)
 					}else{
 						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {

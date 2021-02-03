@@ -54,12 +54,13 @@ func (This *Conn) ReplaceTwoReplace(sql string) string {
 	}
 }
 
-func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql string) {
+func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSqlArr []string) {
 	// 优先判断是否 DML 语句
-	newSql = This.TranferDMLSql(data)
-	if newSql != "" {
+	newSqlArr = This.TranferDMLSql(data)
+	if len(newSqlArr) > 0 {
 		return
 	}
+	var newSql string
 	var Query = strings.Trim(data.Query," ")
 	Query = This.TransferNotes2Space(Query)
 	// 变量 sql 是就不用拼接最后的  可执行 sql的，所以可以全部转成大写
@@ -79,6 +80,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(sqlArr[2],data.SchemaName)
 		sqlArr[2] = "`" + SchemaName + "`.`" + TableName +"`"
 		newSql = strings.Join(sqlArr, " ")
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -96,6 +98,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		var schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
 		sqlArr[tableNameIndex] = schemaAndTable
 		newSql = strings.Join(sqlArr, " ")
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -131,6 +134,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			}
 			newSql = strings.Replace(Query,sqlArr[tableNameIndex],schemaAndTable,1)
 		}
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -144,7 +148,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		}else{
 			newSql = Query
 		}
-
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -188,11 +192,20 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			if t.From == "" || t.To == "" {
 				continue
 			}
-			if newSql == "" {
-				newSql += "RENAME TABLE " + t.From + " TO " + t.To
+			// TiDB 不支持  一条语句，多次 rename , 所以要分成多个rename 语句
+			if This.isTiDB {
+				newSql = "RENAME TABLE " + t.From + " TO " + t.To
+				newSqlArr = append(newSqlArr,newSql)
 			}else{
-				newSql += "," + t.From + " TO " + t.To
+				if newSql == "" {
+					newSql = "RENAME TABLE " + t.From + " TO " + t.To
+				}else{
+					newSql += "," + t.From + " TO " + t.To
+				}
 			}
+		}
+		if This.isTiDB == false && newSql != "" {
+			newSqlArr = append(newSqlArr,newSql)
 		}
 		goto End
 	}
@@ -212,6 +225,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 		}
 		sqlArr[tableNameIndex] = schemaAndTable
 		newSql = strings.Join(sqlArr, " ")
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -236,6 +250,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
 			newSql = strings.Replace(Query,sqlArr[tableNameIndex],schemaAndTable,1)
 		}
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 
@@ -249,13 +264,14 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (newSql str
 			SchemaName = sqlArr[4]
 		}
 		newSql = "DROP DATABASE IF EXISTS " + SchemaName + ";"
+		newSqlArr = append(newSqlArr,newSql)
 		goto End
 	}
 End:
 	return
 }
 
-func (This *Conn) TranferDMLSql(data *pluginDriver.PluginDataType) (newSql string) {
+func (This *Conn) TranferDMLSql(data *pluginDriver.PluginDataType) (newSqlArr []string) {
 	var Query = strings.TrimLeft(data.Query," ")
 	var SchemaName,TableName string
 	// UPDATE Table
@@ -302,6 +318,7 @@ func (This *Conn) TranferDMLSql(data *pluginDriver.PluginDataType) (newSql strin
 	}
 	tmpTableName := sqlArr[tableNameIndex]
 	var schemaAndTable string
+	var newSql string
 	if strings.Index(tmpTableName,"(") > 0 {
 		tmpTableName = strings.Split(tmpTableName,"(")[0]
 		SchemaName,TableName = This.getAutoTableSqlSchemaAndTable(tmpTableName,data.SchemaName)
@@ -312,5 +329,6 @@ func (This *Conn) TranferDMLSql(data *pluginDriver.PluginDataType) (newSql strin
 		schemaAndTable = "`" + SchemaName + "`.`" + TableName +"`"
 		newSql = strings.Replace(Query,tmpTableName,schemaAndTable,1)
 	}
+	newSqlArr = append(newSqlArr,newSql)
 	return
 }

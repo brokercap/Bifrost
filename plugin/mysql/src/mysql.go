@@ -67,6 +67,7 @@ type Conn struct {
 	p		*PluginParam
 	conn    *mysqlDB
 	err 	error
+	isTiDB	bool
 }
 
 type PluginParam struct {
@@ -184,6 +185,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 
 	This.p = &param
 	This.initTableInfo()
+	This.initVersion()
 	return This.p,nil
 }
 
@@ -332,6 +334,22 @@ func (This *Conn) initToDatabaseMap() {
 	return
 }
 
+func (This *Conn) initVersion() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("plugin mysql initVersion recover:",err,string(debug.Stack()))
+			return
+		}
+	}()
+	if This.conn == nil{
+		return
+	}
+	version := This.conn.SelectVersion()
+	if strings.Contains(version,"TiDB") {
+		This.isTiDB = true
+	}
+}
+
 func (This *Conn) Connect() bool {
 	This.conn = NewMysqlDBConn(*This.uri)
 	if This.conn.err == nil{
@@ -437,8 +455,8 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 				This.p.SkipBinlogData = nil
 				return data, nil, nil
 			}
-			newSql := This.TranferQuerySql(data)
-			if newSql == "" {
+			newSqlArr := This.TranferQuerySql(data)
+			if len(newSqlArr) == 0 {
 				log.Println("transfer sql error!",data)
 				return nil,data,fmt.Errorf("transfer sql error")
 			}
@@ -448,10 +466,15 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 			if This.conn.err != nil {
 				return nil,nil,This.conn.err
 			}
-			_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
-			if This.conn.err != nil {
-				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
-				return nil, data, This.conn.err
+			for _,newSql := range newSqlArr {
+				if newSql == "" {
+					continue
+				}
+				_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
+				if This.conn.err != nil {
+					log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+					return nil, data, This.conn.err
+				}
 			}
 			break
 		}

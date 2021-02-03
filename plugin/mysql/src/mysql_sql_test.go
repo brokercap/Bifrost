@@ -67,10 +67,12 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	queryEvent.Query = "CREATE DATABASE `bifrost_test`"
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
+
+
 }
 
 func TestConn_TranferDMLSql(t *testing.T) {
-	var newSql string
+	var newSql []string
 
 	p := &PluginParam{
 		AutoTable:true,
@@ -97,4 +99,27 @@ func TestConn_TranferDMLSql(t *testing.T) {
 	newSql = conn.TranferDMLSql(queryEvent)
 	t.Log(newSql)
 
+}
+
+func TestConn_TranferSql_Rename(t *testing.T) {
+	p := &PluginParam{
+		AutoTable:true,
+	}
+
+	e := pluginTestData.NewEvent()
+
+	conn := &Conn{}
+	conn.p = p
+	queryEvent := e.GetTestQueryData()
+
+	var newSql []string
+	queryEvent.Query = "rename table `mytest`.`ppospro_gate_device_auth` to `mytest`.`_ppospro_gate_device_auth_del`, `mytest`.`ppospro_gate_device_auth2` to `mytest`.`_ppospro_gate_device_auth2_del`"
+	newSql = conn.TranferQuerySql(queryEvent)
+	t.Log(newSql)
+
+	conn.isTiDB = true
+	newSql = conn.TranferQuerySql(queryEvent)
+	for _,sql := range newSql {
+		t.Log(sql)
+	}
 }
