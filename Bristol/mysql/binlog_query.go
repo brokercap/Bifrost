@@ -17,7 +17,7 @@ func (parser *eventParser) getAutoTableSqlSchemaAndTable(name string) (SchemaNam
 	return
 }
 
-func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string,noReloadTableInfo bool) {
+func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName string,noReloadTableInfo bool,isDDL bool) {
 	sql = strings.Trim(sql, " ")
 	switch sql {
 	case "COMMIT","BEGIN","commit","begin":
@@ -25,6 +25,7 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	default:
 		break
 	}
+	isDDL = true
 
 	//将换行去除
 	sql = strings.ReplaceAll(sql, "\r\n","")
@@ -171,9 +172,11 @@ func (parser *eventParser) GetQueryTableName(sql string) (SchemaName,TableName s
 	switch sqlUpper[0:6] {
 	case "UPDATE":
 		tableNameIndex = 1
+		isDDL = false
 		break
 	case "INSERT","DELETE","REPLAC":
 		tableNameIndex = 2
+		isDDL = false
 		break
 	default:
 		return

@@ -72,6 +72,7 @@ func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun call
 }
 
 func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driver.Rows, error) {
+	var isDDL bool
 	for {
 		parser.binlogDump.RLock()
 		if parser.dumpBinLogStatus != STATUS_RUNNING {
@@ -98,6 +99,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 			//continue
 		}
 		if pkt[0] == 0 {
+			isDDL = false
 			var event *EventReslut
 			func() {
 				defer func() {
@@ -151,7 +153,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				//only return replicateDoDb, any sql may be use db.table query
 				var SchemaName,tableName string
 				var noReloadTableInfo bool
-				if SchemaName, tableName,noReloadTableInfo = parser.GetQueryTableName(event.Query); tableName != "" {
+				if SchemaName, tableName,noReloadTableInfo,isDDL = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -195,9 +197,44 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				parser.saveBinlog(event)
 				continue
 			}
-			callbackFun(event)
+			// no commit event after ddl
+			// so we need need callback a begin event and a commit event
+			if isDDL {
+				beginEvent := &EventReslut{
+					Header:event.Header,
+					TableName:event.TableName,
+					SchemaName:event.SchemaName,
+					Query:"BEGIN",
+					EventID:event.EventID,
+					Rows:nil,
+					BinlogFileName:event.BinlogFileName,
+					BinlogPosition:event.BinlogPosition,
+					Gtid:"",
+					Pri:nil,
+					ColumnMapping:nil,
+				}
+				beginEvent.Header.EventType = QUERY_EVENT
+				commitEvent := &EventReslut{
+					Header:event.Header,
+					TableName:event.TableName,
+					SchemaName:event.SchemaName,
+					Query:"COMMIT",
+					EventID:event.EventID,
+					Rows:nil,
+					BinlogFileName:event.BinlogFileName,
+					BinlogPosition:event.BinlogPosition,
+					Gtid:parser.getGtid(),
+					Pri:nil,
+					ColumnMapping:nil,
+				}
+				commitEvent.Header.EventType = XID_EVENT
+				callbackFun(beginEvent)
+				callbackFun(event)
+				callbackFun(commitEvent)
+			}else{
+				callbackFun(event)
+			}
 			parser.saveBinlog(event)
-
 		} else {
 			parser.callbackErrChan <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
 			if strings.Contains(string(pkt), "Could not find first log file name in binary log index file") {
