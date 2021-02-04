@@ -82,6 +82,10 @@ func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string
 			alterParamArr = append(alterParamArr,This.AddColumn(v))
 			continue
 		}
+		if strings.Index(UpperV,"MODIFY") == 0 {
+			alterParamArr = append(alterParamArr,This.ModifyColumn(v))
+			continue
+		}
 		/*
 		if strings.Index(UpperV,"DROP COLUMN") == 0 {
 			continue
@@ -151,7 +155,39 @@ func (This *AlterSQL) ChangeColumn(sql string) (destAlterSql string) {
 		destAlterSql += " COMMENT " + AlterColumn.Comment + ""
 	}
 	return
+}
 
+/*
+mysql : MODIFY column `number` BIGINT(20) NOT NULL  COMMENT '馆藏数量',
+ck : modify column column_name [type] [default_expr]
+*/
+func (This *AlterSQL) ModifyColumn(sql string) (destAlterSql string) {
+	var columnName, ckType string
+	pArr := strings.Split(sql, " ")
+	columnName = pArr[2]
+	ckType = This.GetTransferCkType(pArr[3])
+	var AlterColumn = &AlterColumnInfo{}
+	if len(pArr) > 4 {
+		AlterColumn = This.GetColumnInfo(pArr[4:])
+	}
+
+	if AlterColumn.isUnsigned {
+		// mysql 里，float double ,decimal 是可以设置 unsigned
+		switch ckType {
+		case "Float32","Float64","String":
+			break
+		default:
+			ckType = "U"+ckType
+		}
+	}
+	if AlterColumn.Nullable == true {
+		ckType = " Nullable("+ckType+")"
+	}
+	destAlterSql = "modify column " + columnName + " " + ckType
+	if AlterColumn.Comment != "" {
+		destAlterSql += " COMMENT " + AlterColumn.Comment + ""
+	}
+	return
 }
 
 /*

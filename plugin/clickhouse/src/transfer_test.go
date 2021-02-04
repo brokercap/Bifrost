@@ -286,3 +286,14 @@ func TestConn_TransferToCkTypeByColumnType(t *testing.T) {
 		t.Log(v.Val,v.Type, "success")
 	}
 }
+
+func TestTransferNotes2Space(t *testing.T)  {
+	var sql string
+	sql = `ALTER TABLE /* it is notes */ binlog_field_test 
+  CHANGE testtinyint testtinyint INT UNSIGNED DEFAULT -1  NOT NULL,
+  CHANGE testvarchar testvarchar VARCHAR(60) CHARSET utf8 COLLATE utf8_general_ci NOT NULL,
+  ADD COLUMN testint2 INT(11) DEFAULT 0  NOT NULL   COMMENT 'test ok' AFTER test_json,
+  MODIFY COLUMN testint3 int DEFAULT 1 NULL comment 'sdfsdf sdf',`
+	sql = MyPlugin.TransferNotes2Space(sql)
+	t.Log(sql)
+}

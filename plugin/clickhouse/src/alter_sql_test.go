@@ -1,8 +1,8 @@
 package src
 
 import (
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestAlterSQL_ChangeColumn(t *testing.T) {
@@ -43,6 +43,7 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 		}
 	Query := ReplaceBr(sql)
 	Query = ReplaceTwoReplace(Query)
+	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
 	var destAlterSql string
 	c := NewAlterSQL("test",sql,ckObj)
@@ -53,6 +54,7 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	ADD COLUMN f1 CHAR(10) DEFAULT ''  NOT NULL AFTER varchartest"`
 	Query = ReplaceBr(sql)
 	Query = ReplaceTwoReplace(Query)
+	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
 	c = NewAlterSQL("",Query,ckObj)
 	_,_,destAlterSql = c.Transfer2CkSQL()
@@ -62,22 +64,27 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
   ADD COLUMN t1 TIMESTAMP DEFAULT '2020-01-12 21:00:00'		  NULL		COMMENT "it is test" AFTER f1;`
 	Query = ReplaceBr(sql)
 	Query = ReplaceTwoReplace(Query)
+	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
-	c = NewAlterSQL("test",sql,ckObj)
+	c = NewAlterSQL("test",Query,ckObj)
 	_,_,destAlterSql = c.Transfer2CkSQL()
 	t.Log("33:",destAlterSql)
 
 
-	sql = `ALTER TABLE binlog_field_test 
+	sql = `ALTER TABLE /* it is notes */ binlog_field_test 
   CHANGE testtinyint testtinyint INT UNSIGNED DEFAULT -1  NOT NULL,
   CHANGE testvarchar testvarchar VARCHAR(60) CHARSET utf8 COLLATE utf8_general_ci NOT NULL,
-  ADD COLUMN testint2 INT(11) DEFAULT 0  NOT NULL   COMMENT 'test ok' AFTER test_json;
+  ADD COLUMN testint2 INT(11) DEFAULT 0  NOT NULL   COMMENT 'test ok' AFTER test_json,
+  MODIFY COLUMN testint3 int DEFAULT 1 NULL comment 'sdfsdf sdf',
 `
-	Query = ReplaceBr(sql)
+	Query = TransferNotes2Space(sql)
+	Query = ReplaceBr(Query)
 	Query = ReplaceTwoReplace(Query)
+
+	t.Log("Query:",Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
 	destAlterSql = ""
-	c = NewAlterSQL("test",sql,ckObj)
+	c = NewAlterSQL("test",Query,ckObj)
 	_,_,destAlterSql = c.Transfer2CkSQL()
 	t.Log(destAlterSql)
 }
