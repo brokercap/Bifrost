@@ -38,4 +38,9 @@ func TestConn_TranferQuerySql(t *testing.T) {
 
 	t.Log(SchemaName,TableName,newSql)
 
+	sql = "alter table binlog_field_test_7 add  col1 int;"
+	queryEvent.Query = sql
+	SchemaName,TableName,newSql = ckObj.TranferQuerySql(queryEvent)
+
+	t.Log(SchemaName,TableName,newSql)
 }

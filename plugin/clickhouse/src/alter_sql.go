@@ -78,7 +78,7 @@ func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string
 			alterParamArr = append(alterParamArr,This.ChangeColumn(v))
 			continue
 		}
-		if strings.Index(UpperV,"ADD COLUMN") == 0 {
+		if strings.Index(UpperV,"ADD") == 0 {
 			alterParamArr = append(alterParamArr,This.AddColumn(v))
 			continue
 		}
@@ -195,13 +195,18 @@ mysql : ADD COLUMN `f1` VARCHAR(200) NULL AFTER `number`,
 ck : add column column_name [type] [default_expr] [after name_after]
 */
 func (This *AlterSQL) AddColumn(sql string) (destAlterSql string) {
+	var columnNameIndex = 1
+	if strings.Index(strings.ToUpper(sql),"ADD COLUMN") == 0 {
+		columnNameIndex = 2
+	}
 	var columnName,ckType string
 	pArr := strings.Split(sql," ")
-	columnName = pArr[2]
-	ckType = This.GetTransferCkType(pArr[3])
+	columnName = pArr[columnNameIndex]
+	ckType = This.GetTransferCkType(pArr[columnNameIndex + 1])
 	var AlterColumn = &AlterColumnInfo{}
-	if len(pArr) > 4 {
-		AlterColumn = This.GetColumnInfo(pArr[4:])
+	var columnOtherInfoIndex = columnNameIndex + 2
+	if len(pArr) > columnOtherInfoIndex {
+		AlterColumn = This.GetColumnInfo(pArr[columnOtherInfoIndex:])
 	}
 
 	if AlterColumn.isUnsigned {
