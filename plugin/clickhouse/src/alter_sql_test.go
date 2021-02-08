@@ -141,6 +141,7 @@ func TestAlterSQL_GetTransferCkType(t *testing.T) {
 	testArr = append(testArr,result{Val:"decimal( 18, 5)",Type:"Decimal(18, 5)"})
 	testArr = append(testArr,result{Val:"decimal( 38, 5)",Type:"String"})
 	testArr = append(testArr,result{Val:"decimal( )",Type:"Decimal(18,2)"})
+	testArr = append(testArr,result{Val:"decimal( 1 )",Type:"Decimal(1,0)"})
 
 	ckObj := &Conn{
 		p:&PluginParam{

@@ -556,7 +556,10 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 			}
 			p := strings.Split(dataTypeParam,",")
 			M, _ := strconv.Atoi(strings.Trim(p[0]," "))
-			D, _ := strconv.Atoi(strings.Trim(p[1]," "))
+			var D int
+			if len(p) == 2 {
+				D, _ = strconv.Atoi(strings.Trim(p[1]," "))
+			}
 			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
 			if M > 18 {
 				toType = "String"

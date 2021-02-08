@@ -275,6 +275,7 @@ func TestConn_TransferToCkTypeByColumnType(t *testing.T) {
 	testArr = append(testArr,result{Val:"Nullable(decimal( 18, 5))",Type:"Nullable(Decimal(18,5))"})
 	testArr = append(testArr,result{Val:"Nullable(decimal( 38, 5))",Type:"Nullable(String)"})
 	testArr = append(testArr,result{Val:"decimal( )",Type:"Decimal(18,2)"})
+	testArr = append(testArr,result{Val:"decimal(1)",Type:"Decimal(1,0)"})
 
 	conn := &MyPlugin.Conn{}
 	for _,v := range testArr {

@@ -1,6 +1,7 @@
 package src
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -321,12 +322,16 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 			ckType = "Decimal(18,2)"
 		}else{
 			p := strings.Split(dataTypeParam,",")
-			M, _ := strconv.Atoi(strings.Trim(p[0],""))
+			M, _ := strconv.Atoi(strings.Trim(p[0]," "))
 			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
 			if M > 18 {
 				ckType = "String"
 			}else{
-				ckType = "Decimal("+dataTypeParam+")"
+				var D int
+				if len(p) == 2 {
+					D, _ = strconv.Atoi(strings.Trim(p[1]," "))
+				}
+				ckType = fmt.Sprintf("Decimal(%d,%d)",M,D)
 			}
 		}
 	case "real","double":
