@@ -1,3 +1,18 @@
+v1.7.1-release   2021-02-09
+===========================
+1. fix binlog parser ddl(rename,drop) error
+2. fix binlog parser error by  "/*notes*/" filter
+3. plugin ck ddl update
+4. plugin mysql ddl update ,supported tidb rename multi-table
+5. mysql multi-gtid support
+6. fix percona 8.0 char parser error
+7. recovery binlog position calc update
+8. beore and after ddl, callback a dummy begin and commit event
+9. fix windows path error
+10. db list show eventID
+11. doc update
+12. fix other bugs
+
 v1.7.0-rc.01   2021-01-24
 ===========================
 1. gtid supported
