@@ -65,7 +65,7 @@ func (This *BinlogDump) SetNextEventID(id uint64) bool {
 func (This *BinlogDump) GetBinlog() (string, uint32, uint32,string,uint64) {
 	This.RLock()
 	defer This.RUnlock()
-	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp,This.parser.gtid,This.parser.lastEventID
+	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp,This.parser.getGtid(),This.parser.lastEventID
 }
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error, maxFileName string, maxPosition uint32) {
@@ -85,8 +85,14 @@ func (This *BinlogDump) StartDumpBinlogGtid(gtid string,  ServerId uint32, resul
 	if This.parser == nil {
 		This.parser = newEventParser(This)
 	}
+	gtidInfo,dbType,err := NewGTIDSet(gtid)
+	if err != nil {
+		result <- err
+		return
+	}
+	This.parser.dbType = dbType
+	This.parser.gtidSetInfo = gtidInfo
 	This.parser.ServerId = ServerId
-	This.parser.gtid = gtid
 	This.parser.callbackErrChan = result
 	This.parser.isGTID = true
 	This.StartDumpBinlog0()
@@ -99,7 +105,7 @@ func (This *BinlogDump) StartDumpBinlog0() {
 	for _, val := range This.OnlyEvent {
 		This.parser.eventDo[int(val)] = true
 	}
-	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.gtid," binlogFileName:",This.parser.binlogFileName," binlogPosition:",This.parser.binlogPosition )
+	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.getGtid()," binlogFileName:",This.parser.binlogFileName," binlogPosition:",This.parser.binlogPosition )
 	defer func() {
 		This.parser.ParserConnClose(true)
 	}()

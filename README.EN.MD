@@ -22,7 +22,7 @@ Your star is the biggest support for Bifrost!!!
 * ClickHouse(supported DDL)
 * MySQL(supported DDL)
 * [Http](https://github.com/brokercap/Bifrost/blob/v1.7.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
+* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.7.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -96,11 +96,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.7.0-rc.01/bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.7.1-release/bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.7.0-rc.01_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.7.0-rc.01_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.7.1-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 

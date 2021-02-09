@@ -304,13 +304,7 @@ func (mc *mysqlConn) writeCommandPacket(command commandType, args ...interface{}
 		if len(args) != 3 {
 			return fmt.Errorf("Invalid arguments count (Got: %d Has: 1)", len(args))
 		}
-		GtidSet := NewMySQLGtidSet(args[0].(string))
-		var err error
-		err = GtidSet.Init()
-		if err != nil {
-			return err
-		}
-		GtidBody := GtidSet.Encode()
+		GtidBody := args[0].([]byte)
 		/**
 		binlog_flags 2
 		server_id 4

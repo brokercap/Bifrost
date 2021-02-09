@@ -1,6 +1,7 @@
 package src
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,8 +79,12 @@ func (This *AlterSQL) Transfer2CkSQL() (SchemaName,TableName,destAlterSql string
 			alterParamArr = append(alterParamArr,This.ChangeColumn(v))
 			continue
 		}
-		if strings.Index(UpperV,"ADD COLUMN") == 0 {
+		if strings.Index(UpperV,"ADD") == 0 {
 			alterParamArr = append(alterParamArr,This.AddColumn(v))
+			continue
+		}
+		if strings.Index(UpperV,"MODIFY") == 0 {
+			alterParamArr = append(alterParamArr,This.ModifyColumn(v))
 			continue
 		}
 		/*
@@ -151,7 +156,39 @@ func (This *AlterSQL) ChangeColumn(sql string) (destAlterSql string) {
 		destAlterSql += " COMMENT " + AlterColumn.Comment + ""
 	}
 	return
+}
 
+/*
+mysql : MODIFY column `number` BIGINT(20) NOT NULL  COMMENT '馆藏数量',
+ck : modify column column_name [type] [default_expr]
+*/
+func (This *AlterSQL) ModifyColumn(sql string) (destAlterSql string) {
+	var columnName, ckType string
+	pArr := strings.Split(sql, " ")
+	columnName = pArr[2]
+	ckType = This.GetTransferCkType(pArr[3])
+	var AlterColumn = &AlterColumnInfo{}
+	if len(pArr) > 4 {
+		AlterColumn = This.GetColumnInfo(pArr[4:])
+	}
+
+	if AlterColumn.isUnsigned {
+		// mysql 里，float double ,decimal 是可以设置 unsigned
+		switch ckType {
+		case "Float32","Float64","String":
+			break
+		default:
+			ckType = "U"+ckType
+		}
+	}
+	if AlterColumn.Nullable == true {
+		ckType = " Nullable("+ckType+")"
+	}
+	destAlterSql = "modify column " + columnName + " " + ckType
+	if AlterColumn.Comment != "" {
+		destAlterSql += " COMMENT " + AlterColumn.Comment + ""
+	}
+	return
 }
 
 /*
@@ -159,13 +196,18 @@ mysql : ADD COLUMN `f1` VARCHAR(200) NULL AFTER `number`,
 ck : add column column_name [type] [default_expr] [after name_after]
 */
 func (This *AlterSQL) AddColumn(sql string) (destAlterSql string) {
+	var columnNameIndex = 1
+	if strings.Index(strings.ToUpper(sql),"ADD COLUMN") == 0 {
+		columnNameIndex = 2
+	}
 	var columnName,ckType string
 	pArr := strings.Split(sql," ")
-	columnName = pArr[2]
-	ckType = This.GetTransferCkType(pArr[3])
+	columnName = pArr[columnNameIndex]
+	ckType = This.GetTransferCkType(pArr[columnNameIndex + 1])
 	var AlterColumn = &AlterColumnInfo{}
-	if len(pArr) > 4 {
-		AlterColumn = This.GetColumnInfo(pArr[4:])
+	var columnOtherInfoIndex = columnNameIndex + 2
+	if len(pArr) > columnOtherInfoIndex {
+		AlterColumn = This.GetColumnInfo(pArr[columnOtherInfoIndex:])
 	}
 
 	if AlterColumn.isUnsigned {
@@ -262,6 +304,7 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 	if n > 0 {
 		mysqlDataType = strings.ToLower(mysqlColumnType[0:n])
 		dataTypeParam = mysqlColumnType[n+1:len(mysqlColumnType)-1]
+		dataTypeParam = strings.Trim(dataTypeParam," ")
 	}else{
 		mysqlDataType = strings.ToLower(mysqlColumnType)
 	}
@@ -276,15 +319,19 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 		ckType = "Int64"
 	case "numeric","decimal":
 		if dataTypeParam == "" {
-			ckType = "Decimal(18,17)"
+			ckType = "Decimal(18,2)"
 		}else{
 			p := strings.Split(dataTypeParam,",")
-			M, _ := strconv.Atoi(strings.Trim(p[0],""))
+			M, _ := strconv.Atoi(strings.Trim(p[0]," "))
 			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
 			if M > 18 {
 				ckType = "String"
 			}else{
-				ckType = "Decimal("+dataTypeParam+")"
+				var D int
+				if len(p) == 2 {
+					D, _ = strconv.Atoi(strings.Trim(p[1]," "))
+				}
+				ckType = fmt.Sprintf("Decimal(%d,%d)",M,D)
 			}
 		}
 	case "real","double":
@@ -292,12 +339,15 @@ func (This *AlterSQL) GetTransferCkType(mysqlColumnType string) (ckType string) 
 	case "float":
 		ckType = "Float32"
 	case "timestamp","datetime":
-		ckType = "DateTime"
 		if dataTypeParam != "" {
-			ckType += "("+dataTypeParam+")"
+			ckType = "DateTime64("+dataTypeParam+")"
+		}else{
+			ckType = "DateTime"
 		}
 	case "time":
 		ckType = "String"
+	case "date":
+		ckType = "Date"
 	default:
 		ckType = "String"
 	}

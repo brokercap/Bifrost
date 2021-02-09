@@ -100,8 +100,11 @@ function formatDate(timestamp) {
                                                     <td>
                                                         <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
                                                         <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        {{if eq $v.IsGtid true}}
                                                         <p class="db_last_gtid">{{$v.Gtid}}</p>
+                                                        {{end}}
                                                         <p class="db_last_time"><script type="text/javascript">document.write(formatDate({{$v.BinlogDumpTimestamp}}));</script> </p>
+                                                        <p class="db_last_eventId">EventID: {{$v.LastEventID}}</p>
 
                                                     {{if eq $v.ConnStatus "closed"}}
                                                     {{if  eq $v.ConnErr ""}}
