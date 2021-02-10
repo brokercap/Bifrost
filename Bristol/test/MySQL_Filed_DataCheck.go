@@ -16,7 +16,7 @@ import (
 	"regexp"
 )
 
-const VERSION  = "1.7.0"
+const VERSION  = "1.7.2"
 
 var errDataList []string
 
@@ -70,7 +70,7 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 	var Binlog_Ignore_DB string
 	var Executed_Gtid_Set string
 	for {
-		dest := make([]driver.Value, 4, 4)
+		dest := make([]driver.Value, 5, 5)
 		errs := rows.Next(dest)
 		if errs != nil {
 			return MasterBinlogInfoStruct{}
@@ -78,7 +78,9 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct{
 		File = dest[0].(string)
 		Binlog_Do_DB = dest[2].(string)
 		Binlog_Ignore_DB = dest[3].(string)
-		Executed_Gtid_Set = ""
+		if dest[4] != nil {
+			Executed_Gtid_Set = dest[4].(string)
+		}
 		PositonString := fmt.Sprint(dest[1])
 		Position,_ = strconv.Atoi(PositonString)
 		break
@@ -120,6 +122,63 @@ func GetServerId(db mysql.MysqlConnection) int{
 		break
 	}
 	return ServerId
+}
+
+func GetVariables(db mysql.MysqlConnection, variablesValue string) (data map[string]string) {
+	data = make(map[string]string, 0)
+	sql := "show variables like '" + variablesValue + "'"
+	stmt, err := db.Prepare(sql)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
+	defer rows.Close()
+	for {
+		dest := make([]driver.Value, 2, 2)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		variableName := dest[0].(string)
+		value := dest[1].(string)
+		data[variableName] = value
+	}
+	return
+}
+
+func GetMySQLVersion(db mysql.MysqlConnection) string {
+	sql := "SELECT version()"
+	stmt, err := db.Prepare(sql)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	defer stmt.Close()
+	p := make([]driver.Value, 0)
+	rows, err := stmt.Query(p)
+	if err != nil {
+		log.Printf("sql:%s, err:%v\n", sql, err)
+		return ""
+	}
+	defer rows.Close()
+	var version string
+	for {
+		dest := make([]driver.Value, 1, 1)
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		version = dest[0].(string)
+		break
+	}
+	return version
 }
 
 func ExecSQL(db mysql.MysqlConnection,sql string){
@@ -674,8 +733,8 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection,schema string,table stri
 	sqlstring = "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlv_+")"
 	sqlstring2 := "INSERT INTO `"+schema+"`.`"+table+"` ("+sqlk+") values ("+sqlval+")"
 	log.Println("sqlstring:",sqlstring2)
-	log.Println("data:",len(data))
-	log.Println("columnData:",len(columnData))
+	log.Println("data len:",len(data))
+	log.Println("columnData len:",len(columnData))
 	return autoIncrementField,sqlstring,data,columnData,columnList
 }
 
@@ -760,7 +819,7 @@ func checkData(rowMap map[string]interface{},logPrefix string) (AutoIncrementFie
 		}
 		if isTrue == false {
 			isAllRight = false
-			logInfo = fmt.Sprintf("%s %s value:%s ( %s ) != %s ( %s )",logPrefix, columnName,fmt.Sprint(rowMap[columnName]), reflect.TypeOf(rowMap[columnName]), ColumnData[columnName].Value,reflect.TypeOf(ColumnData[columnName].Value))
+			logInfo = fmt.Sprintf("%s %s value:%v ( %s ) != %v ( %s )",logPrefix, columnName,fmt.Sprint(rowMap[columnName]), reflect.TypeOf(rowMap[columnName]), ColumnData[columnName].Value,reflect.TypeOf(ColumnData[columnName].Value))
 			errDataList = append(errDataList,logInfo)
 		}
 	}
@@ -852,6 +911,53 @@ func CheckSelectTableData(db mysql.MysqlConnection, SchemaName,TableName string,
 	return
 }
 
+type DataTypeSupportedStruct struct {
+	Timestamp  bool
+	Json	   bool
+}
+
+func CheckVersionDataTypeSupportedByMysql(MysqlVersion string) (result *DataTypeSupportedStruct) {
+	result = new(DataTypeSupportedStruct)
+	reg, _ := regexp.Compile("[^0-9.]+")
+	MysqlVersion = reg.ReplaceAllString(MysqlVersion, "")
+	//MysqlVersion = strings.ReplaceAll(MysqlVersion,"-log","")
+	MysqlVerionArr := strings.Split(MysqlVersion,".")
+	bigVersion, _ := strconv.Atoi(MysqlVerionArr[0])
+	midVersion, _ := strconv.Atoi(MysqlVerionArr[1])
+	var lastVersion = 0
+	if len(MysqlVerionArr) == 3 {
+		lastVersion,_ = strconv.Atoi(MysqlVerionArr[2])
+	}
+	mysqlVersionInt := bigVersion * 1000 + midVersion * 100 + lastVersion
+
+	if mysqlVersionInt >= 5600 {
+		result.Timestamp = true
+	}
+	if mysqlVersionInt >= 5700 {
+		result.Json = true
+	}
+	return result
+}
+
+func CheckVersionDataTypeSupportedByMariaDB(version string) (result *DataTypeSupportedStruct) {
+	result = new(DataTypeSupportedStruct)
+	result.Timestamp = true
+	if strings.Index(version,"10.0") == 0 || strings.Index(version,"10.1") == 0 {
+		return
+	}
+	result.Json = true
+	return
+}
+
+func CheckVersionDataTypeSupported(version string) *DataTypeSupportedStruct {
+	version = strings.Trim(version,"")
+	if strings.Contains(strings.ToLower(version),"mariadb") {
+		return CheckVersionDataTypeSupportedByMariaDB(version)
+	}else{
+		return CheckVersionDataTypeSupportedByMysql(version)
+	}
+}
+
 func main() {
 	fmt.Println("VERSION:",VERSION)
 	var userName,password,host,port string
@@ -859,6 +965,7 @@ func main() {
 	// 0  select binlog 都验证
 	// 1  只验证 select
 	// 2  只验证 binlog
+	var IsGTID bool
 	flag.StringVar(&userName,"u", "root", "-u root")
 	flag.StringVar(&password,"p", "root", "-p password")
 	flag.StringVar(&host,"h", "192.168.126.140", "-h 127.0.0.1")
@@ -868,6 +975,7 @@ func main() {
 	flag.StringVar(&longstring,"longstring", "false", "-longstring true | true insert long text,SET GLOBAL max_allowed_packet = 4194304 ,please")
 	flag.BoolVar(&autoCreate,"autoCreate", true, "-autoCreate")
 	flag.IntVar(&CheckType,"CheckType", 0, "-CheckType")
+	flag.BoolVar(&IsGTID,"IsGTID", true, "-IsGTID")
 
 	flag.Parse()
 	if autoCreate {
@@ -882,6 +990,7 @@ func main() {
 	var filename,dataSource string
 	var position uint32 = 0
 	var MyServerID uint32 = 0
+	var MasterGtid string = ""
 
 	dataSource = userName+":"+password+"@tcp("+host+":"+port+")/"+database
 	log.Println(dataSource," start connect")
@@ -902,21 +1011,19 @@ func main() {
 	masterServerId := GetServerId(db)
 	MyServerID = uint32(masterServerId+250)
 
-	stmt0,err := db.Prepare("select version()")
-	rows0,_ := stmt0.Query([]driver.Value{})
 	var MysqlVersion string
-	for {
-		dest := make([]driver.Value, 1, 1)
-
-		err := rows0.Next(dest)
-		if err != nil {
-			break
+	MysqlVersion = GetMySQLVersion(db)
+	if IsGTID {
+		if strings.Contains(MysqlVersion, "MariaDB") {
+			m := GetVariables(db, "gtid_binlog_pos")
+			if gtidBinlogPos, ok := m["gtid_binlog_pos"]; ok {
+				MasterGtid = gtidBinlogPos
+			}
+		}else{
+			MasterGtid = masterInfo.Executed_Gtid_Set
 		}
-		MysqlVersion = fmt.Sprint(dest[0])
-		break
 	}
-
-	fmt.Println("mysql version:",MysqlVersion)
+	fmt.Println("server version:",MysqlVersion)
 
 	fmt.Println("")
 
@@ -955,25 +1062,11 @@ func main() {
 		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4',"+
 		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"
 
-	reg, err := regexp.Compile("[^0-9.]+")
-	if err != nil {
-		log.Fatal(err)
-	}
-	MysqlVersionOld := MysqlVersion
-	MysqlVersion = reg.ReplaceAllString(MysqlVersion, "")
-	//MysqlVersion = strings.ReplaceAll(MysqlVersion,"-log","")
-	MysqlVerionArr := strings.Split(MysqlVersion,".")
-	bigVersion, _ := strconv.Atoi(MysqlVerionArr[0])
-	midVersion, _ := strconv.Atoi(MysqlVerionArr[1])
-	var lastVersion = 0
-	if len(MysqlVerionArr) == 3 {
-		lastVersion,_ = strconv.Atoi(MysqlVerionArr[2])
-	}
-	mysqlVersionInt := bigVersion * 1000 + midVersion * 100 + lastVersion
 	// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
-	log.Println("MysqlVersion:",MysqlVersionOld, mysqlVersionInt)
 
-	if mysqlVersionInt >= 5600 {
+	dataTypeSupported := CheckVersionDataTypeSupported(MysqlVersion)
+
+	if dataTypeSupported.Timestamp {
 		createTableSql += "`testtime2_1` time(1) NOT NULL DEFAULT '00:00:00.0',"+
 			"`testtime2_2` time(2) NOT NULL DEFAULT '00:00:00.00',"+
 			"`testtime2_3` time(3) NOT NULL DEFAULT '00:00:00.000',"+
@@ -996,7 +1089,7 @@ func main() {
 			"`testdatetime2_6` datetime(6) NOT NULL DEFAULT '0000-00-00 00:00:00.000000',"
 	}
 
-	if mysqlVersionInt >= 5700 {
+	if dataTypeSupported.Json {
 		createTableSql += "`test_json` json,"
 	}
 
@@ -1077,19 +1170,27 @@ func main() {
 			mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
 			mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
 			mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
+			mysql.XID_EVENT,
 		},
 		nil,
 		nil)
 	BinlogDump.AddReplicateDoDb(database,"binlog_field_test")
 	log.Println("Version:",VERSION)
 	log.Println("Bristol version:",mysql.VERSION)
-	log.Println("filename:",filename,"position:",position)
-	go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)
+	log.Println("filename:",filename,"position:",position,"MasterGtid:",MasterGtid)
+	if MasterGtid != "" {
+		go BinlogDump.StartDumpBinlogGtid(MasterGtid,MyServerID,reslut)
+	}else{
+		go BinlogDump.StartDumpBinlog(filename, position, MyServerID,reslut,"",0)
+	}
 	go func() {
 		for {
 			v := <-reslut
 			log.Printf("monitor reslut:%s \r\n", v)
-			if v.Error() == "close" {
+			switch v.Error() {
+			case "running","starting":
+				continue
+			default:
 				os.Exit(1)
 			}
 		}
