@@ -68,7 +68,31 @@ func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callba
 
 
 func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
-	return nil,fmt.Errorf("mariadb gtid not supported")
+	var err error
+	// 通知 mariadb ,当前从库能识别gtid事件,如果不设置这个，maridb 主库 是不会下发 MARIADB_GTID_EVENT,MARIADB_GTID_LIST_EVENT 等事件的
+	err = mc.exec("SET @mariadb_slave_capability=4")
+	if err != nil {
+		return nil,fmt.Errorf("failed to SET @mariadb_slave_capability=4: %v", err)
+	}
+	gtidStr := parser.gtidSetInfo.String()
+	// mariadb gtid by set slave_connect_state
+	setGtidQuery := fmt.Sprintf("SET @slave_connect_state='%s'", gtidStr)
+	err = mc.exec(setGtidQuery)
+	if err != nil {
+		return nil,err
+	}
+	err = mc.exec("SET @slave_gtid_strict_mode=1")
+	if err != nil {
+		return nil,fmt.Errorf("failed to set @slave_gtid_strict_mode=1: %v", err)
+	}
+	ServerId := uint32(parser.ServerId)
+	flags := uint16(0)
+	err = mc.writeCommandPacket(COM_BINLOG_DUMP, uint32(0), flags, ServerId, "")
+	if err != nil {
+		parser.callbackErrChan <- err
+		return nil, err
+	}
+	return mc.DumpBinlog0(parser,callbackFun)
 }
 
 func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driver.Rows, error) {
