@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.7.1"
-const BIFROST_VERION = "v1.7.1"
+const VERSION  = "v1.7.2"
+const BIFROST_VERION = "v1.7.2"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -234,7 +234,15 @@ func (This *Conn) initToMysqlTableFieldType() {
 				list = append(list,This.p.Field[k])
 			}
 		}else {
-			This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+			// mysql 里的默认值是在 insert 语句执行的时候，sql 里没有指定字段名的情况下，自动填充
+			// 假如有默认值 ，但是允许为 null 的时候，假如 sql 里指定值为 null，还是可以将 null 写进去的
+			// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
+			// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
+			if strings.ToLower(ckFieldsMap[v.ToField].IS_NULLABLE) == "true" {
+				This.p.Field[k].ToFieldDefault = nil
+			}else{
+				This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+			}
 			list = append(list,This.p.Field[k])
 		}
 	}
@@ -295,7 +303,18 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 		}else{
 			fromFieldName = v.COLUMN_NAME
 		}
-		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:v.COLUMN_DEFAULT }
+		var ToFieldDefault *string
+		// mysql 里的默认值是在 insert 语句执行的时候，sql 里没有指定字段名的情况下，自动填充
+		// 假如有默认值 ，但是允许为 null 的时候，假如 sql 里指定值为 null，还是可以将 null 写进去的
+		// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
+		// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
+		// 同 initToMysqlTableFieldType 函数内部注释
+		if strings.ToLower(v.IS_NULLABLE) == "true" {
+			ToFieldDefault = nil
+		}else{
+			ToFieldDefault = v.COLUMN_DEFAULT
+		}
+		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:ToFieldDefault }
 		if strings.ToUpper(v.COLUMN_KEY) == "PRI" {
 			field.ToFieldDefault = nil
 			priKeyList = append(priKeyList,field)
