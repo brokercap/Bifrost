@@ -6,6 +6,7 @@ if [[ "$1" == "all" ]];then
   $0 windows amd64
   $0 darwin amd64
   $0 freebsd amd64
+  $0 darwin arm64
   exit 0
 fi
 

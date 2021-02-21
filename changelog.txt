@@ -1,3 +1,10 @@
+v1.7.2-release   2021-02-21
+===========================
+1. mariadb gtid supported
+2. fix plugin mysql nullable ,bug has default sync error bug
+3. testing binlog parser and select data is all right for mysql,mariadb,percona
+4. golang 1.16 ,Darwin arm64 supported
+
 v1.7.1-release   2021-02-09
 ===========================
 1. fix binlog parser ddl(rename,drop) error

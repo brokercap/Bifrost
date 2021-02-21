@@ -3,6 +3,10 @@
 
 ##### *Real time data synchronization, only use mouse .....*
 
+[![Gitter](https://badges.gitter.im/brokercap-Bifrost/Bifrost.svg)](https://gitter.im/brokercap-Bifrost/Bifrost?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.7.x)](https://travis-ci.org/brokercap/Bifrost)
+[![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
+
 [中文](https://github.com/brokercap/Bifrost/blob/v1.7.x/README.MD)
 
 Binary [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)
@@ -96,11 +100,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.7.1-release/bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.7.2-release/bifrost_v1.7.2-release_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.7.2-release_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.7.1-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.7.2-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
