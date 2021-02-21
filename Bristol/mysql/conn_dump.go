@@ -255,6 +255,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				callbackFun(beginEvent)
 				callbackFun(event)
 				callbackFun(commitEvent)
+				parser.saveBinlog(commitEvent)
 			}else{
 				callbackFun(event)
 			}

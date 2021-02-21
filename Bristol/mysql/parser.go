@@ -137,6 +137,27 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			Gtid:			parser.gtidSetInfo.String(),
 		}
 		break
+	case MARIADB_GTID_LIST_EVENT:
+		var MariaDBGTIDSEvent *MariadbGTIDListEvent
+		MariaDBGTIDSEvent,err = parser.MariadbGTIDListEvent(buf)
+		event = &EventReslut{
+			Header:         MariaDBGTIDSEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: MariaDBGTIDSEvent.header.LogPos,
+		}
+		return
+	case MARIADB_GTID_EVENT:
+		var GtidEvent *MariadbGTIDEvent
+		GtidEvent, err = parser.MariadbGTIDEvent(buf)
+		gtid := fmt.Sprintf("%d-%d-%d",GtidEvent.GTID.DomainID,GtidEvent.GTID.ServerID,GtidEvent.GTID.SequenceNumber)
+		parser.gtidSetInfo.Update(gtid)
+		event = &EventReslut{
+			Header:         GtidEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: GtidEvent.header.LogPos,
+			Gtid:			parser.gtidSetInfo.String(),
+		}
+		return
 	case FORMAT_DESCRIPTION_EVENT:
 		parser.format, err = parser.parseFormatDescriptionEvent(buf)
 		if strings.Contains(parser.format.mysqlServerVersion,"MariaDB") {
