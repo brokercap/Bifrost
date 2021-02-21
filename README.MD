@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.7.x)](https://travis-ci.org/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
-[English](https://github.com/brokercap/Bifrost/blob/v1.6.x/README.EN.MD)
+[English](https://github.com/brokercap/Bifrost/blob/v1.7.x/README.EN.MD)
 
 ##### 漫威里的彩虹桥可以将 雷神 送到 阿斯加德 和 地球
 
@@ -99,11 +99,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.7.1-release/bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.7.2-release/bifrost_v1.7.2-release_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.7.1-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.7.2-release_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.7.1-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.7.2-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
