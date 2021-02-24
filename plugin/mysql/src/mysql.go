@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.7.2"
-const BIFROST_VERION = "v1.7.2"
+const VERSION  = "v1.7.3"
+const BIFROST_VERION = "v1.7.3"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -238,7 +238,7 @@ func (This *Conn) initToMysqlTableFieldType() {
 			// 假如有默认值 ，但是允许为 null 的时候，假如 sql 里指定值为 null，还是可以将 null 写进去的
 			// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
 			// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
-			if strings.ToLower(ckFieldsMap[v.ToField].IS_NULLABLE) == "true" {
+			if strings.ToUpper(ckFieldsMap[v.ToField].IS_NULLABLE) == "YES" {
 				This.p.Field[k].ToFieldDefault = nil
 			}else{
 				This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
@@ -309,7 +309,7 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 		// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
 		// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
 		// 同 initToMysqlTableFieldType 函数内部注释
-		if strings.ToLower(v.IS_NULLABLE) == "true" {
+		if strings.ToUpper(v.IS_NULLABLE) == "YES" {
 			ToFieldDefault = nil
 		}else{
 			ToFieldDefault = v.COLUMN_DEFAULT
@@ -372,7 +372,7 @@ func (This *Conn) initVersion() {
 func (This *Conn) Connect() bool {
 	This.conn = NewMysqlDBConn(*This.uri)
 	if This.conn.err == nil{
-		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
+		This.conn.conn.Exec("SET NAMES utf8mb4",[]dbDriver.Value{})
 	}
 	return true
 }
