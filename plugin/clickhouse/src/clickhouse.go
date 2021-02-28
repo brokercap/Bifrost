@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-const VERSION = "v1.7.1"
-const BIFROST_VERION = "v1.7.1"
+const VERSION = "v1.7.3"
+const BIFROST_VERION = "v1.7.3"
 
 var l sync.RWMutex
 
@@ -524,7 +524,7 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 			if b == false {
 				return data,nil,nil
 			}
-			if This.conn.err != nil {
+			if This.conn == nil || This.conn.err != nil {
 				This.ReConnect()
 			}
 			if This.conn.err != nil {
@@ -678,7 +678,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 			This.conn.err = e
 		}
 	}()
-	if This.conn.err != nil {
+	if This.conn == nil || This.conn.err != nil {
 		This.ReConnect()
 	}
 	if This.conn.err != nil {

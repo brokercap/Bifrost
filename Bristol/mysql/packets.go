@@ -904,11 +904,14 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					//row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
 					 b := int8(byteToUint8(data[pos]))
 					 //length == 1 是 tinyint(1)  bool值
-					if rc.columns[i].length == 1{
-						if b == 1{
+					if rc.columns[i].length == 1 {
+						switch b {
+						case 1:
 							row[i] = true
-						}else{
+						case 0:
 							row[i] = false
+						default:
+							row[i] = b
 						}
 					}else{
 						row[i] = b

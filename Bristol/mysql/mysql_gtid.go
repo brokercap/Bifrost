@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func NewMySQLGtid(GtidSet string) *MySQLGtid {
@@ -109,11 +110,14 @@ func NewMySQLGtidSet(GtidStr string) *MySQLGtidSet {
 }
 
 type MySQLGtidSet struct {
+	sync.RWMutex
 	gtids   map[string]*MySQLGtid
 	GtidStr string
 }
 
 func (This *MySQLGtidSet) Init() (err error) {
+	This.Lock()
+	defer This.Unlock()
 	for _, gtidStr := range strings.Split(This.GtidStr, ",") {
 		gtidInfo := NewMySQLGtid(gtidStr)
 		err = gtidInfo.Parse()
@@ -132,15 +136,18 @@ func (This *MySQLGtidSet) ReInit() (err error) {
 
 func (This *MySQLGtidSet) Encode() []byte {
 	var buf bytes.Buffer
+	This.RLock()
 	binary.Write(&buf, binary.LittleEndian, uint64(len(This.gtids)))
 	for _, gtid := range This.gtids {
 		gtid.Encode(&buf)
 	}
+	This.RUnlock()
 	return buf.Bytes()
 }
 
 func (This *MySQLGtidSet) String() string {
 	gtidStr := ""
+	This.RLock()
 	for _,gtidInfo := range This.gtids {
 		if gtidStr == "" {
 			gtidStr = gtidInfo.String()
@@ -148,6 +155,7 @@ func (This *MySQLGtidSet) String() string {
 			gtidStr += ","+gtidInfo.String()
 		}
 	}
+	This.RUnlock()
 	return gtidStr
 }
 
@@ -157,6 +165,8 @@ func (This *MySQLGtidSet) Update(gtid string) error {
 	if err != nil {
 		return err
 	}
+	This.Lock()
 	This.gtids[gtidInfo.sid.String()] = gtidInfo
+	This.Unlock()
 	return nil
 }

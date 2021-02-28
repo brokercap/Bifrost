@@ -183,10 +183,6 @@ func (This *mysqlDB) GetTableFields(schema,table string) (data []TableStruct) {
 			NUMERIC_SCALE 	= &t
 		}
 
-		if COLUMN_TYPE=="tinyint(1)"{
-			DATA_TYPE = "bool"
-		}
-
 		FieldList = append(FieldList,TableStruct{
 			COLUMN_NAME:	COLUMN_NAME,
 			COLUMN_DEFAULT:	COLUMN_DEFAULT,

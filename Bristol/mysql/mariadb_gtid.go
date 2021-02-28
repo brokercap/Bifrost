@@ -8,6 +8,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func NewMariaDBGtid(GtidSet string) *MariaDBGtid {
@@ -64,11 +65,14 @@ func NewMariaDBGtidSet(GtidStr string) *MariaDBGtidSet {
 }
 
 type MariaDBGtidSet struct {
+	sync.RWMutex
 	gtids   map[uint32]*MariaDBGtid
 	GtidStr string
 }
 
 func (This *MariaDBGtidSet) Init() (err error) {
+	This.Lock()
+	defer This.Unlock()
 	for _, gtidStr := range strings.Split(This.GtidStr, ",") {
 		gtidInfo := NewMariaDBGtid(gtidStr)
 		err = gtidInfo.Parse()
@@ -88,11 +92,13 @@ func (This *MariaDBGtidSet) ReInit() (err error) {
 func (This *MariaDBGtidSet) Encode() []byte {
 	var buf bytes.Buffer
 	sep := ""
+	This.RLock()
 	for _, gtid := range This.gtids {
 		buf.WriteString(sep)
 		buf.WriteString(gtid.String())
 		sep = ","
 	}
+	This.RUnlock()
 	return buf.Bytes()
 }
 
@@ -102,12 +108,15 @@ func (This *MariaDBGtidSet) Update(gtid string) error {
 	if err != nil {
 		return err
 	}
+	This.Lock()
 	This.gtids[gtidInfo.domainId] = gtidInfo
+	This.Unlock()
 	return nil
 }
 
 func (This *MariaDBGtidSet) String() string {
 	gtidStr := ""
+	This.RLock()
 	for _,gtidInfo := range This.gtids {
 		if gtidStr == "" {
 			gtidStr = gtidInfo.Gtid
@@ -115,5 +124,6 @@ func (This *MariaDBGtidSet) String() string {
 			gtidStr += ","+gtidInfo.Gtid
 		}
 	}
+	This.RUnlock()
 	return gtidStr
 }

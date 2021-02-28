@@ -1,3 +1,12 @@
+v1.7.3-release   2021-02-28
+===========================
+1. fix gtid update panic bug
+2. connection use utf8mb4
+3. plugin mysql cancel bool type
+4. fix plugin field nullable contrast YES
+5. fix plugin clickhouse conn error
+
+
 v1.7.2-release   2021-02-21
 ===========================
 1. mariadb gtid supported
