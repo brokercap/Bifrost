@@ -3,17 +3,17 @@ package src
 import (
 	"errors"
 	"github.com/brokercap/Bifrost/plugin/driver"
+	"encoding/json"
+	"fmt"
 	//"github.com/garyburd/redigo/redis"
 	"github.com/go-redis/redis"
-	"fmt"
-	"encoding/json"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 )
 
-const VERSION  = "v1.6.0"
-const BIFROST_VERION = "v1.6.0"
+const VERSION  = "v1.7.4"
+const BIFROST_VERION = "v1.7.4"
 
 func init(){
 	driver.Register("redis",NewConn,VERSION,BIFROST_VERION)
@@ -247,23 +247,16 @@ func (This *Conn) Del(data *driver.PluginDataType,retry bool)(*driver.PluginData
 }
 
 func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginDataType, *driver.PluginDataType,error) {
-	if This.p.BifrostFilterQuery {
-		return data,nil,nil
-	}
 	var Val string
 	var err error
 	if This.p.ValConfig != ""{
 		Val = This.getVal(data,0)
 	}else{
-		if This.p.ValConfig != ""{
-			Val = This.getVal(data,0)
-		}else{
-			c,err := json.Marshal(data)
-			if err != nil{
-				return nil,data,err
-			}
-			Val = string(c)
+		c,err := json.Marshal(data)
+		if err != nil{
+			return nil,data,err
 		}
+		Val = string(c)
 	}
 	err =This.conn.LPush(Key, Val).Err()
 
@@ -274,9 +267,23 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.P
 }
 
 func (This *Conn) Query(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	if This.p.BifrostFilterQuery {
+		return nil,nil,nil
+	}
+	if This.p.Type == "list" {
+		Key := This.getKeyVal(data, 0)
+		return This.SendToList(Key,data)
+	}
 	return nil,nil,nil
 }
 
 func (This *Conn) Commit(data *driver.PluginDataType,retry bool) (LastSuccessCommitData *driver.PluginDataType,ErrData *driver.PluginDataType,err error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
+	if This.p.Type == "list" {
+		Key := This.getKeyVal(data, 0)
+		return This.SendToList(Key,data)
+	}
 	return data,nil,nil
 }
