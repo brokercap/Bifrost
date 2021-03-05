@@ -22,31 +22,31 @@ type PprofController struct {
 }
 
 // 默认
-func (c *DBController) Default() {
+func (c *PprofController) Default() {
 	c.SetOutputByUser()
 	model.Index(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
 
 // cmdline
-func (c *DBController) Cmdline() {
+func (c *PprofController) Cmdline() {
 	c.SetOutputByUser()
 	model.Cmdline(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
 
 // Profile
-func (c *DBController) Profile() {
+func (c *PprofController) Profile() {
 	c.SetOutputByUser()
 	model.Profile(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
 
 // Symbol
-func (c *DBController) Symbol() {
+func (c *PprofController) Symbol() {
 	c.SetOutputByUser()
 	model.Symbol(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
 
 // Trace
-func (c *DBController) Trace() {
+func (c *PprofController) Trace() {
 	c.SetOutputByUser()
 	model.Trace(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
