@@ -60,7 +60,7 @@
     </div>
 
     <div class="form-group" id="Redis_ExpiredContainer">
-        <label class="col-sm-3 control-label">过期时间：</label>
+        <label class="col-sm-3 control-label">Expired：</label>
         <div class="col-sm-9">
             <input type="number" name="Expired" min="0" id="Redis_Expired" class="form-control" value="0" placeholder="Expired time (s)">
             <span class="help-block m-b-none">key=>value 消息过期时间,单位秒. *****注意: 仅 key=>value 支持*****，必须为 int 类型，默认为0，不过期, CRUD 会同步到redis 上, 该参数一般不需要设置</span>
