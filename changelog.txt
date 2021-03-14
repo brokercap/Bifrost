@@ -1,3 +1,11 @@
+v1.7.4-release   2021-03-14
+===========================
+1. fix plugin redis list sync empty bug
+2. fix pprof.go,update DBController to PprofController
+3. mysql field data  check update
+4. redis-client lib version update
+5. fix eventID calc error, lose data bug
+
 v1.7.3-release   2021-02-28
 ===========================
 1. fix gtid update panic bug
