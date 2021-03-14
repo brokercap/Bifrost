@@ -18,7 +18,7 @@ function doGetPluginParam() {
     if (DataType === "custom" && !ValueConfig){
     	result.msg = "DataType==custom,Custom Value could not be empty!"
         return result;
-    }else{
+    }else if (DataType === "custom"){
 		data["ValueConfig"] = ValueConfig;
 	}
 
