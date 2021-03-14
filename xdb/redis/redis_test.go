@@ -7,7 +7,7 @@ import (
 )
 
 func getConn() (driver.XdbDriver,error)  {
-	uri := "10.40.2.41:6379"
+	uri := "192.168.220.130:6379"
 	MyConn := redis.MyConn{}
 	return  MyConn.Open(uri)
 }
