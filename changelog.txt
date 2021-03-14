@@ -1,3 +1,7 @@
+v1.8.0-beta.01   2021-03-14
+===========================
+1. mysql caching_sha2_password supported
+
 v1.7.4-release   2021-03-14
 ===========================
 1. fix plugin redis list sync empty bug
