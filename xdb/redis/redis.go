@@ -1,17 +1,20 @@
 package redis
 
 import (
+	"context"
 	"github.com/brokercap/Bifrost/xdb/driver"
 	"fmt"
 	"strings"
 	"strconv"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"time"
 )
 
-const VERSION  = "v1.1.0"
+const VERSION  = "v1.1.1"
 
 type MyConn struct {}
+
+var ctx = context.Background()
 
 func (MyConn *MyConn) Open(uri string) (driver.XdbDriver,error){
 	return newConn(uri)
@@ -87,7 +90,7 @@ func (This *Conn) Connect() error{
 		PoolSize: 4096,
 	})
 
-	_, This.err = universalClient.Ping().Result()
+	_, This.err = universalClient.Ping(ctx).Result()
 	if This.err != nil {
 		This.status = ""
 		return This.err
@@ -121,7 +124,7 @@ func (This *Conn) InitConn()  {
 
 func (This *Conn) GetKeyVal(key []byte) ([]byte,error){
 	This.InitConn()
-	f := This.conn.Get(string(key))
+	f := This.conn.Get(ctx,string(key))
 	s,err := f.Bytes()
 	if err != nil{
 		if err.Error() == "redis: nil"{
@@ -135,7 +138,7 @@ func (This *Conn) GetKeyVal(key []byte) ([]byte,error){
 
 func (This *Conn) PutKeyVal(key []byte,val []byte) error{
 	This.InitConn()
-	err := This.conn.Set(string(key),string(val),time.Duration(0)).Err()
+	err := This.conn.Set(ctx,string(key),string(val),time.Duration(0)).Err()
 	if err != nil{
 		This.Close()
 		return err
@@ -145,7 +148,7 @@ func (This *Conn) PutKeyVal(key []byte,val []byte) error{
 
 func (This *Conn) DelKeyVal(key []byte) error{
 	This.InitConn()
-	err := This.conn.Del(string(key)).Err()
+	err := This.conn.Del(ctx,string(key)).Err()
 	if err != nil{
 		if err.Error() != "redis: nil"{
 			This.Close()
@@ -158,7 +161,7 @@ func (This *Conn) DelKeyVal(key []byte) error{
 func (This *Conn) GetListByKeyPrefix(key []byte) ([]driver.ListValue,error){
 	This.InitConn()
 	data := make([]driver.ListValue,0)
-	list,err := This.conn.Keys(string(key)+"*").Result()
+	list,err := This.conn.Keys(ctx,string(key)+"*").Result()
 	if err != nil{
 		This.Close()
 		return data,err

@@ -53,11 +53,15 @@ function StartMySQLDocker() {
     ;;
 
     "5.6"*)
-      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM --gtid_mode=ON --enforce-gtid-consistency=true
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM --gtid_mode=ON --enforce-gtid-consistency=true --log-bin --log-slave-updates
+    ;;
+
+    "5.5"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     ;;
 
     "5.1"*)
-      ocker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d jc3wish/mysql:5.1.73
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d jc3wish/mysql:5.1.73
     ;;
 
     *)
@@ -74,7 +78,6 @@ function StartPerconaDocker() {
   case "$version" in
     "8"*)
       docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION --default-authentication-plugin=mysql_native_password --gtid_mode=ON --enforce-gtid-consistency=true
-
     ;;
 
     "5.7"*)
@@ -82,8 +85,13 @@ function StartPerconaDocker() {
     ;;
 
     "5.6"*)
-      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM --log-bin --log-slave-updates
     ;;
+
+    "5.5"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    ;;
+
     *)
       echo "not suported percona " $version
       exit 1
@@ -111,7 +119,6 @@ case "$dbType" in
   "percona")
      StartPerconaDocker $dbVerion
   ;;
-
 
   *)
     echo "only supported mysql | mariadb | percona "
