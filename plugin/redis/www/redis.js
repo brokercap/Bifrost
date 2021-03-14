@@ -19,7 +19,7 @@ function doGetPluginParam() {
     	result.msg = "DataType==custom,Custom Value could not be empty!"
         return result;
     }else if (DataType === "custom"){
-		data["ValueConfig"] = ValueConfig;
+		data["ValConfig"] = ValueConfig;
 	}
 
     // 不同的类型有不同参数
