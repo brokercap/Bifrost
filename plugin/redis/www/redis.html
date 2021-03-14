@@ -2,8 +2,8 @@
     <div class="form-group">
         <label class="col-sm-3 control-label">Type：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="type" id="plugin_type" onchange="Redis_Type_Change()">
-                <option value="string" selected>key=>value</option>
+            <select class="form-control" name="type" id="Redis_Type" onchange="onRedisTypeChange()">
+                <option value="string">key=>value</option>
                 <option value="hash">Hash</option>
                 <option value="zset">Sorted sets</option>
                 <option value="list">List</option>
@@ -15,8 +15,8 @@
     <div class="form-group">
         <label class="col-sm-3 control-label">DataType：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="datatype" id="Redis_DataType" onchange="Redis_DataType_Change()">
-                <option value="json" selected>auto json</option>
+            <select class="form-control" name="datatype" id="Redis_DataType" onchange="onRedisDataTypeChange()">
+                <option value="json">auto json</option>
                 <option value="custom">custom</option>
             </select><span class="help-block m-b-none"></span>
         </div>
@@ -25,7 +25,7 @@
     <div class="form-group" id="Redis_KeyConfigContainer">
         <label class="col-sm-3 control-label">Key：</label>
         <div class="col-sm-9" style="position: relative">
-            <input type="text" name="KeyConfig" id="KeyConfig" class="form-control" placeholder="请输入文本" value="{$TableName}:{$}">
+            <input type="text" name="KeyConfig" id="Redis_KeyConfig" class="form-control" placeholder="请输入文本" value="{$TableName}:{$}">
             <span class="help-block m-b-none">自定义key,{$SchemaName},{$TableName},{$EventType},{$filedName} (ps: filedName 替换为字段名 字段必须勾选才能替换)</span>
             <p>&nbsp;</p>
         </div>
@@ -34,7 +34,7 @@
     <div class="form-group" id="Redis_HashKeyConfigContainer" style="display: none">
         <label class="col-sm-3 control-label">HashKey：</label>
         <div class="col-sm-9" style="position: relative">
-            <input type="text" name="HashKeyConfig" id="HashKeyConfig" class="form-control" placeholder="请输入文本" value="{$}">
+            <input type="text" name="HashKeyConfig" id="Redis_HashKeyConfig" class="form-control" placeholder="请输入文本" value="{$}">
             <span class="help-block m-b-none">Hash, 自定义HashKey,{$SchemaName},{$TableName},{$EventType},{$filedName} (ps: filedName 替换为字段名 字段必须勾选才能替换)</span>
             <p>&nbsp;</p>
         </div>
@@ -43,7 +43,7 @@
     <div class="form-group" id="Redis_SortConfigContainer" style="display: none">
         <label class="col-sm-3 control-label">Sort：</label>
         <div class="col-sm-9" style="position: relative">
-            <input type="text" name="SortConfig" id="SortConfig" class="form-control" placeholder="请输入文本" value="{$}">
+            <input type="text" name="SortConfig" id="Redis_SortConfig" class="form-control" placeholder="请输入文本" value="{$}">
             <span class="help-block m-b-none">zset, 自定义Sort 必须为数字,{$SchemaName},{$TableName},{$EventType},{$filedName} (ps: filedName 替换为字段名 字段必须勾选才能替换)</span>
             <p>&nbsp;</p>
         </div>
@@ -52,8 +52,8 @@
     <div class="form-group" id="Redis_ValueConfigContainer" style="display: none">
         <label class="col-sm-3 control-label">Custom Value：</label>
         <div class="col-sm-9">
-            <textarea id="ValueConfig" name="ValueConfig" class="form-control" required=""
-                      placeholder="{$SchemaName},{$TableName},{$EventType},{$filedName} (ps: filedName 替换为字段名 字段必须勾选才能替换)"
+            <textarea name="ValueConfig" id="Redis_ValueConfig"  class="form-control" required=""
+                      placeholder="自定义写入Redis 的内容,占位符 {$SchemaName},{$TableName},{$EventType},{$filedName} (ps: filedName 替换为字段名 字段必须勾选才能替换)"
                       aria-required="true"></textarea> <span class="help-block m-b-none"></span>
             <p>&nbsp;</p>
         </div>
@@ -62,7 +62,7 @@
     <div class="form-group" id="Redis_ExpiredContainer">
         <label class="col-sm-3 control-label">过期时间：</label>
         <div class="col-sm-9">
-            <input type="number" name="Expired" id="Redis_Expired" class="form-control" value="0" placeholder="Expired time (s)">
+            <input type="number" name="Expired" min="0" id="Redis_Expired" class="form-control" value="0" placeholder="Expired time (s)">
             <span class="help-block m-b-none">key=>value 消息过期时间,单位秒. *****注意: 仅 key=>value 支持*****，必须为 int 类型，默认为0，不过期, CRUD 会同步到redis 上, 该参数一般不需要设置</span>
             <p>&nbsp;</p>
         </div>

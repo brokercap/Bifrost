@@ -25,7 +25,7 @@
 <p>Redis 写入Sorted set 数据时候的sort值 标签会自动替换为 {$"+filedName+"} 字段内容, *****请确保改字段是数字类型*****, 如果不是将自动使用 0</p>
 
 <h4>Custom Value：</h4>
-<p>当DataType == Custom 的时候 , 同样会标签替换 替换规则: {$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</p>
+<p>自定义写入Redis 的内容当DataType == Custom 的时候 , 同样会标签替换 替换规则: {$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</p>
 
 <h4>Expired</h4>
 <p>key=>value 消息过期时间,单位秒. *****注意: 仅 key=>value 支持*****，必须为 int 类型，默认为0，不过期, CRUD 会同步到redis 上, 该参数一般不需要设置</p>

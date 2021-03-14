@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/brokercap/Bifrost/plugin/driver"
+	"time"
+
 	//"github.com/go-redis/redis"
 	"github.com/go-redis/redis/v8"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const VERSION = "v1.7.4"
@@ -32,13 +33,15 @@ type Conn struct {
 }
 
 type PluginParam struct {
-	HashKeyConfig      string
-	SortedConfig       string
-	KeyConfig          string
-	DataType           string
-	ValConfig          string
-	Type               string
-	Expir              int
+	KeyConfig string
+	DataType  string
+	ValConfig string
+	Type      string
+
+	HashKey string
+	Sort    string
+	Expired int
+
 	BifrostFilterQuery bool // bifrost server 保留,是否过滤sql事件
 }
 
@@ -185,12 +188,17 @@ func (This *Conn) Close() bool {
 	return true
 }
 
-func (This *Conn) getKeyVal(data *driver.PluginDataType, index int) string {
-	return fmt.Sprint(driver.TransfeResult(This.p.KeyConfig, data, index))
+func (This *Conn) getTemplateVal(data *driver.PluginDataType, template string, index int) string {
+	return fmt.Sprint(driver.TransfeResult(template, data, index))
 }
 
-func (This *Conn) getVal(data *driver.PluginDataType, index int) string {
-	return fmt.Sprint(driver.TransfeResult(This.p.ValConfig, data, index))
+func (This *Conn) getRedisContent(data *driver.PluginDataType, index int) (string, error) {
+	if This.p.DataType == "custom" {
+		return This.getTemplateVal(data, This.p.ValConfig, index), nil
+	} else {
+		j, err := json.Marshal(data.Rows[index])
+		return string(j), err
+	}
 }
 
 func (This *Conn) Insert(data *driver.PluginDataType, retry bool) (*driver.PluginDataType, *driver.PluginDataType, error) {
@@ -201,96 +209,132 @@ func (This *Conn) Update(data *driver.PluginDataType, retry bool) (*driver.Plugi
 	if This.err != nil {
 		This.ReConnect()
 	}
-	index := len(data.Rows) - 1
-	Key := This.getKeyVal(data, index)
+
 	var err error
+	index := len(data.Rows) - 1
+	key := This.getTemplateVal(data, This.p.KeyConfig, index)
+	content, err := This.getRedisContent(data, index)
+	pipeline := This.conn.Pipeline()
+	ctx := context.Background()
+
 	switch This.p.Type {
-	case "set":
-		if This.p.ValConfig != "" {
-			err = This.conn.Set(ctx, Key, This.getVal(data, index), time.Duration(This.p.Expir)*time.Second).Err()
-		} else {
-			vbyte, _ := json.Marshal(data.Rows[index])
-			err = This.conn.Set(ctx, Key, string(vbyte), time.Duration(This.p.Expir)*time.Second).Err()
+	case "string":
+		{
+			//删除之前的内容
+			if len(data.Rows) >= 2 {
+				oldKey := This.getTemplateVal(data, This.p.KeyConfig, 0)
+				pipeline.Del(ctx, oldKey)
+			}
+			pipeline.Set(ctx, key, content, time.Duration(This.p.Expired)*time.Second)
 		}
-		break
+	case "hash":
+		{
+			//删除之前的内容
+			if len(data.Rows) >= 2 {
+				oldKey := This.getTemplateVal(data, This.p.KeyConfig, 0)
+				oldHashKey := This.getTemplateVal(data, This.p.HashKey, 0)
+				pipeline.HDel(ctx, oldKey, oldHashKey)
+			}
+			hashKey := This.getTemplateVal(data, This.p.HashKey, index)
+			pipeline.HSet(ctx, key, hashKey, content)
+		}
+	case "zset":
+		{
+			//如果sort 字段无法转换为 数字 默认使用0
+			sort, sortErr := strconv.ParseFloat(This.getTemplateVal(data, This.p.Sort, index), 64)
+			if sortErr != nil {
+				sort = 0
+			}
+			//删除之前的内容
+			if len(data.Rows) >= 2 {
+				oldKey := This.getTemplateVal(data, This.p.KeyConfig, 0)
+				if oldContent, err := This.getRedisContent(data, 0); err == nil {
+					pipeline.ZRem(ctx, oldKey, 1, oldContent)
+				}
+			}
+			pipeline.ZAdd(ctx, key, &redis.Z{Score: sort, Member: content})
+		}
 	case "list":
-		return This.SendToList(Key, data)
+		{
+			//删除之前的内容
+			if len(data.Rows) >= 2 {
+				if oldContent, err := This.getRedisContent(data, 0); err == nil {
+					oldKey := This.getTemplateVal(data, This.p.KeyConfig, 0)
+					pipeline.LRem(ctx, oldKey, 1, oldContent)
+				}
+			}
+			pipeline.LPush(ctx, key, content)
+		}
+	case "set":
+		{
+			//删除之前的内容
+			if len(data.Rows) >= 2 {
+				if oldContent, err := This.getRedisContent(data, 0); err == nil {
+					oldKey := This.getTemplateVal(data, This.p.KeyConfig, 0)
+					pipeline.SRem(ctx, oldKey, 1, oldContent)
+				}
+			}
+			pipeline.SAdd(ctx, key, content)
+		}
 	default:
-		err = fmt.Errorf(This.p.Type + " not in(set,list)")
-		break
+		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
 
+	_, err = pipeline.Exec(ctx)
 	if err != nil {
 		This.err = err
 		return nil, data, err
+	} else {
+		return nil, nil, nil
 	}
-	return nil, nil, nil
 }
 
 func (This *Conn) Del(data *driver.PluginDataType, retry bool) (*driver.PluginDataType, *driver.PluginDataType, error) {
 	if This.err != nil {
 		This.ReConnect()
 	}
-	Key := This.getKeyVal(data, 0)
+
 	var err error
+	key := This.getTemplateVal(data, This.p.KeyConfig, 0)
+	ctx := context.Background()
+
 	switch This.p.Type {
-	case "set":
-		err = This.conn.Del(ctx, Key).Err()
-		break
+	case "string":
+		err = This.conn.Del(ctx, key).Err()
+	case "hash":
+		hashKey := This.getTemplateVal(data, This.p.HashKey, 0)
+		err = This.conn.HDel(ctx, key, hashKey).Err()
+	case "zset":
+		oldContent, err := This.getRedisContent(data, 0)
+		if err == nil {
+			err = This.conn.ZRem(ctx, key, oldContent).Err()
+		}
 	case "list":
-		return This.SendToList(Key, data)
-		break
+		oldContent, err := This.getRedisContent(data, 0)
+		if err == nil {
+			err = This.conn.LRem(ctx, key, 1, oldContent).Err()
+		}
+	case "set":
+		oldContent, err := This.getRedisContent(data, 0)
+		if err == nil {
+			err = This.conn.SRem(ctx, key, oldContent).Err()
+		}
 	default:
-		err = fmt.Errorf(This.p.Type + " not in(set,list)")
+		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
+
 	if err != nil {
 		This.err = err
 		return nil, data, err
-	}
-	return nil, nil, nil
-}
-
-func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginDataType, *driver.PluginDataType, error) {
-	var Val string
-	var err error
-	if This.p.ValConfig != "" {
-		Val = This.getVal(data, 0)
 	} else {
-		c, err := json.Marshal(data)
-		if err != nil {
-			return nil, data, err
-		}
-		Val = string(c)
+		return nil, nil, nil
 	}
-	err = This.conn.LPush(ctx, Key, Val).Err()
-
-	if err != nil {
-		return nil, data, err
-	}
-	return nil, nil, nil
 }
 
 func (This *Conn) Query(data *driver.PluginDataType, retry bool) (*driver.PluginDataType, *driver.PluginDataType, error) {
-	if This.p.BifrostFilterQuery {
-		return nil, nil, nil
-	}
-	if This.p.Type == "list" {
-		Key := This.getKeyVal(data, 0)
-		return This.SendToList(Key, data)
-	}
 	return nil, nil, nil
 }
 
 func (This *Conn) Commit(data *driver.PluginDataType, retry bool) (LastSuccessCommitData *driver.PluginDataType, ErrData *driver.PluginDataType, err error) {
-	if This.p.BifrostFilterQuery {
-		return data, nil, nil
-	}
-	if This.p.Type == "list" {
-		Key := This.getKeyVal(data, 0)
-		LastSuccessCommitData, ErrData, err = This.SendToList(Key, data)
-		if err != nil {
-			return
-		}
-	}
-	return data, nil, nil
+	return nil, nil, nil
 }
