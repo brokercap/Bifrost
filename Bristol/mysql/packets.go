@@ -28,7 +28,6 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-
 	// Check Packet Sync
 	if uint8(pktSeq) != mc.sequence {
 		e = errors.New("Commands out of sync; you can't run this command now")
@@ -47,7 +46,7 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 		if e == nil {
 			e = fmt.Errorf("Length of read data (%d) does not match body length (%d)", n, pktLen)
 		}
-		errLog.Print(`packets:58 `, e)
+		errLog.Print(`readPacket err:  `, e)
 		return nil, driver.ErrBadConn
 	}
 	return data, e
@@ -100,159 +99,6 @@ func (mc *mysqlConn) writePacket(data *[]byte) error {
 }
 
 /******************************************************************************
-*                           Initialisation Process                            *
-******************************************************************************/
-
-/* Handshake Initialization Packet 
- Bytes                        Name
- -----                        ----
- 1                            protocol_version
- n (Null-Terminated String)   server_version
- 4                            thread_id
- 8                            scramble_buff
- 1                            (filler) always 0x00
- 2                            server_capabilities
- 1                            server_language
- 2                            server_status
- 2                            server capabilities (two upper bytes)
- 1                            length of the scramble
-10                            (filler)  always 0
- n                            rest of the plugin provided data (at least 12 bytes) 
- 1                            \0 byte, terminating the second part of a scramble
-*/
-func (mc *mysqlConn) readInitPacket() (e error) {
-	data, e := mc.readPacket()
-	if e != nil {
-		return
-	}
-
-	mc.server = new(serverSettings)
-
-	// Position
-	pos := 0
-
-	// Protocol version [8 bit uint]
-	mc.server.protocol = data[pos]
-	if mc.server.protocol < MIN_PROTOCOL_VERSION {
-		e = fmt.Errorf(
-			"Unsupported MySQL Protocol Version %d. Protocol Version %d or higher is required",
-			mc.server.protocol,
-			MIN_PROTOCOL_VERSION)
-	}
-	pos++
-
-	// Server version [null terminated string]
-	slice, err := readSlice(data[pos:], 0x00)
-	if err != nil {
-		return
-	}
-	mc.server.version = string(slice)
-	pos += len(slice) + 1
-
-	// Thread id [32 bit uint]
-	mc.server.threadID = bytesToUint32(data[pos : pos+4])
-	pos += 4
-
-	// First part of scramble buffer [8 bytes]
-	mc.server.scrambleBuff = make([]byte, 8)
-	mc.server.scrambleBuff = data[pos : pos+8]
-	pos += 9
-
-	// Server capabilities [16 bit uint]
-	mc.server.flags = ClientFlag(bytesToUint16(data[pos : pos+2]))
-	if mc.server.flags&CLIENT_PROTOCOL_41 == 0 {
-		e = errors.New("MySQL-Server does not support required Protocol 41+")
-	}
-	pos += 2
-
-	// Server language [8 bit uint]
-	mc.server.charset = data[pos]
-	pos++
-
-	// Server status [16 bit uint]
-	pos += 15
-
-	mc.server.scrambleBuff = append(mc.server.scrambleBuff, data[pos:pos+12]...)
-
-	return
-}
-
-/* Client Authentication Packet 
-Bytes                        Name
------                        ----
-4                            client_flags
-4                            max_packet_size
-1                            charset_number
-23                           (filler) always 0x00...
-n (Null-Terminated String)   user
-n (Length Coded Binary)      scramble_buff (1 + x bytes)
-n (Null-Terminated String)   databasename (optional)
-*/
-func (mc *mysqlConn) writeAuthPacket() (e error) {
-	// Adjust client flags based on server support
-	clientFlags := uint32(CLIENT_MULTI_STATEMENTS |
-		// CLIENT_MULTI_RESULTS |
-		CLIENT_PROTOCOL_41 |
-		CLIENT_SECURE_CONN |
-		CLIENT_LONG_PASSWORD |
-		CLIENT_TRANSACTIONS)
-	if mc.server.flags&CLIENT_LONG_FLAG > 0 {
-		clientFlags |= uint32(CLIENT_LONG_FLAG)
-	}
-	// To specify a db name
-	if len(mc.cfg.dbname) > 0 {
-		clientFlags |= uint32(CLIENT_CONNECT_WITH_DB)
-	}
-
-	// User Password
-	scrambleBuff := scramblePassword(mc.server.scrambleBuff, []byte(mc.cfg.passwd))
-
-	// Calculate packet length and make buffer with that size
-	pktLen := 4 + 4 + 1 + 23 + len(mc.cfg.user) + 1 + 1 + len(scrambleBuff) + len(mc.cfg.dbname) + 1
-	data := make([]byte, 0, pktLen+4)
-
-	// Add the packet header
-	data = append(data, uint24ToBytes(uint32(pktLen))...)
-	data = append(data, mc.sequence)
-
-	// ClientFlags
-	data = append(data, uint32ToBytes(clientFlags)...)
-
-	// MaxPacketSize
-	data = append(data, uint32ToBytes(MAX_PACKET_SIZE)...)
-
-	// Charset
-	data = append(data, mc.server.charset)
-
-	// Filler
-	data = append(data, make([]byte, 23)...)
-
-	// User
-	if len(mc.cfg.user) > 0 {
-		data = append(data, []byte(mc.cfg.user)...)
-	}
-
-	// Null-Terminator
-	data = append(data, 0x0)
-
-	// ScrambleBuffer
-	data = append(data, byte(len(scrambleBuff)))
-	if len(scrambleBuff) > 0 {
-		data = append(data, scrambleBuff...)
-	}
-
-	// Databasename
-	if len(mc.cfg.dbname) > 0 {
-		data = append(data, []byte(mc.cfg.dbname)...)
-		// Null-Terminator
-		data = append(data, 0x0)
-	}
-
-	// Send Auth packet
-	return mc.writePacket(&data)
-}
-
-/******************************************************************************
 *                             Command Packets                                 *
 ******************************************************************************/
 
@@ -264,7 +110,9 @@ n                            arg
 */
 func (mc *mysqlConn) writeCommandPacket(command commandType, args ...interface{}) (e error) {
 	// Reset Packet Sequence
+
 	mc.sequence = 0
+
 
 	var arg []byte
 
@@ -904,14 +752,11 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					//row[i] = intToByteStr(int64(int8(byteToUint8(data[pos]))))
 					 b := int8(byteToUint8(data[pos]))
 					 //length == 1 是 tinyint(1)  bool值
-					if rc.columns[i].length == 1 {
-						switch b {
-						case 1:
+					if rc.columns[i].length == 1{
+						if b == 1{
 							row[i] = true
-						case 0:
+						}else{
 							row[i] = false
-						default:
-							row[i] = b
 						}
 					}else{
 						row[i] = b
@@ -933,24 +778,13 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 
 			case  FIELD_TYPE_YEAR:
 				row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
-				/*
-				if unsigned {
-					//row[i] = string(uintToByteStr(uint64(bytesToUint16(data[pos : pos+2]))))
-					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
-				} else {
-					//row[i] = string(intToByteStr(int64(int16(bytesToUint16(data[pos : pos+2])))))
-					row[i] = strconv.Itoa(int(bytesToUint16(data[pos : pos+2])))
-				}
-				*/
 				pos += 2
 				break
 
 			case FIELD_TYPE_INT24, FIELD_TYPE_LONG:
 				if unsigned {
-					//row[i] = uintToByteStr(uint64(bytesToUint32(data[pos : pos+4])))
 					row[i] =bytesToUint32(data[pos : pos+4])
 				} else {
-					//row[i] = intToByteStr(int64(int32(bytesToUint32(data[pos : pos+4]))))
 					row[i] = int32(bytesToUint32(data[pos : pos+4]))
 				}
 				pos += 4
@@ -958,23 +792,19 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 
 			case FIELD_TYPE_LONGLONG:
 				if unsigned {
-					//row[i] = uintToByteStr(bytesToUint64(data[pos : pos+8]))
 					row[i] = bytesToUint64(data[pos : pos+8])
 				} else {
-					//row[i] = intToByteStr(int64(bytesToUint64(data[pos : pos+8])))
 					row[i] = int64(bytesToUint64(data[pos : pos+8]))
 				}
 				pos += 8
 				break
 
 			case FIELD_TYPE_FLOAT:
-				//row[i] = float32ToByteStr(bytesToFloat32(data[pos : pos+4]))
 				row[i] = bytesToFloat32(data[pos : pos+4])
 				pos += 4
 				break
 
 			case FIELD_TYPE_DOUBLE:
-				//row[i] = float64ToByteStr(bytesToFloat64(data[pos : pos+8]))
 				row[i] = bytesToFloat64(data[pos : pos+8])
 				pos += 8
 				break
@@ -1042,7 +872,6 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					}
 				}
 				row[i], _ = strconv.ParseInt(resp, 2, 64)
-				//row[i] = []byte(strconv.FormatInt(bitInt,10))
 				pos += n
 				break
 

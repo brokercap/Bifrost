@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"bufio"
+	"crypto/tls"
 	"database/sql/driver"
 	"errors"
 	"net"
@@ -20,6 +21,7 @@ type mysqlConn struct {
 	insertId       uint64
 	lastCmdTime    time.Time
 	keepaliveTimer *time.Timer
+	status		   uint16
 }
 
 type config struct {
@@ -29,6 +31,8 @@ type config struct {
 	addr   string
 	dbname string
 	params map[string]string
+	authPluginName	string
+	tlsConfig *tls.Config
 }
 
 type serverSettings struct {
@@ -155,10 +159,10 @@ func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 	// Read Result
 	var columnCount uint16
 	columnCount, e = stmt.readPrepareResultPacket()
+
 	if e != nil {
 		return nil, e
 	}
-
 	if stmt.paramCount > 0 {
 		stmt.params, e = stmt.mc.readColumns(stmt.paramCount)
 		if e != nil {
