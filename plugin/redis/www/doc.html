@@ -1,20 +1,31 @@
 <h3>Redis 插件 参数解析</h3>
-<p>&nbsp;</p>
+<p>
+注意:
+    该插件对 FilterQuery 为 false 的时候, 仅对List 作出处理
+</p>
 
 <h4>Type</h4>
 <p><strong>key=>value : </strong> SET 命令写入数据</p>
 <p><strong>List : </strong> LPUSH 命令写入数据</p>
+<p><strong>Hash : </strong> HSET 命令写入数据</p>
+<p><strong>Zset : </strong> ZSET 命令写入数据</p>
+<p><strong>SET : </strong> SADD 命令写入数据</p>
 
 <h4>DataType</h4>
-<p><strong>string : </strong> 指定写入哪些数据, 选择这个，Value 参数生效</p>
-<p><strong>json : </strong> 自动将选择中的Fields 进行json 写入Redis</p>
+<p><strong>custom : </strong> 指定写入哪些数据, 选择这个，通过 Value 参数编辑数据</p>
+<p><strong>auto json : </strong> 自动将选择中的Fields 进行json 写入Redis</p>
 
 <h4>Key</h4>
 <p>Redis 写入数据时候的key值,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"} 标签将会替换成数据库名 ，表名 ,事件类型 ， 甚至字段内容</p>
 
-<h4>Value</h4>
-<p>当DataType == string 的时候 , 同样会标签替换</p>
+<h4>HashKey</h4>
+<p>Redis 写入Hash数据时候的key值,{$SchemaName},{$TableName},{$EventType},{$"+filedName+"} 标签将会替换成数据库名 ，表名 ,事件类型 ， 甚至字段内容</p>
 
-<h4>Expir</h4>
+<h4>Sort</h4>
+<p>Redis 写入Sorted set 数据时候的sort值 标签会自动替换为 {$"+filedName+"} 字段内容, *****请确保改字段是数字类型*****, 如果不是将自动使用 0</p>
 
-<p>消息过期时间，必须为 int 类型，默认为0，不过期</p>
+<h4>Custom Value</h4>
+<p>自定义写入Redis 的内容当DataType == Custom 的时候 , 同样会标签替换 替换规则: {$SchemaName},{$TableName},{$EventType},{$"+filedName+"}</p>
+
+<h4>Expired</h4>
+<p>key=>value 消息过期时间,单位秒. *****注意: 仅 key=>value 支持*****，必须为 int 类型，默认为0，不过期, CRUD 会同步到redis 上, 该参数一般不需要设置</p>
