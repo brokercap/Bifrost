@@ -24,7 +24,7 @@ function doGetPluginParam() {
 
     // 不同的类型有不同参数
     switch (Type){
-    	case 'string': {
+    	case 'set': {
     		try {
     			data["Expired"] = parseInt(Expired)
     		}catch (e) {

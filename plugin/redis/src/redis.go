@@ -218,7 +218,7 @@ func (This *Conn) Update(data *driver.PluginDataType, retry bool) (*driver.Plugi
 	ctx := context.Background()
 
 	switch This.p.Type {
-	case "string":
+	case "set":
 		{
 			//删除之前的内容
 			if len(data.Rows) >= 2 {
@@ -265,7 +265,7 @@ func (This *Conn) Update(data *driver.PluginDataType, retry bool) (*driver.Plugi
 			}
 			pipeline.LPush(ctx, key, content)
 		}
-	case "set":
+	case "sadd":
 		{
 			//删除之前的内容
 			if len(data.Rows) >= 2 {
@@ -279,7 +279,10 @@ func (This *Conn) Update(data *driver.PluginDataType, retry bool) (*driver.Plugi
 	default:
 		err = fmt.Errorf(This.p.Type + " not in(string,set,hash,list)")
 	}
-
+	if err != nil {
+		This.err = err
+		return nil, data, err
+	}
 	_, err = pipeline.Exec(ctx)
 	if err != nil {
 		This.err = err
@@ -299,7 +302,7 @@ func (This *Conn) Del(data *driver.PluginDataType, retry bool) (*driver.PluginDa
 	ctx := context.Background()
 
 	switch This.p.Type {
-	case "string":
+	case "set":
 		err = This.conn.Del(ctx, key).Err()
 	case "hash":
 		hashKey := This.getTemplateVal(data, This.p.HashKey, 0)
@@ -314,7 +317,7 @@ func (This *Conn) Del(data *driver.PluginDataType, retry bool) (*driver.PluginDa
 		if err == nil {
 			err = This.conn.LRem(ctx, key, 1, oldContent).Err()
 		}
-	case "set":
+	case "sadd":
 		oldContent, err := This.getRedisContent(data, 0)
 		if err == nil {
 			err = This.conn.SRem(ctx, key, oldContent).Err()
@@ -332,9 +335,34 @@ func (This *Conn) Del(data *driver.PluginDataType, retry bool) (*driver.PluginDa
 }
 
 func (This *Conn) Query(data *driver.PluginDataType, retry bool) (*driver.PluginDataType, *driver.PluginDataType, error) {
+	if This.p.BifrostFilterQuery {
+		return nil, nil, nil
+	}
+	if This.p.Type == "list" {
+		return This.sendList(data, retry)
+	}
 	return nil, nil, nil
 }
 
 func (This *Conn) Commit(data *driver.PluginDataType, retry bool) (LastSuccessCommitData *driver.PluginDataType, ErrData *driver.PluginDataType, err error) {
-	return nil, nil, nil
+	if This.p.BifrostFilterQuery {
+		return data, nil, nil
+	}
+	if This.p.Type == "list" {
+		return This.sendList(data, retry)
+	}
+	return data, nil, nil
+}
+
+//老版本兼容
+func (This *Conn) sendList(data *driver.PluginDataType, retry bool) (*driver.PluginDataType, *driver.PluginDataType, error) {
+	key := This.getTemplateVal(data, This.p.KeyConfig, 0)
+	content, err := This.getRedisContent(data, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = This.conn.LPush(context.Background(), key, content).Err(); err != nil {
+		return nil, nil, err
+	}
+	return data, nil, nil
 }
