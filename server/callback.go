@@ -18,12 +18,12 @@ package server
 import (
 	"log"
 	"time"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-func (db *db) Callback(data *mysql.EventReslut) {
-	switch data.Header.EventType {
-	case mysql.QUERY_EVENT:
+func (db *db) Callback(data *outputDriver.PluginDataType) {
+	switch data.EventType {
+	case "sql":
 		switch data.Query {
 		case "COMMIT":
 			db.CallbackDoCommit(data)
@@ -34,10 +34,9 @@ func (db *db) Callback(data *mysql.EventReslut) {
 		default:
 			break
 		}
-		break
-	case mysql.XID_EVENT:
+	case "commit":
 		db.CallbackDoCommit(data)
-		return
+		break
 	default:
 		break
 	}
@@ -50,28 +49,29 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	db.lastTransactionTableMap[data.SchemaName][data.TableName] = true
 }
 
-func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
+func (db *db) CallbackDoCommit(data *outputDriver.PluginDataType) {
 	for SchemaName,TableNameMap := range db.lastTransactionTableMap {
 		for TableName,_ := range TableNameMap {
-			data0 := &mysql.EventReslut{
-				Header:         data.Header,
-				Rows:           data.Rows,
-				Query:          "COMMIT",
-				SchemaName:     SchemaName,
-				TableName:      TableName,
-				BinlogFileName: data.BinlogFileName,
-				BinlogPosition: data.BinlogPosition,
-				Gtid:			data.Gtid,
-				Pri:			data.Pri,
-				ColumnMapping:  data.ColumnMapping,
-				EventID:		data.EventID,
+			data0 := &outputDriver.PluginDataType{
+				Timestamp:data.Timestamp,
+				EventType:data.EventType,
+				SchemaName:SchemaName,
+				TableName:TableName,
+				Rows:data.Rows,
+				BinlogFileNum:data.BinlogFileNum,
+				BinlogPosition:data.BinlogPosition,
+				Query:data.Query,
+				Gtid:data.Gtid,
+				Pri:data.Pri,
+				ColumnMapping: data.ColumnMapping,
+				EventID: data.EventID,
 			}
 			db.Callback0(data0)
 		}
 	}
 }
 
-func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
+func (db *db) Callback0(data *outputDriver.PluginDataType) (b bool) {
 	var ChannelKey int
 	var t *Table
 	var getChannelKey = func(SchemaName,tableName string) bool {
@@ -128,7 +128,7 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	}
 	chanName := c.GetChannel()
 	if chanName != nil {
-		chanName <- *data
+		chanName <- data
 	} else {
 		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
 	}

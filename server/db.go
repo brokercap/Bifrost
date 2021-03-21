@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"regexp"
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 )
 
 var dbAndTableSplitChars = "_-"
@@ -66,16 +67,16 @@ func init() {
 	DbList = make(map[string]*db, 0)
 }
 
-func AddNewDB(Name string, ConnectUri string, GTID string,binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
+func AddNewDB(Name string,InputType string,inputInfo inputDriver.InputInfo,AddTime int64) *db {
 	var r bool = false
 	DbLock.Lock()
 	if _, ok := DbList[Name]; !ok {
-		DbList[Name] = NewDb(Name, ConnectUri,GTID, binlogFileName, binlogPostion, serverId,maxFileName,maxPosition,AddTime)
+		DbList[Name] = NewDb(Name, InputType,inputInfo,AddTime)
 		r = true
 	}
 	count.SetDB(Name)
 	DbLock.Unlock()
-	log.Println("Add db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition,"GTID:",GTID)
+	log.Println("Add db Info:",InputType,Name,inputInfo)
 	if r == true {
 		return DbList[Name]
 	} else {
@@ -83,24 +84,15 @@ func AddNewDB(Name string, ConnectUri string, GTID string,binlogFileName string,
 	}
 }
 
-func UpdateDB(Name string, ConnectUri string, GTID string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,UpdateTime int64,updateToServer int8) error {
+func UpdateDB(Name string,InputType string, inputInfo inputDriver.InputInfo,UpdateTime int64,updateToServer int8) error {
 	DbLock.Lock()
 	defer DbLock.Unlock()
 	if _, ok := DbList[Name]; !ok {
 		return fmt.Errorf(Name + " not exsit")
 	}
-	if binlogFileName == ""{
-		return fmt.Errorf("binlogFileName can't be empty")
-	}
-	if binlogPostion < 4{
-		return fmt.Errorf("binlogPostion can't < 4")
-	}
-	if serverId == 0 {
+
+	if inputInfo.ServerId == 0 {
 		return fmt.Errorf("serverId can't be 0")
-	}
-	index := strings.IndexAny(binlogFileName,".")
-	if index == -1{
-		return fmt.Errorf("binlogFileName:%s error",binlogFileName)
 	}
 	dbObj := DbList[Name]
 	dbObj.Lock()
@@ -108,29 +100,34 @@ func UpdateDB(Name string, ConnectUri string, GTID string, binlogFileName string
 	if dbObj.ConnStatus != CLOSED{
 		return fmt.Errorf("db status must be close")
 	}
-	dbObj.ConnectUri = ConnectUri
-	dbObj.binlogDumpFileName = binlogFileName
-	dbObj.binlogDumpPosition = binlogPostion
-	dbObj.serverId = serverId
-	dbObj.maxBinlogDumpFileName = maxFileName
-	dbObj.maxBinlogDumpPosition = maxPosition
+	dbObj.ConnectUri = inputInfo.ConnectUri
+	dbObj.binlogDumpFileName = inputInfo.BinlogFileName
+	dbObj.binlogDumpPosition = inputInfo.BinlogPostion
+	dbObj.serverId = inputInfo.ServerId
+	dbObj.maxBinlogDumpFileName = inputInfo.MaxFileName
+	dbObj.maxBinlogDumpPosition = inputInfo.MaxPosition
 	dbObj.AddTime = UpdateTime
-	if GTID == "" {
-		dbObj.gtid = GTID
+	if inputInfo.GTID == "" {
+		dbObj.gtid = inputInfo.GTID
 		dbObj.isGtid = false
 	}else{
-		dbObj.gtid = GTID
+		dbObj.gtid = inputInfo.GTID
 		dbObj.isGtid = true
 	}
-	log.Println("Update db Info:",Name,ConnectUri,binlogFileName,binlogPostion,serverId,maxFileName,maxPosition,"GTID:",GTID)
+	log.Println("Update db Info:",InputType,Name,inputInfo)
 	if updateToServer == 0{
 		return nil
 	}
-	BinlogFileNum,_ := strconv.Atoi(binlogFileName[index+1:])
+	var BinlogFileNum int
+	if inputInfo.BinlogFileName != "" {
+		index := strings.Index(inputInfo.BinlogFileName,".")
+		BinlogFileNum,_ = strconv.Atoi(inputInfo.BinlogFileName[index+1:])
+	}
+
 	for key,t := range dbObj.tableMap{
 		for _,toServer:=range t.ToServerList{
-			log.Println("UpdateToServerBinlogPosition:",key," QueueMsgCount:",toServer.QueueMsgCount," old:",toServer.BinlogFileNum,toServer.BinlogPosition," new:",BinlogFileNum,binlogPostion)
-			toServer.UpdateBinlogPosition(BinlogFileNum,binlogPostion,GTID,0)
+			log.Println("UpdateToServerBinlogPosition:",key," QueueMsgCount:",toServer.QueueMsgCount," old:",toServer.BinlogFileNum,toServer.BinlogPosition," new:",BinlogFileNum,inputInfo.BinlogPostion)
+			toServer.UpdateBinlogPosition(BinlogFileNum,inputInfo.BinlogPostion,inputInfo.GTID,0)
 		}
 	}
 	return nil
@@ -175,7 +172,6 @@ type db struct {
 	channelMap         		map[int]*Channel `json:"ChannelMap"`
 	LastChannelID      		int	`json:"LastChannelID"`
 	tableMap           		map[string]*Table `json:"TableMap"`
-	binlogDump         		*mysql.BinlogDump
 	isGtid					bool `json:"IsGtid"`
 	gtid					string `json:"Gtid"`
 	binlogDumpFileName 		string `json:"BinlogDumpFileName"`
@@ -190,10 +186,14 @@ type db struct {
 	AddTime					int64
 	DBBinlogKey				[]byte `json:"-"`  // 保存 binlog到levelDB 的key
 	lastTransactionTableMap map[string]map[string]bool  `json:"-"` // 最近一个事务里更新了数据表
+	InputType				string `json:"Name"`
+	inputDriverObj			inputDriver.Driver `json:"-"`  // 数据源实例化对象
+	inputStatusChan			chan *inputDriver.PluginStatus
 }
 
 type DbListStruct struct {
 	Name               		string
+	InputType				string
 	ConnectUri         		string
 	ConnStatus         		StatusFlag //close,stop,starting,running
 	ConnErr            		string
@@ -221,6 +221,7 @@ func GetListDb() map[string]DbListStruct {
 	for k,v := range DbList{
 		dbListMap[k] = DbListStruct{
 			Name:					v.Name,
+			InputType:				v.InputType,
 			ConnectUri:				v.ConnectUri,
 			ConnStatus:				v.ConnStatus,
 			ConnErr:				v.ConnErr,
@@ -253,6 +254,7 @@ func GetDbInfo(dbname string) *DbListStruct {
 	}
 	return &DbListStruct{
 			Name:					v.Name,
+			InputType:				v.InputType,
 			ConnectUri:				v.ConnectUri,
 			ConnStatus:				v.ConnStatus,
 			ConnErr:				v.ConnErr,
@@ -276,41 +278,32 @@ func NewDbByNull() *db {
 	return &db{}
 }
 
-func NewDb(Name string, ConnectUri string,GTID string, binlogFileName string, binlogPostion uint32, serverId uint32,maxFileName string,maxPosition uint32,AddTime int64) *db {
+func NewDb(Name string,InputType string, inputInfo inputDriver.InputInfo,AddTime int64) *db {
 	var isGtid bool
-	if GTID != "" {
+	if inputInfo.GTID != "" {
 		isGtid = true
 	}
 	return &db{
 		Name:               	Name,
-		ConnectUri:         	ConnectUri,
+		ConnectUri:         	inputInfo.ConnectUri,
 		ConnStatus:         	CLOSED,
 		ConnErr:            	"",
 		LastChannelID:			0,
 		channelMap:         	make(map[int]*Channel, 0),
 		tableMap:           	make(map[string]*Table, 0),
 		isGtid:					isGtid,
-		gtid:					GTID,
-		binlogDumpFileName: 	binlogFileName,
-		binlogDumpPosition: 	binlogPostion,
-		maxBinlogDumpFileName:	maxFileName,
-		maxBinlogDumpPosition:	maxPosition,
-		binlogDump: 			mysql.NewBinlogDump(
-									ConnectUri,
-									nil,
-									[]mysql.EventType{
-										mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2,
-										mysql.QUERY_EVENT,
-										mysql.XID_EVENT,
-										mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,
-										mysql.WRITE_ROWS_EVENTv0, mysql.UPDATE_ROWS_EVENTv0, mysql.DELETE_ROWS_EVENTv0,
-									},
-									nil,nil),
+		gtid:					inputInfo.GTID,
+		binlogDumpFileName: 	inputInfo.BinlogFileName,
+		binlogDumpPosition: 	inputInfo.BinlogPostion,
+		maxBinlogDumpFileName:	inputInfo.MaxFileName,
+		maxBinlogDumpPosition:	inputInfo.MaxPosition,
 		replicateDoDb: 			make(map[string]uint8, 0),
-		serverId:      			serverId,
+		serverId:      			inputInfo.ServerId,
 		killStatus:				0,
 		AddTime:				AddTime,
 		lastTransactionTableMap:make(map[string]map[string]bool,0),
+		inputDriverObj:			nil,
+		InputType:				InputType,
 	}
 }
 
@@ -337,8 +330,8 @@ func (db *db) AddReplicateDoDb(schemaName,tableName string,doLock bool) bool {
 		return false
 	}
 	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
-	if db.binlogDump != nil {
-		db.binlogDump.AddReplicateDoDb(schemaName, TransferLikeTableReqName)
+	if db.inputDriverObj != nil {
+		db.inputDriverObj.AddReplicateDoDb(schemaName, TransferLikeTableReqName)
 		log.Printf("AddReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
 	}
 	if _,ok:=db.replicateDoDb[schemaName];!ok{
@@ -356,8 +349,8 @@ func (db *db) DelReplicateDoDb(schemaName,tableName string,doLock bool) bool {
 		return false
 	}
 	TransferLikeTableReqName := db.TransferLikeTableReq(tableName)
-	if db.binlogDump != nil {
-		db.binlogDump.DelReplicateDoDb(schemaName, TransferLikeTableReqName)
+	if db.inputDriverObj != nil {
+		db.inputDriverObj.DelReplicateDoDb(schemaName, TransferLikeTableReqName)
 		log.Printf("DelReplicateDoDb dbName:%s ,schemaName:%s, tableName:%s , TransferLikeTableReq:%s ",db.Name,schemaName,tableName,TransferLikeTableReqName)
 
 	}
@@ -441,55 +434,34 @@ func (db *db) Start() (b bool) {
 	switch db.ConnStatus {
 	case CLOSED:
 		db.ConnStatus = STARTING
-		if db.isGtid == false {
-			var newPosition uint32 = 0
-			log.Println(db.Name, "Start(),and starting ", " getRightBinlogPosition")
-			for i := 0; i < 3; i++ {
-				if db.ConnStatus == CLOSING {
-					break
-				}
-				newPosition = db.getRightBinlogPosition()
-				if newPosition > 0 {
-					break
-				}
-				time.Sleep(time.Duration(1) * time.Second)
-			}
-			if db.ConnStatus == CLOSING {
-				db.ConnStatus = CLOSED
-				db.ConnErr = "close"
-				break
-			}
-			if newPosition == 0 {
-				/*
-			db.ConnStatus = "close"
-			db.ConnErr = "binlog position error"
-			break
-			*/
-				log.Println("binlog poistion check failed,dbName:", db.Name, "current position:", db.binlogDumpFileName, " ", db.binlogDumpPosition)
-			} else {
-				log.Println("binlog position change,dbName:", db.Name, " old:", db.binlogDumpFileName, " ", db.binlogDumpPosition, " new:", db.binlogDumpFileName, " ", newPosition)
-				db.binlogDumpPosition = newPosition
-			}
+
+		inputInfo := inputDriver.InputInfo{
+			ConnectUri:db.ConnectUri,
+			GTID: db.gtid,
+			BinlogFileName: db.binlogDumpFileName,
+			BinlogPostion: db.binlogDumpPosition,
+			ServerId: db.serverId,
+			MaxFileName: db.maxBinlogDumpFileName,
+			MaxPosition: db.maxBinlogDumpPosition,
 		}
-		reslut := make(chan error, 1)
-		db.binlogDump.UpdateUri(db.ConnectUri)
-		db.binlogDump.CallbackFun = db.Callback
+		if !db.isGtid {
+			inputInfo.GTID = ""
+		}
+		db.inputStatusChan = make(chan *inputDriver.PluginStatus,1)
+		db.inputDriverObj = inputDriver.Open(db.InputType,inputInfo)
+		db.inputDriverObj.SetCallback(db.Callback)
 		for key,_ := range db.tableMap{
 			schemaName,TableName := GetSchemaAndTableBySplit(key)
 			db.AddReplicateDoDb(schemaName,TableName,false)
 		}
-		db.binlogDump.SetNextEventID(db.lastEventID)
-		if db.isGtid == false {
-			go db.binlogDump.StartDumpBinlog(db.binlogDumpFileName, db.binlogDumpPosition, db.serverId, reslut, db.maxBinlogDumpFileName, db.maxBinlogDumpPosition)
-		}else{
-			go db.binlogDump.StartDumpBinlogGtid(db.gtid, db.serverId, reslut)
-		}
-		go db.monitorDump(reslut)
+		db.inputDriverObj.SetEventID(db.lastEventID)
+		go db.inputDriverObj.Start(db.inputStatusChan)
+		go db.monitorDump()
 		break
 	case STOPPED:
 		db.ConnStatus = RUNNING
 		log.Println(db.Name+" monitor:","running")
-		db.binlogDump.Start()
+		db.inputDriverObj.Start(db.inputStatusChan)
 		break
 	default:
 		return
@@ -501,7 +473,7 @@ func (db *db) Stop() bool {
 	db.Lock()
 	defer db.Unlock()
 	if db.ConnStatus == RUNNING {
-		db.binlogDump.Stop()
+		db.inputDriverObj.Stop()
 		db.ConnStatus = STOPPED
 	}
 	return true
@@ -514,65 +486,64 @@ func (db *db) Close() bool {
 		return true
 	}
 	db.ConnStatus = CLOSING
-	db.binlogDump.Close()
+	db.inputDriverObj.Close()
 	return true
 }
 
-func (db *db) monitorDump(reslut chan error) (r bool) {
-	var lastStatus string = ""
+func (db *db) monitorDump() (r bool) {
+	var lastStatus StatusFlag
 	timer := time.NewTimer( 3 * time.Second)
 	defer timer.Stop()
 	var i uint8 = 0
 	for {
 		select {
-		case v := <-reslut:
+		case inputStatusInfo := <- db.inputStatusChan :
 			timer.Reset(3 * time.Second)
-			switch v.Error() {
-			case "stop":
-				i = 0
-				db.ConnStatus = STOPPED
-				break
-			case "running":
+			switch inputStatusInfo.Status {
+			case inputDriver.RUNNING :
 				i = 0
 				db.ConnStatus = RUNNING
-				db.ConnErr = "running"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGNORMAL,
 					DbName: db.Name,
 					Body:   " running; last status:" + lastStatus,
 				})
-				break
-			case "starting":
+			case inputDriver.STARTING:
 				db.ConnStatus = STARTING
-				break
-			case "close":
-				log.Println(db.Name+" monitor:", v.Error())
+			case inputDriver.STOPPING :
+				db.ConnStatus = STOPPING
+			case inputDriver.CLOSING :
+				db.ConnStatus = CLOSING
+			case inputDriver.STOPPED :
+				i = 0
+				db.ConnStatus = STOPPED
+			case inputDriver.CLOSED :
 				db.ConnStatus = CLOSED
-				db.ConnErr = "close"
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGERROR,
 					DbName: db.Name,
 					Body:   " closed",
 				})
-				return
 			default:
-				i++
-				if i % 3 == 0 || strings.Index(v.Error(),"parseEvent err") != -1{
-					i = 0
-					warning.AppendWarning(warning.WarningContent{
-						Type:   warning.WARNINGERROR,
-						DbName: db.Name,
-						Body:   " "+v.Error() + "; last status:" + lastStatus,
-					})
-				}
-				db.ConnErr = v.Error()
-				break
+				db.ConnStatus = DEFAULT
+			}
+			if inputStatusInfo.Error == nil {
+				db.ConnErr = ""
+			}else{
+				db.ConnErr = inputStatusInfo.Error.Error()
+			}
+			i++
+			if i % 3 == 0 || strings.Index(db.ConnErr,"parseEvent err") != -1{
+				i = 0
+				warning.AppendWarning(warning.WarningContent{
+					Type:   warning.WARNINGERROR,
+					DbName: db.Name,
+					Body:   fmt.Sprintf("err:%s; last status:%s",inputStatusInfo.Error,lastStatus),
+				})
 			}
 
-			log.Println(db.Name+" monitor:", v.Error())
-			if v.Error() != "starting"{
-				lastStatus = v.Error()
-			}
+			log.Println(db.Name+" monitor:", db.ConnStatus, db.ConnErr)
+			lastStatus = db.ConnStatus
 
 			break
 		case <- timer.C:
@@ -585,26 +556,27 @@ func (db *db) monitorDump(reslut chan error) (r bool) {
 }
 
 func (db *db) saveBinlog(){
-	FileName,Position,Timestamp,GTID,LastEventID := db.binlogDump.GetBinlog()
-	if FileName == ""{
-		return
-	}
+	p := db.inputDriverObj.GetLastPosition()
 	//保存位点,这个位点在重启 配置文件恢复的时候
 	db.Lock()
-	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp,db.gtid,db.lastEventID = FileName,Position,Timestamp,GTID,LastEventID
+	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp,db.gtid,db.lastEventID = p.BinlogFileName,p.BinlogPostion,p.Timestamp,p.GTID,p.EventID
 	db.Unlock()
 	if db.DBBinlogKey == nil{
 		db.DBBinlogKey = getDBBinlogkey(db)
 	}
-	index := strings.IndexAny(FileName, ".")
 
-	BinlogFileNum,_ := strconv.Atoi(FileName[index+1:])
+	var BinlogFileNum int
+	if p.BinlogFileName != "" {
+		index := strings.IndexAny(p.BinlogFileName, ".")
+		BinlogFileNum,_ = strconv.Atoi(p.BinlogFileName[index+1:])
+	}
+
 	var lastParseBinlog = &PositionStruct{
 		BinlogFileNum: BinlogFileNum,
-		BinlogPosition: Position,
-		GTID: GTID,
-		Timestamp: Timestamp,
-		EventID: LastEventID,
+		BinlogPosition: p.BinlogPostion,
+		GTID: p.GTID,
+		Timestamp: p.Timestamp,
+		EventID: p.EventID,
 	}
 	saveBinlogPosition(db.DBBinlogKey,lastParseBinlog)
 }
@@ -800,7 +772,7 @@ func (db *db) DelTable(schemaName string, tableName string) bool {
 	}
 	count.DelTable(db.Name,key)
 	log.Println("DelTable",db.Name,schemaName,tableName)
-	if db.binlogDump != nil && toServerLen > 0 {
+	if db.inputDriverObj != nil && toServerLen > 0 {
 		db.DelReplicateDoDb(schemaName,tableName,false)
 	}
 	return true

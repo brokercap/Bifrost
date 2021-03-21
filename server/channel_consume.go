@@ -26,6 +26,7 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"github.com/brokercap/Bifrost/server/count"
 	"github.com/brokercap/Bifrost/config"
+	"unsafe"
 )
 
 func evenTypeName(e mysql.EventType) string {
@@ -180,7 +181,7 @@ func (This *consume_channel_obj) transferToPluginData(data *mysql.EventReslut) (
 
 func (This *consume_channel_obj) consumeChannel() {
 	c := This.c
-	var data mysql.EventReslut
+	var pluginData *pluginDriver.PluginDataType
 	log.Println("channel",c.Name," consume_channel start")
 	timer := time.NewTimer(5 * time.Second)
 	defer func() {
@@ -193,28 +194,28 @@ func (This *consume_channel_obj) consumeChannel() {
 	var EventSize int64 = 0
 	for {
 		select {
-		case data = <-This.c.chanName:
+		case pluginData = <-This.c.chanName:
 			if This.db.killStatus == 1{
 				return
 			}
 			This.checkChannleStatus()
 
-			switch data.Header.EventType {
-			case mysql.UPDATE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv0:
-				countNum = int64(len(data.Rows)/2)
+			switch pluginData.EventType {
+			case "update":
+				countNum = int64(len(pluginData.Rows)/2)
 				break
-			case mysql.QUERY_EVENT,mysql.XID_EVENT:
+			case "sql","commit":
 				countNum = 0
 				break
 			default:
-				countNum = int64(len(data.Rows))
+				countNum = int64(len(pluginData.Rows))
 				break
 			}
-			EventSize = int64(data.Header.EventSize)
+			EventSize = int64(*(*int)(unsafe.Pointer(unsafe.Sizeof(pluginData.Rows))))
 
-			key = GetSchemaAndTableJoin(data.SchemaName,data.TableName)
-			AllTableKey = GetSchemaAndTableJoin(data.SchemaName,"*")
-			pluginData := This.transferToPluginData(&data)
+			key = GetSchemaAndTableJoin(pluginData.SchemaName,pluginData.TableName)
+			AllTableKey = GetSchemaAndTableJoin(pluginData.SchemaName,"*")
+			//pluginData := This.transferToPluginData(&data)
 			This.SchemaName,This.TableName = pluginData.SchemaName,pluginData.TableName
 			This.sendToServerList(key,pluginData,countNum,EventSize)
 			This.SchemaName,This.TableName = pluginData.SchemaName,"*"
