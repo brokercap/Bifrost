@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brokercap/Bifrost/config"
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/server/filequeue"
 	"log"
@@ -30,6 +31,7 @@ import (
 
 type dbSaveInfo struct {
 	Name               		string `json:"Name"`
+	InputType				string `json:"InputType"`
 	ConnectUri         		string `json:"ConnectUri"`
 	ConnStatus         		StatusFlag `json:"ConnStatus"`
 	ConnErr            		string `json:"ConnErr"`
@@ -143,10 +145,20 @@ func Recovery(content *json.RawMessage,isStop bool){
 func recoveryData(data map[string]dbSaveInfo,isStop bool){
 	for name,dbInfo :=range data{
 		channelIDMap := make(map[int]int,0)
-		if dbInfo.IsGtid == false {
-			dbInfo.Gtid = ""
+		inputInfo := inputDriver.InputInfo{
+			IsGTID:         dbInfo.IsGtid,
+			ConnectUri:     dbInfo.ConnectUri,
+			GTID:           dbInfo.Gtid,
+			BinlogFileName: dbInfo.BinlogDumpFileName,
+			BinlogPostion:  dbInfo.BinlogDumpPosition,
+			ServerId:       dbInfo.ServerId,
+			MaxFileName:    dbInfo.MaxBinlogDumpFileName,
+			MaxPosition:    dbInfo.MaxinlogDumpPosition,
 		}
-		db := AddNewDB(name, dbInfo.ConnectUri,dbInfo.Gtid, dbInfo.BinlogDumpFileName, dbInfo.BinlogDumpPosition, dbInfo.ServerId,dbInfo.MaxBinlogDumpFileName,dbInfo.MaxinlogDumpPosition,dbInfo.AddTime)
+		if dbInfo.InputType == "" {
+			dbInfo.InputType = "mysql"
+		}
+		db := AddNewDB(name, dbInfo.InputType,inputInfo,dbInfo.AddTime)
 		if db == nil{
 			log.Println("recovry data error2,data:",dbInfo)
 			os.Exit(1)
@@ -515,7 +527,9 @@ func StopAllChannel(){
 					return
 				}
 			}()
-			db.binlogDump.KillDump()
+			if db.inputDriverObj != nil {
+				db.inputDriverObj.Kill()
+			}
 		}()
 	}
 	DbLock.Unlock()

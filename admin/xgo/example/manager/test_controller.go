@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"github.com/brokercap/xgo"
+	"github.com/brokercap/Bifrost/admin/xgo"
 	"log"
 )
 

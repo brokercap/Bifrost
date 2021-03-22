@@ -20,8 +20,9 @@ type Driver interface {
 	Start(ch chan *PluginStatus) error
 	Stop() error
 	Close() error
+	Kill() error
 	GetLastPosition() *PluginPosition
-	GetCurrentPosition() *PluginPosition
+	GetCurrentPosition() (*PluginPosition,error)
 	Skip(skipEventCount int) error
 	SetEventID(eventId uint64) error
 	SetCallback(callback Callback)
@@ -30,6 +31,10 @@ type Driver interface {
 	AddReplicateDoDb(SchemaName,TableName string) (err error)
 	DelReplicateDoDb(SchemaName,TableName string) (err error)
 	GetVersion() (string,error)
+
+	GetSchemaList() ([]string,error)
+	GetSchemaTableList(schema string) (tableList []TableList,err error)
+	GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo,err error)
 }
 
 type DriverStructure struct{

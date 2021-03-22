@@ -24,12 +24,16 @@ func (c *PluginDriverInterface) Close() error {
 	return nil
 }
 
+func (c *PluginDriverInterface) Kill() error {
+	return nil
+}
+
 func (c *PluginDriverInterface) GetLastPosition() *PluginPosition {
 	return nil
 }
 
-func (c *PluginDriverInterface) GetCurrentPosition() *PluginPosition {
-	return nil
+func (c *PluginDriverInterface) GetCurrentPosition() (*PluginPosition,error) {
+	return nil,nil
 }
 
 func (c *PluginDriverInterface) Skip(skipEventCount int) error {

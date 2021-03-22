@@ -125,7 +125,7 @@ func (c *MysqlInput) Kill() error {
 	return nil
 }
 
-func (c *MysqlInput) GetCurrentPosition() *inputDriver.PluginPosition {
+func (c *MysqlInput) GetLastPosition() *inputDriver.PluginPosition {
 	FileName,Position,Timestamp,GTID,LastEventID := c.binlogDump.GetBinlog()
 	return &inputDriver.PluginPosition{
 		GTID:GTID,
