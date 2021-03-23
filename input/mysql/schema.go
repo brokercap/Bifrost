@@ -15,7 +15,7 @@ func (c *MysqlInput) GetConn() mysql.MysqlConnection {
 	return db
 }
 
-func (c *MysqlInput) GetSchemaList() ([]string,error) {
+func (c *MysqlInput) GetSchemaList() ([]string, error) {
 	defer func() {
 		if err := recover(); err != nil {
 
@@ -27,7 +27,7 @@ func (c *MysqlInput) GetSchemaList() ([]string,error) {
 	stmt, err := db.Prepare(sql)
 	if err != nil {
 		log.Println(err)
-		return databaseList,nil
+		return databaseList, nil
 	}
 	defer stmt.Close()
 	p := make([]driver.Value, 0)
@@ -35,7 +35,7 @@ func (c *MysqlInput) GetSchemaList() ([]string,error) {
 	defer rows.Close()
 	if err != nil {
 		log.Printf("%v\n", err)
-		return databaseList,nil
+		return databaseList, nil
 	}
 
 	for {
@@ -48,11 +48,10 @@ func (c *MysqlInput) GetSchemaList() ([]string,error) {
 		DatabaseName = dest[0].(string)
 		databaseList = append(databaseList, DatabaseName)
 	}
-	return databaseList,nil
+	return databaseList, nil
 }
 
-
-func (c *MysqlInput)  GetSchemaTableList(schema string) (tableList []inputDriver.TableList,err error) {
+func (c *MysqlInput) GetSchemaTableList(schema string) (tableList []inputDriver.TableList, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 
@@ -91,8 +90,7 @@ func (c *MysqlInput)  GetSchemaTableList(schema string) (tableList []inputDriver
 	return
 }
 
-
-func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (FieldList []inputDriver.TableFieldInfo,err error) {
+func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (FieldList []inputDriver.TableFieldInfo, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 
@@ -133,6 +131,7 @@ func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (Field
 		var DATA_TYPE string
 		var NUMERIC_PRECISION *uint64
 		var NUMERIC_SCALE *uint64
+		var COLUMN_KEY string
 
 		COLUMN_NAME = dest[0].(string)
 		if dest[1] == nil {
@@ -144,6 +143,7 @@ func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (Field
 
 		IS_NULLABLE = dest[2].(string)
 		COLUMN_TYPE = dest[3].(string)
+		COLUMN_KEY = dest[4].(string)
 		EXTRA = dest[5].(string)
 		COLUMN_COMMENT = dest[6].(string)
 		DATA_TYPE = dest[7].(string)
@@ -175,7 +175,7 @@ func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (Field
 
 		var IsNullable bool
 		switch strings.ToUpper(IS_NULLABLE) {
-		case "YES","TRUE":
+		case "YES", "TRUE":
 			IsNullable = true
 		default:
 			break
@@ -186,25 +186,25 @@ func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (Field
 		}
 
 		FieldList = append(FieldList, inputDriver.TableFieldInfo{
-			ColumnName: &COLUMN_NAME,
-			ColumnDefault: COLUMN_DEFAULT,
-			IsNullable:IsNullable,
+			ColumnName:       &COLUMN_NAME,
+			ColumnDefault:    COLUMN_DEFAULT,
+			IsNullable:       IsNullable,
 			ColumnType:       &COLUMN_TYPE,
-			IsAutoIncrement:             IsAutoIncrement,
-			Comment:    &COLUMN_COMMENT,
+			IsAutoIncrement:  IsAutoIncrement,
+			Comment:          &COLUMN_COMMENT,
 			DataType:         &DATA_TYPE,
 			NumericPrecision: NUMERIC_PRECISION,
 			NumericScale:     NUMERIC_SCALE,
+			ColumnKey:        &COLUMN_KEY,
 		})
 	}
 	return
 }
 
-
 func (c *MysqlInput) CheckPrivilege() (err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
-			err = fmt.Errorf("%s",err0)
+			err = fmt.Errorf("%s", err0)
 		}
 	}()
 	db := c.GetConn()
@@ -212,10 +212,10 @@ func (c *MysqlInput) CheckPrivilege() (err error) {
 	return
 }
 
-func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.CheckUriResult,err error) {
+func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.CheckUriResult, err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
-			err = fmt.Errorf("%s",err0)
+			err = fmt.Errorf("%s", err0)
 		}
 	}()
 	dbconn := c.GetConn()
@@ -232,7 +232,7 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 			return
 		}
 	}
-	Msg := make([]string,0)
+	Msg := make([]string, 0)
 	MasterBinlogInfo := GetBinLogInfo(dbconn)
 	if MasterBinlogInfo.File != "" {
 		CheckUriResult.BinlogFileName = MasterBinlogInfo.File
@@ -247,7 +247,7 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 			case "row":
 				break
 			default:
-				Msg = append(Msg,fmt.Sprintf("binlog_format(%s) != row",binlogFormat))
+				Msg = append(Msg, fmt.Sprintf("binlog_format(%s) != row", binlogFormat))
 			}
 		}
 		if binlogRowImage, ok := BinlogRowImageMap["binlog_row_image"]; ok {
@@ -255,27 +255,26 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 			case "full":
 				break
 			default:
-				Msg = append(Msg,fmt.Sprintf("binlog_row_image(%s) != full",binlogRowImage))
+				Msg = append(Msg, fmt.Sprintf("binlog_row_image(%s) != full", binlogRowImage))
 			}
 		}
 	} else {
 		err = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 	}
 	MasterVersion := GetMySQLVersion(dbconn)
-	if strings.Contains(MasterVersion,"MariaDB") {
-		m := GetVariables(dbconn,"gtid_binlog_pos")
-		if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+	if strings.Contains(MasterVersion, "MariaDB") {
+		m := GetVariables(dbconn, "gtid_binlog_pos")
+		if gtidBinlogPos, ok := m["gtid_binlog_pos"]; ok {
 			CheckUriResult.Gtid = gtidBinlogPos
 		}
 	}
 	return
 }
 
-
-func (c *MysqlInput) GetCurrentPosition() (p *inputDriver.PluginPosition,err error) {
+func (c *MysqlInput) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
-			err = fmt.Errorf("%s",err0)
+			err = fmt.Errorf("%s", err0)
 		}
 	}()
 	dbconn := c.GetConn()
@@ -289,28 +288,27 @@ func (c *MysqlInput) GetCurrentPosition() (p *inputDriver.PluginPosition,err err
 
 	MasterBinlogInfo := GetBinLogInfo(dbconn)
 	MasterVersion := GetMySQLVersion(dbconn)
-	if strings.Contains(MasterVersion,"MariaDB") {
-		m := GetVariables(dbconn,"gtid_binlog_pos")
-		if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+	if strings.Contains(MasterVersion, "MariaDB") {
+		m := GetVariables(dbconn, "gtid_binlog_pos")
+		if gtidBinlogPos, ok := m["gtid_binlog_pos"]; ok {
 			MasterBinlogInfo.Executed_Gtid_Set = gtidBinlogPos
 		}
 	}
 
 	p = &inputDriver.PluginPosition{
-		GTID: MasterBinlogInfo.Executed_Gtid_Set,
+		GTID:           MasterBinlogInfo.Executed_Gtid_Set,
 		BinlogFileName: MasterBinlogInfo.File,
-		BinlogPostion: uint32(MasterBinlogInfo.Position),
-		Timestamp: uint32(time.Now().Unix()),
-		EventID:0,
+		BinlogPostion:  uint32(MasterBinlogInfo.Position),
+		Timestamp:      uint32(time.Now().Unix()),
+		EventID:        0,
 	}
 	return
 }
 
-
-func (c *MysqlInput) GetVersion() (Version string,err error) {
+func (c *MysqlInput) GetVersion() (Version string, err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
-			err = fmt.Errorf("%s",err0)
+			err = fmt.Errorf("%s", err0)
 		}
 	}()
 	db := c.GetConn()

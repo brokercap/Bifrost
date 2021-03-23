@@ -636,10 +636,10 @@
             clearTableDataMap();
             TableMap.get(key).forEach(function (value, k, map) {
                 var phtml = "";
-                setTableFieldType(value.COLUMN_NAME,value)
-                phtml +='<input type="checkbox" style="width: 20px; height: 20px;" title="'+value.COLUMN_COMMENT+'" value="'+value.COLUMN_NAME+'">';
-                phtml += "&nbsp;&nbsp;"+value.COLUMN_NAME;
-                if (value.COLUMN_KEY == "PRI"){
+                setTableFieldType(value.ColumnName,value)
+                phtml +='<input type="checkbox" style="width: 20px; height: 20px;" title="'+value.Comment+'" value="'+value.ColumnName+'">';
+                phtml += "&nbsp;&nbsp;"+value.ColumnName;
+                if (value.ColumnKey == "PRI"){
                     phtml += " (PRI)";
                 }
                 html += '<p class="fieldsname" style="font-size: 16px; cursor: pointer">&nbsp;'+phtml+' </p>'

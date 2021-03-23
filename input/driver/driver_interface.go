@@ -67,3 +67,15 @@ func (c *PluginDriverInterface) DelReplicateDoDb(SchemaName,TableName string) (e
 func (c *PluginDriverInterface) GetVersion() (string, error) {
 	return "",nil
 }
+
+func (c *PluginDriverInterface) GetSchemaList() (SchemaList []string,err error) {
+	return
+}
+
+func (c *PluginDriverInterface) GetSchemaTableList(schema string) (tableList []TableList,err error) {
+	return
+}
+
+func (c *PluginDriverInterface) GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo,err error) {
+	return
+}

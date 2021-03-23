@@ -34,11 +34,12 @@ type TableFieldInfo struct {
 	ColumnDefault	  *string
 	IsNullable		  bool
 	ColumnType		  *string
-	IsAutoIncrement	 bool
-	Comment		    *string
+	IsAutoIncrement	  bool
+	Comment		     *string
 	DataType         *string
 	NumericPrecision *uint64
 	NumericScale	 *uint64
+	ColumnKey		 *string
 }
 
 type CheckUriResult struct {

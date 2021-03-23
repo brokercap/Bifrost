@@ -139,7 +139,7 @@ function getClickHouseTableCreateSQL(tableName) {
                     case "Int16":
                     case "Int32":
                     case "Int64":
-                        if(data.COLUMN_TYPE.indexOf("unsigned") >0){
+                        if(data.ColumnType.indexOf("unsigned") >0){
                             Type = "U"+Type;
                         }
                         break;
@@ -148,23 +148,23 @@ function getClickHouseTableCreateSQL(tableName) {
                 }
 
                 if(ddlSql == ""){
-                    ddlSql = getFieldName(data.COLUMN_NAME) + " " + Type;
+                    ddlSql = getFieldName(data.ColumnName) + " " + Type;
                 }else{
-                    ddlSql +="," + getFieldName(data.COLUMN_NAME) +" " + Type;
+                    ddlSql +="," + getFieldName(data.ColumnName) +" " + Type;
                 }
-                if(data.COLUMN_KEY == ""){
+                if(data.ColumnKey == ""){
                     return
                 }
-                if (data.COLUMN_KEY != "PRI" && data.IS_NULLABLE != "NO" ){
+                if (data.ColumnKey != "PRI" && data.IsNullable ){
                     return
                 }
                 if(index == ""){
-                    index = getFieldName(data.COLUMN_NAME);
+                    index = getFieldName(data.ColumnName);
                 }else{
-                    index += "," + getFieldName(data.COLUMN_NAME);
+                    index += "," + getFieldName(data.ColumnName);
                 }
             }
-            switch(data.DATA_TYPE){
+            switch(data.DataType){
                 case "tinyint":
                     return getDDL("Int8");
                     break;
@@ -299,8 +299,8 @@ function GetCkTableDesc(SchemaName,TableName) {
                 var isPri = false;
                 var tmpKey = d[i].Name.toLowerCase();
                 if(fieldsMap.hasOwnProperty(tmpKey)){
-                    toField = fieldsMap[tmpKey].COLUMN_NAME;
-                    if(fieldsMap[tmpKey].COLUMN_KEY == "PRI"){
+                    toField = fieldsMap[tmpKey].ColumnName;
+                    if(fieldsMap[tmpKey].ColumnKey == "PRI"){
                         isPri = true;
                     }
                 }
