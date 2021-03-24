@@ -440,6 +440,7 @@ func (db *db) Start() (b bool) {
 			GTID: db.gtid,
 			BinlogFileName: db.binlogDumpFileName,
 			BinlogPostion: db.binlogDumpPosition,
+
 			ServerId: db.serverId,
 			MaxFileName: db.maxBinlogDumpFileName,
 			MaxPosition: db.maxBinlogDumpPosition,

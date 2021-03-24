@@ -308,7 +308,11 @@ func (c *DBController) GetLastPosition() {
 	}
 
 	o := inputDriver.Open(data.InputType,inputInfo)
-	MasterBinlogInfo := o.GetCurrentPosition()
+	MasterBinlogInfo,err := o.GetCurrentPosition()
+	if err != nil {
+		result.Msg = err.Error()
+		return
+	}
 	if MasterBinlogInfo == nil {
 		result.Msg = fmt.Sprintf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		return

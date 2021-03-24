@@ -38,6 +38,7 @@ import (
 	"time"
 )
 import _ "github.com/brokercap/Bifrost/plugin/load"
+import _ "github.com/brokercap/Bifrost/input"
 
 var l sync.Mutex
 
