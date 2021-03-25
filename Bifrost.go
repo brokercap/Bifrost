@@ -18,8 +18,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/brokercap/Bifrost/config"
 	manager "github.com/brokercap/Bifrost/admin"
+	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/plugin"
 	"github.com/brokercap/Bifrost/server"
 	"io"

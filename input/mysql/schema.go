@@ -278,14 +278,10 @@ func (c *MysqlInput) GetCurrentPosition() (p *inputDriver.PluginPosition, err er
 		}
 	}()
 	dbconn := c.GetConn()
-	if dbconn != nil {
+	if dbconn == nil {
 		err = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
 	}
-	if err != nil {
-		return
-	}
 	defer dbconn.Close()
-
 	MasterBinlogInfo := GetBinLogInfo(dbconn)
 	MasterVersion := GetMySQLVersion(dbconn)
 	if strings.Contains(MasterVersion, "MariaDB") {
@@ -312,6 +308,9 @@ func (c *MysqlInput) GetVersion() (Version string, err error) {
 		}
 	}()
 	db := c.GetConn()
+	if db == nil {
+		err = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
+	}
 	Version = GetMySQLVersion(db)
 	return
 }

@@ -298,7 +298,7 @@ func (c *DBController) GetLastPosition() {
 
 	inputInfo := inputDriver.InputInfo{
 		IsGTID:         false,
-		ConnectUri:     data.Uri,
+		ConnectUri:     dbObj.ConnectUri,
 		GTID:           "",
 		BinlogFileName: "",
 		BinlogPostion:  0,
@@ -306,8 +306,7 @@ func (c *DBController) GetLastPosition() {
 		MaxFileName:    "",
 		MaxPosition:    0,
 	}
-
-	o := inputDriver.Open(data.InputType,inputInfo)
+	o := inputDriver.Open(dbObj.InputType,inputInfo)
 	MasterBinlogInfo,err := o.GetCurrentPosition()
 	if err != nil {
 		result.Msg = err.Error()

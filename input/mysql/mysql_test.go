@@ -23,7 +23,8 @@ func monitorDump(reslut chan *inputDriver.PluginStatus,plugin inputDriver.Driver
 			t.Log("status:",v)
 		case <- timer.C:
 			timer.Reset(3 * time.Second)
-			t.Log("position:",*plugin.GetCurrentPosition())
+			p,_ := plugin.GetCurrentPosition()
+			t.Log("position:",*p)
 			break
 		}
 	}
