@@ -558,6 +558,9 @@ func (db *db) monitorDump() (r bool) {
 
 func (db *db) saveBinlog(){
 	p := db.inputDriverObj.GetLastPosition()
+	if p == nil {
+		return
+	}
 	//保存位点,这个位点在重启 配置文件恢复的时候
 	db.Lock()
 	db.binlogDumpFileName,db.binlogDumpPosition,db.binlogDumpTimestamp,db.gtid,db.lastEventID = p.BinlogFileName,p.BinlogPostion,p.Timestamp,p.GTID,p.EventID

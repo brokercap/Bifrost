@@ -27,6 +27,7 @@ func init(){
 
 type PluginDataType struct {
 	Timestamp 		uint32
+	EventSize		uint32
 	EventType 		string
 	Rows            []map[string]interface{}
 	Query          	string

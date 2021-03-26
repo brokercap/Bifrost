@@ -68,33 +68,26 @@ function formatDate(timestamp) {
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
                                                     	{{if eq $v.ConnStatus "closed"}}
-                                                        	{{if ne $v.ConnErr "running"}}
-                                                            	{{if eq $v.ConnErr ""}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
                                                         <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
-                                                        		{{else if eq $v.ConnErr "close"}}
+                                                        {{else if eq $v.ConnStatus "stopped"}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
-                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
-                                                        		{{else}}        
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
-                                                        		{{end}}
-                                                        	{{end}}
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "running"}}
                                                         <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
-                                                        {{end}}
-                                                        {{if eq $v.ConnStatus "stopped"}}
-                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
-                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "starting"}}
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
                                                         {{end}}
 
-                                                    {{if eq $v.ConnStatus "closing"}}
-                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
-                                                    {{end}}
+                                                        {{if eq $v.ConnStatus "closing"}}
+                                                            <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "stopping"}}
+                                                            <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                        {{end}}
 
                                                     </td>
                                                     <td>

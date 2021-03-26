@@ -49,7 +49,8 @@ func (c *MysqlInput) MySQLCallback(data *mysql.EventReslut) {
 	intString := data.BinlogFileName[i+1:]
 	BinlogFileNum,_:=strconv.Atoi(intString)
 	data0 := &pluginDriver.PluginDataType{
-		Timestamp:data.Header.Timestamp,
+		EventSize: data.Header.EventSize,
+		Timestamp: data.Header.Timestamp,
 		EventType:evenTypeName(data.Header.EventType),
 		SchemaName:data.SchemaName,
 		TableName:data.TableName,

@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"runtime/debug"
 	"sync"
 	"github.com/brokercap/Bifrost/server/count"
 	"github.com/brokercap/Bifrost/config"
@@ -129,7 +130,7 @@ func (c *Channel) channelConsume() {
 	c.Unlock()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("channelConsume err:",err)
+			log.Println("channelConsume err:",err,string(debug.Stack()))
 			c.Lock()
 			c.CurrentThreadNum--
 			c.Unlock()

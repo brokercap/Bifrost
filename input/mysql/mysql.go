@@ -3,6 +3,7 @@ package mysql
 import (
 	mysqlDriver "github.com/brokercap/Bifrost/Bristol/mysql"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
+	"log"
 )
 
 var MySQLBinlogDump string
@@ -65,6 +66,7 @@ func (c *MysqlInput) Start0() error {
 	if c.inputInfo.IsGTID && c.inputInfo.GTID == "" {
 		go c.binlogDump.StartDumpBinlog(c.inputInfo.BinlogFileName, c.inputInfo.BinlogPostion, c.inputInfo.ServerId, c.reslut, c.inputInfo.MaxFileName, c.inputInfo.MaxPosition)
 	}else{
+		log.Println("c.inputInfo.GTID:",c.inputInfo.GTID," c.inputInfo.ServerId:",c.inputInfo.ServerId)
 		go c.binlogDump.StartDumpBinlogGtid(c.inputInfo.GTID, c.inputInfo.ServerId, c.reslut)
 	}
 	go c.monitorDump(c.reslut)
@@ -127,6 +129,9 @@ func (c *MysqlInput) Kill() error {
 
 func (c *MysqlInput) GetLastPosition() *inputDriver.PluginPosition {
 	FileName,Position,Timestamp,GTID,LastEventID := c.binlogDump.GetBinlog()
+	if FileName == "" {
+		return nil
+	}
 	return &inputDriver.PluginPosition{
 		GTID:GTID,
 		BinlogFileName:FileName,

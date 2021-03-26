@@ -17,16 +17,15 @@ package server
 
 import (
 	"fmt"
-	"time"
-	"strings"
-	"strconv"
-	"sync"
-	"log"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
-	"github.com/brokercap/Bifrost/server/count"
 	"github.com/brokercap/Bifrost/config"
-	"unsafe"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/server/count"
+	"log"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 func evenTypeName(e mysql.EventType) string {
@@ -211,7 +210,7 @@ func (This *consume_channel_obj) consumeChannel() {
 				countNum = int64(len(pluginData.Rows))
 				break
 			}
-			EventSize = int64(*(*int)(unsafe.Pointer(unsafe.Sizeof(pluginData.Rows))))
+			EventSize = int64(pluginData.EventSize)
 
 			key = GetSchemaAndTableJoin(pluginData.SchemaName,pluginData.TableName)
 			AllTableKey = GetSchemaAndTableJoin(pluginData.SchemaName,"*")
