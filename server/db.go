@@ -448,7 +448,7 @@ func (db *db) Start() (b bool) {
 		if !db.isGtid {
 			inputInfo.GTID = ""
 		}
-		db.inputStatusChan = make(chan *inputDriver.PluginStatus,1)
+		db.inputStatusChan = make(chan *inputDriver.PluginStatus,10)
 		db.inputDriverObj = inputDriver.Open(db.InputType,inputInfo)
 		db.inputDriverObj.SetCallback(db.Callback)
 		for key,_ := range db.tableMap{
@@ -499,6 +499,9 @@ func (db *db) monitorDump() (r bool) {
 	for {
 		select {
 		case inputStatusInfo := <- db.inputStatusChan :
+			if inputStatusInfo == nil {
+				break
+			}
 			timer.Reset(3 * time.Second)
 			switch inputStatusInfo.Status {
 			case inputDriver.RUNNING :

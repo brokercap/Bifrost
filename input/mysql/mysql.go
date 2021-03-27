@@ -69,7 +69,7 @@ func (c *MysqlInput) Start0() error {
 		log.Println("c.inputInfo.GTID:",c.inputInfo.GTID," c.inputInfo.ServerId:",c.inputInfo.ServerId)
 		go c.binlogDump.StartDumpBinlogGtid(c.inputInfo.GTID, c.inputInfo.ServerId, c.reslut)
 	}
-	go c.monitorDump(c.reslut)
+	go c.monitorDump()
 	return nil
 }
 
@@ -78,10 +78,15 @@ func (c *MysqlInput) Start1() error {
 	return nil
 }
 
-func (c *MysqlInput) monitorDump(reslut chan error) (r bool) {
+func (c *MysqlInput) monitorDump() (r bool) {
+	defer func() {
+		if err := recover(); err != nil {
+			// 上一层 PluginStatusChan 在进程退出之前会被关闭，这里需要无视异常情况
+		}
+	}()
 	for {
 		select {
-		case v := <- reslut:
+		case v := <- c.reslut:
 			if v == nil {
 				return
 			}
@@ -90,7 +95,7 @@ func (c *MysqlInput) monitorDump(reslut chan error) (r bool) {
 				c.status = inputDriver.STOPPED
 				break
 			case "running":
-				c.status  = inputDriver.RUNNING
+				c.status = inputDriver.RUNNING
 				c.err = nil
 				break
 			case "starting":
@@ -108,6 +113,7 @@ func (c *MysqlInput) monitorDump(reslut chan error) (r bool) {
 			break
 		}
 		c.PluginStatusChan <- &inputDriver.PluginStatus{Status:c.status , Error: c.err}
+
 	}
 	return true
 }
