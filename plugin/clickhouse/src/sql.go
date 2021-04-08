@@ -5,20 +5,20 @@ import (
 	"strings"
 )
 
-func (This *Conn) getAutoTableSqlSchemaAndTable(name string,DefaultSchemaName string) (SchemaName,TableName string) {
+func (This *Conn) getAutoTableSqlSchemaAndTable(name string, DefaultSchemaName string) (SchemaName, TableName string) {
 	dbAndTable := strings.Replace(name, "`", "", -1)
 	i := strings.IndexAny(dbAndTable, ".")
 	if i > 0 {
 		if This.p.CkSchema == "" {
 			SchemaName = dbAndTable[0:i]
-		}else{
+		} else {
 			SchemaName = This.p.CkSchema
 		}
 		TableName = dbAndTable[i+1:]
 	} else {
 		if This.p.CkSchema == "" {
 			SchemaName = DefaultSchemaName
-		}else{
+		} else {
 			SchemaName = This.p.CkSchema
 		}
 		TableName = dbAndTable
@@ -29,28 +29,28 @@ func (This *Conn) getAutoTableSqlSchemaAndTable(name string,DefaultSchemaName st
 	return
 }
 
-func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName,TableName,newSql string) {
-	Query := strings.Trim(data.Query," ")
+func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName, TableName, newSql, newLocalSql, newDisSql,newViewSql string) {
+	Query := strings.Trim(data.Query, " ")
 	// 非 DDL ALTER 语句，直接过滤掉
 	if len(Query) < 5 {
 		return
 	}
-	Query = strings.Trim(strings.Trim(strings.Trim(Query," "),";")," ")
+	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
 	switch strings.ToUpper(Query[0:5]) {
-		// alter
+	// alter
 	case "ALTER":
 		Query = TransferNotes2Space(Query)
 		Query = ReplaceBr(Query)
 		Query = ReplaceTwoReplace(Query)
-		c := NewAlterSQL(data.SchemaName,Query,This)
-		SchemaName,TableName,newSql = c.Transfer2CkSQL()
+		c := NewAlterSQL(data.SchemaName, Query, This)
+		SchemaName, TableName, newSql, newLocalSql, newDisSql,newViewSql = c.Transfer2CkSQL(This)
 		// rename
 	case "RENAM":
 		Query = TransferNotes2Space(Query)
 		Query = ReplaceBr(Query)
 		Query = ReplaceTwoReplace(Query)
-		c := NewReNameSQL(data.SchemaName,Query,This)
-		SchemaName,TableName,newSql = c.Transfer2CkSQL()
+		c := NewReNameSQL(data.SchemaName, Query, This)
+		SchemaName, TableName, newSql, newLocalSql, newDisSql = c.Transfer2CkSQL(This)
 	default:
 		break
 	}
