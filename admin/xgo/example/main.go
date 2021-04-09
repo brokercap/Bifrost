@@ -4,10 +4,10 @@ import "github.com/brokercap/xgo"
 
 import "github.com/brokercap/xgo/example/manager"
 
-func init()  {
-	xgo.AddRoute("/test",&manager.TestController{},"*:Post")
+func init() {
+	xgo.AddRoute("/test", &manager.TestController{}, "*:Post")
 }
 
-func main()  {
+func main() {
 	xgo.Start("0.0.0.0:9612")
 }

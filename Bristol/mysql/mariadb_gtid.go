@@ -17,10 +17,10 @@ func NewMariaDBGtid(GtidSet string) *MariaDBGtid {
 }
 
 type MariaDBGtid struct {
-	Gtid      		string
-	domainId        uint32
-	serverId 		uint32
-	sequence		uint64
+	Gtid     string
+	domainId uint32
+	serverId uint32
+	sequence uint64
 }
 
 func (This *MariaDBGtid) SetGtid(gtid string) {
@@ -28,22 +28,22 @@ func (This *MariaDBGtid) SetGtid(gtid string) {
 }
 
 func (This *MariaDBGtid) Parse() (err error) {
-	t := strings.Split(This.Gtid,"-")
+	t := strings.Split(This.Gtid, "-")
 	if len(t) != 3 {
-		return fmt.Errorf("invalid GTID: %s,MariaDB GTID must like DomainId-ServerId-Sequence",This.Gtid)
+		return fmt.Errorf("invalid GTID: %s,MariaDB GTID must like DomainId-ServerId-Sequence", This.Gtid)
 	}
-	domainId,err := strconv.ParseUint(t[0], 10, 32)
+	domainId, err := strconv.ParseUint(t[0], 10, 32)
 	if err != nil {
-		return fmt.Errorf("invalid GTID: %s,DomainId is not uint32",This.Gtid)
+		return fmt.Errorf("invalid GTID: %s,DomainId is not uint32", This.Gtid)
 	}
 	serverId, err := strconv.ParseUint(t[1], 10, 32)
 	if err != nil {
-		return fmt.Errorf("invalid GTID: %s,ServerId is not uint32",This.Gtid)
+		return fmt.Errorf("invalid GTID: %s,ServerId is not uint32", This.Gtid)
 	}
 
 	sequence, err := strconv.ParseUint(t[2], 10, 64)
 	if err != nil {
-		return fmt.Errorf("invalid GTID: %s,Sequence is not uint64",This.Gtid)
+		return fmt.Errorf("invalid GTID: %s,Sequence is not uint64", This.Gtid)
 	}
 	This.domainId = uint32(domainId)
 	This.serverId = uint32(serverId)
@@ -117,11 +117,11 @@ func (This *MariaDBGtidSet) Update(gtid string) error {
 func (This *MariaDBGtidSet) String() string {
 	gtidStr := ""
 	This.RLock()
-	for _,gtidInfo := range This.gtids {
+	for _, gtidInfo := range This.gtids {
 		if gtidStr == "" {
 			gtidStr = gtidInfo.Gtid
-		}else{
-			gtidStr += ","+gtidInfo.Gtid
+		} else {
+			gtidStr += "," + gtidInfo.Gtid
 		}
 	}
 	This.RUnlock()

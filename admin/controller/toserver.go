@@ -32,8 +32,8 @@ type ToServerParam struct {
 	PluginName  string
 	Notes       string
 	ConnUri     string
-	MaxConn     int			// 最大连接数
-	MinConn		int			// 最小连接数
+	MaxConn     int // 最大连接数
+	MinConn     int // 最小连接数
 }
 
 func (c *ToServerController) getParam() *ToServerParam {
@@ -58,7 +58,7 @@ func (c *ToServerController) Index() {
 	c.SetData("ToServerList", ToServerStorage.ToServerMap)
 	c.SetData("Drivers", driver.Drivers())
 	c.SetTitle("ToServer List")
-	c.AddAdminTemplate("toserver.list.html","header.html","footer.html")
+	c.AddAdminTemplate("toserver.list.html", "header.html", "footer.html")
 }
 
 func (c *ToServerController) List() {
@@ -128,7 +128,7 @@ func (c *ToServerController) Update() {
 			ConnUri:    param.ConnUri,
 			Notes:      param.Notes,
 			MaxConn:    param.MaxConn,
-			MinConn:	param.MinConn,
+			MinConn:    param.MinConn,
 		})
 	defer server.SaveDBConfigInfo()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}

@@ -1,15 +1,15 @@
 package driver
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"bytes"
-	"encoding/gob"
 	"strings"
 )
 
-func init()  {
+func init() {
 	gob.Register(map[string]interface{}{})
 	gob.Register([]interface{}{})
 }
@@ -36,7 +36,7 @@ func (c *PluginDataType) MarshalJSON() (b []byte, err error) {
 		return json.Marshal(cc)
 	}
 	var data PluginDataTypeCopy
-	err = DeepCopy(&data,*c)
+	err = DeepCopy(&data, *c)
 	if err != nil {
 		return
 	}
@@ -79,25 +79,25 @@ func (c *PluginDataType) MarshalJSON() (b []byte, err error) {
 	*/
 
 	var key string
-	for key,mappingType = range data.ColumnMapping {
+	for key, mappingType = range data.ColumnMapping {
 		switch mappingType {
-		case "uint64","Nullable(uint64)":
-		case "int64","Nullable(int64)":
-		case "uint32","Nullable(uint32)","uint24","Nullable(uint24)":
-		case "int32","Nullable(int32)","int24","Nullable(int24)":
-		case "uint16","Nullable(uint16)":
-		case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
-		case "uint8","Nullable(uint8)":
-		case "int8","Nullable(int8)":
+		case "uint64", "Nullable(uint64)":
+		case "int64", "Nullable(int64)":
+		case "uint32", "Nullable(uint32)", "uint24", "Nullable(uint24)":
+		case "int32", "Nullable(int32)", "int24", "Nullable(int24)":
+		case "uint16", "Nullable(uint16)":
+		case "int16", "Nullable(int16)", "year(4)", "Nullable(year(4))", "year(2)", "Nullable(year(2))":
+		case "uint8", "Nullable(uint8)":
+		case "int8", "Nullable(int8)":
 		default:
-			if strings.Index(mappingType,"bit") >= 0 {
+			if strings.Index(mappingType, "bit") >= 0 {
 				break
 			}
 			continue
 		}
 		var val interface{}
 		for _, row := range data.Rows {
-			if val,ok = row[key];ok {
+			if val, ok = row[key]; ok {
 				row[key] = fmt.Sprint(val)
 			}
 		}
@@ -122,33 +122,33 @@ func (c *PluginDataType) UnmarshalJSON(data []byte) error {
 	var ok bool
 	var mappingType string
 	for _, row := range cc.Rows {
-		for key,val := range row {
+		for key, val := range row {
 			if val == nil {
 				continue
 			}
-			if mappingType,ok = cc.ColumnMapping[key];ok {
+			if mappingType, ok = cc.ColumnMapping[key]; ok {
 				switch mappingType {
-				case "uint64","Nullable(uint64)":
-					row[key],_ = strconv.ParseUint(fmt.Sprint(val), 10, 64)
-				case "int64","Nullable(int64)":
-					row[key],_ = strconv.ParseInt(fmt.Sprint(val), 10, 64)
-				case "uint32","Nullable(uint32)":
-					intA,_ := strconv.ParseUint(fmt.Sprint(val),10,32)
+				case "uint64", "Nullable(uint64)":
+					row[key], _ = strconv.ParseUint(fmt.Sprint(val), 10, 64)
+				case "int64", "Nullable(int64)":
+					row[key], _ = strconv.ParseInt(fmt.Sprint(val), 10, 64)
+				case "uint32", "Nullable(uint32)":
+					intA, _ := strconv.ParseUint(fmt.Sprint(val), 10, 32)
 					row[key] = uint32(intA)
-				case "int32","Nullable(int32)","int24","Nullable(int24)":
-					intA,_ := strconv.Atoi(fmt.Sprint(val))
+				case "int32", "Nullable(int32)", "int24", "Nullable(int24)":
+					intA, _ := strconv.Atoi(fmt.Sprint(val))
 					row[key] = int32(intA)
-				case "uint16","Nullable(uint16)":
-					intA,_ := strconv.ParseUint(fmt.Sprint(val),10,32)
+				case "uint16", "Nullable(uint16)":
+					intA, _ := strconv.ParseUint(fmt.Sprint(val), 10, 32)
 					row[key] = uint16(intA)
-				case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
-					intA,_ := strconv.Atoi(fmt.Sprint(val))
+				case "int16", "Nullable(int16)", "year(4)", "Nullable(year(4))", "year(2)", "Nullable(year(2))":
+					intA, _ := strconv.Atoi(fmt.Sprint(val))
 					row[key] = int16(intA)
-				case "uint8","Nullable(uint8)":
-					intA,_ := strconv.Atoi(fmt.Sprint(val))
+				case "uint8", "Nullable(uint8)":
+					intA, _ := strconv.Atoi(fmt.Sprint(val))
 					row[key] = uint8(intA)
-				case "int8","Nullable(int8)":
-					intA,_ := strconv.Atoi(fmt.Sprint(val))
+				case "int8", "Nullable(int8)":
+					intA, _ := strconv.Atoi(fmt.Sprint(val))
 					row[key] = int8(intA)
 				case "float32":
 					switch val.(type) {
@@ -166,7 +166,7 @@ func (c *PluginDataType) UnmarshalJSON(data []byte) error {
 					}
 					break
 				default:
-					if strings.Index(mappingType,"double") >= 0 {
+					if strings.Index(mappingType, "double") >= 0 {
 						switch val.(type) {
 						case float32:
 							row[key] = float64(val.(float32))
@@ -175,7 +175,7 @@ func (c *PluginDataType) UnmarshalJSON(data []byte) error {
 						}
 						break
 					}
-					if strings.Index(mappingType,"float64") >= 0 {
+					if strings.Index(mappingType, "float64") >= 0 {
 						switch val.(type) {
 						case float32:
 							row[key] = float64(val.(float32))
@@ -184,7 +184,7 @@ func (c *PluginDataType) UnmarshalJSON(data []byte) error {
 						}
 						break
 					}
-					if strings.Index(mappingType,"float") >= 0 {
+					if strings.Index(mappingType, "float") >= 0 {
 						switch val.(type) {
 						case float64:
 							row[key] = float32(val.(float64))
@@ -194,7 +194,7 @@ func (c *PluginDataType) UnmarshalJSON(data []byte) error {
 						}
 						break
 					}
-					if strings.Index(mappingType,"bit") >= 0 {
+					if strings.Index(mappingType, "bit") >= 0 {
 						switch val.(type) {
 						case float64:
 							row[key] = int64(val.(float64))

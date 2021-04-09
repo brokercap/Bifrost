@@ -34,7 +34,7 @@ func (c *PluginController) Index() {
 	c.SetTitle("Plugin List")
 	c.SetData("PluginAPIVersion", driver.GetApiVersion())
 	c.SetData("Drivers", driversMap)
-	c.AddAdminTemplate("plugin.list.html","header.html","footer.html")
+	c.AddAdminTemplate("plugin.list.html", "header.html", "footer.html")
 }
 
 func (c *PluginController) List() {

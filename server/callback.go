@@ -16,9 +16,9 @@ limitations under the License.
 package server
 
 import (
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"log"
 	"time"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
 )
 
 func (db *db) Callback(data *mysql.EventReslut) {
@@ -29,7 +29,7 @@ func (db *db) Callback(data *mysql.EventReslut) {
 			db.CallbackDoCommit(data)
 			return
 		case "BEGIN":
-			db.lastTransactionTableMap = make(map[string]map[string]bool,0)
+			db.lastTransactionTableMap = make(map[string]map[string]bool, 0)
 			return
 		default:
 			break
@@ -44,15 +44,15 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if db.Callback0(data) == false {
 		return
 	}
-	if _,ok := db.lastTransactionTableMap[data.SchemaName];!ok {
-		db.lastTransactionTableMap[data.SchemaName] = make(map[string]bool,0)
+	if _, ok := db.lastTransactionTableMap[data.SchemaName]; !ok {
+		db.lastTransactionTableMap[data.SchemaName] = make(map[string]bool, 0)
 	}
 	db.lastTransactionTableMap[data.SchemaName][data.TableName] = true
 }
 
 func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
-	for SchemaName,TableNameMap := range db.lastTransactionTableMap {
-		for TableName,_ := range TableNameMap {
+	for SchemaName, TableNameMap := range db.lastTransactionTableMap {
+		for TableName, _ := range TableNameMap {
 			data0 := &mysql.EventReslut{
 				Header:         data.Header,
 				Rows:           data.Rows,
@@ -61,10 +61,10 @@ func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
 				TableName:      TableName,
 				BinlogFileName: data.BinlogFileName,
 				BinlogPosition: data.BinlogPosition,
-				Gtid:			data.Gtid,
-				Pri:			data.Pri,
+				Gtid:           data.Gtid,
+				Pri:            data.Pri,
 				ColumnMapping:  data.ColumnMapping,
-				EventID:		data.EventID,
+				EventID:        data.EventID,
 			}
 			db.Callback0(data0)
 		}
@@ -74,8 +74,8 @@ func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
 func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	var ChannelKey int
 	var t *Table
-	var getChannelKey = func(SchemaName,tableName string) bool {
-		t = db.GetTable(SchemaName,tableName)
+	var getChannelKey = func(SchemaName, tableName string) bool {
+		t = db.GetTable(SchemaName, tableName)
 		if t == nil {
 			return false
 		}
@@ -86,16 +86,16 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	//再判断 schema.* 绑定的 channel
 	//最后再判断 schema.table 绑定的 channel
 	//这样一样顺序是为了 防止  *.* 绑了的之后,某个表又独立的去绑了其他 channel,防目数据不一致的情况
-	for{
-		b = getChannelKey("*","*")
+	for {
+		b = getChannelKey("*", "*")
 		if b {
 			break
 		}
-		b = getChannelKey(data.SchemaName,"*")
+		b = getChannelKey(data.SchemaName, "*")
 		if b {
 			break
 		}
-		b = getChannelKey(data.SchemaName,data.TableName)
+		b = getChannelKey(data.SchemaName, data.TableName)
 		if b {
 			break
 		}
@@ -110,7 +110,7 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 		}
 		c = db.channelMap[ChannelKey]
 		c.RLock()
-		if c.Status == CLOSED{
+		if c.Status == CLOSED {
 			c.RUnlock()
 			return
 		}
@@ -130,7 +130,7 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	if chanName != nil {
 		chanName <- *data
 	} else {
-		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
+		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName, data.TableName, ChannelKey, data)
 	}
 	return
 }

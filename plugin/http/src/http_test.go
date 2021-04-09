@@ -1,107 +1,104 @@
 package src_test
 
 import (
-	"testing"
-	"log"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/http/src"
+	"log"
+	"testing"
 )
 
-
 import (
-	"net/http"
-	"github.com/brokercap/Bifrost/sdk/pluginTestData"
-	"time"
-	"io/ioutil"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"encoding/json"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/sdk/pluginTestData"
+	"io/ioutil"
+	"net/http"
+	"time"
 )
 
 var lastEvent pluginDriver.PluginDataType
 var lastBody string
 
-func handel_data(w http.ResponseWriter,req *http.Request){
+func handel_data(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "GET":
 		check_uri()
 		break
 	case "POST":
-		post(w,req)
+		post(w, req)
 		break
 	default:
-		log.Println("Methon:",req.Method," not supported ")
+		log.Println("Methon:", req.Method, " not supported ")
 		break
 	}
 	w.Write([]byte("success"))
 }
 
-func check_uri()  {
+func check_uri() {
 	log.Println("check uri success")
 	return
 }
 
-func post(w http.ResponseWriter,req *http.Request)  {
-	body,err := ioutil.ReadAll(req.Body)
+func post(w http.ResponseWriter, req *http.Request) {
+	body, err := ioutil.ReadAll(req.Body)
 	var data pluginDriver.PluginDataType
-	err = json.Unmarshal(body,&data)
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		w.WriteHeader(501)
-		log.Println("body err:",string(body))
+		log.Println("body err:", string(body))
 		return
 	}
 	lastEvent = data
 	lastBody = string(body)
-	log.Println("body:",string(body))
+	log.Println("body:", string(body))
 	return
 
 }
 
-
 var httpUrl string = "http://127.0.0.1:3332/bifrost_http_api_test"
+
 func beforeTest() {
-	http.HandleFunc("/bifrost_http_api_test",handel_data)
+	http.HandleFunc("/bifrost_http_api_test", handel_data)
 	go http.ListenAndServe("0.0.0.0:3332", nil)
 	time.Sleep(1 * time.Second)
 }
 
-
-func TestChechUri(t *testing.T){
+func TestChechUri(t *testing.T) {
 	beforeTest()
 	myConn := MyPlugin.NewConn()
-	myConn.SetOption(&httpUrl,nil)
-	if err := myConn.CheckUri();err!= nil{
-		log.Println("TestChechUri err:",err)
-	}else{
+	myConn.SetOption(&httpUrl, nil)
+	if err := myConn.CheckUri(); err != nil {
+		log.Println("TestChechUri err:", err)
+	} else {
 		log.Println("TestChechUri success")
 	}
 }
 
 func getParam() map[string]interface{} {
-	p := make(map[string]interface{},2)
+	p := make(map[string]interface{}, 2)
 	p["ContentType"] = "application/json-raw"
 	p["Timeout"] = 10
 	return p
 }
 
-func TestSetParam(t *testing.T){
+func TestSetParam(t *testing.T) {
 	myConn := MyPlugin.NewConn()
-	myConn.SetOption(&httpUrl,nil)
+	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	myConn.SetParam(nil)
 }
 
-func TestCommit(t *testing.T){
+func TestCommit(t *testing.T) {
 	myConn := MyPlugin.NewConn()
-	myConn.SetOption(&httpUrl,nil)
+	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	e := pluginTestData.NewEvent()
-	myConn.Commit(e.GetTestCommitData(),false)
+	myConn.Commit(e.GetTestCommitData(), false)
 }
 
-
-func TestAndCheckData(t *testing.T)  {
+func TestAndCheckData(t *testing.T) {
 	beforeTest()
 	myConn := MyPlugin.NewConn()
-	myConn.SetOption(&httpUrl,nil)
+	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	myConn.SetParam(getParam())
 
@@ -109,25 +106,24 @@ func TestAndCheckData(t *testing.T)  {
 
 	var checkResult map[string][]string
 
-
 	t.Log(" insert test start")
 	eventData := e.GetTestInsertData()
 
-	myConn.Insert(eventData,false)
+	myConn.Insert(eventData, false)
 
 	var err error
 
-	checkResult,err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1],lastBody)
-	if err != nil{
+	checkResult, err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1], lastBody)
+	if err != nil {
 		t.Log(lastBody)
 		t.Fatal(err)
 	}
 
-	for _,v := range checkResult["ok"]{
+	for _, v := range checkResult["ok"] {
 		t.Log(v)
 	}
 
-	for _,v := range checkResult["error"]{
+	for _, v := range checkResult["error"] {
 		t.Error(v)
 	}
 
@@ -137,37 +133,34 @@ func TestAndCheckData(t *testing.T)  {
 	t.Log(" update test start")
 	eventData = e.GetTestUpdateData()
 
-	myConn.Update(eventData,false)
+	myConn.Update(eventData, false)
 
-	if eventData.EventType != lastEvent.EventType{
-		t.Error("lastEvent.EventType:",lastEvent.EventType, " != ",eventData.EventType )
+	if eventData.EventType != lastEvent.EventType {
+		t.Error("lastEvent.EventType:", lastEvent.EventType, " != ", eventData.EventType)
 	}
 
 	t.Log("update test over")
-
 
 	t.Log("")
 	t.Log(" delete test start")
 	eventData = e.GetTestDeleteData()
 
-	myConn.Del(eventData,false)
+	myConn.Del(eventData, false)
 
-
-	checkResult,err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1],lastBody)
-	if err != nil{
+	checkResult, err = e.CheckData2(eventData.Rows[len(eventData.Rows)-1], lastBody)
+	if err != nil {
 		t.Log(lastEvent)
 		t.Fatal(err)
 	}
 
-	for _,v := range checkResult["ok"]{
+	for _, v := range checkResult["ok"] {
 		t.Log(v)
 	}
 
-	for _,v := range checkResult["error"]{
+	for _, v := range checkResult["error"] {
 		t.Error(v)
 	}
 
 	t.Log("delete test over")
-
 
 }

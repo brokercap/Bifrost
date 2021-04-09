@@ -41,15 +41,15 @@ func (This *MySQLGtid) Parse() (err error) {
 	if err != nil {
 		return err
 	}
-	for _,v := range strings.Split(m[0][2],":"){
+	for _, v := range strings.Split(m[0][2], ":") {
 		if v == "" {
 			continue
 		}
-		intervals,err := This.ParseInterval(v)
+		intervals, err := This.ParseInterval(v)
 		if err != nil {
 			return err
 		}
-		This.intervals = append(This.intervals,intervals)
+		This.intervals = append(This.intervals, intervals)
 	}
 	return
 }
@@ -96,11 +96,11 @@ func (This *MySQLGtid) Encode(w io.Writer) {
 func (This *MySQLGtid) String() string {
 	return This.Gtid
 	/*
-	gtid := This.sid.String()
-	for _, v := range This.intervals {
-		gtid += fmt.Sprint(":%d-%d",v.Start,v.Stop)
-	}
-	return gtid
+		gtid := This.sid.String()
+		for _, v := range This.intervals {
+			gtid += fmt.Sprint(":%d-%d",v.Start,v.Stop)
+		}
+		return gtid
 	*/
 }
 
@@ -148,11 +148,11 @@ func (This *MySQLGtidSet) Encode() []byte {
 func (This *MySQLGtidSet) String() string {
 	gtidStr := ""
 	This.RLock()
-	for _,gtidInfo := range This.gtids {
+	for _, gtidInfo := range This.gtids {
 		if gtidStr == "" {
 			gtidStr = gtidInfo.String()
-		}else{
-			gtidStr += ","+gtidInfo.String()
+		} else {
+			gtidStr += "," + gtidInfo.String()
 		}
 	}
 	This.RUnlock()

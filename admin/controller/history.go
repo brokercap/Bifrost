@@ -109,7 +109,7 @@ func (c *HistoryController) Index() {
 	c.SetData("DbName", DbName)
 
 	c.SetTitle("History List")
-	c.AddAdminTemplate("history.list.html","header.html","footer.html")
+	c.AddAdminTemplate("history.list.html", "header.html", "footer.html")
 }
 
 func (c *HistoryController) List() {

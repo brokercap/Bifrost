@@ -1,11 +1,13 @@
 module github.com/brokercap/Bifrost
 
+go 1.14
+
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/Shopify/sarama v1.26.4
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/gmallard/stompngo v1.0.11
-	github.com/go-redis/redis/v8 v8.7.1 // indirect
+	github.com/go-redis/redis/v8 v8.7.1
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94

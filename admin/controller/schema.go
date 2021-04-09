@@ -264,9 +264,9 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct {
 		File = dest[0].(string)
 		Binlog_Do_DB = dest[2].(string)
 		Binlog_Ignore_DB = dest[3].(string)
-		if  dest[4] == nil {
+		if dest[4] == nil {
 			Executed_Gtid_Set = ""
-		}else{
+		} else {
 			Executed_Gtid_Set = dest[4].(string)
 		}
 		PositonString := fmt.Sprint(dest[1])

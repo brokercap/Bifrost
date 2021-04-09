@@ -18,13 +18,13 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"github.com/brokercap/Bifrost/server"
 	"io/ioutil"
 	"log"
 	"runtime/debug"
-	"time"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"strings"
+	"time"
 )
 
 type DBController struct {
@@ -33,7 +33,7 @@ type DBController struct {
 
 type DbUpdateParam struct {
 	DbName            string
-	SchemaName 		  string
+	SchemaName        string
 	TableName         string
 	Uri               string
 	BinlogFileName    string
@@ -42,8 +42,8 @@ type DbUpdateParam struct {
 	MaxBinlogFileName string
 	MaxBinlogPosition uint32
 	UpdateToServer    int8
-	CheckPrivilege	  bool
-	Gtid			  string
+	CheckPrivilege    bool
+	Gtid              string
 }
 
 func (c *DBController) getParam() *DbUpdateParam {
@@ -69,7 +69,7 @@ func (c *DBController) Index() {
 	dbList := server.GetListDb()
 	c.SetData("Title", "db list")
 	c.SetData("DBList", dbList)
-	c.AddAdminTemplate("db.list.html","header.html","footer.html")
+	c.AddAdminTemplate("db.list.html", "header.html", "footer.html")
 }
 
 // db list
@@ -228,7 +228,7 @@ func (c *DBController) CheckUri() {
 	type dbInfoStruct struct {
 		BinlogFile     string
 		BinlogPosition int
-		Gtid		   string
+		Gtid           string
 		ServerId       int
 		BinlogFormat   string
 		BinlogRowImage string
@@ -277,9 +277,9 @@ func (c *DBController) CheckUri() {
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
 		MasterVersion := GetMySQLVersion(dbconn)
-		if strings.Contains(MasterVersion,"MariaDB") {
-			m := GetVariables(dbconn,"gtid_binlog_pos")
-			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+		if strings.Contains(MasterVersion, "MariaDB") {
+			m := GetVariables(dbconn, "gtid_binlog_pos")
+			if gtidBinlogPos, ok := m["gtid_binlog_pos"]; ok {
 				dbInfo.Gtid = gtidBinlogPos
 			}
 		}
@@ -302,10 +302,10 @@ func (c *DBController) GetLastPosition() {
 		BinlogFile            string
 		BinlogPosition        int
 		BinlogTimestamp       uint32
-		Gtid			      string
+		Gtid                  string
 		CurrentBinlogFile     string
 		CurrentBinlogPosition int
-		CurrentGtid			  string
+		CurrentGtid           string
 		NowTimestamp          uint32
 		DelayedTime           uint32
 	}
@@ -324,11 +324,11 @@ func (c *DBController) GetLastPosition() {
 		result.Msg = data.DbName + " no exsit"
 		return
 	}
-	dbInfo := &dbInfoStruct{ NowTimestamp: uint32(time.Now().Unix()) }
+	dbInfo := &dbInfoStruct{NowTimestamp: uint32(time.Now().Unix())}
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
 	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
 	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
-	dbInfo.Gtid			  = dbObj.Gtid
+	dbInfo.Gtid = dbObj.Gtid
 	var f = func() (e error) {
 		e = nil
 		defer func() {
@@ -351,16 +351,16 @@ func (c *DBController) GetLastPosition() {
 			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
 			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
 			dbInfo.CurrentGtid = MasterBinlogInfo.Executed_Gtid_Set
-			if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile &&  dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
+			if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile && dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
 				dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 			}
 		} else {
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
 		MasterVersion := GetMySQLVersion(dbconn)
-		if strings.Contains(MasterVersion,"MariaDB") {
-			m := GetVariables(dbconn,"gtid_binlog_pos")
-			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+		if strings.Contains(MasterVersion, "MariaDB") {
+			m := GetVariables(dbconn, "gtid_binlog_pos")
+			if gtidBinlogPos, ok := m["gtid_binlog_pos"]; ok {
 				dbInfo.CurrentGtid = gtidBinlogPos
 			}
 		}

@@ -57,7 +57,7 @@ func (c *TableSyncController) Index() {
 	c.SetData("DbList", data.DbList)
 	c.SetData("ChannelID", data.ChannelID)
 	c.SetData("ChannelList", data.ChannelList)
-	c.AddAdminTemplate("sync.list.html","header.html","footer.html")
+	c.AddAdminTemplate("sync.list.html", "header.html", "footer.html")
 }
 
 func (c *TableSyncController) List() {

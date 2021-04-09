@@ -554,16 +554,16 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			nsec := readNsec(buf, fsp)
 			if timestamp == 0 {
 				if fsp > 0 {
-					row[column_name] = "0000-00-00 00:00:00."+fmt.Sprintf("%0*d",fsp,0)
-				}else{
+					row[column_name] = "0000-00-00 00:00:00." + fmt.Sprintf("%0*d", fsp, 0)
+				} else {
 					row[column_name] = "0000-00-00 00:00:00"
 				}
 				break
 			}
 			tm := time.Unix(int64(timestamp), int64(nsec)*1000)
 			if fsp > 0 {
-				row[column_name] = tm.Format(TIME_FORMAT+"."+fmt.Sprintf("%0*d",fsp,0))
-			}else{
+				row[column_name] = tm.Format(TIME_FORMAT + "." + fmt.Sprintf("%0*d", fsp, 0))
+			} else {
 				row[column_name] = tm.Format(TIME_FORMAT)
 			}
 			break
@@ -672,11 +672,11 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 	nsec := readNsec(buf, fsp)
 	var timeFormat1 = TIME_FORMAT
 	if fsp > 0 {
-		timeFormat1 += "."+fmt.Sprintf("%0*d",fsp,0)
+		timeFormat1 += "." + fmt.Sprintf("%0*d", fsp, 0)
 	}
 	data = time.Date(year, month, int(days), int(hours), int(minute), int(second), nsec*1000, time.UTC).Format(timeFormat1)
-	if strings.Index(data,"-0001-11-30") == 0 {
-		return strings.Replace(data,"-0001-11-30","0000-00-00",1),nil
+	if strings.Index(data, "-0001-11-30") == 0 {
+		return strings.Replace(data, "-0001-11-30", "0000-00-00", 1), nil
 	}
 	return
 }

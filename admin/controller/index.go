@@ -21,8 +21,8 @@ import (
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/server"
 	"runtime"
-	"time"
 	"runtime/debug"
+	"time"
 )
 
 var StartTime = ""
@@ -38,7 +38,7 @@ type IndexController struct {
 // 首页
 func (c *IndexController) Index() {
 	c.SetTitle("Index")
-	c.AddAdminTemplate("index.html","header.html","footer.html")
+	c.AddAdminTemplate("index.html", "header.html", "footer.html")
 }
 
 // Bifrostd 基本信息

@@ -1,39 +1,39 @@
 package src
 
 import (
+	"fmt"
 	"github.com/streadway/amqp"
 	"time"
-	"fmt"
 )
 
-func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode uint8) (bool,error) {
+func (This *Conn) SendAndWait(exchange *string, routingkey *string, c *[]byte, DeliveryMode uint8) (bool, error) {
 	ch := This.getChannel(true)
-	if ch == nil{
+	if ch == nil {
 		This.status = "close"
-		return false,This.err
+		return false, This.err
 	}
 	err := ch.Publish(
-		*exchange,     // exchange
+		*exchange,   // exchange
 		*routingkey, // routing key
-		true,  // mandatory
-		false,  // immediate
+		true,        // mandatory
+		false,       // immediate
 		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:   *c,
-			DeliveryMode:	DeliveryMode,
-			Expiration:	This.p.expir,
+			ContentType:  "text/plain",
+			Body:         *c,
+			DeliveryMode: DeliveryMode,
+			Expiration:   This.p.expir,
 		})
-	if err != nil{
+	if err != nil {
 		This.err = err
 		This.status = "close"
-		return false,err
-		}
+		return false, err
+	}
 	timer := time.NewTimer(10 * time.Second)
 	select {
 	case d := <-This.confirmWait:
-		if d.DeliveryTag >= 0{
+		if d.DeliveryTag >= 0 {
 			timer.Stop()
-			return true,nil
+			return true, nil
 		}
 		This.err = fmt.Errorf("unkonw err")
 		break
@@ -43,30 +43,30 @@ func (This *Conn) SendAndWait(exchange *string,routingkey *string, c *[]byte,Del
 	}
 	timer.Stop()
 	This.status = "close"
-	return false,This.err
+	return false, This.err
 }
 
-func (This *Conn) SendAndNoWait(exchange *string,routingkey *string, c *[]byte,DeliveryMode uint8) (bool,error) {
+func (This *Conn) SendAndNoWait(exchange *string, routingkey *string, c *[]byte, DeliveryMode uint8) (bool, error) {
 	ch := This.getChannel(false)
-	if ch == nil{
+	if ch == nil {
 		This.status = "close"
-		return false,This.err
+		return false, This.err
 	}
 	err := ch.Publish(
-		*exchange,     // exchange
+		*exchange,   // exchange
 		*routingkey, // routing key
-		false,  // mandatory
-		false,  // immediate
+		false,       // mandatory
+		false,       // immediate
 		amqp.Publishing{
-			ContentType: 	"text/plain",
-			Body:   *c,
-			DeliveryMode:	DeliveryMode,
-			Expiration:	This.p.expir,
+			ContentType:  "text/plain",
+			Body:         *c,
+			DeliveryMode: DeliveryMode,
+			Expiration:   This.p.expir,
 		})
-	if err != nil{
+	if err != nil {
 		This.err = err
 		This.status = "close"
-		return false,err
+		return false, err
 	}
-	return true,nil
+	return true, nil
 }

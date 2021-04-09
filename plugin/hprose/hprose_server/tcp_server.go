@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/hprose/hprose-golang/rpc"
 	"github.com/brokercap/Bifrost/plugin/hprose/hprose_server/serverdo"
+	"github.com/hprose/hprose-golang/rpc"
 )
 
 func main() {

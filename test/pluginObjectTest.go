@@ -2,18 +2,18 @@ package main
 
 import (
 	"github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/brokercap/Bifrost/plugin/redis/src"
 	_ "github.com/brokercap/Bifrost/plugin/redis/src"
 	"log"
-	_ "net/http/pprof"
 	"net/http"
+	_ "net/http/pprof"
 	"time"
-	"github.com/brokercap/Bifrost/plugin/redis/src"
 )
 
-func main()  {
+func main() {
 	f1 := src.MyConn{}
 	f := f1.Open("127.0.0.1:6379")
-	redisKeyPluginPamram := make(map[string]interface{},0)
+	redisKeyPluginPamram := make(map[string]interface{}, 0)
 	redisKeyPluginPamram["KeyConfig"] = "{$SchemaName}-{$TableName}"
 	redisKeyPluginPamram["DataType"] = "json"
 	redisKeyPluginPamram["Type"] = "set"
@@ -25,8 +25,8 @@ func main()  {
 	var p interface{}
 	p = redisKeyPluginPamram
 	var err error
-	for i:=0;i<100000;i++ {
-		m := make(map[string]interface{},0)
+	for i := 0; i < 100000; i++ {
+		m := make(map[string]interface{}, 0)
 		m["ssdfsdfsdfsdfsdf1"] = "sdfsdfsdffffffffffffff"
 		m["ssdfsdfsdfsdfsdf2"] = "sdfsdfsdffffffffffffff"
 		m["ssdfsdfsdfsdfsdf3"] = "sdfsdfsdffffffffffffff"
@@ -42,29 +42,29 @@ func main()  {
 		m["ssdfsdfsdfsdfsdf12"] = "sdfsdfsdffffffffffffff"
 		m["ssdfsdfsdfsdfsdf14"] = "sdfsdfsdffffffffffffff"
 
-		rows := make([]map[string]interface{},1)
+		rows := make([]map[string]interface{}, 1)
 		data := driver.PluginDataType{
-			Timestamp:uint32(time.Now().Unix()),
-			EventType:"insert",
-			Rows:rows,
-			Query:"",
-			SchemaName:"test",
-			TableName:"testtable",
-			BinlogFileNum:70,
-			BinlogPosition:12341451,
+			Timestamp:      uint32(time.Now().Unix()),
+			EventType:      "insert",
+			Rows:           rows,
+			Query:          "",
+			SchemaName:     "test",
+			TableName:      "testtable",
+			BinlogFileNum:  70,
+			BinlogPosition: 12341451,
 		}
 
-		p,err = f.SetParam(p)
-		if err != nil{
+		p, err = f.SetParam(p)
+		if err != nil {
 			log.Println(err)
 			continue
 		}
 		f.Insert(&data)
 	}
-	ch := make(chan int,1)
+	ch := make(chan int, 1)
 
-	for{
-		<- ch
+	for {
+		<-ch
 	}
 
 }

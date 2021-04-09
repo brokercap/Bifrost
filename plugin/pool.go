@@ -1,19 +1,19 @@
 package plugin
 
 import (
-	"log"
+	"fmt"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
+	"log"
 	"runtime/debug"
-	"time"
 	"sync"
-	"fmt"
+	"time"
 )
 
 type ToServerConn struct {
-	id			int
+	id          int
 	toServerKey string
-	conn		driver.Driver
+	conn        driver.Driver
 	updateTime  int64
 }
 
@@ -22,8 +22,8 @@ var l sync.RWMutex
 var ToServerConnList map[string]map[int]*ToServerConn
 var toServerChanMap map[string]chan *ToServerConn
 
-func init()  {
-	toServerChanMap = make(map[string]chan *ToServerConn,0)
+func init() {
+	toServerChanMap = make(map[string]chan *ToServerConn, 0)
 	ToServerConnList = make(map[string]map[int]*ToServerConn)
 }
 
@@ -43,10 +43,10 @@ func (This *ToServerConn) checkClose(t *pluginStorage.ToServer) {
 	}
 }
 
-func GetPlugin(ToServerKey string)  (toServerConn *ToServerConn) {
+func GetPlugin(ToServerKey string) (toServerConn *ToServerConn) {
 	t := pluginStorage.GetToServerInfo(ToServerKey)
-	if t == nil{
-		log.Println("ToServer:",ToServerKey," no exsit,start error")
+	if t == nil {
+		log.Println("ToServer:", ToServerKey, " no exsit,start error")
 		return nil
 	}
 	t.Lock()
@@ -67,7 +67,7 @@ func GetPlugin(ToServerKey string)  (toServerConn *ToServerConn) {
 		t.CurrentConn++
 		t.Unlock()
 		toServerConn = startPlugin(ToServerKey)
-		if toServerConn == nil{
+		if toServerConn == nil {
 			t.Lock()
 			t.CurrentConn--
 			t.Unlock()
@@ -81,11 +81,11 @@ func GetPlugin(ToServerKey string)  (toServerConn *ToServerConn) {
 	select {
 	case toServerConn = <-toServerChanMap[ToServerKey]:
 		break
-	case <- timer.C:
+	case <-timer.C:
 		break
 	}
 	timer.Stop()
-	if toServerConn == nil{
+	if toServerConn == nil {
 		return nil
 	}
 	t.Lock()
@@ -99,18 +99,18 @@ func startPlugin(ToServerKey string) (toServerConn *ToServerConn) {
 	l.Lock()
 	if _, ok := toServerChanMap[ToServerKey]; !ok {
 		ToServerConnList[ToServerKey] = make(map[int]*ToServerConn)
-		toServerChanMap[ToServerKey] = make(chan *ToServerConn,512)
+		toServerChanMap[ToServerKey] = make(chan *ToServerConn, 512)
 	}
 	l.Unlock()
 
 	t := pluginStorage.GetToServerInfo(ToServerKey)
-	if t == nil{
+	if t == nil {
 		return nil
 	}
 	var F driver.Driver
 	var ConnId int
-	F = driver.Open(t.PluginName,&t.ConnUri)
-	if F == nil{
+	F = driver.Open(t.PluginName, &t.ConnUri)
+	if F == nil {
 		return nil
 	}
 	t.Lock()
@@ -118,10 +118,10 @@ func startPlugin(ToServerKey string) (toServerConn *ToServerConn) {
 	ConnId = t.LastID
 	t.Unlock()
 	toServerConn = &ToServerConn{
-		id:ConnId,
-		toServerKey:ToServerKey,
-		conn:F,
-		updateTime:t.UpdateTime,
+		id:          ConnId,
+		toServerKey: ToServerKey,
+		conn:        F,
+		updateTime:  t.UpdateTime,
 	}
 	l.Lock()
 	ToServerConnList[ToServerKey][ConnId] = toServerConn
@@ -131,21 +131,21 @@ func startPlugin(ToServerKey string) (toServerConn *ToServerConn) {
 
 func BackPlugin(ToServerConn *ToServerConn) bool {
 	defer func() {
-		if err := recover();err !=nil{
-			log.Printf("BackPlugin ToServerKey:%s recover err:%s debug:%s",ToServerConn.toServerKey,fmt.Sprint(err),string(debug.Stack()))
+		if err := recover(); err != nil {
+			log.Printf("BackPlugin ToServerKey:%s recover err:%s debug:%s", ToServerConn.toServerKey, fmt.Sprint(err), string(debug.Stack()))
 			return
 		}
 	}()
 	t := pluginStorage.GetToServerInfo(ToServerConn.toServerKey)
-	if t == nil{
+	if t == nil {
 		return true
 	}
 	t.Lock()
 	if t.CurrentConn > t.MaxConn {
 		t.CurrentConn--
-		func(){
+		func() {
 			defer func() {
-				if err := recover();err != nil{
+				if err := recover(); err != nil {
 					log.Println(string(debug.Stack()))
 					return
 				}
@@ -155,10 +155,10 @@ func BackPlugin(ToServerConn *ToServerConn) bool {
 		}()
 
 		l.Lock()
-		delete(ToServerConnList[ToServerConn.toServerKey],ToServerConn.id)
+		delete(ToServerConnList[ToServerConn.toServerKey], ToServerConn.id)
 		l.Unlock()
 
-	}else{
+	} else {
 		t.AvailableConn++
 		l.RLock()
 		toServerChanMap[ToServerConn.toServerKey] <- ToServerConn

@@ -21,18 +21,18 @@ type mysqlConn struct {
 	insertId       uint64
 	lastCmdTime    time.Time
 	keepaliveTimer *time.Timer
-	status		   uint16
+	status         uint16
 }
 
 type config struct {
-	user   string
-	passwd string
-	net    string
-	addr   string
-	dbname string
-	params map[string]string
-	authPluginName	string
-	tlsConfig *tls.Config
+	user           string
+	passwd         string
+	net            string
+	addr           string
+	dbname         string
+	params         map[string]string
+	authPluginName string
+	tlsConfig      *tls.Config
 }
 
 type serverSettings struct {
@@ -289,7 +289,7 @@ func (mc *mysqlConn) markBadConn(err error) error {
 	return driver.ErrBadConn
 }
 
-func NewConnect(uri string) MysqlConnection{
+func NewConnect(uri string) MysqlConnection {
 	dbopen := &mysqlDriver{}
 	conn, err := dbopen.Open(uri)
 	if err != nil {

@@ -8,8 +8,8 @@ import (
 )
 
 type XIdEvent struct {
-	header        EventHeader
-	xid  		  int64
+	header EventHeader
+	xid    int64
 }
 
 func (parser *eventParser) parseXidEvent(buf *bytes.Buffer) (event *XIdEvent, err error) {

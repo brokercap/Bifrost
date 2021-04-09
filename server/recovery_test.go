@@ -1,9 +1,9 @@
 package server
 
 import (
-	"testing"
-	"os"
 	"encoding/json"
+	"os"
+	"testing"
 )
 
 func TestRecoveryJSON(t *testing.T) {
@@ -11,14 +11,14 @@ func TestRecoveryJSON(t *testing.T) {
 	var data map[string]dbSaveInfo
 
 	var recoveryData recovery
-	errors := json.Unmarshal([]byte(str),&recoveryData)
-	if errors != nil{
-		t.Fatal("recovery error:",errors.Error())
+	errors := json.Unmarshal([]byte(str), &recoveryData)
+	if errors != nil {
+		t.Fatal("recovery error:", errors.Error())
 		return
 	}
-	errors = json.Unmarshal(*recoveryData.DbInfo,&data)
-	if errors != nil{
-		t.Fatal( "recorery db content errors;",errors)
+	errors = json.Unmarshal(*recoveryData.DbInfo, &data)
+	if errors != nil {
+		t.Fatal("recorery db content errors;", errors)
 		os.Exit(1)
 		return
 	}

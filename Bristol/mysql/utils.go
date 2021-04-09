@@ -363,8 +363,8 @@ func lengthCodedBinaryToBytes(n uint64) (b []byte) {
 		b = []byte{0xfd, byte(n), byte(n >> 8), byte(n >> 16)}
 
 	default:
-		b = []byte{0xfe, byte(n), byte(n>>8), byte(n>>16), byte(n>>24),
-			byte(n>>32), byte(n>>40), byte(n>>48), byte(n>>56)}
+		b = []byte{0xfe, byte(n), byte(n >> 8), byte(n >> 16), byte(n >> 24),
+			byte(n >> 32), byte(n >> 40), byte(n >> 48), byte(n >> 56)}
 	}
 	return
 }

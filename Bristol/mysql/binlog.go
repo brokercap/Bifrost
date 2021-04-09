@@ -2,10 +2,10 @@ package mysql
 
 import (
 	"database/sql/driver"
-	"log"
-	"strings"
 	"fmt"
+	"log"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,10 +62,10 @@ func (This *BinlogDump) SetNextEventID(id uint64) bool {
 	return false
 }
 
-func (This *BinlogDump) GetBinlog() (string, uint32, uint32,string,uint64) {
+func (This *BinlogDump) GetBinlog() (string, uint32, uint32, string, uint64) {
 	This.RLock()
 	defer This.RUnlock()
-	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp,This.parser.getGtid(),This.parser.lastEventID
+	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp, This.parser.getGtid(), This.parser.lastEventID
 }
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error, maxFileName string, maxPosition uint32) {
@@ -81,11 +81,11 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 	This.StartDumpBinlog0()
 }
 
-func (This *BinlogDump) StartDumpBinlogGtid(gtid string,  ServerId uint32, result chan error) {
+func (This *BinlogDump) StartDumpBinlogGtid(gtid string, ServerId uint32, result chan error) {
 	if This.parser == nil {
 		This.parser = newEventParser(This)
 	}
-	gtidInfo,dbType,err := NewGTIDSet(gtid)
+	gtidInfo, dbType, err := NewGTIDSet(gtid)
 	if err != nil {
 		result <- err
 		return
@@ -105,7 +105,7 @@ func (This *BinlogDump) StartDumpBinlog0() {
 	for _, val := range This.OnlyEvent {
 		This.parser.eventDo[int(val)] = true
 	}
-	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.getGtid()," binlogFileName:",This.parser.binlogFileName," binlogPosition:",This.parser.binlogPosition )
+	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.getGtid(), " binlogFileName:", This.parser.binlogFileName, " binlogPosition:", This.parser.binlogPosition)
 	defer func() {
 		This.parser.ParserConnClose(true)
 	}()
@@ -124,8 +124,8 @@ func (This *BinlogDump) StartDumpBinlog0() {
 		}
 		This.RUnlock()
 		if first == false {
-			time.Sleep( 5 * time.Second)
-		}else{
+			time.Sleep(5 * time.Second)
+		} else {
 			first = false
 		}
 		This.parser.callbackErrChan <- fmt.Errorf(StatusFlagName(STATUS_STARTING))
@@ -252,9 +252,9 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 
 	This.checksumEnabled()
 	if This.parser.isGTID == false {
-		This.mysqlConn.DumpBinlog(This.parser,This.CallbackFun)
-	}else{
-		This.mysqlConn.DumpBinlogGtid(This.parser,This.CallbackFun)
+		This.mysqlConn.DumpBinlog(This.parser, This.CallbackFun)
+	} else {
+		This.mysqlConn.DumpBinlogGtid(This.parser, This.CallbackFun)
 	}
 	This.BinlogConnCLose(true)
 	This.RLock()
@@ -311,8 +311,8 @@ func (This *BinlogDump) checkDumpConnection() {
 			}
 			break
 		}
-		if m != nil  {
-			if _,ok = m["TIME"];!ok {
+		if m != nil {
+			if _, ok = m["TIME"]; !ok {
 				log.Println("This.mysqlConn close ,connectionId: ", connectionId)
 				This.BinlogConnCLose0(true)
 				break

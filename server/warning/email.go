@@ -1,14 +1,14 @@
 package warning
 
 import (
-	"net/smtp"
-	"strings"
 	"encoding/json"
+	"net/smtp"
 	"strconv"
+	"strings"
 )
 
-func init()  {
-	Register("Email",&Email{})
+func init() {
+	Register("Email", &Email{})
 }
 
 type Email struct {
@@ -16,33 +16,33 @@ type Email struct {
 }
 
 type EmailParam struct {
-	From string
-	To string
+	From     string
+	To       string
 	Password string
 	SmtpHost string
 	SmtpPort int
 	NickName string
 }
 
-func (This *Email) paramTansfer(p map[string]interface{}) error{
-	s,err := json.Marshal(p)
-	if err != nil{
+func (This *Email) paramTansfer(p map[string]interface{}) error {
+	s, err := json.Marshal(p)
+	if err != nil {
 		return err
 	}
-	err2 := json.Unmarshal(s,&This.p)
-	if err2 != nil{
+	err2 := json.Unmarshal(s, &This.p)
+	if err2 != nil {
 		return err2
 	}
 	return nil
 }
 
-func (This *Email) SendWarning(p map[string]interface{},title,Body string) error {
+func (This *Email) SendWarning(p map[string]interface{}, title, Body string) error {
 	err1 := This.paramTansfer(p)
-	if err1 != nil{
+	if err1 != nil {
 		return err1
 	}
-	toUser := strings.Split(This.p.To,";")
-	if toUser[len(toUser)-1]==""{
+	toUser := strings.Split(This.p.To, ";")
+	if toUser[len(toUser)-1] == "" {
 		toUser = toUser[:len(toUser)-1]
 	}
 	auth := smtp.PlainAuth("", This.p.From, This.p.Password, This.p.SmtpHost)
@@ -53,5 +53,5 @@ func (This *Email) SendWarning(p map[string]interface{},title,Body string) error
 	if err != nil {
 		return err
 	}
-	return  nil
+	return nil
 }

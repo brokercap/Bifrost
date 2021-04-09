@@ -37,7 +37,7 @@ func (c *DBController) Detail() {
 	c.SetData("ToServerList", toserver.GetToServerMap())
 	c.SetData("ChannelList:", server.GetDBObj(DbName).ListChannel())
 	c.SetData("Title", DbName+" - Detail")
-	c.AddAdminTemplate("db.detail.html","header.html","db.detail.table.add.html","db.detail.history.add.html","footer.html")
+	c.AddAdminTemplate("db.detail.html", "header.html", "db.detail.table.add.html", "db.detail.history.add.html", "footer.html")
 }
 
 func (c *DBController) GetTableFields() {
