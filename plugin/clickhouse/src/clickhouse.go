@@ -63,14 +63,10 @@ type PluginParam struct {
 	PriKey                 []fieldStruct
 	SyncType               SyncType
 	AutoCreateTable        bool
-	NullNotTransferDefault bool //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
-	BifrostMustBeSuccess   bool // bifrost server 保留,数据是否能丢
-	LowerCaseTableNames    int8 // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
-	ColumnAdd              bool
-	ColumnModify           bool
-	ColumnChange           bool
-	ColumnDrop             bool
-	TableRename            bool
+	NullNotTransferDefault bool            //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
+	BifrostMustBeSuccess   bool            // bifrost server 保留,数据是否能丢
+	LowerCaseTableNames    int8            // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
+	ModifDDLMap            map[string]bool //ddl同步程度选择
 	CkEngine               int
 	CkClusterName          string
 	// 以上的数据是 界面配置的参数
@@ -272,9 +268,32 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 	switch p.(type) {
 	case *PluginParam:
 		This.p = p.(*PluginParam)
-		return p, nil
+		if This.p.CkEngine == 0 { //表示是旧版本升级上来的(旧版本只有单机情况) 强制赋值为1 表示单机  2表示 集群
+			This.p.CkEngine = 1
+			//因为旧版本ddl默认是全部开启的  所以ddl同步 新版在这默认全部开启以兼容老版本
+			This.p.ModifDDLMap["ColumnAdd"] = true
+			This.p.ModifDDLMap["ColumnModify"] = true
+			This.p.ModifDDLMap["ColumnChange"] = true
+			This.p.ModifDDLMap["ColumnDrop"] = true
+			This.p.ModifDDLMap["TableRename"] = true
+		}
+		return This.p, nil
 	default:
-		return This.GetParam(p)
+		tmpP, err := This.GetParam(p)
+		if err != nil {
+			return nil, err
+		}
+
+		if tmpP.CkEngine == 0 { //表示是旧版本升级上来的(旧版本只有单机情况) 强制赋值为1 表示单机  2表示 集群
+			tmpP.CkEngine = 1
+			//因为旧版本ddl默认是全部开启的  所以ddl同步 新版在这默认全部开启以兼容老版本
+			tmpP.ModifDDLMap["ColumnAdd"] = true
+			tmpP.ModifDDLMap["ColumnModify"] = true
+			tmpP.ModifDDLMap["ColumnChange"] = true
+			tmpP.ModifDDLMap["ColumnDrop"] = true
+			tmpP.ModifDDLMap["TableRename"] = true
+		}
+		return tmpP, nil
 	}
 }
 
@@ -362,7 +381,7 @@ func (This *Conn) CreateCkTable(data *pluginDriver.PluginDataType) (ckField []fi
 	sql, disSql, viewSql, ckField2 := This.TransferToCreateTableSql(data)
 
 	switch This.p.CkEngine {
-	case 0:
+	case 1:
 		if sql == "" {
 			return nil, nil
 		}
@@ -371,7 +390,7 @@ func (This *Conn) CreateCkTable(data *pluginDriver.PluginDataType) (ckField []fi
 		if This.conn.err != nil {
 			return nil, This.conn.err
 		}
-	case 1:
+	case 2:
 		if sql == "" || disSql == "" || viewSql == "" {
 			return nil, nil
 		}
@@ -457,9 +476,9 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	var TableName string
 
 	switch This.p.CkEngine {
-	case 0:
-		SchemaName = This.GetSchemaName(data.SchemaName)
 	case 1:
+		SchemaName = This.GetSchemaName(data.SchemaName)
+	case 2:
 		SchemaName = This.GetSchemaName(data.SchemaName) + "_ck"
 	}
 
@@ -469,9 +488,9 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	}
 
 	switch This.p.CkEngine {
-	case 0:
-		TableName = This.GetFieldName(data.TableName)
 	case 1:
+		TableName = This.GetFieldName(data.TableName)
+	case 2:
 		TableName = This.GetFieldName(data.TableName) + "_all"
 	}
 
@@ -564,11 +583,11 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 			SchemaName, TableName, newSql, newLocalSql, newDisSql, newViewSql := This.TranferQuerySql(data)
 
 			switch This.p.CkEngine {
-			case 0: //单机
+			case 1: //单机
 				if newSql == "" {
 					return data, nil, This.conn.err
 				}
-			case 1: //集群
+			case 2: //集群
 				if newLocalSql == "" || newDisSql == "" || (newViewSql == "" && len(strings.Split(newViewSql, ";")) > 1) {
 					return data, nil, This.conn.err
 				}
@@ -593,9 +612,9 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 			}()
 
 			switch This.p.CkEngine {
-			case 0: //单机
+			case 1: //单机
 				This.conn.err = This.conn.Exec(newSql, []driver.Value{})
-			case 1: //集群
+			case 2: //集群
 				This.conn.err = This.conn.Exec(newLocalSql, []driver.Value{})
 				if This.conn.err != nil {
 					log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)

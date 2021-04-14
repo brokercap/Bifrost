@@ -56,7 +56,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 		var TableTmp = TableInfo{}
 
 		switch c.p.CkEngine {
-		case 0: //单机
+		case 1: //单机
 			FromSchemaName = This.c.GetFieldName(FromSchemaName)
 			FromTableName = This.c.GetFieldName(FromTableName)
 
@@ -67,7 +67,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 				From: "`" + FromSchemaName + "`.`" + FromTableName + "`",
 				To:   "`" + ToSchemaName + "`.`" + ToTableName + "`",
 			}
-		case 1: //集群
+		case 2: //集群
 			var DisFromTableName = This.c.GetFieldName(FromTableName)
 			var DisToTableName = This.c.GetFieldName(ToTableName)
 
@@ -98,7 +98,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 	}
 	for _, t := range ReNameTableArr {
 		switch c.p.CkEngine {
-		case 0: //单节点
+		case 1: //单节点
 			if t.From == "" || t.To == "" {
 				continue
 			}
@@ -107,7 +107,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			} else {
 				destAlterSql += "," + t.From + " TO " + t.To
 			}
-		case 1: //集群
+		case 2: //集群
 			if t.From == "" || t.To == "" || t.DisFrom == "" || t.DisTo == "" {
 				continue
 			}
@@ -125,7 +125,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 	}
 
 	//分布式操作
-	if c.p.CkEngine == 1 {
+	if c.p.CkEngine == 2 {
 		if c.p.CkClusterName == "" {
 			return
 		}

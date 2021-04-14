@@ -31,23 +31,36 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
   ADD COLUMN decimal_test_1 decimal(18,2) NULL AFTER f1,
   ADD COLUMN decimal_test_2 decimal NULL AFTER decimal_test_1,
   ADD COLUMN decimal_test_3 decimal(19,17) NULL AFTER decimal_test_2,
-  ADD  INDEX sdfsdfsdf (id),
+  ADD INDEX sdfsdfsdf (id),
+  ADD PRIMARY key(id),
  COMMENT='mytest\'s test,';
 `
 
 	ckObj := &Conn{
 		p: &PluginParam{
-			CkSchema: "",
+			CkSchema:    "",
+			ModifDDLMap: map[string]bool{},
 		},
 	}
+	ckObj.p.ModifDDLMap["ColumnAdd"] = true
+	ckObj.p.ModifDDLMap["ColumnModify"] = true
+	ckObj.p.ModifDDLMap["ColumnChange"] = true
+	ckObj.p.ModifDDLMap["ColumnDrop"] = true
+	ckObj.p.ModifDDLMap["TableRename"] = true
+	ckObj.p.CkEngine = 2
+	ckObj.p.CkClusterName = "ck_cluster"
+
 	Query := ReplaceBr(sql)
 	Query = ReplaceTwoReplace(Query)
 	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
-	var destAlterSql string
+	var destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql string
 	c := NewAlterSQL("test", sql, ckObj)
-	_, _, destAlterSql = c.Transfer2CkSQL()
+	_, _, destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql = c.Transfer2CkSQL(ckObj)
 	t.Log(destAlterSql)
+	t.Log(destLocalAlterSql)
+	t.Log(destDisAlterSql)
+	t.Log(destViewAlterSql)
 
 	sql = `ALTER TABLE mytest
 	ADD COLUMN f1 CHAR(10) DEFAULT ''  NOT NULL AFTER varchartest"`
@@ -56,8 +69,11 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
 	c = NewAlterSQL("", Query, ckObj)
-	_, _, destAlterSql = c.Transfer2CkSQL()
+	_, _, destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql = c.Transfer2CkSQL(ckObj)
 	t.Log(destAlterSql)
+	t.Log(destLocalAlterSql)
+	t.Log(destDisAlterSql)
+	t.Log(destViewAlterSql)
 
 	sql = `ALTER TABLE bifrost_test.table_nodata   
   ADD COLUMN t1 TIMESTAMP DEFAULT '2020-01-12 21:00:00'		  NULL		COMMENT "it is test" AFTER f1;`
@@ -66,8 +82,11 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	Query = TransferNotes2Space(Query)
 	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
 	c = NewAlterSQL("test", Query, ckObj)
-	_, _, destAlterSql = c.Transfer2CkSQL()
-	t.Log("33:", destAlterSql)
+	_, _, destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql = c.Transfer2CkSQL(ckObj)
+	t.Log(destAlterSql)
+	t.Log(destLocalAlterSql)
+	t.Log(destDisAlterSql)
+	t.Log(destViewAlterSql)
 
 	sql = `ALTER TABLE /* it is notes */ binlog_field_test 
   CHANGE testtinyint testtinyint INT UNSIGNED DEFAULT -1  NOT NULL,
@@ -83,15 +102,18 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
 	destAlterSql = ""
 	c = NewAlterSQL("test", Query, ckObj)
-	_, _, destAlterSql = c.Transfer2CkSQL()
+	_, _, destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql = c.Transfer2CkSQL(ckObj)
 	t.Log(destAlterSql)
+	t.Log(destLocalAlterSql)
+	t.Log(destDisAlterSql)
+	t.Log(destViewAlterSql)
 }
 
 func TestAlterSQL_GetColumnInfo(t *testing.T) {
 	//sql := `ALTER TABLE bifrost_test.table_nodata
 	//ADD COLUMN t1 TIMESTAMP DEFAULT '2020-01-12 121:00:00'  NULL  COMMENT "it is test" AFTER f1;`
 	ckObj := &Conn{
-		p: &PluginParam{
+		P: &PluginParam{
 			CkSchema: "",
 		},
 	}
@@ -142,7 +164,7 @@ func TestAlterSQL_GetTransferCkType(t *testing.T) {
 	testArr = append(testArr, result{Val: "decimal( 1 )", Type: "Decimal(1,0)"})
 
 	ckObj := &Conn{
-		p: &PluginParam{
+		P: &PluginParam{
 			CkSchema: "",
 		},
 	}

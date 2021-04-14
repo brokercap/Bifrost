@@ -7,7 +7,7 @@ import (
 
 func TestReNameSQL_Transfer2CkSQL(t *testing.T) {
 	ckObj := &Conn{
-		p: &PluginParam{
+		P: &PluginParam{
 			CkSchema: "",
 		},
 	}

@@ -6,7 +6,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
-	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	"math"
 	"os"
 	"reflect"
@@ -129,17 +128,44 @@ func TestCkDataTypeTransfer(t *testing.T) {
 }
 
 func TestTransferToCreateTableSql(t *testing.T) {
-	data := pluginTestData.NewEvent().GetTestInsertData()
-	obj := &MyPlugin.Conn{}
-	sql, ckField := obj.TransferToCreateTableSql(data)
+	/*data := pluginTestData.NewEvent().GetTestInsertData()
+
+	obj := &MyPlugin.Conn{
+		p: &MyPlugin.PluginParam{
+			CkSchema:    "",
+			ModifDDLMap: map[string]bool{},
+		},
+	}
+	obj.p.ModifDDLMap["ColumnAdd"] = true
+	obj.p.ModifDDLMap["ColumnModify"] = true
+	obj.p.ModifDDLMap["ColumnChange"] = true
+	obj.p.ModifDDLMap["ColumnDrop"] = true
+	obj.p.ModifDDLMap["TableRename"] = true
+	obj.p.CkEngine = 2
+	obj.p.CkClusterName = "ck_cluster"
+
+	sql, distributeSql, viewSql, ckField := obj.TransferToCreateTableSql(data)
 	t.Log(sql)
+	t.Log(distributeSql)
+	t.Log(viewSql)
 	t.Log(ckField)
 	c := MyPlugin.NewClickHouseDBConn(url)
 	err := c.Exec(sql, []driver.Value{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("success")
+
+	err = c.Exec(distributeSql, []driver.Value{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Exec(viewSql, []driver.Value{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("success")*/
 }
 
 func TestTransferToCreateDatabaseSql(t *testing.T) {

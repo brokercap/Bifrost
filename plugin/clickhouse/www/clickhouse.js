@@ -1,7 +1,7 @@
 var ckFieldDataMap = {};
 
 document.getElementById("clickhouse_engine").onchange = function () {
-    if (parseInt($('#clickhouse_engine').val()) == 1) {
+    if (parseInt($('#clickhouse_engine').val()) == 2) {
         $('#ckDivName').show()
     } else {
         $('#ckDivName').hide()
@@ -129,6 +129,13 @@ function doGetPluginParam() {
     }
     var clickhouse_engine = parseInt($("#clickhouse_engine").val());
 
+    var modifDDLMap = {
+        ColumnAdd: column_add,
+        ColumnModify: column_modify,
+        ColumnChange: column_change,
+        ColumnDrop: column_drop,
+        TableRename: table_rename
+    };
 
     result.msg = "success";
     result.status = true;
@@ -140,11 +147,8 @@ function doGetPluginParam() {
     result.data["SyncType"] = SyncType;
     result.data["AutoCreateTable"] = AutoCreateTable;
     result.data["LowerCaseTableNames"] = parseInt(LowerCaseTableNames);
-    result.data["ColumnAdd"] = column_add;
-    result.data["ColumnModify"] = column_modify;
-    result.data["ColumnChange"] = column_change;
-    result.data["ColumnDrop"] = column_drop;
-    result.data["TableRename"] = table_rename;
+    result.data["ModifDDLMap"] = modifDDLMap;
+
     result.data["CkEngine"] = clickhouse_engine;
     result.data["CkClusterName"] = ckClusterName;
 

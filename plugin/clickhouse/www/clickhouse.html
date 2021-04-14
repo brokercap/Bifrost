@@ -80,8 +80,8 @@
         <label class="col-sm-3 control-label">clickhouse表引擎：</label>
         <div class="col-sm-9">
             <select class="form-control" name="clickhouse_engine" id="clickhouse_engine">
-                <option value=0>ReplacingMergeTree【单机模式】</option>
-                <option value=1 selected="selected">ReplicatedReplacingMergeTree【集群模式，至少需要两个节点】</option>
+                <option value=1>ReplacingMergeTree【单机模式】</option>
+                <option value=2 selected="selected">ReplicatedReplacingMergeTree【集群模式，至少需要两个节点】</option>
             </select>
             <span class="help-block m-b-none">
                 <p></p>
@@ -89,7 +89,7 @@
         </div>
     </div>
 
-    <div class="form-group"  id="ckDivName">
+    <div class="form-group" id="ckDivName">
         <label class="col-sm-3 control-label">ckClusterName：</label>
         <div class="col-sm-9">
             <input type="text" name="ckClusterName" id="ckClusterName" value="" class="form-control" placeholder="">

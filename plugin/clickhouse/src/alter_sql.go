@@ -2,6 +2,7 @@ package src
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,6 +67,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 		v = strings.Trim(v, " ")
 		v = TransferOther2Comma(v)
 		UpperV := strings.ToUpper(v)
+		log.Println("ddl: " + UpperV)
 		// 假如是第一个，则要去除  ALTER TABLE tableName
 		if i == 0 && strings.Index(UpperV, "ALTER TABLE") == 0 {
 			tmpArr := strings.Split(v, " ")
@@ -73,10 +75,10 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 
 			var tableName = TableName
 			switch c.p.CkEngine {
-			case 0: //单机模式
+			case 1: //单机模式
 				SchemaName = This.c.GetFieldName(SchemaName)
 				TableName = This.c.GetFieldName(TableName)
-			case 1: //集群模式
+			case 2: //集群模式
 				SchemaName = This.c.GetFieldName(SchemaName) + "_ck"
 				TableName = This.c.GetFieldName(TableName) + "_local"
 				disTableName = This.c.GetFieldName(tableName) + "_all"
@@ -86,27 +88,39 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			v = strings.Trim(v, " ")
 			UpperV = strings.ToUpper(v)
 		}
-		if c.p.ColumnChange && strings.Index(UpperV, "CHANGE") == 0 {
-			alterParamArr = append(alterParamArr, This.ChangeColumn(v))
+		if c.p.ModifDDLMap["ColumnChange"] && strings.Index(UpperV, "CHANGE") == 0 {
+			columnChange := This.ChangeColumn(v)
+			if columnChange == "" {
+				continue
+			}
+			alterParamArr = append(alterParamArr)
 			continue
 		}
-		if c.p.ColumnAdd && strings.Index(UpperV, "ADD") == 0 {
-			alterParamArr = append(alterParamArr, This.AddColumn(v))
+		if c.p.ModifDDLMap["ColumnAdd"] && strings.Index(UpperV, "ADD") == 0 {
+			columnAdd := This.AddColumn(v)
+			if columnAdd == "" {
+				continue
+			}
+			alterParamArr = append(alterParamArr, columnAdd)
 			continue
 		}
-		if c.p.ColumnModify && strings.Index(UpperV, "MODIFY") == 0 {
-			alterParamArr = append(alterParamArr, This.ModifyColumn(v))
+		if c.p.ModifDDLMap["ColumnModify"] && strings.Index(UpperV, "MODIFY") == 0 {
+			columnModify := This.ModifyColumn(v)
+			if columnModify == "" {
+				continue
+			}
+			alterParamArr = append(alterParamArr, columnModify)
 			continue
 		}
-		if c.p.ColumnDrop && strings.Index(UpperV, "DROP COLUMN") == 0 {
-			alterParamArr = append(alterParamArr, This.DropColumn(v))
+		if c.p.ModifDDLMap["ColumnDrop"] && strings.Index(UpperV, "DROP COLUMN") == 0 {
+			columnDrop := This.DropColumn(v)
+			if columnDrop == "" {
+				continue
+			}
+			alterParamArr = append(alterParamArr)
 			continue
 		}
 		/*
-			if strings.Index(UpperV,"DROP COLUMN") == 0 {
-				continue
-				//alterParamArr = append(alterParamArr,This.DropColumn(v))
-			}
 			if strings.Index(UpperV,"ADD INDEX") == 0 {
 				continue
 			}
@@ -129,10 +143,10 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 	}
 
 	switch c.p.CkEngine {
-	case 0: //单机模式
+	case 1: //单机模式
 		//单机下的最终ddl语句
 		destAlterSql = "alter table `" + SchemaName + "`.`" + TableName + "` " + strings.Join(alterParamArr, ",")
-	case 1: //集群模式
+	case 2: //集群模式
 		//集群下的本地表和分布式表最终的 ddl 语句
 		if c.p.CkClusterName == "" {
 			return
@@ -229,12 +243,22 @@ ck : add column column_name [type] [default_expr] [after name_after]
 */
 func (This *AlterSQL) AddColumn(sql string) (destAlterSql string) {
 	var columnNameIndex = 1
+	if strings.Index(strings.ToUpper(sql), "ADD PRIMARY") == 0 || strings.Index(strings.ToUpper(sql), "ADD INDEX") == 0 || strings.Index(strings.ToUpper(sql), "ADD FOREIGN KEY") == 0 { //添加主键操作 ck不支持 直接过滤
+		return
+	}
 	if strings.Index(strings.ToUpper(sql), "ADD COLUMN") == 0 {
 		columnNameIndex = 2
 	}
 	var columnName, ckType string
 	pArr := strings.Split(sql, " ")
+	if len(pArr) <= columnNameIndex {
+		return
+	}
+
 	columnName = pArr[columnNameIndex]
+	if columnName == "" {
+		return
+	}
 	ckType = This.GetTransferCkType(pArr[columnNameIndex+1])
 	var AlterColumn = &AlterColumnInfo{}
 	var columnOtherInfoIndex = columnNameIndex + 2
@@ -254,6 +278,7 @@ func (This *AlterSQL) AddColumn(sql string) (destAlterSql string) {
 	if AlterColumn.Nullable == true {
 		ckType = " Nullable(" + ckType + ")"
 	}
+
 	destAlterSql = "add column IF NOT EXISTS " + columnName + " " + ckType
 	if AlterColumn.Comment != "" {
 		destAlterSql += " COMMENT " + AlterColumn.Comment + ""

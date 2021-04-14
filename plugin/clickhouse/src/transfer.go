@@ -673,9 +673,9 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 	}
 
 	switch This.p.CkEngine {
-	case 0: //单节点
+	case 1: //单节点
 		sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
-	case 1: //集群
+	case 2: //集群
 		if This.p.CkClusterName == "" {
 			return "", "", "", nil
 		}
@@ -733,9 +733,9 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 	addCkField("binlog_event_type", "{$EventType}", "Nullable(String)")
 
 	switch This.p.CkEngine {
-	case 0: //单机
+	case 1: //单机
 		sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
-	case 1: //集群
+	case 2: //集群
 		sql += val + ") ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetSchemaName(data.TableName) + "_local" + "/{shard}', '{replica}') ORDER BY (" + strings.Join(priArr, ",") + ")"
 		distributeSql += val + ") ENGINE = Distributed(ck_cluster, " + This.GetSchemaName(data.SchemaName) + "_ck" + ", " + This.GetSchemaName(data.TableName) + "_local" + ",sipHash64(" + strings.Join(priArr, ",") + "))"
 	}
@@ -744,9 +744,9 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 
 func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
 	switch This.p.CkEngine {
-	case 0: //单节点
+	case 1: //单节点
 		sql = "CREATE DATABASE IF NOT EXISTS `" + SchemaName + "`"
-	case 1: //集群
+	case 2: //集群
 		if This.p.CkClusterName == "" {
 			return
 		}
