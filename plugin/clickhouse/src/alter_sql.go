@@ -93,7 +93,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			if columnChange == "" {
 				continue
 			}
-			alterParamArr = append(alterParamArr)
+			alterParamArr = append(alterParamArr, columnChange)
 			continue
 		}
 		if c.p.ModifDDLMap["ColumnAdd"] && strings.Index(UpperV, "ADD") == 0 {
