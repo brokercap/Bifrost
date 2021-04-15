@@ -114,11 +114,11 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			if destAlterDisSql == "" {
 				//destAlterLocalSql += "RENAME TABLE " + t.From + " TO " + t.To
 				destAlterDisSql += "RENAME TABLE " + t.DisFrom + " TO " + t.DisTo
-				destAlterViewSql += "RENAME TABLE " + t.DisFrom + "_view" + " TO " + t.DisTo + "_view"
+				destAlterViewSql += "RENAME TABLE " + t.DisFrom + "_pview" + " TO " + t.DisTo + "_pview"
 			} else {
 				//destAlterLocalSql += "," + t.From + " TO " + t.To
 				destAlterDisSql += "," + t.DisFrom + " TO " + t.DisTo
-				destAlterViewSql += "," + t.DisFrom + "_view" + " TO " + t.DisTo + "_view"
+				destAlterViewSql += "," + t.DisFrom + "_pview" + " TO " + t.DisTo + "_pview"
 			}
 		}
 
