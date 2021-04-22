@@ -180,10 +180,10 @@ function checkOrDownloadGoEnv(){
    fi
 }
 
-# 兼容 travis 自动编译测试, travis 不需要自动判断是否存在 go 环境
-if [[ "$1" != "travis" ]];then
-  checkOrDownloadGoEnv
-fi
+# # 兼容 travis 自动编译测试, travis 不需要自动判断是否存在 go 环境
+# if [[ "$1" != "travis" ]];then
+#   checkOrDownloadGoEnv
+# fi
 
 checkGoVersion
 
@@ -440,7 +440,7 @@ function buildHelp(){
     echo "--- build for linux|windows|freebsd|darwin"
     echo "./build.sh install ./targetdir linux"
     echo "--- build for linux ,and target is ./targetdir "
-    echo "./build clean"
+    echo "./build.sh clean"
     echo "--- clean build cache "
 }
 
