@@ -45,9 +45,9 @@ type PluginParam struct {
 	primaryKeys          []string        `json: "primaryKeys"`
 	hadMapping           map[string]bool `json: "hadMapping"`
 	BifrostMustBeSuccess bool            `json: "BifrostMustBeSuccess"` // bifrost server 保留,数据是否能丢
-	SkipBinlogData       *bool           `json: "SkipBinlogData"`       //
 	BatchSize            int             `json: "BatchSize"`
 	Data                 *TableDataStruct
+	SkipBinlogData		*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
 }
 
 func NewConn() pluginDriver.Driver {
@@ -102,9 +102,6 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 	default:
 		param, _ := This.GetParam(p)
 		This.p = param
-		log.Println("======>  This.p.BatchSize:", This.p.BatchSize)
-		log.Println("======>  p:", p)
-
 		return param, nil
 	}
 }
@@ -230,14 +227,14 @@ func (This *Conn) doCreateMapping() {
 	}
 }
 
-func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType) {
+func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType,err error) {
 
 	if len(list) > 0 {
 		This.p.EsIndexName = strings.ToLower(fmt.Sprint(pluginDriver.TransfeResult(This.p.EsIndexName, list[0], 0)))
 	}
 
 	This.doCreateMapping()
-	errData = This.commitNormal(list, n)
+	errData,err = This.commitNormal(list, n)
 	return
 }
 
@@ -270,12 +267,30 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	}
 	list := This.p.Data.Data[:n]
 
-	ErrData = This.doCommit(list, n)
-
-	// 假如数据不能丢，才需要 判断 是否有err，如果可以丢，直接错过数据
-	if This.err != nil && This.p.BifrostMustBeSuccess {
-		return nil, ErrData, This.err
+	dataMap := make(map[string][]*pluginDriver.PluginDataType,0)
+	var ok bool
+	for _,PluginData := range list {
+		key := PluginData.SchemaName + "." + PluginData.TableName
+		if _,ok = dataMap[key];!ok {
+			dataMap[key] = make([]*pluginDriver.PluginDataType,0)
+		}
+		dataMap[key] = append(dataMap[key],PluginData)
 	}
+	for _,dataList := range dataMap {
+		ErrData,e = This.doCommit(dataList, n)
+		// 假如数据不能丢，才需要 判断 是否有err，如果可以丢，直接错过数据
+		if e != nil  {
+			This.err = e
+			if This.p.BifrostMustBeSuccess {
+
+				return nil, ErrData, This.err
+			}
+			if This.CheckDataSkip(ErrData) {
+				continue
+			}
+		}
+	}
+	This.err = e
 	var binlogEvent *pluginDriver.PluginDataType
 	if len(This.p.Data.Data) <= int(This.p.BatchSize) {
 		// log.Println("This.p.Data:", g.Export(This.p.Data))
@@ -302,8 +317,6 @@ func (This *Conn) sendToCacheList(data *pluginDriver.PluginDataType, retry bool)
 		This.p.Data.Data = append(This.p.Data.Data, data)
 	}
 	n = len(This.p.Data.Data)
-	log.Println("======>  n:", n)
-	log.Println("======>  retry:", retry)
 
 	if This.p.BatchSize <= n {
 		return This.AutoCommit()
@@ -365,4 +378,22 @@ func (This *Conn) Commit(data *pluginDriver.PluginDataType, retry bool) (
 func (This *Conn) TimeOutCommit() (
 	*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	return This.AutoCommit()
+}
+
+// 设置跳过的位点
+func (This *Conn) Skip (SkipData *pluginDriver.PluginDataType) error {
+	This.p.SkipBinlogData = SkipData
+	return nil
+}
+
+func (This *Conn) CheckDataSkip(data *pluginDriver.PluginDataType) bool {
+	if This.p.SkipBinlogData != nil && This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition == data.BinlogPosition {
+		if This.p.SkipBinlogData.BinlogFileNum == data.BinlogFileNum && This.p.SkipBinlogData.BinlogPosition >= data.BinlogPosition {
+			return true
+		}
+		if This.p.SkipBinlogData.BinlogFileNum > data.BinlogFileNum {
+			return true
+		}
+	}
+	return false
 }

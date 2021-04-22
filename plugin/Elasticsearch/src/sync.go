@@ -37,7 +37,7 @@ const (
 )
 
 // commitNormal commitNormal
-func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType) {
+func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType,err error) {
 	reqs := make([]*elastic.BulkRequest, 0, len(list))
 
 	var normalFun = func(v *pluginDriver.PluginDataType, reqs1 []*elastic.BulkRequest) {
@@ -72,7 +72,7 @@ func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errD
 		This.doCreateMapping()
 	}
 	// TODO: retry some times?
-	if err := This.doBulkSync(reqs); err != nil {
+	if err = This.doBulkSync(reqs); err != nil {
 		log.Printf("do ES bulk err %v, close sync", err)
 		return
 	}
