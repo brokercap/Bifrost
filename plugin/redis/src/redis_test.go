@@ -1,19 +1,21 @@
 package src_test
 
 import (
-	"testing"
-	"log"
-	"github.com/brokercap/Bifrost/sdk/pluginTestData"
-	MyPlugin "github.com/brokercap/Bifrost/plugin/redis/src"
-	"github.com/go-redis/redis"
+	"context"
 	"fmt"
+	MyPlugin "github.com/brokercap/Bifrost/plugin/redis/src"
+	"github.com/brokercap/Bifrost/sdk/pluginTestData"
+	"github.com/go-redis/redis/v8"
+	"log"
 	"strings"
+	"testing"
 )
 
-var url string = "10.40.2.41:6379"
+var url string = "192.168.220.130:6379"
 var event *pluginTestData.Event
 var SchemaName = "bifrost_test"
 var TableName = "binlog_field_test"
+var ctx = context.Background()
 
 func testBefore()  {
 	event = pluginTestData.NewEvent()
@@ -45,7 +47,7 @@ func initRedisConn() error{
 
 func TestChechUri(t *testing.T){
 	testBefore()
-	var url string = "127.0.0.1:6379"
+	var url string = "192.168.220.130:6379"
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
 	if err := myConn.CheckUri();err!= nil{
@@ -69,6 +71,7 @@ func TestInsert(t *testing.T){
 	testBefore()
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err := myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +87,7 @@ func TestUpate(t *testing.T){
 	testBefore()
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err := myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -100,6 +104,7 @@ func TestDelete(t *testing.T){
 	testBefore()
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err := myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -116,6 +121,7 @@ func TestQuery(t *testing.T){
 	testBefore()
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err := myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -131,6 +137,7 @@ func TestCommit(t *testing.T){
 	testBefore()
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err := myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -151,6 +158,7 @@ func TestCheckData(t *testing.T){
 	}
 	myConn := MyPlugin.NewConn()
 	myConn.SetOption(&url,nil)
+	myConn.Open()
 	_ ,err = myConn.SetParam(getParam())
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +180,7 @@ func TestCheckData(t *testing.T){
 	var key string
 	key = insertData.SchemaName+"-"+insertData.TableName+"-"+fmt.Sprint(insertData.Rows[0]["id"])
 	var c string
-	c,err = redisConn.Get( key).Result()
+	c,err = redisConn.Get(ctx,key).Result()
 	if err!=nil{
 		t.Fatal(err)
 	}
@@ -203,7 +211,7 @@ func TestCheckData(t *testing.T){
 	}
 
 	key = updateData.SchemaName+"-"+updateData.TableName+"-"+fmt.Sprint(updateData.Rows[1]["id"])
-	c,err = redisConn.Get( key).Result()
+	c,err = redisConn.Get(ctx,key).Result()
 	if err!=nil{
 		t.Fatal(err)
 	}
@@ -233,7 +241,7 @@ func TestCheckData(t *testing.T){
 	}
 
 	key = deleteData.SchemaName+"-"+deleteData.TableName+"-"+fmt.Sprint(deleteData.Rows[0]["id"])
-	c,err = redisConn.Get( key).Result()
+	c,err = redisConn.Get(ctx,key).Result()
 	if strings.Contains(fmt.Sprint(err),"redis: nil") {
 		t.Log("key:",key, " delete success")
 	}else{
@@ -281,4 +289,22 @@ func TestSyncLikeProductForSpeed(t *testing.T)  {
 		t.Log("test success")
 	}
 
+}
+
+func TestGetUriParam(t *testing.T) {
+	url := "pwd@123@tcp(127.0.0.1:6379,127.0.0.1:6380)/16"
+	pwd,network,uri,database := MyPlugin.GetUriParam(url)
+
+	t.Log("pwd:",pwd)
+	t.Log("network:",network)
+	t.Log("uri:",uri)
+	t.Log("database:",database)
+
+	url = "127.0.0.1:6379"
+	pwd,network,uri,database = MyPlugin.GetUriParam(url)
+
+	t.Log("pwd:",pwd)
+	t.Log("network:",network)
+	t.Log("uri:",uri)
+	t.Log("database:",database)
 }

@@ -38,10 +38,15 @@ func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (
 			return
 		}
 	}()
+	// 这里需要重新对 gtidSetInfo 重新做一次 ReInit 初始化
+	// 在gtid事件解析后，实际 gtidSetInfo update 操作的时候 ，可能只更新指定的gtid String，并没有整体进行更新
+	err := parser.gtidSetInfo.ReInit()
+	if err != nil {
+		return nil,err
+	}
 	// mysql gtid  87c74d71-2d6c-11eb-921a-0242ac110004:1-6"
-	// mariadb gtid [domain ID]-[server-id]-[sequence]
-	seq := strings.Split(parser.gtid,",")[0]
-	if strings.Count(strings.Split(seq,":")[1],"-") >= 2 {
+	// mariadb gtid domainId-serverId-sequence
+	if parser.dbType == DB_TYPE_MARIADB {
 		return mc.DumpBinlogMariaDBGtid(parser,callbackFun)
 	}else{
 		return mc.DumpBinlogMySQLGtid(parser,callbackFun)
@@ -51,7 +56,9 @@ func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (
 func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	ServerId := uint32(parser.ServerId) // Must be non-zero to avoid getting EOF packet
 	flags := uint16(0)
-	e := mc.writeCommandPacket(COM_BINLOG_DUMP_GTID, parser.gtid, flags, ServerId)
+	GtidBodyBytes := parser.gtidSetInfo.Encode()
+	//GtidBody := GtidSet.Encode()
+	e := mc.writeCommandPacket(COM_BINLOG_DUMP_GTID, GtidBodyBytes, flags, ServerId)
 	if e != nil {
 		parser.callbackErrChan <- e
 		return nil, e
@@ -59,11 +66,37 @@ func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callba
 	return mc.DumpBinlog0(parser,callbackFun)
 }
 
+
 func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
-	return nil,fmt.Errorf("Mariabdb is Not Supported")
+	var err error
+	// 通知 mariadb ,当前从库能识别gtid事件,如果不设置这个，maridb 主库 是不会下发 MARIADB_GTID_EVENT,MARIADB_GTID_LIST_EVENT 等事件的
+	err = mc.exec("SET @mariadb_slave_capability=4")
+	if err != nil {
+		return nil,fmt.Errorf("failed to SET @mariadb_slave_capability=4: %v", err)
+	}
+	gtidStr := parser.gtidSetInfo.String()
+	// mariadb gtid by set slave_connect_state
+	setGtidQuery := fmt.Sprintf("SET @slave_connect_state='%s'", gtidStr)
+	err = mc.exec(setGtidQuery)
+	if err != nil {
+		return nil,err
+	}
+	err = mc.exec("SET @slave_gtid_strict_mode=1")
+	if err != nil {
+		return nil,fmt.Errorf("failed to set @slave_gtid_strict_mode=1: %v", err)
+	}
+	ServerId := uint32(parser.ServerId)
+	flags := uint16(0)
+	err = mc.writeCommandPacket(COM_BINLOG_DUMP, uint32(0), flags, ServerId, "")
+	if err != nil {
+		parser.callbackErrChan <- err
+		return nil, err
+	}
+	return mc.DumpBinlog0(parser,callbackFun)
 }
 
 func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driver.Rows, error) {
+	var isDDL bool
 	for {
 		parser.binlogDump.RLock()
 		if parser.dumpBinLogStatus != STATUS_RUNNING {
@@ -90,6 +123,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 			//continue
 		}
 		if pkt[0] == 0 {
+			isDDL = false
 			var event *EventReslut
 			func() {
 				defer func() {
@@ -131,8 +165,19 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				if event.Query == "COMMIT" {
 					break
 				}
+				// # Dumm
+				// # Dummy e
+				// # Dum
+				// # Dummy event replacing event type 16
+				// mariadb Dumm 内容事件,这种内容的事件，直接过滤掉，不展示给上层
+				if event.Query[0:1] == "#"{
+					continue
+				}
+
 				//only return replicateDoDb, any sql may be use db.table query
-				if SchemaName, tableName := parser.GetQueryTableName(event.Query); tableName != "" {
+				var SchemaName,tableName string
+				var noReloadTableInfo bool
+				if SchemaName, tableName,noReloadTableInfo,isDDL = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -143,8 +188,13 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 						parser.saveBinlog(event)
 						continue
 					}
-					if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
-						parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+					if noReloadTableInfo {
+						// 假如 是rename,drop table 等操作 操作的 ddl,需要将 SchemaName,TableName 对应的缓存数据删除，因为表名变了，TableId 也变了
+						parser.delTableId(event.SchemaName, event.TableName)
+					}else{
+						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
+							parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+						}
 					}
 					break
 				}
@@ -171,9 +221,45 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				parser.saveBinlog(event)
 				continue
 			}
-			callbackFun(event)
+			// no commit event after ddl
+			// so we need need callback a begin event and a commit event
+			if isDDL {
+				beginEvent := &EventReslut{
+					Header:event.Header,
+					TableName:event.TableName,
+					SchemaName:event.SchemaName,
+					Query:"BEGIN",
+					EventID:event.EventID,
+					Rows:nil,
+					BinlogFileName:event.BinlogFileName,
+					BinlogPosition:event.BinlogPosition,
+					Gtid:"",
+					Pri:nil,
+					ColumnMapping:nil,
+				}
+				beginEvent.Header.EventType = QUERY_EVENT
+				commitEvent := &EventReslut{
+					Header:event.Header,
+					TableName:event.TableName,
+					SchemaName:event.SchemaName,
+					Query:"COMMIT",
+					EventID:event.EventID,
+					Rows:nil,
+					BinlogFileName:event.BinlogFileName,
+					BinlogPosition:event.BinlogPosition,
+					Gtid:parser.getGtid(),
+					Pri:nil,
+					ColumnMapping:nil,
+				}
+				commitEvent.Header.EventType = XID_EVENT
+				callbackFun(beginEvent)
+				callbackFun(event)
+				callbackFun(commitEvent)
+				parser.saveBinlog(commitEvent)
+			}else{
+				callbackFun(event)
+			}
 			parser.saveBinlog(event)
-
 		} else {
 			parser.callbackErrChan <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
 			if strings.Contains(string(pkt), "Could not find first log file name in binary log index file") {

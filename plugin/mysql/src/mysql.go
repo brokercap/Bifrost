@@ -14,8 +14,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.5"
-const BIFROST_VERION = "v1.6.5"
+const VERSION  = "v1.7.3"
+const BIFROST_VERION = "v1.7.3"
 
 type TableDataStruct struct {
 	Data 			[]*pluginDriver.PluginDataType
@@ -67,6 +67,7 @@ type Conn struct {
 	p		*PluginParam
 	conn    *mysqlDB
 	err 	error
+	isTiDB	bool
 }
 
 type PluginParam struct {
@@ -184,6 +185,7 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam,error){
 
 	This.p = &param
 	This.initTableInfo()
+	This.initVersion()
 	return This.p,nil
 }
 
@@ -232,7 +234,15 @@ func (This *Conn) initToMysqlTableFieldType() {
 				list = append(list,This.p.Field[k])
 			}
 		}else {
-			This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+			// mysql 里的默认值是在 insert 语句执行的时候，sql 里没有指定字段名的情况下，自动填充
+			// 假如有默认值 ，但是允许为 null 的时候，假如 sql 里指定值为 null，还是可以将 null 写进去的
+			// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
+			// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
+			if strings.ToUpper(ckFieldsMap[v.ToField].IS_NULLABLE) == "YES" {
+				This.p.Field[k].ToFieldDefault = nil
+			}else{
+				This.p.Field[k].ToFieldDefault = ckFieldsMap[v.ToField].COLUMN_DEFAULT
+			}
 			list = append(list,This.p.Field[k])
 		}
 	}
@@ -293,12 +303,25 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 		}else{
 			fromFieldName = v.COLUMN_NAME
 		}
-		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:v.COLUMN_DEFAULT }
+		var ToFieldDefault *string
+		// mysql 里的默认值是在 insert 语句执行的时候，sql 里没有指定字段名的情况下，自动填充
+		// 假如有默认值 ，但是允许为 null 的时候，假如 sql 里指定值为 null，还是可以将 null 写进去的
+		// 但是 bf 同步写数据的时候，源端是可能为 null ，目标表 是 not null default 值
+		// 因为后面 tansfer 函数只使用了 default 值，没做是否可以为 null 判断 ，这里进行统一判断 可以为 null 的情况下，默认值为 null
+		// 同 initToMysqlTableFieldType 函数内部注释
+		if strings.ToUpper(v.IS_NULLABLE) == "YES" {
+			ToFieldDefault = nil
+		}else{
+			ToFieldDefault = v.COLUMN_DEFAULT
+		}
+		field := fieldStruct{ToField:v.COLUMN_NAME,ToFieldType: v.DATA_TYPE,FromMysqlField:fromFieldName,ToFieldDefault:ToFieldDefault }
 		if strings.ToUpper(v.COLUMN_KEY) == "PRI" {
 			field.ToFieldDefault = nil
 			priKeyList = append(priKeyList,field)
-			fromPriKey = v.COLUMN_NAME
-			toPriKey = v.COLUMN_NAME
+			if fromPriKey == "" || v.EXTRA == "auto_increment" {
+				fromPriKey = v.COLUMN_NAME
+				toPriKey = v.COLUMN_NAME
+			}
 		}
 		fieldList[i] = field
 	}
@@ -330,10 +353,26 @@ func (This *Conn) initToDatabaseMap() {
 	return
 }
 
+func (This *Conn) initVersion() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("plugin mysql initVersion recover:",err,string(debug.Stack()))
+			return
+		}
+	}()
+	if This.conn == nil{
+		return
+	}
+	version := This.conn.SelectVersion()
+	if strings.Contains(version,"TiDB") {
+		This.isTiDB = true
+	}
+}
+
 func (This *Conn) Connect() bool {
 	This.conn = NewMysqlDBConn(*This.uri)
 	if This.conn.err == nil{
-		This.conn.conn.Exec("SET NAMES UTF8",[]dbDriver.Value{})
+		This.conn.conn.Exec("SET NAMES utf8mb4",[]dbDriver.Value{})
 	}
 	return true
 }
@@ -435,17 +474,26 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSucce
 				This.p.SkipBinlogData = nil
 				return data, nil, nil
 			}
-			newSql := This.TranferQuerySql(data)
+			newSqlArr := This.TranferQuerySql(data)
+			if len(newSqlArr) == 0 {
+				log.Println("transfer sql error!",data)
+				return nil,data,fmt.Errorf("transfer sql error")
+			}
 			if This.conn.err != nil {
 				This.ReConnect()
 			}
 			if This.conn.err != nil {
 				return nil,nil,This.conn.err
 			}
-			_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
-			if This.conn.err != nil {
-				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
-				return nil, data, This.conn.err
+			for _,newSql := range newSqlArr {
+				if newSql == "" {
+					continue
+				}
+				_, This.conn.err = This.conn.conn.Exec(newSql, []dbDriver.Value{})
+				if This.conn.err != nil {
+					log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+					return nil, data, This.conn.err
+				}
 			}
 			break
 		}

@@ -1,15 +1,12 @@
 module github.com/brokercap/Bifrost
 
-go 1.15
 
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/Shopify/sarama v1.26.4
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/gmallard/stompngo v1.0.11
-	github.com/go-redis/redis v6.15.5+incompatible
-	github.com/gogf/gf v1.15.0
-	github.com/golang/protobuf v1.3.2 // indirect
+	github.com/go-redis/redis/v8 v8.7.1 // indirect
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/testing v0.0.0-20201216035041-2be42bba85f3 // indirect

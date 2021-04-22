@@ -289,12 +289,21 @@ func (This *consume_channel_obj) sendToServerList0(toServerList []*ToServer,plug
 				continue
 			}
 		}
+		if pluginData.EventID < toServerInfo.LastSuccessBinlog.EventID {
+			// 这里多加一层 时间差过滤, 防止在数据的时候，EventID 计算错误造成可能丢失的bug
+			// 这里直接 continue 过滤只是尽可能防止重复同步而已
+			if pluginData.Timestamp < toServerInfo.LastSuccessBinlog.Timestamp {
+				continue
+			}
+		}
+		/*
 		if pluginData.BinlogFileNum < toServerInfo.BinlogFileNum {
 			continue
 		}
 		if pluginData.Timestamp < toServerInfo.LastSuccessBinlog.Timestamp || (pluginData.BinlogFileNum == toServerInfo.LastSuccessBinlog.BinlogFileNum && toServerInfo.LastSuccessBinlog.BinlogPosition >= pluginData.BinlogPosition) {
 			continue
 		}
+		 */
 		This.sendToServerResult(toServerInfo,pluginData)
 	}
 }

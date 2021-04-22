@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-const VERSION = "v1.7.0"
-const BIFROST_VERION = "v1.7.0"
+const VERSION = "v1.7.3"
+const BIFROST_VERION = "v1.7.3"
 
 var l sync.RWMutex
 
@@ -403,7 +403,7 @@ func (This *Conn) getAutoCreateCkTableFieldType(SchemaName,TableName string,data
 				MySQLFieldName = "{$BinlogPosition}"
 				break
 			default:
-				MySQLFieldName = v.Name
+				MySQLFieldName = ""
 				break
 			}
 		}else{
@@ -496,8 +496,74 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (*pluginDriv
 	return This.sendToCacheList(data,retry)
 }
 
-func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
-	return nil, nil, nil
+func (This *Conn) Query(data *pluginDriver.PluginDataType,retry bool) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+	if This.p.AutoCreateTable == false || data.Query == ""{
+		return nil,nil,nil
+	}
+	switch data.Query {
+	case "COMMIT","commit","BEGIN","begin":
+		return nil,nil,nil
+	default:
+		break
+	}
+	for {
+		LastSuccessCommitData, ErrData, err = This.AutoCommit()
+		if err != nil {
+			break
+		}
+		if len(This.p.Data.Data) == 0 {
+			if This.CheckDataSkip(data) {
+				This.p.SkipBinlogData = nil
+				return data, nil, nil
+			}
+			SchemaName,TableName,newSql := This.TranferQuerySql(data)
+			if newSql == "" {
+				return data,nil,This.conn.err
+			}
+			b,_ := This.CheckTableExsit(SchemaName,TableName)
+			if b == false {
+				return data,nil,nil
+			}
+			if This.conn == nil || This.conn.err != nil {
+				This.ReConnect()
+			}
+			if This.conn.err != nil {
+				return nil,nil,This.conn.err
+			}
+			func() {
+				defer func() {
+					if err := recover();err != nil {
+						This.conn.err = fmt.Errorf("ddl exec err:%s",fmt.Sprint(err))
+					}
+				}()
+				This.conn.err = This.conn.Exec(newSql,[]driver.Value{})
+			}()
+			if This.conn.err != nil {
+				log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+				return nil, data, This.conn.err
+			}
+			// 清掉缓存，下一次数据操作的时候，再从 ck 里读取
+			key := "`"+SchemaName + "`.`" + TableName +"`"
+			delete(This.p.tableMap,key)
+			break
+		}
+	}
+	return
+}
+
+func (This *Conn) CheckTableExsit(SchemaName,TableName string) (bool,error)  {
+	if This.conn.err != nil {
+		return false,This.conn.err
+	}
+	key := "`"+SchemaName + "`.`" + TableName +"`"
+	if _, ok := This.p.tableMap[key]; ok {
+		return true,nil
+	}
+	ckFields := This.conn.GetTableFields(SchemaName,TableName)
+	if len(ckFields) == 0 {
+		return false,nil
+	}
+	return true,nil
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType,retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType,error) {
@@ -612,7 +678,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 			This.conn.err = e
 		}
 	}()
-	if This.conn.err != nil {
+	if This.conn == nil || This.conn.err != nil {
 		This.ReConnect()
 	}
 	if This.conn.err != nil {

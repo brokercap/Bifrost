@@ -1,3 +1,59 @@
+v1.8.0-beta.01   2021-03-14
+===========================
+1. mysql caching_sha2_password supported
+
+v1.7.4-release   2021-03-14
+===========================
+1. fix plugin redis list sync empty bug
+2. fix pprof.go,update DBController to PprofController
+3. mysql field data  check update
+4. redis-client lib version update
+5. fix eventID calc error, lose data bug
+
+v1.7.3-release   2021-02-28
+===========================
+1. fix gtid update panic bug
+2. connection use utf8mb4
+3. plugin mysql cancel bool type
+4. fix plugin field nullable contrast YES
+5. fix plugin clickhouse conn error
+
+
+v1.7.2-release   2021-02-21
+===========================
+1. mariadb gtid supported
+2. fix plugin mysql nullable ,bug has default sync error bug
+3. testing binlog parser and select data is all right for mysql,mariadb,percona
+4. golang 1.16 ,Darwin arm64 supported
+
+v1.7.1-release   2021-02-09
+===========================
+1. fix binlog parser ddl(rename,drop) error
+2. fix binlog parser error by  "/*notes*/" filter
+3. plugin ck ddl update
+4. plugin mysql ddl update ,supported tidb rename multi-table
+5. mysql multi-gtid support
+6. fix percona 8.0 char parser error
+7. recovery binlog position calc update
+8. beore and after ddl, callback a dummy begin and commit event
+9. fix windows path error
+10. db list show eventID
+11. doc update
+12. fix other bugs
+
+v1.7.0-rc.01   2021-01-24
+===========================
+1. gtid supported
+2. plugin ck ddl supported(add,change column)
+3. plugin ck decimal64 tansfer decimal64, decimal128 and decimal256 tansfer to String
+4. plugin mysql filter data auto_increment be first
+5. fix other bugs
+
+v1.6.6-release   2021-01-17
+===========================
+1. fix rename table binlog parser error bug
+2. fix http basic auth bug
+
 v1.6.5-release   2021-01-10
 ===========================
 1. fixed mysql desc SchemaName error bug

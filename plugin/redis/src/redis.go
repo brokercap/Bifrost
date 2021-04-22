@@ -1,23 +1,26 @@
 package src
 
 import (
-	"errors"
-	"github.com/brokercap/Bifrost/plugin/driver"
-	//"github.com/garyburd/redigo/redis"
-	"github.com/go-redis/redis"
-	"fmt"
 	"encoding/json"
-	"strings"
+	"errors"
+	"fmt"
+	"github.com/brokercap/Bifrost/plugin/driver"
+	"context"
+	//"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"strconv"
+	"strings"
 	"time"
 )
 
-const VERSION  = "v1.6.0"
-const BIFROST_VERION = "v1.6.0"
+const VERSION  = "v1.7.4"
+const BIFROST_VERION = "v1.7.4"
 
 func init(){
 	driver.Register("redis",NewConn,VERSION,BIFROST_VERION)
 }
+
+var ctx = context.Background()
 
 type Conn struct {
 	driver.PluginDriverInterface
@@ -67,8 +70,8 @@ func (This *Conn) CheckUri() error{
 	return nil
 }
 
-func getUriParam(uri string)(pwd string, network string, url string, database int){
-	i := strings.IndexAny(uri, "@")
+func GetUriParam(uri string)(pwd string, network string, url string, database int){
+	i := strings.LastIndex(uri, "@")
 	pwd = ""
 	if i > 0{
 		pwd = uri[0:i]
@@ -126,7 +129,7 @@ func (This *Conn) SetParam(p interface{}) (interface{},error){
 }
 
 func (This *Conn) Connect() bool {
-	pwd,network,uri,database := getUriParam(*This.Uri)
+	pwd,network,uri,database := GetUriParam(*This.Uri)
 	if database < 0 {
 		This.err = fmt.Errorf("database must be in 0 and 16")
 		return false
@@ -143,7 +146,7 @@ func (This *Conn) Connect() bool {
 		PoolSize: 4096,
 	})
 
-	_, This.err = universalClient.Ping().Result()
+	_, This.err = universalClient.Ping(ctx).Result()
 	if This.err != nil {
 		This.status = ""
 		return false
@@ -202,10 +205,10 @@ func (This *Conn) Update(data *driver.PluginDataType,retry bool) (*driver.Plugin
 	switch This.p.Type {
 	case "set":
 		if This.p.ValConfig != ""{
-			err =This.conn.Set(Key, This.getVal(data,index), time.Duration(This.p.Expir) * time.Second).Err()
+			err =This.conn.Set(ctx,Key, This.getVal(data,index), time.Duration(This.p.Expir) * time.Second).Err()
 		}else {
 			vbyte, _ := json.Marshal(data.Rows[index])
-			err =This.conn.Set(Key, string(vbyte), time.Duration(This.p.Expir) * time.Second).Err()
+			err =This.conn.Set(ctx,Key, string(vbyte), time.Duration(This.p.Expir) * time.Second).Err()
 		}
 		break
 	case "list":
@@ -231,7 +234,7 @@ func (This *Conn) Del(data *driver.PluginDataType,retry bool)(*driver.PluginData
 	var err error
 	switch This.p.Type {
 	case "set":
-		err = This.conn.Del(Key).Err()
+		err = This.conn.Del(ctx,Key).Err()
 		break
 	case "list":
 		return This.SendToList(Key,data)
@@ -247,25 +250,18 @@ func (This *Conn) Del(data *driver.PluginDataType,retry bool)(*driver.PluginData
 }
 
 func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.PluginDataType, *driver.PluginDataType,error) {
-	if This.p.BifrostFilterQuery {
-		return data,nil,nil
-	}
 	var Val string
 	var err error
 	if This.p.ValConfig != ""{
 		Val = This.getVal(data,0)
 	}else{
-		if This.p.ValConfig != ""{
-			Val = This.getVal(data,0)
-		}else{
-			c,err := json.Marshal(data)
-			if err != nil{
-				return nil,data,err
-			}
-			Val = string(c)
+		c,err := json.Marshal(data)
+		if err != nil{
+			return nil,data,err
 		}
+		Val = string(c)
 	}
-	err =This.conn.LPush(Key, Val).Err()
+	err =This.conn.LPush(ctx,Key, Val).Err()
 
 	if err != nil {
 		return nil,data,err
@@ -274,9 +270,26 @@ func (This *Conn) SendToList(Key string, data *driver.PluginDataType) (*driver.P
 }
 
 func (This *Conn) Query(data *driver.PluginDataType,retry bool) (*driver.PluginDataType, *driver.PluginDataType,error) {
+	if This.p.BifrostFilterQuery {
+		return nil,nil,nil
+	}
+	if This.p.Type == "list" {
+		Key := This.getKeyVal(data, 0)
+		return This.SendToList(Key,data)
+	}
 	return nil,nil,nil
 }
 
 func (This *Conn) Commit(data *driver.PluginDataType,retry bool) (LastSuccessCommitData *driver.PluginDataType,ErrData *driver.PluginDataType,err error) {
+	if This.p.BifrostFilterQuery {
+		return data,nil,nil
+	}
+	if This.p.Type == "list" {
+		Key := This.getKeyVal(data, 0)
+		LastSuccessCommitData , ErrData , err =  This.SendToList(Key,data)
+		if err != nil {
+			return
+		}
+	}
 	return data,nil,nil
 }

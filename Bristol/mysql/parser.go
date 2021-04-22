@@ -21,7 +21,6 @@ type eventParser struct {
 	binlogFileName     string
 	currentBinlogFileName string
 	binlogPosition     uint32
-	gtid			   string
 	binlogTimestamp    uint32
 	lastEventID		   uint64
 	maxBinlogFileName  string
@@ -37,6 +36,8 @@ type eventParser struct {
 	isGTID			   bool
 	nextEventID		   uint64						// 下一个事件ID, 不能修改
 	lastPrevtiousGTIDSMap map[string]Intervals		// 当前解析的 binlog 文件的 PrevtiousGTIDS 对应关系
+	gtidSetInfo		   GTIDSet
+	dbType			   DBType
 }
 
 
@@ -86,16 +87,22 @@ func (parser *eventParser) saveBinlog(event *EventReslut) {
 		parser.currentBinlogFileName = event.BinlogFileName
 		parser.lastEventID = event.EventID
 		parser.binlogDump.Unlock()
-	case GTID_EVENT,ANONYMOUS_GTID_EVENT:
+	case GTID_EVENT,ANONYMOUS_GTID_EVENT,MARIADB_GTID_EVENT:
 		parser.binlogDump.Lock()
 		parser.binlogTimestamp = event.Header.Timestamp
 		parser.lastEventID = event.EventID
-		parser.gtid = event.Gtid
 		parser.binlogDump.Unlock()
 		break
 	default:
 		break
 	}
+}
+
+func (parser *eventParser) getGtid() string {
+	if parser.gtidSetInfo == nil {
+		return ""
+	}
+	return parser.gtidSetInfo.String()
 }
 
 func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename string, err error) {
@@ -110,19 +117,60 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 	case HEARTBEAT_EVENT, IGNORABLE_EVENT:
 		return
 	case PREVIOUS_GTIDS_EVENT:
+		var PreviousGTIDSEvent *PreviousGTIDSEvent
+		PreviousGTIDSEvent,err = parser.parsePrevtiousGTIDSEvent(buf)
+		event = &EventReslut{
+			Header:         PreviousGTIDSEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: PreviousGTIDSEvent.header.LogPos,
+		}
 		return
 	case GTID_EVENT,ANONYMOUS_GTID_EVENT:
 		var GtidEvent *GTIDEvent
 		GtidEvent, err = parser.parseGTIDEvent(buf)
+		gtid := fmt.Sprintf("%s:%d-%d",GtidEvent.SID36,parser.getGTIDSIDStart(GtidEvent.SID36),GtidEvent.GNO)
+		parser.gtidSetInfo.Update(gtid)
 		event = &EventReslut{
 			Header:         GtidEvent.header,
 			BinlogFileName: parser.currentBinlogFileName,
 			BinlogPosition: GtidEvent.header.LogPos,
-			Gtid:			fmt.Sprintf("%s:%d-%d",GtidEvent.SID36,parser.getGTIDSIDStart(GtidEvent.SID36),GtidEvent.GNO),
+			Gtid:			parser.gtidSetInfo.String(),
 		}
 		break
+	case MARIADB_GTID_LIST_EVENT:
+		var MariaDBGTIDSEvent *MariadbGTIDListEvent
+		MariaDBGTIDSEvent,err = parser.MariadbGTIDListEvent(buf)
+		event = &EventReslut{
+			Header:         MariaDBGTIDSEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: MariaDBGTIDSEvent.header.LogPos,
+		}
+		return
+	case MARIADB_GTID_EVENT:
+		var GtidEvent *MariadbGTIDEvent
+		GtidEvent, err = parser.MariadbGTIDEvent(buf)
+		gtid := fmt.Sprintf("%d-%d-%d",GtidEvent.GTID.DomainID,GtidEvent.GTID.ServerID,GtidEvent.GTID.SequenceNumber)
+		parser.gtidSetInfo.Update(gtid)
+		event = &EventReslut{
+			Header:         GtidEvent.header,
+			BinlogFileName: parser.currentBinlogFileName,
+			BinlogPosition: GtidEvent.header.LogPos,
+			Gtid:			parser.gtidSetInfo.String(),
+		}
+		return
 	case FORMAT_DESCRIPTION_EVENT:
 		parser.format, err = parser.parseFormatDescriptionEvent(buf)
+		if strings.Contains(parser.format.mysqlServerVersion,"MariaDB") {
+			parser.dbType = DB_TYPE_MARIADB
+		}
+		// 这要地方要对 gtidSetInfo 初始化，在假如非 GTID 解析的情况下，但是 数据库本身又有 GTID 事件，是存在可能解析出错的情况的
+		if parser.gtidSetInfo == nil {
+			if parser.dbType == DB_TYPE_MARIADB {
+				parser.gtidSetInfo = NewMariaDBGtidSet("")
+			}else{
+				parser.gtidSetInfo = NewMySQLGtidSet("")
+			}
+		}
 		/*
 			i := strings.IndexAny(parser.format.mysqlServerVersion, "-")
 			var version string
@@ -160,7 +208,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 		}
 		switch queryEvent.query {
 		case "COMMIT":
-			event.Gtid = parser.gtid
+			event.Gtid = parser.getGtid()
 		default:
 			break
 		}
@@ -245,7 +293,7 @@ func (parser *eventParser) parseEvent(data []byte) (event *EventReslut, filename
 			SchemaName:     "",
 			TableName:      "",
 			Rows:           nil,
-			Gtid:			parser.gtid,
+			Gtid:			parser.gtidSetInfo.String(),
 		}
 		break
 	default:
@@ -599,4 +647,13 @@ func (parser *eventParser) GetTableId(database string, tablename string) (uint64
 		return 0,fmt.Errorf("not found key:%s",key)
 	}
 	return parser.tableNameMap[key],nil
+}
+
+func (parser *eventParser) delTableId(database string, tablename string) {
+	key := database + "." + tablename
+	if tableId, ok := parser.tableNameMap[key]; ok {
+		delete(parser.tableSchemaMap, tableId)
+	}
+	delete(parser.tableNameMap, key)
+	return
 }

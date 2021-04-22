@@ -24,6 +24,7 @@ import (
 	"runtime/debug"
 	"time"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"strings"
 )
 
 type DBController struct {
@@ -275,6 +276,13 @@ func (c *DBController) CheckUri() {
 		} else {
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		}
+		MasterVersion := GetMySQLVersion(dbconn)
+		if strings.Contains(MasterVersion,"MariaDB") {
+			m := GetVariables(dbconn,"gtid_binlog_pos")
+			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+				dbInfo.Gtid = gtidBinlogPos
+			}
+		}
 		return
 	}
 
@@ -348,6 +356,13 @@ func (c *DBController) GetLastPosition() {
 			}
 		} else {
 			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
+		}
+		MasterVersion := GetMySQLVersion(dbconn)
+		if strings.Contains(MasterVersion,"MariaDB") {
+			m := GetVariables(dbconn,"gtid_binlog_pos")
+			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
+				dbInfo.CurrentGtid = gtidBinlogPos
+			}
 		}
 		return
 	}

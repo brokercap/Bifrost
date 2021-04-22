@@ -5,6 +5,7 @@ import (
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -541,6 +542,32 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 			toType = "DateTime"
 			break
 		}
+		if strings.Index(columnType, "decimal") >= 0 {
+			i := strings.Index(columnType,"decimal(")
+			if i < 0 {
+				toType = "Decimal(18,2)"
+				break
+			}
+			dataTypeParam := strings.Split(columnType[i+8:], ")")[0]
+			dataTypeParam = strings.Trim(dataTypeParam," ")
+			if dataTypeParam == "" {
+				toType = "Decimal(18,2)"
+				break
+			}
+			p := strings.Split(dataTypeParam,",")
+			M, _ := strconv.Atoi(strings.Trim(p[0]," "))
+			var D int
+			if len(p) == 2 {
+				D, _ = strconv.Atoi(strings.Trim(p[1]," "))
+			}
+			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
+			if M > 18 {
+				toType = "String"
+			}else{
+				toType = fmt.Sprintf("Decimal(%d,%d)",M,D)
+			}
+			break
+		}
 	}
 	if nullable {
 		if strings.Index(columnType,"Nullable") >= 0 {
@@ -691,5 +718,39 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 
 func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
 	sql = "CREATE DATABASE IF NOT EXISTS `"+SchemaName+"`"
+	return sql
+}
+
+func ReplaceBr(str string) string  {
+	str = strings.ReplaceAll(str, "\r\n"," ")
+	str = strings.ReplaceAll(str, "\n"," ")
+	str = strings.ReplaceAll(str, "\r"," ")
+	return str
+}
+
+//去除连续的两个空格
+func ReplaceTwoReplace(sql string) string {
+	for {
+		if strings.Index(sql,"  ") >= 0 {
+			sql = strings.ReplaceAll(sql,"  "," ")
+			//sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			break
+		}
+	}
+	for {
+		if strings.Index(sql,"	") >= 0 {
+			sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		}else{
+			return sql
+		}
+	}
+}
+
+// 将sql 里 /* */ 注释内容给去掉
+// 感谢 @zeroone2005 正则表达式提供支持
+var replaceSqlNotesReq = regexp.MustCompile(`/\*(.*?)\*/`)
+func TransferNotes2Space(sql string) string {
+	sql = replaceSqlNotesReq.ReplaceAllString(sql, "")
 	return sql
 }

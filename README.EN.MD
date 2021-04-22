@@ -3,7 +3,11 @@
 
 ##### *Real time data synchronization, only use mouse .....*
 
-[中文](https://github.com/brokercap/Bifrost/blob/v1.6.x/README.MD)
+[![Gitter](https://badges.gitter.im/brokercap-Bifrost/Bifrost.svg)](https://gitter.im/brokercap-Bifrost/Bifrost?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.8.x)](https://travis-ci.org/brokercap/Bifrost)
+[![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
+
+[中文](https://github.com/brokercap/Bifrost/blob/v1.8.x/README.MD)
 
 Binary [Linux](https://github.com/brokercap/Bifrost/releases) , [mac](https://github.com/brokercap/Bifrost/releases) , [windows](https://github.com/brokercap/Bifrost/releases) , [freebsd](https://github.com/brokercap/Bifrost/releases)
 
@@ -19,10 +23,10 @@ Your star is the biggest support for Bifrost!!!
 * ActiveMQ
 * Kafka
 * Mongodb
-* ClickHouse
-* MySQL
-* [Http](https://github.com/brokercap/Bifrost/blob/v1.6.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.6.x/hprose_server/tcp_server.go)
+* ClickHouse(supported DDL)
+* MySQL(supported DDL)
+* [Http](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)
+* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)
 
 ---
 
@@ -34,12 +38,12 @@ Your star is the biggest support for Bifrost!!!
 
 http://www.xbifrost.com/demo/
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/bifrost.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.8.x/bifrost.png)
 
 
 #### *Bifrsot* Diagram
 
-![image](https://github.com/brokercap/Bifrost/blob/v1.6.x/diagram.png)
+![image](https://github.com/brokercap/Bifrost/blob/v1.8.x/diagram.png)
 
 
 ### Points
@@ -57,6 +61,8 @@ http://www.xbifrost.com/demo/
 
 * Supported **Flow** display
 
+* Plugin MySQL and ClickHouse suppoted DDL
+
 
 ### MySQL version(after test)
 
@@ -68,7 +74,7 @@ http://www.xbifrost.com/demo/
 
 * 5.7.18
 
-* 8.0.11 (mysql-native-password)
+* 8.0.11
 
 
 ### Install
@@ -94,11 +100,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.6.5-release/bifrost_v1.6.5-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.8.0-beta.01/bifrost_v1.8.0-beta.01_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.6.5-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.8.0-beta.01_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.6.5-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.8.0-beta.01_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
@@ -213,7 +219,7 @@ cluster_name=bifrostTestClusterName
 - github.com/bradfitz/gomemcache/memcache
 - gopkg.in/mgo.v2
 - github.com/streadway/amqp
-- github.com/go-redis/redis
+- github.com/go-redis/redis/v8
 - github.com/syndtr/goleveldb/leveldb
 - github.com/ClickHouse/clickhouse-go
 

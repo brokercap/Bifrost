@@ -16,47 +16,122 @@ path=$(dirname $0)
 cd ./${path}  # 当前位置跳到脚本位置
 path=$(pwd)   # 取到脚本目录 
 
-echo dockerName $dockerName
-version=$1
+pwd=123456
 
-if [ ! -n "$version" ]; then
+#dbType  mysql | mariadb
+dbType=mysql
+dbVerion=
+
+if (( "$#" >= "2" )); then
+    dbType=$1
+    dbVerion=$2
+else
+    dbVerion=$1
+fi
+
+echo dockerName $dockerName
+
+if [ ! -n "$dbVerion" ]; then
   echo "\$1 is mysql version"
   exit 1
 fi
 
-echo mysqlVerion:$version
+echo server:$dbType
+echo version:$dbVerion
 
-pwd=123456
+function StartMySQLDocker() {
+  echo "pwd:" $pwd
+  version=$1
+  sleepTime=10
+  case "$version" in
+    "8"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION --default-authentication-plugin=mysql_native_password --gtid_mode=ON --enforce-gtid-consistency=true
+    ;;
 
-if [ "${version:0:1}" = "8" ];then
-/usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --default-authentication-plugin=mysql_native_password --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
-sleep 8
+    "5.7"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --gtid_mode=ON --enforce-gtid-consistency=true
+    ;;
 
-else
+    "5.6"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM --gtid_mode=ON --enforce-gtid-consistency=true --log-bin --log-slave-updates
+    ;;
 
-tmp=${version:0:3}
+    "5.5"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    ;;
 
-if [ "$tmp" = "5.6" ];then
-  /usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM
+    "5.1"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d jc3wish/mysql:5.1.73
+    ;;
 
-echo "5.6 test"
+    *)
+      echo "not suported mysql " $version
+      exit 1
+    ;;
+  esac
+  sleep $sleepTime
+}
 
-elif [ "$tmp" = "5.1" ]; then
-  /usr/bin/docker run -d --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai jc3wish/mysql:5.1.73
-  sleep 10
-else
-  /usr/bin/docker run --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
-fi
+function StartPerconaDocker() {
+  version=$1
+  sleepTime=10
+  case "$version" in
+    "8"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION --default-authentication-plugin=mysql_native_password --gtid_mode=ON --enforce-gtid-consistency=true
+    ;;
+
+    "5.7"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --gtid_mode=ON --enforce-gtid-consistency=true
+    ;;
+
+    "5.6"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --default-storage-engine=MyISAM --loose-skip-innodb --default-tmp-storage-engine=MyISAM --log-bin --log-slave-updates
+    ;;
+
+    "5.5"*)
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d percona:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    ;;
+
+    *)
+      echo "not suported percona " $version
+      exit 1
+    ;;
+  esac
+  sleep $sleepTime
+}
+
+function StartMariaDBDocker() {
+  version=$1
+  sleepTime=10
+  docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mariadb:$version --server_id=10 --default-time_zone='+8:00' --log_bin=mysql-bin --binlog_format=ROW
+  sleep $sleepTime
+}
+
+case "$dbType" in
+  "mysql")
+    StartMySQLDocker $dbVerion
+  ;;
+
+  "mariadb")
+    StartMariaDBDocker $dbVerion
+  ;;
+
+  "percona")
+     StartPerconaDocker $dbVerion
+  ;;
+
+  *)
+    echo "only supported mysql | mariadb | percona "
+    exit 1
+    ;;
+esac
 
 sleep 5
-
-fi
-
 
 ip=
 while ((i < 3))
 do
-    ip=`/usr/bin/docker inspect --format '{{ .NetworkSettings.IPAddress }}' $dockerName`
+    ip=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' $dockerName`
     if [ -n "$ip" ]; then
       break
     fi
@@ -70,17 +145,19 @@ if [ ! -n "$ip" ]; then
   exit 1
 fi
 
-
-echo $ip
-
+#获取对应的映射端口
+port=
+port=`docker port $dockerName 3306`
+port=${port#*:}
+echo "docker -P" $port
 sleep 15
 
 
-$path/MySQL_Filed_DataCheck -u root -p $pwd -h $ip -database bifrost_test -table "" -longstring false
+$path/MySQL_Filed_DataCheck -u root -p $pwd -h 127.0.0.1 -P $port -database bifrost_test -table "" -longstring false
 
 
-/usr/bin/docker stop $dockerName
+docker stop $dockerName
 
-/usr/bin/docker rm $dockerName
+docker rm $dockerName
 
 echo "over"
