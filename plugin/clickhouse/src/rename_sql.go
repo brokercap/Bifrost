@@ -88,7 +88,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 				To:      ToSchemaName + "." + ToTableName,
 				DisTo:   ToSchemaName + "." + DisToTableName,
 			}*/
-			//	集群模式根据业务需求暂时不需要rename 集群模式牵扯local表和分布式表  目前只想到了分布式表删除重建模式，可能会对后期业务有影响
+			//集群模式根据业务需求暂时不需要rename 集群模式牵扯local表和分布式表  目前只想到了分布式表删除重建模式，可能会对后期业务有影响
 			return
 		}
 
