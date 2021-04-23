@@ -57,7 +57,7 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 
 		switch c.p.CkEngine {
 		case 1: //单机
-			if !c.p.ModifDDLMap["ColumnChange"] {
+			if !c.p.ModifDDLMap["TableRename"] {
 				return
 			}
 			FromSchemaName = This.c.GetFieldName(FromSchemaName)
