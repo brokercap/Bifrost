@@ -57,6 +57,9 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 
 		switch c.p.CkEngine {
 		case 1: //单机
+			if !c.p.ModifDDLMap["ColumnChange"] {
+				return
+			}
 			FromSchemaName = This.c.GetFieldName(FromSchemaName)
 			FromTableName = This.c.GetFieldName(FromTableName)
 
@@ -64,11 +67,11 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			ToTableName = This.c.GetFieldName(ToTableName)
 
 			TableTmp = TableInfo{
-				From: "`" + FromSchemaName + "`.`" + FromTableName + "`",
-				To:   "`" + ToSchemaName + "`.`" + ToTableName + "`",
+				From: FromSchemaName + "." + FromTableName,
+				To:   ToSchemaName + "." + ToTableName,
 			}
 		case 2: //集群
-			var DisFromTableName = This.c.GetFieldName(FromTableName)
+			/*var DisFromTableName = This.c.GetFieldName(FromTableName)
 			var DisToTableName = This.c.GetFieldName(ToTableName)
 
 			FromSchemaName = This.c.GetFieldName(FromSchemaName) + "_ck"
@@ -80,11 +83,13 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			DisToTableName = This.c.GetFieldName(DisToTableName) + "_all"
 
 			TableTmp = TableInfo{
-				From:    "`" + FromSchemaName + "`.`" + FromTableName + "`",
-				DisFrom: "`" + FromSchemaName + "`.`" + DisFromTableName + "`",
-				To:      "`" + ToSchemaName + "`.`" + ToTableName + "`",
-				DisTo:   "`" + ToSchemaName + "`.`" + DisToTableName + "`",
-			}
+				From:    FromSchemaName + "." + FromTableName,
+				DisFrom: FromSchemaName + "." + DisFromTableName,
+				To:      ToSchemaName + "." + ToTableName,
+				DisTo:   ToSchemaName + "." + DisToTableName,
+			}*/
+			//	集群模式根据业务需求暂时不需要rename 集群模式牵扯local表和分布式表  目前只想到了分布式表删除重建模式，可能会对后期业务有影响
+			return
 		}
 
 		ReNameTableArr = append(ReNameTableArr, TableTmp)
@@ -113,11 +118,12 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			}
 			if destAlterDisSql == "" {
 				//destAlterLocalSql += "RENAME TABLE " + t.From + " TO " + t.To
+				destAlterSql += "RENAME TABLE " + t.From + " TO " + t.To
 				destAlterDisSql += "RENAME TABLE " + t.DisFrom + " TO " + t.DisTo
 				destAlterViewSql += "RENAME TABLE " + t.DisFrom + "_pview" + " TO " + t.DisTo + "_pview"
 			} else {
-				//destAlterLocalSql += "," + t.From + " TO " + t.To
-				destAlterDisSql += "," + t.DisFrom + " TO " + t.DisTo
+				destAlterSql += "RENAME TABLE " + t.From + " TO " + t.To
+				destAlterDisSql += "RENAME TABLE " + t.DisFrom + "_all" + " TO " + t.DisTo + "_all"
 				destAlterViewSql += "," + t.DisFrom + "_pview" + " TO " + t.DisTo + "_pview"
 			}
 		}
@@ -129,7 +135,9 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 		if c.p.CkClusterName == "" {
 			return
 		}
+		//destAlterSql += " on cluster " + c.p.CkClusterName
 		destAlterDisSql += " on cluster " + c.p.CkClusterName
+		destAlterViewSql += " on cluster " + c.p.CkClusterName
 	}
 	return
 }
