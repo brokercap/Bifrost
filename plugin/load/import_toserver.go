@@ -14,4 +14,5 @@ import (
 	_ "github.com/brokercap/Bifrost/plugin/mysql/src"
 	_ "github.com/brokercap/Bifrost/plugin/rabbitmq/src"
 	_ "github.com/brokercap/Bifrost/plugin/redis/src"
+	_ "github.com/brokercap/Bifrost/plugin/Elasticsearch/src"
 )

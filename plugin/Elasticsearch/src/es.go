@@ -15,7 +15,7 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-const VERSION = "v1.6.0"
+const VERSION = "v1.6.0-beta"
 const BIFROST_VERION = "v1.6.0"
 
 func init() {

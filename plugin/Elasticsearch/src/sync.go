@@ -106,7 +106,7 @@ func (This *Conn) makeRequest(action string, rows []map[string]interface{}) ([]*
 
 // makeInsertRequest makeInsertRequest
 func (This *Conn) makeInsertRequest(rows []map[string]interface{}) ([]*elastic.BulkRequest, error) {
-	return This.makeRequest(InsertAction, rows)
+	return This.makeRequest(ActionIndex, rows)
 }
 
 // makeDeleteRequest makeDeleteRequest
@@ -131,7 +131,7 @@ func (This *Conn) makeUpdateRequest(rows []map[string]interface{}) ([]*elastic.B
 		}
 
 		req := &elastic.BulkRequest{Index: This.p.EsIndexName, ID: afterID}
-		req.Action = ActionUpdate
+		req.Action = ActionIndex
 		req.Data = rows[i+1]
 
 		reqs = append(reqs, req)
