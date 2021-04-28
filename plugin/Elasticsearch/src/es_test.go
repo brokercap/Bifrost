@@ -1,6 +1,7 @@
 package src
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -21,7 +22,7 @@ var event *pluginTestData.Event
 var SchemaName = "2bifrost_test"
 var TableName = "binlog_field_test"
 var EsIndexName = "{$SchemaName}--{$TableName}"
-var Url = "http://localhost:9200?user=root&password=rootroot"
+var Url = "http://192.168.220.130:32769"
 
 func testBefore() {
 	conn = NewConn()
@@ -40,6 +41,22 @@ func getParam(args ...bool) map[string]interface{} {
 		"EsIndexName":          EsIndexName, //             string
 		"BifrostMustBeSuccess": true,        //  bool  // bifrost server 保留,数据是否能丢
 		"BatchSize":            3,           //             int
+		"Mapping":				`{
+  "mappings": {
+    "properties": {},
+    "date_detection": true,
+    "dynamic_date_formats": [
+      "yyyy-MM-dd",
+      "yyyy-MM-dd HH:mm:ss",
+      "yyyy-MM-dd HH:mm:ss.S",
+      "yyyy-MM-dd HH:mm:ss.SS",
+      "yyyy-MM-dd HH:mm:ss.SSS",
+      "yyyy-MM-dd HH:mm:ss.SSSS",
+      "yyyy-MM-dd HH:mm:ss.SSSSS",
+      "yyyy-MM-dd HH:mm:ss.SSSSSS"
+    ]
+  }
+}`,
 	}
 	return param
 }
@@ -53,6 +70,17 @@ func initSyncParam() {
 
 	log.Println("Param:", p)
 }
+
+func TestConn_CheckUri(t *testing.T) {
+	conn = NewConn()
+	conn.SetOption(&Url, nil)
+	err := conn.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("success")
+}
+
 
 func TestCommit(t *testing.T) {
 	testBefore()
@@ -165,10 +193,10 @@ func TestInsertNullAndChekcData(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(insertdata.Rows[0]["id"]))
+	dataList, _ := myConn.client.Get().Index(myConn.p.EsIndexName).Id(fmt.Sprint(insertdata.Rows[0]["id"])).Do(context.Background())
 	// c := NewClickHouseDBConn(url)
 	// dataList := c.GetTableDataList(insertdata.SchemaName, insertdata.TableName, "id="+fmt.Sprint(insertdata.Rows[0]["id"]))
-	for k, v := range dataList.ResponseItem.Source {
+	for k, v := range dataList.Fields {
 		t.Log("k, v:", k, v)
 	}
 	t.Log("success")
@@ -190,13 +218,13 @@ func TestCommitAndCheckData(t *testing.T) {
 	m := eventData.Rows[len(eventData.Rows)-1]
 	time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
-	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(eventData.Rows[0]["id"]))
+	dataList, _ := myConn.client.Get().Index(myConn.p.EsIndexName).Id(fmt.Sprint(eventData.Rows[0]["id"])).Do(context.Background())
 
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
 
-	checkDataRight(m, dataList.ResponseItem.Source, resultData)
+	checkDataRight(m, dataList.Fields, resultData)
 
 	// for _, v := range resultData["ok"] {
 	// 	t.Log(v)
@@ -250,9 +278,9 @@ func TestRandDataAndCheck(t *testing.T) {
 	conn.TimeOutCommit()
 	dataMap := event.GetDataMap()
 
-	ids := []uint64{}
+	ids := []string{}
 	for id := range dataMap {
-		ids = append(ids, id)
+		ids = append(ids, fmt.Sprint(id))
 	}
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
@@ -260,9 +288,11 @@ func TestRandDataAndCheck(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
-	dataList, _ := myConn.conn.GetMany(myConn.p.EsIndexName, ids)
-
-	count := uint64(len(dataList.Hits.Hits))
+	dataList,err := myConn.client.Mget().StoredFields(ids...).Do(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := uint64(len(dataList.Docs))
 
 	if count != uint64(len(dataMap)) {
 		for k, v := range dataMap {
@@ -273,9 +303,8 @@ func TestRandDataAndCheck(t *testing.T) {
 	}
 	destMap := make(map[string]map[string]interface{}, 0)
 
-	for _, v := range dataList.Hits.Hits {
-		vv := v.Source.(map[string]interface{})
-		destMap[fmt.Sprint(vv["id"])] = vv
+	for _, v := range dataList.Docs {
+		destMap[fmt.Sprint(v.Fields["id"])] = v.Fields
 	}
 	for _, data := range dataMap {
 		id := fmt.Sprint(data["id"])
@@ -334,9 +363,9 @@ func TestCommitAndCheckData2(t *testing.T) {
 	// time.Sleep(1 * time.Second)
 	// c := NewClickHouseDBConn(url)
 	// dataList := c.GetTableDataList(eventData.SchemaName, eventData.TableName, "id="+fmt.Sprint(m["id"]))
-	dataList, _ := myConn.conn.Get(myConn.p.EsIndexName, fmt.Sprint(eventData.Rows[0]["id"]))
+	dataList, _ := myConn.client.Get().Index(myConn.p.EsIndexName).Id(fmt.Sprint(eventData.Rows[0]["id"])).Do(context.Background())
 
-	if len(dataList.ResponseItem.Source) == 0 {
+	if len(dataList.Fields) == 0 {
 		t.Fatal("select data len == 0")
 	}
 
@@ -344,7 +373,7 @@ func TestCommitAndCheckData2(t *testing.T) {
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
 
-	checkDataRight(m, dataList.ResponseItem.Source, resultData)
+	checkDataRight(m, dataList.Fields, resultData)
 
 	// for _, v := range resultData["ok"] {
 	// 	t.Log(v)

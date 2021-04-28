@@ -1,18 +1,20 @@
 package src
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"net/url"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
 
 	"log"
 
-	"github.com/brokercap/Bifrost/plugin/Elasticsearch/src/elastic"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	elastic "github.com/olivere/elastic/v7"
 )
 
 const VERSION = "v1.6.0-beta"
@@ -26,18 +28,19 @@ type Conn struct {
 	pluginDriver.PluginDriverInterface
 	Uri    *string
 	status string
-	conn   *elastic.Client
+	client   *elastic.Client
 
 	err error
 	p   *PluginParam
 
-	RetryCount int64
+	esServerInfo *EsServer
 }
 
 type TableDataStruct struct {
 	Data       []*pluginDriver.PluginDataType
 	CommitData []*pluginDriver.PluginDataType // commit 提交的数据列表，Data 每 BatchSize 数据量划分为一个最后提交的commit
 }
+
 type PluginParam struct {
 	EsIndexName          string          `json: "EsIndexName"`
 	PrimaryKey           string          `json: "PrimaryKey"`
@@ -48,6 +51,16 @@ type PluginParam struct {
 	BatchSize            int             `json: "BatchSize"`
 	Data                 *TableDataStruct
 	SkipBinlogData		*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
+}
+
+type EsServer struct {
+	User				string
+	Password 			string
+	Urls				[]string
+	Sniff				bool
+	Timeout				int
+	RetryCount			int
+
 }
 
 func NewConn() pluginDriver.Driver {
@@ -61,6 +74,7 @@ func (This *Conn) SetOption(uri *string, param map[string]interface{}) {
 }
 
 func (This *Conn) Open() error {
+	This.esServerInfo = This.getUriParam(*This.Uri)
 	This.Connect()
 	return nil
 }
@@ -109,34 +123,84 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 func (This *Conn) CheckUri() error {
 	var err error
 	This.Connect()
-	if This.conn.Err != nil {
-		return This.conn.Err
+	if This.err != nil {
+		return This.err
 	}
 	_, err = This.GetVersion()
 	return err
 }
+
+func (This *Conn) getUriParam(uri string) (EsServerInfo *EsServer) {
+	EsServerInfo = &EsServer{}
+	EsServerInfo.Urls = make([]string,0)
+	for _,httpUrl :=  range strings.Split(uri,",") {
+		if httpUrl == "" {
+			continue
+		}
+		urlInfo, _ := url.Parse(httpUrl)
+		auths := urlInfo.Query()
+		if len(auths["user"]) > 0 {
+			EsServerInfo.User = auths["user"][0]
+		}
+		if len(auths["password"]) > 0 {
+			EsServerInfo.Password = auths["password"][0]
+		}
+		if len(auths["sniff"]) > 0 {
+			if auths["sniff"][0] == "true" {
+				EsServerInfo.Sniff = true
+			}
+		}
+		if len(auths["timeout"]) > 0 {
+			n,_ := strconv.Atoi(auths["timeout"][0])
+			if n > 0 {
+				EsServerInfo.Timeout = n
+			}
+		}
+		if len(auths["retryCount"]) > 0 {
+			n,_ := strconv.Atoi(auths["retryCount"][0])
+			if n > 0 {
+				EsServerInfo.RetryCount = n
+			}
+		}
+		index := strings.Index(httpUrl,"?")
+		if index > 0 {
+			EsServerInfo.Urls = append(EsServerInfo.Urls,httpUrl[0:index])
+		}else{
+			EsServerInfo.Urls = append(EsServerInfo.Urls,httpUrl)
+		}
+	}
+	if EsServerInfo.Timeout == 0 {
+		EsServerInfo.Timeout = 10
+	}
+	if EsServerInfo.RetryCount == 0 {
+		EsServerInfo.RetryCount = 3
+	}
+	return
+}
+
 func (This *Conn) Connect() bool {
 
 	// This.Uri   http://127.0.0.1:9200?user=root&password=rootroot
-	urlInfo, _ := url.Parse(*This.Uri)
-	auths := urlInfo.Query()
-	var (
-		user     = ""
-		password = ""
-	)
-	if len(auths["user"]) > 0 {
-		user = auths["user"][0]
+	EsServerInfo := This.getUriParam(*This.Uri)
+	options := []elastic.ClientOptionFunc{
+		elastic.SetURL(EsServerInfo.Urls...),
+		elastic.SetSniff(EsServerInfo.Sniff),
 	}
-	if len(auths["password"]) > 0 {
-		password = auths["password"][0]
+	if EsServerInfo.User != "" {
+		options = append(options, elastic.SetBasicAuth(EsServerInfo.User, EsServerInfo.Password))
 	}
-	cfg := &elastic.ClientConfig{
-		HTTPS:    urlInfo.Scheme == "https",
-		Addr:     urlInfo.Host,
-		User:     user,
-		Password: password,
+
+	options = append(options, elastic.SetHttpClient(&http.Client{
+		Timeout: time.Duration(EsServerInfo.Timeout) * time.Second,
+	}))
+
+	client, err := elastic.NewClient(options...)
+	if err != nil {
+		This.err = err
+		return false
 	}
-	This.conn = elastic.NewClient(cfg)
+	This.esServerInfo = EsServerInfo
+	This.client = client
 	This.err = nil
 	This.status = "running"
 
@@ -161,12 +225,9 @@ func (This *Conn) Close() bool {
 				return
 			}
 		}()
-		if This.conn != nil {
-			// This.conn.Close()
-		}
 	}()
 	This.status = "close"
-	This.conn = nil
+	This.client = nil
 	This.err = fmt.Errorf("close")
 	return true
 }
@@ -176,18 +237,9 @@ func (This *Conn) GetVersion() (Version string, err error) {
 	if This.err != nil {
 		This.Connect()
 	}
-
-	reqURL := fmt.Sprintf("%s://%s/", This.conn.Protocol, This.conn.Addr)
-	resp, err := This.conn.DoRequest("GET", reqURL, &bytes.Buffer{})
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-
-	defer resp.Body.Close()
-	// return resp.StatusCode
-	data, err := ioutil.ReadAll(resp.Body)
-	return string(data), err
+	EsServerInfo := This.getUriParam(*This.Uri)
+	Version,err = This.client.ElasticsearchVersion(EsServerInfo.Urls[0])
+	return
 }
 
 func NewTableData() *TableDataStruct {
@@ -208,21 +260,26 @@ func (This *Conn) initPrimaryKeys(data *pluginDriver.PluginDataType) {
 
 func (This *Conn) doCreateMapping() {
 	EsIndexName := This.p.EsIndexName
+	if This.p.Mapping == "" {
+		This.p.hadMapping[EsIndexName] = true
+		return
+	}
 	if _, ok := This.p.hadMapping[EsIndexName]; !ok {
-		resp, err := This.conn.GetMapping(EsIndexName)
+		resp, err := This.client.GetMapping().Index(EsIndexName).Do(context.Background())
 
-		if err == nil && resp.Mapping != nil {
-			if res, ok := resp.Mapping[EsIndexName]; ok { // hadMapping
-				if res.Mappings.DateDetection {
-					This.p.hadMapping[EsIndexName] = true
-					return
-				}
-				_ = This.conn.UpdateMapping(EsIndexName)
+		if err == nil && resp != nil{
+			if _, ok := resp[EsIndexName]; ok { // hadMapping
 				This.p.hadMapping[EsIndexName] = true
 				return
 			}
 		}
-		_ = This.conn.CreateMapping(EsIndexName, This.p.Mapping)
+		var mapping map[string]interface{}
+		err = json.Unmarshal([]byte(This.p.Mapping),&mapping)
+		if err == nil {
+			This.client.PutMapping().Index(EsIndexName).BodyJson(mapping).Do(context.Background())
+		}else{
+			log.Printf("output[elasticsearch] doCreateMapping json.Unmarshal err: %s , mapping:%s",err.Error(),mapping)
+		}
 		This.p.hadMapping[EsIndexName] = true
 	}
 }
@@ -243,16 +300,16 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	defer func() {
 		if err := recover(); err != nil {
 			e = fmt.Errorf(string(debug.Stack()))
-			This.conn.Err = e
+			This.err = e
 			// log.Println(" This.conn.Err:", This.conn.Err)
 		}
 	}()
-	if This.conn.Err != nil {
+	if This.err != nil {
 		This.ReConnect()
 	}
-	if This.conn.Err != nil {
-		log.Println(" This.conn.Err:", This.conn.Err)
-		return nil, nil, This.conn.Err
+	if This.err != nil {
+		log.Println(" This.Err:", This.err)
+		return nil, nil, This.err
 	}
 	if This.err != nil {
 		log.Println("This.err:", This.err)
