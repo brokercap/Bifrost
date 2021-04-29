@@ -17,7 +17,7 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 )
 
-const VERSION = "v1.6.0-beta"
+const VERSION = "v1.8.0-beta"
 const BIFROST_VERION = "v1.6.0"
 
 func init() {
@@ -28,7 +28,7 @@ type Conn struct {
 	pluginDriver.PluginDriverInterface
 	Uri    *string
 	status string
-	client   *elastic.Client
+	client *elastic.Client
 
 	err error
 	p   *PluginParam
@@ -50,17 +50,16 @@ type PluginParam struct {
 	BifrostMustBeSuccess bool            `json: "BifrostMustBeSuccess"` // bifrost server 保留,数据是否能丢
 	BatchSize            int             `json: "BatchSize"`
 	Data                 *TableDataStruct
-	SkipBinlogData		*pluginDriver.PluginDataType		// 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
+	SkipBinlogData       *pluginDriver.PluginDataType // 在执行 skip 的时候 ，进行传入进来的时候需要要过滤的 位点，在每次commit之后，这个数据会被清空
 }
 
 type EsServer struct {
-	User				string
-	Password 			string
-	Urls				[]string
-	Sniff				bool
-	Timeout				int
-	RetryCount			int
-
+	User       string
+	Password   string
+	Urls       []string
+	Sniff      bool
+	Timeout    int
+	RetryCount int
 }
 
 func NewConn() pluginDriver.Driver {
@@ -132,8 +131,8 @@ func (This *Conn) CheckUri() error {
 
 func (This *Conn) getUriParam(uri string) (EsServerInfo *EsServer) {
 	EsServerInfo = &EsServer{}
-	EsServerInfo.Urls = make([]string,0)
-	for _,httpUrl :=  range strings.Split(uri,",") {
+	EsServerInfo.Urls = make([]string, 0)
+	for _, httpUrl := range strings.Split(uri, ",") {
 		if httpUrl == "" {
 			continue
 		}
@@ -151,22 +150,22 @@ func (This *Conn) getUriParam(uri string) (EsServerInfo *EsServer) {
 			}
 		}
 		if len(auths["timeout"]) > 0 {
-			n,_ := strconv.Atoi(auths["timeout"][0])
+			n, _ := strconv.Atoi(auths["timeout"][0])
 			if n > 0 {
 				EsServerInfo.Timeout = n
 			}
 		}
 		if len(auths["retryCount"]) > 0 {
-			n,_ := strconv.Atoi(auths["retryCount"][0])
+			n, _ := strconv.Atoi(auths["retryCount"][0])
 			if n > 0 {
 				EsServerInfo.RetryCount = n
 			}
 		}
-		index := strings.Index(httpUrl,"?")
+		index := strings.Index(httpUrl, "?")
 		if index > 0 {
-			EsServerInfo.Urls = append(EsServerInfo.Urls,httpUrl[0:index])
-		}else{
-			EsServerInfo.Urls = append(EsServerInfo.Urls,httpUrl)
+			EsServerInfo.Urls = append(EsServerInfo.Urls, httpUrl[0:index])
+		} else {
+			EsServerInfo.Urls = append(EsServerInfo.Urls, httpUrl)
 		}
 	}
 	if EsServerInfo.Timeout == 0 {
@@ -238,7 +237,7 @@ func (This *Conn) GetVersion() (Version string, err error) {
 		This.Connect()
 	}
 	EsServerInfo := This.getUriParam(*This.Uri)
-	Version,err = This.client.ElasticsearchVersion(EsServerInfo.Urls[0])
+	Version, err = This.client.ElasticsearchVersion(EsServerInfo.Urls[0])
 	return
 }
 
@@ -267,31 +266,31 @@ func (This *Conn) doCreateMapping() {
 	if _, ok := This.p.hadMapping[EsIndexName]; !ok {
 		resp, err := This.client.GetMapping().Index(EsIndexName).Do(context.Background())
 
-		if err == nil && resp != nil{
+		if err == nil && resp != nil {
 			if _, ok := resp[EsIndexName]; ok { // hadMapping
 				This.p.hadMapping[EsIndexName] = true
 				return
 			}
 		}
 		var mapping map[string]interface{}
-		err = json.Unmarshal([]byte(This.p.Mapping),&mapping)
+		err = json.Unmarshal([]byte(This.p.Mapping), &mapping)
 		if err == nil {
 			This.client.PutMapping().Index(EsIndexName).BodyJson(mapping).Do(context.Background())
-		}else{
-			log.Printf("output[elasticsearch] doCreateMapping json.Unmarshal err: %s , mapping:%s",err.Error(),mapping)
+		} else {
+			log.Printf("output[elasticsearch] doCreateMapping json.Unmarshal err: %s , mapping:%s", err.Error(), mapping)
 		}
 		This.p.hadMapping[EsIndexName] = true
 	}
 }
 
-func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType,err error) {
+func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType, err error) {
 
 	if len(list) > 0 {
 		This.p.EsIndexName = strings.ToLower(fmt.Sprint(pluginDriver.TransfeResult(This.p.EsIndexName, list[0], 0)))
 	}
 
 	This.doCreateMapping()
-	errData,err = This.commitNormal(list, n)
+	errData, err = This.commitNormal(list, n)
 	return
 }
 
@@ -324,22 +323,21 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	}
 	list := This.p.Data.Data[:n]
 
-	dataMap := make(map[string][]*pluginDriver.PluginDataType,0)
+	dataMap := make(map[string][]*pluginDriver.PluginDataType, 0)
 	var ok bool
-	for _,PluginData := range list {
+	for _, PluginData := range list {
 		key := PluginData.SchemaName + "." + PluginData.TableName
-		if _,ok = dataMap[key];!ok {
-			dataMap[key] = make([]*pluginDriver.PluginDataType,0)
+		if _, ok = dataMap[key]; !ok {
+			dataMap[key] = make([]*pluginDriver.PluginDataType, 0)
 		}
-		dataMap[key] = append(dataMap[key],PluginData)
+		dataMap[key] = append(dataMap[key], PluginData)
 	}
-	for _,dataList := range dataMap {
-		ErrData,e = This.doCommit(dataList, n)
+	for _, dataList := range dataMap {
+		ErrData, e = This.doCommit(dataList, n)
 		// 假如数据不能丢，才需要 判断 是否有err，如果可以丢，直接错过数据
-		if e != nil  {
+		if e != nil {
 			This.err = e
 			if This.p.BifrostMustBeSuccess {
-
 				return nil, ErrData, This.err
 			}
 			if This.CheckDataSkip(ErrData) {
@@ -438,7 +436,7 @@ func (This *Conn) TimeOutCommit() (
 }
 
 // 设置跳过的位点
-func (This *Conn) Skip (SkipData *pluginDriver.PluginDataType) error {
+func (This *Conn) Skip(SkipData *pluginDriver.PluginDataType) error {
 	This.p.SkipBinlogData = SkipData
 	return nil
 }

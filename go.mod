@@ -1,6 +1,5 @@
 module github.com/brokercap/Bifrost
 
-
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/Shopify/sarama v1.26.4
@@ -10,6 +9,7 @@ require (
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/testing v0.0.0-20201216035041-2be42bba85f3 // indirect
+	github.com/olivere/elastic/v7 v7.0.24 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
@@ -28,7 +28,6 @@ replace (
 	golang.org/x/tools => github.com/golang/tools v0.0.0-20181219222714-6e267b5cc78e
 	google.golang.org/api => github.com/googleapis/google-api-go-client v0.0.0-20181220000619-583d854617af
 	google.golang.org/appengine => github.com/golang/appengine v1.3.0
-	google.golang.org/genproto => github.com/google/go-genproto v0.0.0-20181219182458-5a97ab628bfb
 	google.golang.org/grpc => github.com/grpc/grpc-go v1.17.0
 	gopkg.in/alecthomas/kingpin.v2 => github.com/alecthomas/kingpin v2.2.6+incompatible
 	gopkg.in/mgo.v2 => github.com/go-mgo/mgo v0.0.0-20180705113604-9856a29383ce

@@ -14,6 +14,7 @@ import (
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
+	elastic "github.com/olivere/elastic/v7"
 )
 
 var myConn *Conn
@@ -22,7 +23,7 @@ var event *pluginTestData.Event
 var SchemaName = "2bifrost_test"
 var TableName = "binlog_field_test"
 var EsIndexName = "{$SchemaName}--{$TableName}"
-var Url = "http://192.168.220.130:32769"
+var Url = "http://192.168.220.130:9200"
 
 func testBefore() {
 	conn = NewConn()
@@ -41,7 +42,7 @@ func getParam(args ...bool) map[string]interface{} {
 		"EsIndexName":          EsIndexName, //             string
 		"BifrostMustBeSuccess": true,        //  bool  // bifrost server 保留,数据是否能丢
 		"BatchSize":            3,           //             int
-		"Mapping":				`{
+		"Mapping": `{
   "mappings": {
     "properties": {},
     "date_detection": true,
@@ -80,7 +81,6 @@ func TestConn_CheckUri(t *testing.T) {
 	}
 	t.Log("success")
 }
-
 
 func TestCommit(t *testing.T) {
 	testBefore()
@@ -276,19 +276,21 @@ func TestRandDataAndCheck(t *testing.T) {
 		}
 	}
 	conn.TimeOutCommit()
+
 	dataMap := event.GetDataMap()
 
-	ids := []string{}
+	mget := myConn.client.Mget()
 	for id := range dataMap {
-		ids = append(ids, fmt.Sprint(id))
+		q1 := &elastic.MultiGetItem{}
+		q1.Index(myConn.p.EsIndexName).Id(fmt.Sprint(id))
+		mget.Add(q1)
 	}
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
 
 	time.Sleep(1 * time.Second)
-	// c := NewClickHouseDBConn(url)
-	dataList,err := myConn.client.Mget().StoredFields(ids...).Do(context.Background())
+	dataList, err := mget.Do(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,6 +417,37 @@ func TestConn_GetVersion(t *testing.T) {
 			gotVersion, _ := This.GetVersion()
 			log.Println(gotVersion)
 		})
+	}
+}
+
+func TestConn_Mget(t *testing.T) {
+	testBefore()
+	initSyncParam()
+	event := pluginTestData.NewEvent()
+	event.SetNoUint64(true)
+
+	eventData := event.GetTestInsertData()
+	eventData.Rows[0]["testint"] = "1334　" // 这个通不过， 不支持修改字段类型
+	conn.Insert(eventData, false)
+	eventData2 := event.GetTestInsertData()
+	conn.Insert(eventData2, false)
+	_, _, err2 := conn.TimeOutCommit()
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+	q1 := &elastic.MultiGetItem{}
+	q1.Index(myConn.p.EsIndexName).Id(fmt.Sprint(eventData.Rows[0]["id"]))
+	q2 := &elastic.MultiGetItem{}
+	q2.Index(myConn.p.EsIndexName).Id(fmt.Sprint(eventData2.Rows[0]["id"]))
+	MgetResponse, err := myConn.client.MultiGet().Add(q1, q2).Do(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range MgetResponse.Docs {
+		t.Log(string(v.Source))
+		for key, val := range v.Fields {
+			t.Log(key, val)
+		}
 	}
 }
 
