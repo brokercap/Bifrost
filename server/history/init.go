@@ -49,6 +49,7 @@ func AddHistory(dbName string,SchemaName string,TableName string,TableNames stri
 	if Property.SyncThreadNum <= 0 {
 		Property.SyncThreadNum = 1
 	}
+	Property.FirstLimitOptimize = Property.LimitOptimize
 	if len(ToServerIDList) * int(Property.SyncThreadNum) > 16384 {
 		return 0,fmt.Errorf("SyncThreadNum * len(ToServerIDList) > 16384")
 	}
@@ -164,6 +165,7 @@ type HistoryProperty struct {
 	Where				string   // where 条件
 	LimitOptimize		int8	 // 是否自动分页优化, 1 采用 between 方式优化 0 不启动优化
 	SyncThreadNum		int		 // 同步协程数
+	FirstLimitOptimize	int8	 // 被添加的时候 LimitOptimize 的值，因为计算的时候，LimitOptimize 是可能被修改掉值
 }
 
 type ThreadStatus struct {
@@ -448,6 +450,8 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 			}
 		}
 	}
+	// 重新赋值在界面配置的 LimitOptimize 初始值
+	This.Property.LimitOptimize = This.Property.FirstLimitOptimize
 	// 没有主键的情况下,不能使用 between 等方式查询
 	if This.TablePriKey == "" {
 		This.Property.LimitOptimize = 0
