@@ -60,14 +60,18 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 	var disTableName = ""
 
 	sql0 := TransferComma2Other(This.Sql)
-	sql0Arr := strings.Split(sql0, ",")
+	var sql0Arr = strings.Split(sql0, ",")
+	if len(sql0Arr) <= 1 {
+		sql0Arr = strings.Split(sql0, "#@%")
+	}
+
 	alterParamArr := make([]string, 0)
 	for i, v := range sql0Arr {
 		v = ReplaceBr(v)
 		v = strings.Trim(v, " ")
 		v = TransferOther2Comma(v)
 		UpperV := strings.ToUpper(v)
-		log.Println("ddl: " + UpperV)
+		log.Println("DDL ALTER: " + UpperV)
 		// 假如是第一个，则要去除  ALTER TABLE tableName
 		if i == 0 && strings.Index(UpperV, "ALTER TABLE") == 0 {
 			tmpArr := strings.Split(v, " ")
@@ -88,7 +92,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			v = strings.Trim(v, " ")
 			UpperV = strings.ToUpper(v)
 		}
-		if c.p.ModifDDLMap["ColumnChange"] && strings.Index(UpperV, "CHANGE") == 0 {
+		if c.p.ModifDDLType.ColumnModify && strings.Index(UpperV, "CHANGE") == 0 {
 			columnChange := This.ChangeColumn(v)
 			if columnChange == "" {
 				continue
@@ -96,7 +100,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			alterParamArr = append(alterParamArr, columnChange)
 			continue
 		}
-		if c.p.ModifDDLMap["ColumnAdd"] && strings.Index(UpperV, "ADD") == 0 {
+		if c.p.ModifDDLType.ColumnAdd && strings.Index(UpperV, "ADD") == 0 {
 			columnAdd := This.AddColumn(v)
 			if columnAdd == "" {
 				continue
@@ -104,7 +108,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			alterParamArr = append(alterParamArr, columnAdd)
 			continue
 		}
-		if c.p.ModifDDLMap["ColumnModify"] && strings.Index(UpperV, "MODIFY") == 0 {
+		if c.p.ModifDDLType.ColumnModify && strings.Index(UpperV, "MODIFY") == 0 {
 			columnModify := This.ModifyColumn(v)
 			if columnModify == "" {
 				continue
@@ -112,12 +116,12 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			alterParamArr = append(alterParamArr, columnModify)
 			continue
 		}
-		if c.p.ModifDDLMap["ColumnDrop"] && strings.Index(UpperV, "DROP COLUMN") == 0 {
+		if c.p.ModifDDLType.ColumnDrop && strings.Index(UpperV, "DROP COLUMN") == 0 {
 			columnDrop := This.DropColumn(v)
 			if columnDrop == "" {
 				continue
 			}
-			alterParamArr = append(alterParamArr)
+			alterParamArr = append(alterParamArr, columnDrop)
 			continue
 		}
 		/*
@@ -146,6 +150,7 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 	case 1: //单机模式
 		//单机下的最终ddl语句
 		destAlterSql = "alter table `" + SchemaName + "`.`" + TableName + "` " + strings.Join(alterParamArr, ",")
+		log.Println("DDL ALTER DJ CK: " + destAlterSql)
 	case 2: //集群模式
 		//集群下的本地表和分布式表最终的 ddl 语句
 		if c.p.CkClusterName == "" {
@@ -156,6 +161,8 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 		destViewAlterSql = fmt.Sprintf("Drop TABLE IF EXISTS %s.%s on cluster %s;create view IF NOT EXISTS %s.%s on cluster %s as "+
 			"select * from %s.%s final",
 			SchemaName, disTableName+"_"+"pview", c.p.CkClusterName, SchemaName, disTableName+"_"+"pview", c.p.CkClusterName, SchemaName, disTableName)
+
+		log.Println("DDL ALTER JQ CK: " + destLocalAlterSql + "===" + destDisAlterSql + "===" + destViewAlterSql)
 	}
 
 	return
@@ -174,10 +181,19 @@ ck : modify column column_name [type] [default_expr]
 func (This *AlterSQL) ChangeColumn(sql string) (destAlterSql string) {
 	var columnName, ckType string
 	pArr := strings.Split(sql, " ")
-	if pArr[1] != pArr[2] {
-		destAlterSql += " RENAME COLUMN  IF EXISTS " + pArr[1] + "  TO " + pArr[2] + ""
-		return
+	//经测试 不同mysql客户端可视化操作 生成的sql有差异 比如： sqlyog[change 不带column]  Navicat[change 带column]
+	if strings.ToUpper(pArr[0]) == "CHANGE" && strings.ToUpper(pArr[1]) == "COLUMN" {
+		if pArr[2] != pArr[3] {
+			destAlterSql += " RENAME COLUMN  IF EXISTS " + pArr[2] + "  TO " + pArr[3] + ""
+			return
+		}
+	} else {
+		if pArr[1] != pArr[2] {
+			destAlterSql += " RENAME COLUMN  IF EXISTS " + pArr[1] + "  TO " + pArr[2] + ""
+			return
+		}
 	}
+
 	columnName = pArr[2]
 	ckType = This.GetTransferCkType(pArr[3])
 	var AlterColumn = &AlterColumnInfo{}
@@ -211,11 +227,20 @@ ck : modify column column_name [type] [default_expr]
 func (This *AlterSQL) ModifyColumn(sql string) (destAlterSql string) {
 	var columnName, ckType string
 	pArr := strings.Split(sql, " ")
-	columnName = pArr[2]
-	ckType = This.GetTransferCkType(pArr[3])
+
 	var AlterColumn = &AlterColumnInfo{}
-	if len(pArr) > 4 {
-		AlterColumn = This.GetColumnInfo(pArr[4:])
+	if strings.ToUpper(pArr[0]) == "MODIFY" && strings.ToUpper(pArr[1]) == "COLUMN" {
+		columnName = pArr[2]
+		ckType = This.GetTransferCkType(pArr[3])
+		if len(pArr) > 4 {
+			AlterColumn = This.GetColumnInfo(pArr[4:])
+		}
+	} else {
+		columnName = pArr[1]
+		ckType = This.GetTransferCkType(pArr[2])
+		if len(pArr) > 3 {
+			AlterColumn = This.GetColumnInfo(pArr[3:])
+		}
 	}
 
 	if AlterColumn.isUnsigned {

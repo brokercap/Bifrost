@@ -38,15 +38,17 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 
 	ckObj := &Conn{
 		p: &PluginParam{
-			CkSchema:    "",
-			ModifDDLMap: map[string]bool{},
+			CkSchema:     "",
+			ModifDDLType: &DDLSupportType{},
 		},
 	}
-	ckObj.p.ModifDDLMap["ColumnAdd"] = true
-	ckObj.p.ModifDDLMap["ColumnModify"] = true
-	ckObj.p.ModifDDLMap["ColumnChange"] = true
-	ckObj.p.ModifDDLMap["ColumnDrop"] = true
-	ckObj.p.ModifDDLMap["TableRename"] = true
+	ckObj.p.ModifDDLType.ColumnAdd = true
+	ckObj.p.ModifDDLType.ColumnModify = true
+	ckObj.p.ModifDDLType.TableRename = true
+
+	ckObj.p.ModifDDLType.ColumnDrop = false
+	ckObj.p.ModifDDLType.DropDbAndTable = false
+	ckObj.p.ModifDDLType.Rruncate = false
 	ckObj.p.CkEngine = 2
 	ckObj.p.CkClusterName = "ck_cluster"
 
@@ -113,7 +115,7 @@ func TestAlterSQL_GetColumnInfo(t *testing.T) {
 	//sql := `ALTER TABLE bifrost_test.table_nodata
 	//ADD COLUMN t1 TIMESTAMP DEFAULT '2020-01-12 121:00:00'  NULL  COMMENT "it is test" AFTER f1;`
 	ckObj := &Conn{
-		P: &PluginParam{
+		p: &PluginParam{
 			CkSchema: "",
 		},
 	}
@@ -164,7 +166,7 @@ func TestAlterSQL_GetTransferCkType(t *testing.T) {
 	testArr = append(testArr, result{Val: "decimal( 1 )", Type: "Decimal(1,0)"})
 
 	ckObj := &Conn{
-		P: &PluginParam{
+		p: &PluginParam{
 			CkSchema: "",
 		},
 	}

@@ -55,6 +55,15 @@ const (
 	SYNCMODE_LOG_APPEND SyncType = "insertAll"
 )
 
+type DDLSupportType struct {
+	ColumnAdd      bool
+	ColumnModify   bool
+	ColumnDrop     bool
+	TableRename    bool
+	DropDbAndTable bool
+	Rruncate       bool
+}
+
 type PluginParam struct {
 	Field                  []fieldStruct
 	BatchSize              int
@@ -63,12 +72,13 @@ type PluginParam struct {
 	PriKey                 []fieldStruct
 	SyncType               SyncType
 	AutoCreateTable        bool
-	NullNotTransferDefault bool            //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
-	BifrostMustBeSuccess   bool            // bifrost server 保留,数据是否能丢
-	LowerCaseTableNames    int8            // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
-	ModifDDLMap            map[string]bool //ddl同步程度选择
-	CkEngine               int
-	CkClusterName          string
+	NullNotTransferDefault bool //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
+	BifrostMustBeSuccess   bool // bifrost server 保留,数据是否能丢
+	LowerCaseTableNames    int8 // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
+	//ModifDDLMap            map[string]bool //ddl同步程度选择
+	ModifDDLType  *DDLSupportType //ddl同步程度选择
+	CkEngine      int
+	CkClusterName string
 	// 以上的数据是 界面配置的参数
 
 	// 以下的数据 是插件执行的时候，进行计算而来的
@@ -238,7 +248,6 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam, error) {
 	if param.AutoCreateTable == true {
 		param.SyncType = SYNCMODE_LOG_APPEND
 	}
-
 	This.p = &param
 	if param.AutoCreateTable == false {
 		This.getCktFieldType()
@@ -271,11 +280,14 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 		if This.p.CkEngine == 0 { //表示是旧版本升级上来的(旧版本只有单机情况) 强制赋值为1 表示单机  2表示 集群
 			This.p.CkEngine = 1
 			//因为旧版本ddl默认是全部开启的  所以ddl同步 新版在这默认全部开启以兼容老版本
-			This.p.ModifDDLMap["ColumnAdd"] = true
-			This.p.ModifDDLMap["ColumnModify"] = true
-			This.p.ModifDDLMap["ColumnChange"] = true
-			This.p.ModifDDLMap["ColumnDrop"] = true
-			This.p.ModifDDLMap["TableRename"] = true
+			This.p.ModifDDLType.ColumnAdd = true
+			This.p.ModifDDLType.ColumnModify = true
+			This.p.ModifDDLType.TableRename = true
+
+			This.p.ModifDDLType.ColumnDrop = false
+			This.p.ModifDDLType.DropDbAndTable = false
+			This.p.ModifDDLType.Rruncate = false
+
 		}
 		return This.p, nil
 	default:
@@ -287,11 +299,13 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 		if tmpP.CkEngine == 0 { //表示是旧版本升级上来的(旧版本只有单机情况) 强制赋值为1 表示单机  2表示 集群
 			tmpP.CkEngine = 1
 			//因为旧版本ddl默认是全部开启的  所以ddl同步 新版在这默认全部开启以兼容老版本
-			tmpP.ModifDDLMap["ColumnAdd"] = true
-			tmpP.ModifDDLMap["ColumnModify"] = true
-			tmpP.ModifDDLMap["ColumnChange"] = true
-			tmpP.ModifDDLMap["ColumnDrop"] = true
-			tmpP.ModifDDLMap["TableRename"] = true
+			This.p.ModifDDLType.ColumnAdd = true
+			This.p.ModifDDLType.ColumnModify = true
+			This.p.ModifDDLType.TableRename = true
+
+			This.p.ModifDDLType.ColumnDrop = false
+			This.p.ModifDDLType.DropDbAndTable = false
+			This.p.ModifDDLType.Rruncate = false
 		}
 		return tmpP, nil
 	}

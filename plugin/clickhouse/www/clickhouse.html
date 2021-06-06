@@ -97,130 +97,74 @@
         </div>
     </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label">自动新增字段：</label>
+    <div class="form-group" id="ddlDiV">
+        <label class="col-sm-3 control-label">DDL：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="column_add" id="column_add">
-                <option value="true" selected="selected">True</option>
-                <option value="false">False</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p></p>
-            </span>
+            <label><input type="checkbox" name="column_add" id="column_add" value="" checked
+                          style="width: 20px; height: 20px;">Add Column</label>
+            <label><input type="checkbox" name="column_modify" id="column_modify" value="" checked
+                          style="width: 20px; height: 20px;">Modify Column</label>
+            <label><input type="checkbox" name="column_drop" id="column_drop" value="" checked
+                          style="width: 20px; height: 20px;">Drop Column</label>
+            <label><input type="checkbox" name="table_rename" id="table_rename" value=""
+                          style="width: 20px; height: 20px;">Rename Table</label>
         </div>
-    </div>
-    <div>&nbsp;</div>
+        <div>
+
+            <br><br>
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <table style="width: 100%">
+                        <thead>
+                        <tr>
+                            <th width="45%" height="35">Ck Field</th>
+                            <th width="45%">DB Field</th>
+                            <th>PRI</th>
+                        </tr>
+                        </thead>
+                        <tbody id="CKTableFieldsTable">
 
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label">自动修改字段类型：</label>
-        <div class="col-sm-9">
-            <select class="form-control" name="column_modify" id="column_modify">
-                <option value="true" selected="selected">True</option>
-                <option value="false">False</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p></p>
-            </span>
-        </div>
-    </div>
-    <div>&nbsp;</div>
-
-    <div class="form-group">
-        <label class="col-sm-3 control-label">自动修改字段名称：</label>
-        <div class="col-sm-9">
-            <select class="form-control" name="column_change" id="column_change">
-                <option value="true" selected="selected">True</option>
-                <option value="false">False</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p></p>
-            </span>
-        </div>
-    </div>
-    <div>&nbsp;</div>
-
-
-    <div class="form-group">
-        <label class="col-sm-3 control-label">自动删除字段：</label>
-        <div class="col-sm-9">
-            <select class="form-control" name="column_drop" id="column_drop">
-                <option value="true" selected="selected">True</option>
-                <option value="false">False</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p></p>
-            </span>
-        </div>
-    </div>
-    <div>&nbsp;</div>
-
-    <div class="form-group">
-        <label class="col-sm-3 control-label">自动修改表名：</label>
-        <div class="col-sm-9">
-            <select class="form-control" name="table_rename" id="table_rename">
-                <option value="true" selected="selected">True</option>
-                <option value="false">False</option>
-            </select>
-            <span class="help-block m-b-none">
-                <p></p>
-            </span>
-        </div>
-    </div>
-    <div>&nbsp;</div>
-    <br><br>
-    <div class="form-group">
-        <div class="col-sm-12">
-            <table style="width: 100%">
-                <thead>
-                <tr>
-                    <th width="45%" height="35">Ck Field</th>
-                    <th width="45%">DB Field</th>
-                    <th>PRI</th>
-                </tr>
-                </thead>
-                <tbody id="CKTableFieldsTable">
-
-
-                </tbody>
-                <!--
-                <tr>
-                    <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
-                    <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
-                </tr>
-                -->
-            </table>
-            <p>&nbsp;</p>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label class="col-sm-3 control-label">BatchSize：</label>
-        <div class="col-sm-9">
-            <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control" placeholder="">
-            <span class="help-block m-b-none">* 多少条刷一次数据</span>
-        </div>
-    </div>
-</div>
-
-
-<!--show clickhouse create sql start-->
-<div class="modal inmodal fade" id="showClickHouseCreateSQL" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
-                            class="sr-only">Close</span></button>
-                <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+                        </tbody>
+                        <!--
+                        <tr>
+                            <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
+                            <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
+                        </tr>
+                        -->
+                    </table>
+                    <p>&nbsp;</p>
+                </div>
             </div>
-            <div class="modal-body">
 
-
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+            <div class="form-group">
+                <label class="col-sm-3 control-label">BatchSize：</label>
+                <div class="col-sm-9">
+                    <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control"
+                           placeholder="">
+                    <span class="help-block m-b-none">* 多少条刷一次数据</span>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-<!--show clickhouse create sql over-->
+
+
+        <!--show clickhouse create sql start-->
+        <div class="modal inmodal fade" id="showClickHouseCreateSQL" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                    class="sr-only">Close</span></button>
+                        <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+                    </div>
+                    <div class="modal-body">
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--show clickhouse create sql over-->

@@ -8,6 +8,7 @@ document.getElementById("clickhouse_engine").onchange = function () {
     }
 }
 
+
 function doGetPluginParam() {
     var result = {data: {}, status: false, msg: "failed", batchSupport: false};
 
@@ -97,45 +98,39 @@ function doGetPluginParam() {
     var ckClusterName = $("#ckClusterName").val();
 
     // 选ddl同步程度
-    var column_add = $("#column_add").val();
-    var column_modify = $("#column_modify").val();
-    var column_change = $("#column_change").val();
-    var column_drop = $("#column_drop").val();
-    var table_rename = $("#table_rename").val();
-    if (column_add == "true") {
-        column_add = true;
-    } else {
-        column_add = false;
-    }
-    if (column_modify == "true") {
-        column_modify = true;
-    } else {
-        column_modify = false;
-    }
-    if (column_change == "true") {
-        column_change = true;
-    } else {
-        column_change = false;
-    }
-    if (column_drop == "true") {
-        column_drop = true;
-    } else {
-        column_drop = false;
-    }
-    if (table_rename == "true") {
-        table_rename = true;
-    } else {
-        table_rename = false;
-    }
+    var column_add = $("#column_add").is(":checked");
+    var column_modify = $("#column_modify").is(":checked");
+    var column_drop = $("#column_drop").is(":checked");
+    var table_rename = $("#table_rename").is(":checked");
+    var drop_db_and_table = $("#drop_db_and_table").is(":checked");
+    var truncate = $("#truncate").is(":checked");
+
+
     var clickhouse_engine = parseInt($("#clickhouse_engine").val());
 
-    var modifDDLMap = {
+    var ModifDDLType = {
         ColumnAdd: column_add,
         ColumnModify: column_modify,
-        ColumnChange: column_change,
         ColumnDrop: column_drop,
-        TableRename: table_rename
+        TableRename: table_rename,
+        dropDbAndTable: drop_db_and_table,
+        Rruncate: truncate
     };
+
+    var hidden = $('#ddlDiV').is(':hidden');// true 为隐藏状态
+    if (hidden == true) {  //若为隐藏状态则 提交值全部为false
+        ModifDDLType = {
+            ColumnAdd: false,
+            ColumnModify: false,
+            ColumnDrop: false,
+            TableRename: false,
+            DropDbAndTable: false,
+            Rruncate: false
+        };
+    }
+
+    // 测试
+    alert(JSON.stringify(ModifDDLType))
 
     result.msg = "success";
     result.status = true;
@@ -147,7 +142,7 @@ function doGetPluginParam() {
     result.data["SyncType"] = SyncType;
     result.data["AutoCreateTable"] = AutoCreateTable;
     result.data["LowerCaseTableNames"] = parseInt(LowerCaseTableNames);
-    result.data["ModifDDLMap"] = modifDDLMap;
+    result.data["ModifDDLType"] = ModifDDLType;
 
     result.data["CkEngine"] = clickhouse_engine;
     result.data["CkClusterName"] = ckClusterName;
@@ -314,7 +309,7 @@ function GetCkSchameTableList(SchemaName) {
     $("#CKTableFieldsTable").html("");
     if (SchemaName == "") {
         $("#clickohuse_table").html("");
-
+        $("#ddlDiV").show()
         return
     }
     $.get(
@@ -334,6 +329,12 @@ function GetCkSchameTableList(SchemaName) {
 }
 
 function GetCkTableDesc(SchemaName, TableName) {
+    if (TableName != "") {
+        $("#ddlDiV").hide()
+    } else {
+        $("#ddlDiV").show()
+    }
+
     $("#CKTableFieldsTable").html("");
     ckFieldDataMap = {};
     $.get(

@@ -128,7 +128,7 @@ func (This *Plugin) DoTestStart(n uint) error {
 			}
 
 			if err == nil {
-				if This.debug {
+				if This.debug && lastSuccessCommitData != nil {
 					log.Println("success(", i, ") ", opName, " lastSuccessCommitData:", *lastSuccessCommitData, " data:", data)
 				}
 				break
