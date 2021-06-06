@@ -28,6 +28,7 @@ import (
 
 func LoadConf(BifrostConfigFile string) {
 	if BifrostConfigFile == "" {
+		BifrostDir = "C:/zy/githup/Bifrost_v1.8.x/Bifrost"
 		BifrostConfigFile = BifrostDir + "/etc/Bifrost.ini"
 		//log.Println("BifrostConfigFile:",BifrostConfigFile)
 	} else {
@@ -96,7 +97,7 @@ func InitParam() {
 	}
 	DelConfig("Bifrostd", "admin_template_dir")
 
-	BifrostPluginTemplateDir = GetConfigVal("Bifrostd", "plugin_template_dir")
+	BifrostPluginTemplateDir = GetConfigVal("Bifrostd", "pdlugin_template_dir")
 	if BifrostPluginTemplateDir == "" {
 		BifrostPluginTemplateDir = BifrostDir
 	}
