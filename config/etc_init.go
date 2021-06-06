@@ -29,6 +29,7 @@ import (
 func LoadConf(BifrostConfigFile string) {
 	if BifrostConfigFile == "" {
 		BifrostConfigFile = BifrostDir + "/etc/Bifrost.ini"
+
 		//log.Println("BifrostConfigFile:",BifrostConfigFile)
 	} else {
 		if runtime.GOOS != "windows" {
