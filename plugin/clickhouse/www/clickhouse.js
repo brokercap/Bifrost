@@ -128,7 +128,6 @@ function doGetPluginParam() {
             Rruncate: false
         };
     }
-
     // 测试
     // alert(JSON.stringify(ModifDDLType))
 
