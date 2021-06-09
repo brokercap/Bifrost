@@ -602,11 +602,32 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 					return data, nil, This.conn.err
 				}
 			case 2: //集群
-				if newLocalSql == "" || newDisSql == "" || (newViewSql == "" && len(strings.Split(newViewSql, ";")) > 1) {
+				if newLocalSql == "" || newDisSql == "" || newViewSql == "" {
 					return data, nil, This.conn.err
 				}
 			}
 
+			// DATABASE 级别操作 不需要验证下面的存在逻辑。 已经添加了 IF EXISTS
+			switch This.p.CkEngine {
+			case 1: //单机
+				if strings.Contains(newSql, "DATABASE") {
+					This.conn.err = This.conn.Exec(newSql, []driver.Value{})
+					if This.conn.err != nil {
+						log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+						return nil, data, This.conn.err
+					}
+				}
+			case 2: //集群
+				if strings.Contains(newLocalSql, "DATABASE") { //DATABASE 执行一个 一次删除就行了
+					This.conn.err = This.conn.Exec(newLocalSql, []driver.Value{})
+					if This.conn.err != nil {
+						log.Printf("plugin mysql, exec sql:%s err:%s", newLocalSql, This.conn.err)
+						return nil, data, This.conn.err
+					}
+				}
+			}
+
+			// 非 database 级别，表级别操作，检查表是否存在
 			b, _ := This.CheckTableExsit(SchemaName, TableName)
 			if b == false {
 				return data, nil, nil
@@ -628,10 +649,14 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 			switch This.p.CkEngine {
 			case 1: //单机
 				This.conn.err = This.conn.Exec(newSql, []driver.Value{})
+				if This.conn.err != nil {
+					log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+					return nil, data, This.conn.err
+				}
 			case 2: //集群
 				This.conn.err = This.conn.Exec(newLocalSql, []driver.Value{})
 				if This.conn.err != nil {
-					log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+					log.Printf("plugin mysql, exec sql:%s err:%s", newLocalSql, This.conn.err)
 					return nil, data, This.conn.err
 				}
 				This.conn.err = This.conn.Exec(newDisSql, []driver.Value{})
@@ -640,20 +665,28 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 					return nil, data, This.conn.err
 				}
 
-				This.conn.err = This.conn.Exec(strings.Split(newViewSql, ";")[0], []driver.Value{})
+				for _, v := range strings.Split(newViewSql, ";") {
+					This.conn.err = This.conn.Exec(v, []driver.Value{})
+					if This.conn.err != nil {
+						log.Printf("plugin mysql, exec sql:%s err:%s", v, This.conn.err)
+						return nil, data, This.conn.err
+					}
+				}
+
+				/*This.conn.err = This.conn.Exec(strings.Split(newViewSql, ";")[0], []driver.Value{})
 				if This.conn.err != nil {
 					log.Printf("plugin mysql, exec sql:%s err:%s", strings.Split(newViewSql, ";")[0], This.conn.err)
 					return nil, data, This.conn.err
 				}
 
 				This.conn.err = This.conn.Exec(strings.Split(newViewSql, ";")[1], []driver.Value{})
+				if This.conn.err != nil {
+					log.Printf("plugin mysql, exec sql:%s err:%s", strings.Split(newViewSql, ";")[1], This.conn.err)
+					return nil, data, This.conn.err
+				}*/
 
 			}
 
-			if This.conn.err != nil {
-				log.Printf("plugin mysql, exec sql:%s err:%s", strings.Split(newViewSql, ";")[1], This.conn.err)
-				return nil, data, This.conn.err
-			}
 			// 清掉缓存，下一次数据操作的时候，再从 ck 里读取
 			key := "`" + SchemaName + "`.`" + TableName + "`"
 			delete(This.p.tableMap, key)

@@ -36,7 +36,7 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName
 		return
 	}
 	Query = strings.Trim(strings.Trim(strings.Trim(Query, " "), ";"), " ")
-	switch strings.ToUpper(Query[0:5]) {
+	switch strings.Trim(strings.ToUpper(Query[0:5]), " ") {
 	// alter
 	case "ALTER":
 		Query = TransferNotes2Space(Query)
@@ -51,6 +51,15 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName
 		Query = ReplaceTwoReplace(Query)
 		c := NewReNameSQL(data.SchemaName, Query, This)
 		SchemaName, TableName, newLocalSql, newViewSql, newDisSql = c.Transfer2CkSQL(This)
+	case "DROP":
+		if !This.p.ModifDDLType.DropDbAndTable {
+			return
+		}
+		Query = TransferNotes2Space(Query)
+		Query = ReplaceBr(Query)
+		Query = ReplaceTwoReplace(Query)
+		c := NewDropDBOrTruncateSQL(data.SchemaName, Query, This)
+		SchemaName, TableName, newSql, newLocalSql, newViewSql, newDisSql = c.Transfer2CkSQL(This)
 	default:
 		break
 	}
