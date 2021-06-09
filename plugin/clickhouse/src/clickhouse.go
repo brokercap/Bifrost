@@ -672,19 +672,6 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 						return nil, data, This.conn.err
 					}
 				}
-
-				/*This.conn.err = This.conn.Exec(strings.Split(newViewSql, ";")[0], []driver.Value{})
-				if This.conn.err != nil {
-					log.Printf("plugin mysql, exec sql:%s err:%s", strings.Split(newViewSql, ";")[0], This.conn.err)
-					return nil, data, This.conn.err
-				}
-
-				This.conn.err = This.conn.Exec(strings.Split(newViewSql, ";")[1], []driver.Value{})
-				if This.conn.err != nil {
-					log.Printf("plugin mysql, exec sql:%s err:%s", strings.Split(newViewSql, ";")[1], This.conn.err)
-					return nil, data, This.conn.err
-				}*/
-
 			}
 
 			// 清掉缓存，下一次数据操作的时候，再从 ck 里读取
