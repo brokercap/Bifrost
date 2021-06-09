@@ -28,7 +28,6 @@ import (
 
 func LoadConf(BifrostConfigFile string) {
 	if BifrostConfigFile == "" {
-		BifrostDir = "C:/zy/software/gihup/Bifrost"
 		BifrostConfigFile = BifrostDir + "/etc/Bifrost.ini"
 		//log.Println("BifrostConfigFile:",BifrostConfigFile)
 	} else {
