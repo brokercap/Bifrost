@@ -6,32 +6,32 @@ import (
 	"strings"
 )
 
-type DropDBTableOrTruncateSQL struct {
+type DropDBTableOrTableSQL struct {
 	DefaultSchemaName string
 	Sql               string
 	c                 *Conn
 }
 
-func NewDropDBOrTruncateSQL(DefaultSchemaName, sql string, c *Conn) *DropDBTableOrTruncateSQL {
-	return &DropDBTableOrTruncateSQL{
+func NewDropDBOrTableSQL(DefaultSchemaName, sql string, c *Conn) *DropDBTableOrTableSQL {
+	return &DropDBTableOrTableSQL{
 		DefaultSchemaName: DefaultSchemaName,
 		Sql:               sql,
 		c:                 c,
 	}
 }
 
-func (This *DropDBTableOrTruncateSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, newSql, newLocalSql, newDisSql, newViewSql string) {
+func (This *DropDBTableOrTableSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, newSql, newLocalSql, newDisSql, newViewSql string) {
 	var dbNameOrTableName = ""
 	var disTableName = ""
 	var isDatabase = false
 
 	sql0 := strings.Split(This.Sql, " ")
-	if len(sql0) <= 3 {
+	if len(sql0) < 3 {
 		log.Println("invalid sql " + This.Sql)
 		return
 	}
 
-	log.Println("dropDbOrTable or truncate mysql sql: " + This.Sql)
+	log.Println("dropDbOrTable  mysql sql: " + This.Sql)
 
 	if strings.Trim(strings.ToUpper(sql0[1]), " ") == "DATABASE" {
 		isDatabase = true

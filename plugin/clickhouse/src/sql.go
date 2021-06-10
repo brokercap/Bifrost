@@ -58,7 +58,16 @@ func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName
 		Query = TransferNotes2Space(Query)
 		Query = ReplaceBr(Query)
 		Query = ReplaceTwoReplace(Query)
-		c := NewDropDBOrTruncateSQL(data.SchemaName, Query, This)
+		c := NewDropDBOrTableSQL(data.SchemaName, Query, This)
+		SchemaName, TableName, newSql, newLocalSql, newViewSql, newDisSql = c.Transfer2CkSQL(This)
+	case "TRUNC":
+		if !This.p.ModifDDLType.Rruncate {
+			return
+		}
+		Query = TransferNotes2Space(Query)
+		Query = ReplaceBr(Query)
+		Query = ReplaceTwoReplace(Query)
+		c := NewTruncateSQL(data.SchemaName, Query, This)
 		SchemaName, TableName, newSql, newLocalSql, newViewSql, newDisSql = c.Transfer2CkSQL(This)
 	default:
 		break
