@@ -131,6 +131,11 @@ function doGetPluginParam() {
     // 测试
     // alert(JSON.stringify(ModifDDLType))
 
+    if (parseInt($('#clickhouse_engine').val()) == 2 && $('#ckClusterName').val() == "") {
+        alert("ckClusterName 集群模式下不能为空")
+        return
+    }
+
     result.msg = "success";
     result.status = true;
     result.data["Field"] = Field;

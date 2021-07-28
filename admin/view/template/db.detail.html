@@ -838,11 +838,6 @@
 
         $("#addToServerBtn").click(
             function () {
-                if (parseInt($('#clickhouse_engine').val()) == 2 && $('#ckClusterName').val() == "") {
-                    alert("ckClusterName 集群模式下不能为空")
-                    return
-                }
-
                 if ($("#addToServerKey").val() == null) {
                     if (confirm("目标库地址为空，是否跳转到 添加 目标库 ？")) {
                         window.location.href = "/toserver/list";
@@ -922,11 +917,6 @@
 
         $("#batchAddToServerBtn").click(
             function () {
-                if (parseInt($('#clickhouse_engine').val()) == 2 && $('#ckClusterName').val() == "") {
-                    alert("ckClusterName 集群模式下不能为空")
-                    return
-                }
-
                 if ($("#addToServerKey").val() == null) {
                     if (confirm("目标库地址为空，是否跳转到 添加 目标库 ？")) {
                         window.location.href = "/toserver/list";
