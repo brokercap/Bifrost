@@ -31,10 +31,10 @@ func AllTypeToUInt64(s interface{}) (uint64, error) {
 	return ui64, nil
 }
 
-func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,NullNotTransferDefault bool) (v interface{}, e error) {
+func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, NullNotTransferDefault bool) (v interface{}, e error) {
 	// 假如字段允许是 Nullable() ，允许为 null 的情况下，并设置的强制转成默认值，则直接写入 nil 值
 	if NullNotTransferDefault == true && data == nil && toDataType[0:3] == "Nul" {
-		return nil,nil
+		return nil, nil
 	}
 	defer func() {
 		if err := recover(); err != nil {
@@ -53,7 +53,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 			break
 		case string:
 			switch data.(string) {
-			case "0000-00-00",""," ":
+			case "0000-00-00", "", " ":
 				v = int16(0)
 				break
 			default:
@@ -93,13 +93,13 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 			v = int32(data.(float64))
 		case string:
 			switch data.(string) {
-			case "0000-00-00 00:00:00",""," ":
+			case "0000-00-00 00:00:00", "", " ":
 				v = int32(0)
 				break
 			default:
-				if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
+				if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
 					v = int64(0)
-				}else{
+				} else {
 					v = data
 				}
 				break
@@ -389,7 +389,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 		break
 	default:
 		//DateTime64
-		if strings.Contains(toDataType,"DateTime64") {
+		if strings.Contains(toDataType, "DateTime64") {
 			if data == nil {
 				v = int64(0)
 				break
@@ -406,14 +406,14 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string,Nu
 			case float64:
 				v = int64(data.(float64))
 			case string:
-				switch data.(string){
-				case ""," ":
+				switch data.(string) {
+				case "", " ":
 					v = int64(0)
 					break
 				default:
-					if strings.Index(data.(string),"0000-00-00 00:00:00") == 0 {
+					if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
 						v = int64(0)
-					}else{
+					} else {
 						v = data
 					}
 					break
@@ -474,41 +474,41 @@ func interfaceToFloat64(data interface{}) float64 {
 	return f1
 }
 
-func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) (toType string) {
+func (This *Conn) TransferToCkTypeByColumnType(columnType string, nullable bool) (toType string) {
 	toType = "String"
 	switch columnType {
-	case "uint64","Nullable(uint64)":
+	case "uint64", "Nullable(uint64)":
 		toType = "UInt64"
-	case "int64","Nullable(int64)":
+	case "int64", "Nullable(int64)":
 		toType = "Int64"
-	case "uint32","Nullable(uint32)","uint24","Nullable(uint24)":
+	case "uint32", "Nullable(uint32)", "uint24", "Nullable(uint24)":
 		toType = "UInt32"
-	case "int32","Nullable(int32)","int24","Nullable(int24)":
+	case "int32", "Nullable(int32)", "int24", "Nullable(int24)":
 		toType = "Int32"
-	case "uint16","Nullable(uint16)":
+	case "uint16", "Nullable(uint16)":
 		toType = "UInt16"
-	case "int16","Nullable(int16)","year(4)","Nullable(year(4))","year(2)","Nullable(year(2))":
+	case "int16", "Nullable(int16)", "year(4)", "Nullable(year(4))", "year(2)", "Nullable(year(2))":
 		toType = "Int16"
-	case "uint8","Nullable(uint8)":
+	case "uint8", "Nullable(uint8)":
 		toType = "UInt8"
-	case "int8","Nullable(int8)","bool","Nullable(bool)":
+	case "int8", "Nullable(int8)", "bool", "Nullable(bool)":
 		toType = "Int8"
-	case "float","Nullable(float)":
+	case "float", "Nullable(float)":
 		toType = "Float32"
-	case "double","Nullable(double)":
+	case "double", "Nullable(double)":
 		toType = "Float64"
-	case "date","Nullable(date)":
+	case "date", "Nullable(date)":
 		toType = "Date"
 	default:
-		if strings.Index(columnType,"double") >= 0 {
+		if strings.Index(columnType, "double") >= 0 {
 			toType = "Float64"
 			break
 		}
-		if strings.Index(columnType,"float") >= 0 {
+		if strings.Index(columnType, "float") >= 0 {
 			toType = "Float32"
 			break
 		}
-		if strings.Index(columnType,"bit") >= 0 {
+		if strings.Index(columnType, "bit") >= 0 {
 			toType = "Int64"
 			break
 		}
@@ -517,10 +517,10 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 			if i >= 0 {
 				// 0000-00-00 00:00:00.000000
 				// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
-				if This.ckVersion >= 2000000000 || This.ckVersion==0 {
+				if This.ckVersion >= 2000000000 || This.ckVersion == 0 {
 					nsecNum := strings.Split(columnType[i+10:], ")")[0]
 					toType = "DateTime64(" + nsecNum + ")"
-				}else {
+				} else {
 					toType = "String"
 				}
 				break
@@ -531,10 +531,10 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 		if strings.Index(columnType, "datetime") >= 0 {
 			i := strings.Index(columnType, "datetime(")
 			if i >= 0 {
-				if This.ckVersion >= 2000000000 || This.ckVersion==0 {
+				if This.ckVersion >= 2000000000 || This.ckVersion == 0 {
 					nsecNum := strings.Split(columnType[i+9:], ")")[0]
 					toType = "DateTime64(" + nsecNum + ")"
-				}else {
+				} else {
 					toType = "String"
 				}
 				break
@@ -543,41 +543,41 @@ func (This *Conn) TransferToCkTypeByColumnType(columnType string,nullable bool) 
 			break
 		}
 		if strings.Index(columnType, "decimal") >= 0 {
-			i := strings.Index(columnType,"decimal(")
+			i := strings.Index(columnType, "decimal(")
 			if i < 0 {
 				toType = "Decimal(18,2)"
 				break
 			}
 			dataTypeParam := strings.Split(columnType[i+8:], ")")[0]
-			dataTypeParam = strings.Trim(dataTypeParam," ")
+			dataTypeParam = strings.Trim(dataTypeParam, " ")
 			if dataTypeParam == "" {
 				toType = "Decimal(18,2)"
 				break
 			}
-			p := strings.Split(dataTypeParam,",")
-			M, _ := strconv.Atoi(strings.Trim(p[0]," "))
+			p := strings.Split(dataTypeParam, ",")
+			M, _ := strconv.Atoi(strings.Trim(p[0], " "))
 			var D int
 			if len(p) == 2 {
-				D, _ = strconv.Atoi(strings.Trim(p[1]," "))
+				D, _ = strconv.Atoi(strings.Trim(p[1], " "))
 			}
 			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
 			if M > 18 {
 				toType = "String"
-			}else{
-				toType = fmt.Sprintf("Decimal(%d,%d)",M,D)
+			} else {
+				toType = fmt.Sprintf("Decimal(%d,%d)", M, D)
 			}
 			break
 		}
 	}
 	if nullable {
-		if strings.Index(columnType,"Nullable") >= 0 {
-			toType = "Nullable("+toType+")"
+		if strings.Index(columnType, "Nullable") >= 0 {
+			toType = "Nullable(" + toType + ")"
 		}
 	}
 	return
 }
 
-func (This *Conn) TransferToCkTypeByColumnData(v interface{},nullable bool) (toType string) {
+func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (toType string) {
 	toType = "String"
 	var err error
 	if v != nil {
@@ -645,7 +645,7 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{},nullable bool) (toT
 			default:
 				// 0000-00-00 00:00:00.000000
 				// 由于 ck DateTime64 在19.19 某个小版本开始支持，考滤分支过细的问题，我们统一以20版本开始支持 DateTime64 转换
-				if This.ckVersion >= 2000000000 || This.ckVersion ==0 {
+				if This.ckVersion >= 2000000000 || This.ckVersion == 0 {
 					if n > 19 && n <= 26 {
 						nsec := fmt.Sprintf("%0*d", n-20, 0)
 						_, err = time.Parse("2006-01-02 15:04:05."+nsec, v.(string))
@@ -662,86 +662,120 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{},nullable bool) (toT
 		}
 	}
 	if nullable {
-		toType = "Nullable("+toType+")"
+		toType = "Nullable(" + toType + ")"
 	}
 	return
 }
 
-func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string, ckField []fieldStruct) {
+func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string, distributeSql, viewSql string, ckField []fieldStruct) {
 	if data.Rows == nil || len(data.Rows) == 0 || len(data.Pri) == 0 {
-		return "", nil
+		return "", "", "", nil
 	}
-	sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
+
+	switch This.p.CkEngine {
+	case 1: //单节点
+		sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
+	case 2: //集群
+		if This.p.CkClusterName == "" {
+			return "", "", "", nil
+		}
+		schemaNameCase1 := "`" + This.GetSchemaName(data.SchemaName) + "_ck`"
+		tableNameLocalCase1 := "`" + This.GetFieldName(data.TableName) + "_local`"
+		tableNameDisCase1 := "`" + This.GetFieldName(data.TableName) + "_all`"
+		tableNameViewCase1 := "`" + This.GetFieldName(data.TableName) + "_all_pview`"
+
+		sql = "CREATE TABLE IF NOT EXISTS " + schemaNameCase1 + "." + tableNameLocalCase1 + " on cluster " + This.p.CkClusterName + " ("
+		distributeSql = "CREATE TABLE IF NOT EXISTS " + schemaNameCase1 + "." + tableNameDisCase1 + "  on cluster " + This.p.CkClusterName + " ("
+		viewSql = fmt.Sprintf("create view IF NOT EXISTS %s.%s on cluster %s as "+
+			"select * from %s.%s final",
+			schemaNameCase1, tableNameViewCase1, This.p.CkClusterName, schemaNameCase1, tableNameDisCase1)
+	}
+
 	ckField = make([]fieldStruct, 0)
-	var getToCkType = func(fieldName string,nullable bool) string {
+	var getToCkType = func(fieldName string, nullable bool) string {
 		if data.ColumnMapping != nil {
-			if columnType,ok := data.ColumnMapping[fieldName]; ok {
-				return This.TransferToCkTypeByColumnType(columnType,nullable)
+			if columnType, ok := data.ColumnMapping[fieldName]; ok {
+				return This.TransferToCkTypeByColumnType(columnType, nullable)
 			}
 		}
-		return This.TransferToCkTypeByColumnData(data.Rows[0][fieldName],nullable)
+		return This.TransferToCkTypeByColumnData(data.Rows[0][fieldName], nullable)
 	}
 	var val = ""
-	var addCkField = func(ckFieldName,mysqlFieldName,ckType string) {
+	var addCkField = func(ckFieldName, mysqlFieldName, ckType string) {
 		if val == "" {
-			val = "`"+ckFieldName +"` " +ckType
+			val = "`" + strings.Trim(ckFieldName, " ") + "` " + ckType
 		} else {
-			val += ",`" + ckFieldName +"` "+ ckType
+			val += ",`" + strings.Trim(ckFieldName, " ") + "` " + ckType
 		}
 		ckField = append(ckField, fieldStruct{CK: ckFieldName, MySQL: mysqlFieldName, CkType: ckType})
 		return
 	}
 	priArr := make([]string, 0)
-	priMap := make(map[string]bool,0)
+	priMap := make(map[string]bool, 0)
 	var toCkType string
 	for _, priK := range data.Pri {
 		fileName0 := This.GetFieldName(priK)
 		priArr = append(priArr, fileName0)
 		priMap[fileName0] = true
-		toCkType = getToCkType(priK,false)
-		addCkField(fileName0,priK,toCkType)
+		toCkType = getToCkType(priK, false)
+		addCkField(fileName0, priK, toCkType)
 	}
 	var ok bool
 	for fileName, _ := range data.Rows[0] {
 		fileName0 := This.GetFieldName(fileName)
-		if _,ok = priMap[fileName0];ok {
+		if _, ok = priMap[fileName0]; ok {
 			continue
 		}
-		toCkType = getToCkType(fileName,true)
-		addCkField(fileName0,fileName,toCkType)
+		toCkType = getToCkType(fileName, true)
+		addCkField(fileName0, fileName, toCkType)
 	}
-	addCkField("bifrost_data_version","{$BifrostDataVersion}","Nullable(Int64)")
-	addCkField("binlog_event_type","{$EventType}","Nullable(String)")
-	sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
+	addCkField("bifrost_data_version", "{$BifrostDataVersion}", "Nullable(Int64)")
+	addCkField("binlog_event_type", "{$EventType}", "Nullable(String)")
+
+	switch This.p.CkEngine {
+	case 1: //单机
+		sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
+	case 2: //集群
+		sql += val + ") ENGINE = ReplicatedReplacingMergeTree('/clickhouse/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetSchemaName(data.TableName) + "_local" + "/{shard}', '{replica}') ORDER BY (" + strings.Join(priArr, ",") + ")"
+		distributeSql += val + ") ENGINE = Distributed(ck_cluster, " + This.GetSchemaName(data.SchemaName) + "_ck" + ", " + This.GetSchemaName(data.TableName) + "_local" + ",sipHash64(" + strings.Join(priArr, ",") + "))"
+	}
 	return
 }
 
 func (This *Conn) TransferToCreateDatabaseSql(SchemaName string) (sql string) {
-	sql = "CREATE DATABASE IF NOT EXISTS `"+SchemaName+"`"
+	switch This.p.CkEngine {
+	case 1: //单节点
+		sql = "CREATE DATABASE IF NOT EXISTS `" + SchemaName + "`"
+	case 2: //集群
+		if This.p.CkClusterName == "" {
+			return
+		}
+		sql = "CREATE DATABASE IF NOT EXISTS `" + SchemaName + "` on cluster " + This.p.CkClusterName + ""
+	}
 	return sql
 }
 
-func ReplaceBr(str string) string  {
-	str = strings.ReplaceAll(str, "\r\n"," ")
-	str = strings.ReplaceAll(str, "\n"," ")
-	str = strings.ReplaceAll(str, "\r"," ")
+func ReplaceBr(str string) string {
+	str = strings.ReplaceAll(str, "\r\n", " ")
+	str = strings.ReplaceAll(str, "\n", " ")
+	str = strings.ReplaceAll(str, "\r", " ")
 	return str
 }
 
 //去除连续的两个空格
 func ReplaceTwoReplace(sql string) string {
 	for {
-		if strings.Index(sql,"  ") >= 0 {
-			sql = strings.ReplaceAll(sql,"  "," ")
+		if strings.Index(sql, "  ") >= 0 {
+			sql = strings.ReplaceAll(sql, "  ", " ")
 			//sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
-		}else{
+		} else {
 			break
 		}
 	}
 	for {
-		if strings.Index(sql,"	") >= 0 {
-			sql = strings.ReplaceAll(sql,"	"," ")    // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
-		}else{
+		if strings.Index(sql, "	") >= 0 {
+			sql = strings.ReplaceAll(sql, "	", " ") // 这两个是不一样的，一个是两个 " "+" "，一个是" "+""
+		} else {
 			return sql
 		}
 	}
@@ -750,6 +784,7 @@ func ReplaceTwoReplace(sql string) string {
 // 将sql 里 /* */ 注释内容给去掉
 // 感谢 @zeroone2005 正则表达式提供支持
 var replaceSqlNotesReq = regexp.MustCompile(`/\*(.*?)\*/`)
+
 func TransferNotes2Space(sql string) string {
 	sql = replaceSqlNotesReq.ReplaceAllString(sql, "")
 	return sql
