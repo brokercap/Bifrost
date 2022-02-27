@@ -6,13 +6,13 @@ import (
 )
 
 func TestConn_TranferQuerySql(t *testing.T) {
-	ckObj := &Conn{
-		p:&PluginParam{
-			CkSchema:"",
+	/*	ckObj := &Conn{
+		p: &PluginParam{
+			CkSchema: "",
 		},
-	}
+	}*/
 
-	var SchemaName,TableName,newSql string
+	var SchemaName, TableName, newSql string
 
 	e := pluginTestData.NewEvent()
 
@@ -27,20 +27,20 @@ func TestConn_TranferQuerySql(t *testing.T) {
 
 	queryEvent.Query = sql
 
-	SchemaName,TableName,newSql = ckObj.TranferQuerySql(queryEvent)
+	//SchemaName, TableName, newSql = ckObj.TranferQuerySql(queryEvent)
 
-	t.Log(SchemaName,TableName,newSql)
+	t.Log(SchemaName, TableName, newSql)
 
 	sql = "ALTER TABLE ppospro_gate_device_auth2 MODIFY COLUMN id7 BIGINT(20) DEFAULT 0;"
 	queryEvent.Query = sql
 
-	SchemaName,TableName,newSql = ckObj.TranferQuerySql(queryEvent)
+	//SchemaName, TableName, newSql = ckObj.TranferQuerySql(queryEvent)
 
-	t.Log(SchemaName,TableName,newSql)
+	t.Log(SchemaName, TableName, newSql)
 
 	sql = "alter table binlog_field_test_7 add  col1 int;"
 	queryEvent.Query = sql
-	SchemaName,TableName,newSql = ckObj.TranferQuerySql(queryEvent)
+	//SchemaName, TableName, newSql = ckObj.TranferQuerySql(queryEvent)
 
-	t.Log(SchemaName,TableName,newSql)
+	t.Log(SchemaName, TableName, newSql)
 }

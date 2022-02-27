@@ -39,7 +39,7 @@ func (d *mysqlDriver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	// Read Result Packet
-	e = mc.readResultOK()
+	e = mc.handleAuthResult()
 	if e != nil {
 		return nil, e
 	}

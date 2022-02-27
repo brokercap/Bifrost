@@ -1,0 +1,13 @@
+<h4>EsIndexName</h4>
+<p>数据库名</p>
+<p>支持{$SchemaName},{$TableName} 等标签,请参考 Bifrost 标签使用规则</p>
+
+
+<h4>PrimaryKey</h4>
+<p>Elasticsearch 中的文档ID对应于数据源表中的哪几个字段,字段必须在被选中的字段中,多个用逗号隔开</p>
+<p>假如为空，没有填写，将自动识别数据源表中的主键</p>
+
+
+<h4>备注</h4>
+<p>不支持 大于 int64(9223372036854775807) 的数字</p>
+<p>支持 Elasticsearch v6.0+</p>

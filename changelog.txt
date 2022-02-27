@@ -1,3 +1,16 @@
+v1.8.1-release   2022-02-27
+===========================
+1. ClickHouse DDL 支持完善，包含：增加字段，删除字段，修改字段类型，修改字段名称，修改表名称等
+2. 支持 ClickHouse ReplicatedReplacingMergeTree 分布式集群模式写入（由于涉及到final 效率问题，推荐ck版本为 v20.5.2.7-stable以上（包含））
+3. 新增 ElasticSearch 插件支持
+4. 修复数据包超过16MB时无法完全解析的BUG
+5. 优化某个表没有数据写入，其他表有数据写入的情况下，造成没有数据更变的表，并不会5秒进行超时同步的BUG
+6. 优化Binlog连接断开重连的功能
+
+v1.8.0-beta.01   2021-03-14
+===========================
+1. mysql caching_sha2_password supported
+
 v1.7.4-release   2021-03-14
 ===========================
 1. fix plugin redis list sync empty bug
