@@ -13,7 +13,7 @@ import (
 )
 
 // commitNormal commitNormal
-func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType,err error) {
+func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType, err error) {
 	reqs := make([]elastic.BulkableRequest, 0, len(list))
 	var normalFun = func(v *pluginDriver.PluginDataType, reqs1 []elastic.BulkableRequest) {
 		var reqs2 []elastic.BulkableRequest
@@ -51,7 +51,6 @@ func (This *Conn) commitNormal(list []*pluginDriver.PluginDataType, n int) (errD
 	return
 }
 
-
 // makeInsertRequest makeInsertRequest
 func (This *Conn) makeInsertRequest(rows []map[string]interface{}) ([]elastic.BulkableRequest, error) {
 	reqs := make([]elastic.BulkableRequest, 0, len(rows))
@@ -60,15 +59,16 @@ func (This *Conn) makeInsertRequest(rows []map[string]interface{}) ([]elastic.Bu
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		req := elastic.NewBulkIndexRequest().
+		req := elastic.NewBulkUpdateRequest().
 			Index(This.p.EsIndexName).
 			RetryOnConflict(This.esServerInfo.RetryCount).
 			Id(id).
-			Doc(values).Type("_doc")
+			Doc(values).DocAsUpsert(true).
+			Upsert(values).Type("_doc")
 
 		reqs = append(reqs, req)
 	}
-	return reqs,nil
+	return reqs, nil
 	//return This.makeRequest(ActionIndex, rows)
 }
 
@@ -85,7 +85,7 @@ func (This *Conn) makeDeleteRequest(rows []map[string]interface{}) ([]elastic.Bu
 			Id(id)
 		reqs = append(reqs, req)
 	}
-	return reqs,nil
+	return reqs, nil
 }
 
 // makeUpdateRequest makeUpdateRequest
@@ -103,7 +103,7 @@ func (This *Conn) makeUpdateRequest(rows []map[string]interface{}) ([]elastic.Bu
 			Index(This.p.EsIndexName).
 			RetryOnConflict(This.esServerInfo.RetryCount).
 			Id(afterID).
-			Doc(rows[i+1]).
+			Doc(rows[i+1]).DocAsUpsert(true).
 			Upsert(rows[i+1]).Type("_doc")
 
 		reqs = append(reqs, req)
@@ -141,7 +141,7 @@ func (output *Conn) sendBulkRequests(reqs []elastic.BulkableRequest) error {
 				var status int
 				if result.Status == http.StatusBadRequest {
 					//printJsonEncodef("[output_elasticsearch] The remote server returned an error: (400) Bad request, index: %s, details: %s.", result.Index, marshalError(result.Error))
-					log.Printf("[output_elasticsearch] The remote server returned an error: (400) Bad request, index: %s, action:%s ,status:%d ,details: %T.", result.Index,action,status, result.Error)
+					log.Printf("[output_elasticsearch] The remote server returned an error: (400) Bad request, index: %s, action:%s ,status:%d ,details: %T.", result.Index, action, status, result.Error)
 					status = http.StatusBadRequest
 				} else {
 					// 200/201/404(delete) -> 200 because the request is successful
@@ -151,7 +151,7 @@ func (output *Conn) sendBulkRequests(reqs []elastic.BulkableRequest) error {
 				// when the server returns 429, it must be that all requests have failed.
 				return errors.Errorf("[output_elasticsearch] The remote server returned an error: (429) Too Many Requests.")
 			} else {
-				return errors.Errorf("[output_elasticsearch] Received an error from server, status: [%d], index: %s, action:%s ,status:%d ,details: %T.", result.Status, result.Index, action,result.Status,result.Error)
+				return errors.Errorf("[output_elasticsearch] Received an error from server, status: [%d], index: %s, action:%s ,status:%d ,details: %+v.", result.Status, result.Index, action, result.Status, result.Error)
 			}
 		}
 	}

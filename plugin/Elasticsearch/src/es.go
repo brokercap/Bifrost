@@ -17,7 +17,7 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 )
 
-const VERSION = "v1.8.0-beta"
+const VERSION = "v1.8.1-beta"
 const BIFROST_VERION = "v1.6.0"
 
 func init() {
@@ -289,7 +289,7 @@ func (This *Conn) doCommit(list []*pluginDriver.PluginDataType, n int) (errData 
 		This.p.EsIndexName = strings.ToLower(fmt.Sprint(pluginDriver.TransfeResult(This.p.EsIndexName, list[0], 0)))
 	}
 
-	This.doCreateMapping()
+	//This.doCreateMapping()
 	errData, err = This.commitNormal(list, n)
 	return
 }
@@ -333,7 +333,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 		dataMap[key] = append(dataMap[key], PluginData)
 	}
 	for _, dataList := range dataMap {
-		ErrData, e = This.doCommit(dataList, n)
+		ErrData, e = This.doCommit(dataList, len(dataList))
 		// 假如数据不能丢，才需要 判断 是否有err，如果可以丢，直接错过数据
 		if e != nil {
 			This.err = e
