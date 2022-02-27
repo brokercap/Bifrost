@@ -1,16 +1,16 @@
 package mysql
 
 import (
-	"time"
-	"encoding/hex"
-	"strings"
-	"fmt"
-	"runtime/debug"
-	"log"
 	"database/sql/driver"
+	"encoding/hex"
+	"fmt"
+	"log"
+	"runtime/debug"
+	"strings"
+	"time"
 )
 
-func (mc *mysqlConn) DumpBinlog(parser *eventParser,callbackFun callback,) (driver.Rows, error) {
+func (mc *mysqlConn) DumpBinlog(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(string(debug.Stack()))
@@ -26,7 +26,7 @@ func (mc *mysqlConn) DumpBinlog(parser *eventParser,callbackFun callback,) (driv
 		parser.callbackErrChan <- e
 		return nil, e
 	}
-	return mc.DumpBinlog0(parser,callbackFun)
+	return mc.DumpBinlog0(parser, callbackFun)
 }
 
 func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
@@ -42,14 +42,14 @@ func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (
 	// 在gtid事件解析后，实际 gtidSetInfo update 操作的时候 ，可能只更新指定的gtid String，并没有整体进行更新
 	err := parser.gtidSetInfo.ReInit()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	// mysql gtid  87c74d71-2d6c-11eb-921a-0242ac110004:1-6"
 	// mariadb gtid domainId-serverId-sequence
 	if parser.dbType == DB_TYPE_MARIADB {
-		return mc.DumpBinlogMariaDBGtid(parser,callbackFun)
-	}else{
-		return mc.DumpBinlogMySQLGtid(parser,callbackFun)
+		return mc.DumpBinlogMariaDBGtid(parser, callbackFun)
+	} else {
+		return mc.DumpBinlogMySQLGtid(parser, callbackFun)
 	}
 }
 
@@ -63,27 +63,26 @@ func (mc *mysqlConn) DumpBinlogMySQLGtid(parser *eventParser, callbackFun callba
 		parser.callbackErrChan <- e
 		return nil, e
 	}
-	return mc.DumpBinlog0(parser,callbackFun)
+	return mc.DumpBinlog0(parser, callbackFun)
 }
-
 
 func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	var err error
 	// 通知 mariadb ,当前从库能识别gtid事件,如果不设置这个，maridb 主库 是不会下发 MARIADB_GTID_EVENT,MARIADB_GTID_LIST_EVENT 等事件的
 	err = mc.exec("SET @mariadb_slave_capability=4")
 	if err != nil {
-		return nil,fmt.Errorf("failed to SET @mariadb_slave_capability=4: %v", err)
+		return nil, fmt.Errorf("failed to SET @mariadb_slave_capability=4: %v", err)
 	}
 	gtidStr := parser.gtidSetInfo.String()
 	// mariadb gtid by set slave_connect_state
 	setGtidQuery := fmt.Sprintf("SET @slave_connect_state='%s'", gtidStr)
 	err = mc.exec(setGtidQuery)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	err = mc.exec("SET @slave_gtid_strict_mode=1")
 	if err != nil {
-		return nil,fmt.Errorf("failed to set @slave_gtid_strict_mode=1: %v", err)
+		return nil, fmt.Errorf("failed to set @slave_gtid_strict_mode=1: %v", err)
 	}
 	ServerId := uint32(parser.ServerId)
 	flags := uint16(0)
@@ -92,11 +91,12 @@ func (mc *mysqlConn) DumpBinlogMariaDBGtid(parser *eventParser, callbackFun call
 		parser.callbackErrChan <- err
 		return nil, err
 	}
-	return mc.DumpBinlog0(parser,callbackFun)
+	return mc.DumpBinlog0(parser, callbackFun)
 }
 
-func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driver.Rows, error) {
+func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	var isDDL bool
+	var commitEventOk bool
 	for {
 		parser.binlogDump.RLock()
 		if parser.dumpBinLogStatus != STATUS_RUNNING {
@@ -128,7 +128,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 			func() {
 				defer func() {
 					if err := recover(); err != nil {
-						e = fmt.Errorf("parseEvent err recover err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d",fmt.Sprint(err),parser.lastMapEvent,parser.binlogFileName,parser.binlogPosition)
+						e = fmt.Errorf("parseEvent err recover err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d", fmt.Sprint(err), parser.lastMapEvent, parser.binlogFileName, parser.binlogPosition)
 						log.Println(string(debug.Stack()))
 					}
 				}()
@@ -163,6 +163,9 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				break
 			case QUERY_EVENT:
 				if event.Query == "COMMIT" {
+					if !commitEventOk {
+						continue
+					}
 					break
 				}
 				// # Dumm
@@ -170,14 +173,14 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 				// # Dum
 				// # Dummy event replacing event type 16
 				// mariadb Dumm 内容事件,这种内容的事件，直接过滤掉，不展示给上层
-				if event.Query[0:1] == "#"{
+				if event.Query[0:1] == "#" {
 					continue
 				}
 
 				//only return replicateDoDb, any sql may be use db.table query
-				var SchemaName,tableName string
+				var SchemaName, tableName string
 				var noReloadTableInfo bool
-				if SchemaName, tableName,noReloadTableInfo,isDDL = parser.GetQueryTableName(event.Query); tableName != "" {
+				if SchemaName, tableName, noReloadTableInfo, isDDL = parser.GetQueryTableName(event.Query); tableName != "" {
 					if SchemaName != "" {
 						event.SchemaName = SchemaName
 					}
@@ -191,7 +194,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 					if noReloadTableInfo {
 						// 假如 是rename,drop table 等操作 操作的 ddl,需要将 SchemaName,TableName 对应的缓存数据删除，因为表名变了，TableId 也变了
 						parser.delTableId(event.SchemaName, event.TableName)
-					}else{
+					} else {
 						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
 							parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
 						}
@@ -205,15 +208,21 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 						continue
 					}
 				}
+				commitEventOk = true
 				break
 			case XID_EVENT:
 				parser.saveBinlog(event)
+				// 假如整个事务期间，所有表都被过滤了，没有任何一个表的数据需要被同步，则表示可以直接跳过这个事务，当前这个 XID 事件也不需要返回给上一层
+				if !commitEventOk {
+					continue
+				}
 				break
 			default:
 				if event.TableName != "" && parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
 					parser.saveBinlog(event)
 					continue
 				}
+				commitEventOk = true
 			}
 
 			//only return EventType by set
@@ -225,41 +234,43 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser,callbackFun callback) (driv
 			// so we need need callback a begin event and a commit event
 			if isDDL {
 				beginEvent := &EventReslut{
-					Header:event.Header,
-					TableName:event.TableName,
-					SchemaName:event.SchemaName,
-					Query:"BEGIN",
-					EventID:event.EventID,
-					Rows:nil,
-					BinlogFileName:event.BinlogFileName,
-					BinlogPosition:event.BinlogPosition,
-					Gtid:"",
-					Pri:nil,
-					ColumnMapping:nil,
+					Header:         event.Header,
+					TableName:      event.TableName,
+					SchemaName:     event.SchemaName,
+					Query:          "BEGIN",
+					EventID:        event.EventID,
+					Rows:           nil,
+					BinlogFileName: event.BinlogFileName,
+					BinlogPosition: event.BinlogPosition,
+					Gtid:           "",
+					Pri:            nil,
+					ColumnMapping:  nil,
 				}
 				beginEvent.Header.EventType = QUERY_EVENT
 				commitEvent := &EventReslut{
-					Header:event.Header,
-					TableName:event.TableName,
-					SchemaName:event.SchemaName,
-					Query:"COMMIT",
-					EventID:event.EventID,
-					Rows:nil,
-					BinlogFileName:event.BinlogFileName,
-					BinlogPosition:event.BinlogPosition,
-					Gtid:parser.getGtid(),
-					Pri:nil,
-					ColumnMapping:nil,
+					Header:         event.Header,
+					TableName:      event.TableName,
+					SchemaName:     event.SchemaName,
+					Query:          "COMMIT",
+					EventID:        event.EventID,
+					Rows:           nil,
+					BinlogFileName: event.BinlogFileName,
+					BinlogPosition: event.BinlogPosition,
+					Gtid:           parser.getGtid(),
+					Pri:            nil,
+					ColumnMapping:  nil,
 				}
 				commitEvent.Header.EventType = XID_EVENT
 				callbackFun(beginEvent)
 				callbackFun(event)
 				callbackFun(commitEvent)
 				parser.saveBinlog(commitEvent)
-			}else{
+				commitEventOk = false
+			} else {
 				callbackFun(event)
+				parser.saveBinlog(event)
+				commitEventOk = false
 			}
-			parser.saveBinlog(event)
 		} else {
 			parser.callbackErrChan <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
 			if strings.Contains(string(pkt), "Could not find first log file name in binary log index file") {
