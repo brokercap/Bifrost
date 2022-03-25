@@ -36,7 +36,7 @@ func proccessExit() {
 	for _, logInfo := range errDataList {
 		log.Println(logInfo)
 	}
-	fmt.Println("mysql server:",MysqlVersion)
+	fmt.Println("mysql server:", MysqlVersion)
 }
 
 func DBConnect(uri string) mysql.MysqlConnection {
@@ -791,7 +791,7 @@ func checkData(rowMap map[string]interface{}, logPrefix string) (AutoIncrementFi
 			if v == nil {
 				log.Println(logPrefix, columnName, "==", v)
 				continue
-			}else{
+			} else {
 				log.Println("columnType.Value:", nil)
 				log.Println("v:", fmt.Sprint(v))
 				isTrue = false
@@ -1119,6 +1119,27 @@ func main() {
 
 	if dataTypeSupported.Timestamp {
 		createTableSql += "`testtime2_1` time(1) NULL DEFAULT NULL," +
+			"`testtime2_2` time(2) NOT NULL," +
+			"`testtime2_3` time(3) NOT NULL," +
+			"`testtime2_4` time(4) NOT NULL," +
+			"`testtime2_5` time(5) NOT NULL," +
+			"`testtime2_6` time(6) NOT NULL," +
+
+			"`testtimestamp2_1` timestamp(1) NOT NULL," +
+			"`testtimestamp2_2` timestamp(2) NOT NULL," +
+			"`testtimestamp2_3` timestamp(3) NOT NULL," +
+			"`testtimestamp2_4` timestamp(4) NOT NULL," +
+			"`testtimestamp2_5` timestamp(5) NOT NULL," +
+			"`testtimestamp2_6` timestamp(6) NOT NULL," +
+
+			"`testdatetime2_1` datetime(1) NOT NULL," +
+			"`testdatetime2_2` datetime(2) NOT NULL," +
+			"`testdatetime2_3` datetime(3) NOT NULL," +
+			"`testdatetime2_4` datetime(4) NOT NULL," +
+			"`testdatetime2_5` datetime(5) NOT NULL," +
+			"`testdatetime2_6` datetime(6) NOT NULL,"
+
+		createTableSql += "`testtime2_1_null` time(1) NULL DEFAULT NULL," +
 			"`testtime2_2_null` time(2) NULL DEFAULT NULL," +
 			"`testtime2_3_null` time(3) NULL DEFAULT NULL," +
 			"`testtime2_4_null` time(4) NULL DEFAULT NULL," +
@@ -1243,7 +1264,7 @@ func main() {
 			case "running", "starting":
 				continue
 			default:
-				fmt.Println("mysql server:",MysqlVersion)
+				fmt.Println("mysql server:", MysqlVersion)
 				os.Exit(1)
 			}
 		}
