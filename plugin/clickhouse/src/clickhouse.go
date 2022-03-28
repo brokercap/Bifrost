@@ -493,7 +493,7 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	case 1:
 		SchemaName = This.GetSchemaName(data.SchemaName)
 	case 2:
-		SchemaName = This.GetSchemaName(data.SchemaName) + "_ck"
+		SchemaName = This.GetSchemaName(data.SchemaName)
 	}
 
 	This.CreateCkDatabase(SchemaName)

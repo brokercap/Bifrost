@@ -16,11 +16,13 @@ import (
 	"time"
 )
 
-const VERSION = "1.8.1"
+const VERSION = "1.8.2"
 
 var errDataList []string
 
 var defaultValBool bool
+
+var MysqlVersion string
 
 func init() {
 	errDataList = make([]string, 0)
@@ -34,6 +36,7 @@ func proccessExit() {
 	for _, logInfo := range errDataList {
 		log.Println(logInfo)
 	}
+	fmt.Println("mysql server:", MysqlVersion)
 }
 
 func DBConnect(uri string) mysql.MysqlConnection {
@@ -455,7 +458,8 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection, schema string, table st
 		}
 		if EXTRA == "auto_increment" {
 			continue
-		} else {
+		}
+		if IS_NULLABLE == "NO" {
 			switch columnType.DataType {
 			case "int", "tinyint", "smallint", "mediumint", "bigint":
 				if columnType.IsBool {
@@ -698,35 +702,40 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection, schema string, table st
 				data = append(data, "0")
 				break
 			}
+		} else {
+			columnType.Value = nil
+			data = append(data, nil)
+		}
 
-			valTmp := data[len(data)-1]
-			var sqlValTmp string
-			switch valTmp.(type) {
-			case float32:
-				sqlValTmp = strconv.FormatFloat(float64(valTmp.(float32)), 'E', -1, 32)
-			case float64:
-				sqlValTmp = strconv.FormatFloat(valTmp.(float64), 'E', -1, 64)
-			default:
-				sqlValTmp = strings.Replace(fmt.Sprint(valTmp), "'", "", -1)
-				sqlValTmp = strings.Replace(sqlValTmp, "\"", "", -1)
-				sqlValTmp = strings.Replace(sqlValTmp, "\\", "", -1)
-			}
-			if sqlk == "" {
-				sqlk = "`" + columnType.ColumnName + "`"
-				sqlv_ = "?"
-				if columnType.DataType == "bit" {
-					sqlval = sqlValTmp
-				} else {
-					sqlval = "'" + sqlValTmp + "'"
-				}
+		valTmp := data[len(data)-1]
+		var sqlValTmp string
+		switch valTmp.(type) {
+		case nil:
+			sqlValTmp = "null"
+		case float32:
+			sqlValTmp = strconv.FormatFloat(float64(valTmp.(float32)), 'E', -1, 32)
+		case float64:
+			sqlValTmp = strconv.FormatFloat(valTmp.(float64), 'E', -1, 64)
+		default:
+			sqlValTmp = strings.Replace(fmt.Sprint(valTmp), "'", "", -1)
+			sqlValTmp = strings.Replace(sqlValTmp, "\"", "", -1)
+			sqlValTmp = strings.Replace(sqlValTmp, "\\", "", -1)
+		}
+		if sqlk == "" {
+			sqlk = "`" + columnType.ColumnName + "`"
+			sqlv_ = "?"
+			if columnType.DataType == "bit" {
+				sqlval = sqlValTmp
 			} else {
-				sqlk += ",`" + columnType.ColumnName + "`"
-				sqlv_ += ",?"
-				if columnType.DataType == "bit" {
-					sqlval += "," + sqlValTmp + ""
-				} else {
-					sqlval += ",'" + sqlValTmp + "'"
-				}
+				sqlval = "'" + sqlValTmp + "'"
+			}
+		} else {
+			sqlk += ",`" + columnType.ColumnName + "`"
+			sqlv_ += ",?"
+			if columnType.DataType == "bit" {
+				sqlval += "," + sqlValTmp + ""
+			} else {
+				sqlval += ",'" + sqlValTmp + "'"
 			}
 		}
 	}
@@ -777,6 +786,16 @@ func checkData(rowMap map[string]interface{}, logPrefix string) (AutoIncrementFi
 			AutoIncrementField = columnName
 			log.Println(columnName, "==", v, " is AutoIncrement")
 			continue
+		}
+		if columnType.Value == nil {
+			if v == nil {
+				log.Println(logPrefix, columnName, "==", v)
+				continue
+			} else {
+				log.Println("columnType.Value:", nil)
+				log.Println("v:", fmt.Sprint(v))
+				isTrue = false
+			}
 		}
 		switch columnType.DataType {
 		case "set":
@@ -1011,7 +1030,6 @@ func main() {
 	masterServerId := GetServerId(db)
 	MyServerID = uint32(masterServerId + 250)
 
-	var MysqlVersion string
 	MysqlVersion = GetMySQLVersion(db)
 	if IsGTID {
 		if strings.Contains(MysqlVersion, "MariaDB") {
@@ -1060,37 +1078,92 @@ func main() {
 		"`test_unsinged_smallint` smallint(6) unsigned NOT NULL DEFAULT '2'," +
 		"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3'," +
 		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4'," +
-		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5',"
+		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5'," +
+
+		"`testtinyint_null` tinyint(4) DEFAULT NULL," +
+		"`testsmallint_null` smallint(6) DEFAULT NULL," +
+		"`testmediumint_null` mediumint(8) DEFAULT NULL," +
+		"`testint_null` int(11) DEFAULT NULL," +
+		"`testbigint_null` bigint(20) DEFAULT NULL," +
+		"`testvarchar_null` varchar(10) DEFAULT NULL," +
+		"`testchar_null` char(2) DEFAULT NULL," +
+		"`testenum_null` enum('en1','en2','en3') DEFAULT NULL," +
+		"`testset_null` set('set1','set2','set3') DEFAULT NULL," +
+		"`testtime_null` time DEFAULT NULL," +
+		"`testdate_null` date DEFAULT NULL," +
+		"`testyear_null` year(4) DEFAULT NULL," +
+		"`testtimestamp_null` timestamp NULL DEFAULT NULL," +
+		"`testdatetime_null` datetime NULL DEFAULT NULL," +
+		"`testfloat_null` float(9,2) DEFAULT NULL," +
+		"`testdouble_null` double(9,2) DEFAULT NULL," +
+		"`testdecimal_null` decimal(9,2) DEFAULT NULL," +
+		"`testdecimal2_null` decimal(10,4) DEFAULT NULL," +
+		"`testdecimal3_null` decimal(20,4) DEFAULT NULL," +
+		"`testdecimal4_null` decimal(30,5) DEFAULT NULL," +
+		"`testtext_null` text DEFAULT NULL," +
+		"`testblob_null` blob DEFAULT NULL," +
+		"`testbit_null` bit(8) DEFAULT NULL," +
+		"`testbool_null` tinyint(1) DEFAULT NULL," +
+		"`testmediumblob_null` mediumblob DEFAULT NULL," +
+		"`testlongblob_null` longblob DEFAULT NULL," +
+		"`testtinyblob_null` tinyblob DEFAULT NULL," +
+		"`test_unsinged_tinyint_null` tinyint(4) unsigned DEFAULT NULL," +
+		"`test_unsinged_smallint_null` smallint(6) unsigned DEFAULT NULL," +
+		"`test_unsinged_mediumint_null` mediumint(8) unsigned DEFAULT NULL," +
+		"`test_unsinged_int_null` int(11) unsigned DEFAULT NULL," +
+		"`test_unsinged_bigint_null` bigint(20) unsigned DEFAULT NULL,"
 
 	// 假如 mysql 版本 非 mysql5.7 及以上，不进行 json 类型测试
 
 	dataTypeSupported := CheckVersionDataTypeSupported(MysqlVersion)
 
 	if dataTypeSupported.Timestamp {
-		createTableSql += "`testtime2_1` time(1) NOT NULL DEFAULT '00:00:00.0'," +
-			"`testtime2_2` time(2) NOT NULL DEFAULT '00:00:00.00'," +
-			"`testtime2_3` time(3) NOT NULL DEFAULT '00:00:00.000'," +
-			"`testtime2_4` time(4) NOT NULL DEFAULT '00:00:00.0000'," +
-			"`testtime2_5` time(5) NOT NULL DEFAULT '00:00:00.00000'," +
-			"`testtime2_6` time(6) NOT NULL DEFAULT '00:00:00.000000'," +
+		createTableSql += "`testtime2_1` time(1) NULL DEFAULT NULL," +
+			"`testtime2_2` time(2) NOT NULL," +
+			"`testtime2_3` time(3) NOT NULL," +
+			"`testtime2_4` time(4) NOT NULL," +
+			"`testtime2_5` time(5) NOT NULL," +
+			"`testtime2_6` time(6) NOT NULL," +
 
-			"`testtimestamp2_1` timestamp(1) NOT NULL DEFAULT CURRENT_TIMESTAMP(1)," +
-			"`testtimestamp2_2` timestamp(2) NOT NULL DEFAULT CURRENT_TIMESTAMP(2)," +
-			"`testtimestamp2_3` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
-			"`testtimestamp2_4` timestamp(4) NOT NULL DEFAULT CURRENT_TIMESTAMP(4)," +
-			"`testtimestamp2_5` timestamp(5) NOT NULL DEFAULT CURRENT_TIMESTAMP(5)," +
-			"`testtimestamp2_6` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)," +
+			"`testtimestamp2_1` timestamp(1) NOT NULL," +
+			"`testtimestamp2_2` timestamp(2) NOT NULL," +
+			"`testtimestamp2_3` timestamp(3) NOT NULL," +
+			"`testtimestamp2_4` timestamp(4) NOT NULL," +
+			"`testtimestamp2_5` timestamp(5) NOT NULL," +
+			"`testtimestamp2_6` timestamp(6) NOT NULL," +
 
-			"`testdatetime2_1` datetime(1) NOT NULL DEFAULT '0000-00-00 00:00:00.0'," +
-			"`testdatetime2_2` datetime(2) NOT NULL DEFAULT '0000-00-00 00:00:00.00'," +
-			"`testdatetime2_3` datetime(3) NOT NULL DEFAULT '0000-00-00 00:00:00.000'," +
-			"`testdatetime2_4` datetime(4) NOT NULL DEFAULT '0000-00-00 00:00:00.0000'," +
-			"`testdatetime2_5` datetime(5) NOT NULL DEFAULT '0000-00-00 00:00:00.00000'," +
-			"`testdatetime2_6` datetime(6) NOT NULL DEFAULT '0000-00-00 00:00:00.000000',"
+			"`testdatetime2_1` datetime(1) NOT NULL," +
+			"`testdatetime2_2` datetime(2) NOT NULL," +
+			"`testdatetime2_3` datetime(3) NOT NULL," +
+			"`testdatetime2_4` datetime(4) NOT NULL," +
+			"`testdatetime2_5` datetime(5) NOT NULL," +
+			"`testdatetime2_6` datetime(6) NOT NULL,"
+
+		createTableSql += "`testtime2_1_null` time(1) NULL DEFAULT NULL," +
+			"`testtime2_2_null` time(2) NULL DEFAULT NULL," +
+			"`testtime2_3_null` time(3) NULL DEFAULT NULL," +
+			"`testtime2_4_null` time(4) NULL DEFAULT NULL," +
+			"`testtime2_5_null` time(5) NULL DEFAULT NULL," +
+			"`testtime2_6_null` time(6) NULL DEFAULT NULL," +
+
+			"`testtimestamp2_1_null` timestamp(1) NULL DEFAULT NULL," +
+			"`testtimestamp2_2_null` timestamp(2) NULL DEFAULT NULL," +
+			"`testtimestamp2_3_null` timestamp(3) NULL DEFAULT NULL," +
+			"`testtimestamp2_4_null` timestamp(4) NULL DEFAULT NULL," +
+			"`testtimestamp2_5_null` timestamp(5) NULL DEFAULT NULL," +
+			"`testtimestamp2_6_null` timestamp(6) NULL DEFAULT NULL," +
+
+			"`testdatetime2_1_null` datetime(1) NULL DEFAULT NULL," +
+			"`testdatetime2_2_null` datetime(2) NULL DEFAULT NULL," +
+			"`testdatetime2_3_null` datetime(3) NULL DEFAULT NULL," +
+			"`testdatetime2_4_null` datetime(4) NULL DEFAULT NULL," +
+			"`testdatetime2_5_null` datetime(5) NULL DEFAULT NULL," +
+			"`testdatetime2_6_null` datetime(6) NULL DEFAULT NULL,"
 	}
 
 	if dataTypeSupported.Json {
-		createTableSql += "`test_json` json,"
+		createTableSql += "`test_json` json NOT NULL,"
+		createTableSql += "`test_json_null` json NULL DEFAULT NULL,"
 	}
 
 	createTableSql += "PRIMARY KEY (`id`)" +
@@ -1191,6 +1264,7 @@ func main() {
 			case "running", "starting":
 				continue
 			default:
+				fmt.Println("mysql server:", MysqlVersion)
 				os.Exit(1)
 			}
 		}
