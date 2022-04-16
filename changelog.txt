@@ -1,3 +1,6 @@
+v1.8.3-release   2022-04-16
+1. FIX CK插件同步配置选择了指定目标表的时候指定字段映射关系不显示的BUG(issue https://github.com/brokercap/Bifrost/issues/180)
+
 v1.8.2-release   2022-03-26
 1. 修复ck插件集群模式同步不了数据的bug
 2. Binlog解析测试新增所有字段类型的null值测试
