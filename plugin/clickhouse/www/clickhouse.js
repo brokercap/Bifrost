@@ -2,9 +2,9 @@ var ckFieldDataMap = {};
 
 document.getElementById("clickhouse_engine").onchange = function () {
     if (parseInt($('#clickhouse_engine').val()) == 2) {
-        $('#ckDivName').show()
+        $('#ckEngineClusterNameDiv').show()
     } else {
-        $('#ckDivName').hide()
+        $('#ckEngineClusterNameDiv').hide()
     }
 }
 
@@ -334,9 +334,13 @@ function GetCkSchameTableList(SchemaName) {
 
 function GetCkTableDesc(SchemaName, TableName) {
     if (TableName != "") {
-        $("#ddlDiV").hide()
+        $("#ddlDiV").hide();
+        $("#CKTableFieldsDiv").show();
+        $("#clickhouse_engine").val(1).parent().parent().parent().hide();
     } else {
-        $("#ddlDiV").show()
+        $("#ddlDiV").show();
+        $("#CKTableFieldsDiv").hide();
+        $("#clickhouse_engine").parent().parent().parent().show();
     }
 
     $("#CKTableFieldsTable").html("");
