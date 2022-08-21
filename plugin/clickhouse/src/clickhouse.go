@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-const VERSION = "v1.7.3"
-const BIFROST_VERION = "v1.7.3"
+const VERSION = "v1.8.4"
+const BIFROST_VERION = "v1.8.3"
 
 var l sync.RWMutex
 
@@ -595,7 +595,6 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 				return data, nil, nil
 			}
 			SchemaName, TableName, newSql, newLocalSql, newDisSql, newViewSql := This.TranferQuerySql(data)
-
 			switch This.p.CkEngine {
 			case 1: //单机
 				if newSql == "" {
@@ -613,7 +612,7 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 				if strings.Contains(newSql, "DATABASE") {
 					This.conn.err = This.conn.Exec(newSql, []driver.Value{})
 					if This.conn.err != nil {
-						log.Printf("plugin mysql, exec sql:%s err:%s", newSql, This.conn.err)
+						log.Printf("plugin clickhouse, exec sql:%s err:%s", newSql, This.conn.err)
 						return nil, data, This.conn.err
 					}
 				}
@@ -621,7 +620,7 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 				if strings.Contains(newLocalSql, "DATABASE") { //DATABASE 执行一个 一次删除就行了
 					This.conn.err = This.conn.Exec(newLocalSql, []driver.Value{})
 					if This.conn.err != nil {
-						log.Printf("plugin mysql, exec sql:%s err:%s", newLocalSql, This.conn.err)
+						log.Printf("plugin clickhouse, exec sql:%s err:%s", newLocalSql, This.conn.err)
 						return nil, data, This.conn.err
 					}
 				}
