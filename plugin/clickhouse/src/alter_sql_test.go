@@ -59,6 +59,9 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	var destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql string
 	c := NewAlterSQL("test", sql, ckObj)
 	_, _, destAlterSql, destLocalAlterSql, destDisAlterSql, destViewAlterSql = c.Transfer2CkSQL(ckObj)
+	if destDisAlterSql == "" {
+		t.Fatal("sql:", sql, " destAlterSql is empty!")
+	}
 	t.Log(destAlterSql)
 	t.Log(destLocalAlterSql)
 	t.Log(destDisAlterSql)
@@ -109,6 +112,78 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	t.Log(destLocalAlterSql)
 	t.Log(destDisAlterSql)
 	t.Log(destViewAlterSql)
+}
+
+func TestAlterSQL_Transfer2CkSQL_Unsupport(t *testing.T) {
+
+	ckObj := &Conn{
+		p: &PluginParam{
+			CkSchema:     "",
+			ModifDDLType: &DDLSupportType{},
+		},
+	}
+
+	var f = func(Query string) {
+		var newSql string
+		Query = TransferNotes2Space(Query)
+		Query = ReplaceBr(Query)
+		Query = ReplaceTwoReplace(Query)
+		c := NewAlterSQL("", Query, ckObj)
+		_, _, newSql, _, _, _ = c.Transfer2CkSQL(ckObj)
+		if newSql != "" {
+			t.Fatal("Query:", Query, " newSql is not emtpy:", newSql)
+		}
+	}
+
+	var sql string
+	sql = `ALTER TABLE mytest
+	ADD PRIMARY KEY ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	ADD UNIQUE KEY ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	ADD INdex index_name ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	ADD FOREIGN key ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	ADD PARTITION key ( column )`
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	DROP PRIMARY KEY ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	DROP UNIQUE KEY ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	DROP INdex index_name ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	DROP FOREIGN key ( column )`
+
+	f(sql)
+
+	sql = `ALTER TABLE mytest
+	DROP PARTITION key ( column )`
+	f(sql)
+
 }
 
 func TestAlterSQL_GetColumnInfo(t *testing.T) {

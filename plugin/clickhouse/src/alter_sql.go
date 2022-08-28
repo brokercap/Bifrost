@@ -88,10 +88,44 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 				disTableName = This.c.GetFieldName(tableName) + "_all"
 			}
 
+			// 将ALTER TABLE $TABLENAME 去掉，重新赋值给 UpperV
 			v = strings.Join(tmpArr[3:], " ")
 			v = strings.Trim(v, " ")
 			UpperV = strings.ToUpper(v)
 		}
+
+		// 不支持索引 ，分区的操作
+		if strings.Index(UpperV, "ADD INDEX") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "DROP INDEX") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "DROP PRIMARY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "ADD PRIMARY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "ADD UNIQUE") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "DROP UNIQUE") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "ADD FOREIGN KEY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "DROP FOREIGN KEY") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "DROP PARTITION") == 0 {
+			continue
+		}
+		if strings.Index(UpperV, "ADD PARTITION") == 0 {
+			continue
+		}
+
 		if c.p.ModifDDLType.ColumnModify && strings.Index(UpperV, "CHANGE") == 0 {
 			columnChange := This.ChangeColumn(v)
 			if columnChange == "" {
@@ -124,23 +158,6 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			alterParamArr = append(alterParamArr, columnDrop)
 			continue
 		}
-		/*
-			if strings.Index(UpperV,"ADD INDEX") == 0 {
-				continue
-			}
-			if strings.Index(UpperV,"DROP PRIMARY") == 0 {
-				continue
-			}
-			if strings.Index(UpperV,"ADD PRIMARY") == 0 {
-				continue
-			}
-			if strings.Index(UpperV,"ADD FOREIGN KEY") == 0 {
-				continue
-			}
-			if strings.Index(UpperV,"DROP FOREIGN KEY") == 0 {
-				continue
-			}
-		*/
 	}
 	if len(alterParamArr) == 0 {
 		return

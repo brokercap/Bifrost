@@ -933,6 +933,7 @@ func CheckSelectTableData(db mysql.MysqlConnection, SchemaName, TableName string
 type DataTypeSupportedStruct struct {
 	Timestamp bool
 	Json      bool
+	Innodb    bool
 }
 
 func CheckVersionDataTypeSupportedByMysql(MysqlVersion string) (result *DataTypeSupportedStruct) {
@@ -954,6 +955,7 @@ func CheckVersionDataTypeSupportedByMysql(MysqlVersion string) (result *DataType
 	}
 	if mysqlVersionInt >= 5700 {
 		result.Json = true
+		result.Innodb = true
 	}
 	return result
 }
@@ -1166,8 +1168,13 @@ func main() {
 		createTableSql += "`test_json_null` json NULL DEFAULT NULL,"
 	}
 
-	createTableSql += "PRIMARY KEY (`id`)" +
-		") ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8"
+	var engine = "MyISAM"
+	if dataTypeSupported.Innodb {
+		engine = "InnoDB"
+	}
+
+	createTableSql += "index testvarchar(testvarchar),PRIMARY KEY (`id`)" +
+		") ENGINE=" + engine + " AUTO_INCREMENT=0 DEFAULT CHARSET=utf8 PARTITION BY HASH (id) PARTITIONS 3"
 
 	log.Println("load data start")
 	if autoCreate {

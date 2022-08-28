@@ -1,3 +1,9 @@
+v1.8.4-release   2022-08-28
+1. 修复分区表解析出错的bug
+2. 修复ClickHouse插件同步 新增索引等DDL语句同步导致的bug
+3，修复可能造成超时并不同步数据的bug(issue https://github.com/brokercap/Bifrost/issues/179)
+4. 修复其他已知bug
+
 v1.8.3-release   2022-04-16
 1. FIX CK插件同步配置选择了指定目标表的时候指定字段映射关系不显示的BUG(issue https://github.com/brokercap/Bifrost/issues/180)
 

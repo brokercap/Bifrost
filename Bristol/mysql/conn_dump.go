@@ -217,12 +217,18 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 					continue
 				}
 				break
+			case TABLE_MAP_EVENT:
+				break
 			default:
 				if event.TableName != "" && parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
 					parser.saveBinlog(event)
 					continue
 				}
-				commitEventOk = true
+				if parser.eventDo[int(event.Header.EventType)] {
+					commitEventOk = true
+				} else {
+					continue
+				}
 			}
 
 			//only return EventType by set
