@@ -60,11 +60,11 @@ func (This *ReNameSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlter
 			if !c.p.ModifDDLType.TableRename {
 				return
 			}
-			FromSchemaName = This.c.GetFieldName(FromSchemaName)
-			FromTableName = This.c.GetFieldName(FromTableName)
+			FromSchemaName = This.c.GetSchemaName(FromSchemaName)
+			FromTableName = This.c.GetTableName(FromTableName)
 
-			ToSchemaName = This.c.GetFieldName(ToSchemaName)
-			ToTableName = This.c.GetFieldName(ToTableName)
+			ToSchemaName = This.c.GetSchemaName(ToSchemaName)
+			ToTableName = This.c.GetTableName(ToTableName)
 
 			TableTmp = TableInfo{
 				From: FromSchemaName + "." + FromTableName,

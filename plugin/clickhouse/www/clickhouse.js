@@ -18,11 +18,20 @@ function doGetPluginParam() {
     var SyncType = $("#clickhouse_sync_type").val();
     var NullNotTransferDefault = $("#clickhouse_NullNotTransferDefault").val();
     var LowerCaseTableNames = $("#clickhouse_LowerCaseTableNames").val();
+    var AutoSchemaPrefix = $("#clickohuse_AutoSchemaPrefix").val();
+    var AutoTablePrefix = $("#clickohuse_AutoTablePrefix").val();
     var AutoCreateTable = false;
+    // 假如自动建表的情况下，强制转成 追加模式，因为当前版本只有追加模式支持自动建表
+    // 假如选择了库或者表，则相对应的库表前缀必须清空
     if (CkTable == "") {
         AutoCreateTable = true;
         SyncType = "insertAll";
         result.batchSupport = true;
+    }else{
+        AutoCreateTable = false
+    }
+    if( CkSchema != "" ) {
+        AutoSchemaPrefix = ""
     }
 
     if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)) {
@@ -150,6 +159,8 @@ function doGetPluginParam() {
 
     result.data["CkEngine"] = clickhouse_engine;
     result.data["CkClusterName"] = ckClusterName;
+    result.data["AutoSchemaPrefix"] = AutoSchemaPrefix;
+    result.data["AutoTablePrefix"] = AutoTablePrefix;
 
     if (NullNotTransferDefault == "true") {
         result.data["NullNotTransferDefault"] = true;
@@ -312,10 +323,14 @@ function GetCkSchameList() {
 function GetCkSchameTableList(SchemaName) {
     $("#CKTableFieldsTable").html("");
     if (SchemaName == "") {
-        $("#clickohuse_table").html("");
-        $("#ddlDiV").show()
+        var html = "<option value=''>自动创建CK表</option>";
+        $("#clickohuse_table").html(html);
+        $("#ddlDiV").show();
+        $("#clickohuse_AutoSchemaPrefix").parent().show();
+        $("#clickohuse_AutoTablePrefix").parent().show();
         return
     }
+    $("#clickohuse_AutoSchemaPrefix").parent().hide();
     $.get(
         "/bifrost/plugin/clickhouse/tablelist?ToServerKey=" + $("#addToServerKey").val() + "&SchemaName=" + SchemaName,
         function (d, status) {
@@ -337,10 +352,12 @@ function GetCkTableDesc(SchemaName, TableName) {
         $("#ddlDiV").hide();
         $("#CKTableFieldsDiv").show();
         $("#clickhouse_engine").val(1).parent().parent().parent().hide();
+        $("#clickohuse_AutoTablePrefix").parent().hide();
     } else {
         $("#ddlDiV").show();
         $("#CKTableFieldsDiv").hide();
         $("#clickhouse_engine").parent().parent().parent().show();
+        $("#clickohuse_AutoTablePrefix").parent().show();
     }
 
     $("#CKTableFieldsTable").html("");

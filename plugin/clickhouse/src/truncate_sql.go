@@ -35,13 +35,13 @@ func (This *TruncateSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, newSql,
 
 	switch c.p.CkEngine {
 	case 1: //单机模式
-		SchemaName = This.c.GetFieldName(SchemaName)
-		TableName = This.c.GetFieldName(TableName)
+		SchemaName = This.c.GetSchemaName(SchemaName)
+		TableName = This.c.GetTableName(TableName)
 		newSql = fmt.Sprintf("TRUNCATE TABLE %s.%s", SchemaName, TableName)
 		log.Println("Truncate DJ CK: " + newSql)
 	case 2: //集群模式
-		SchemaName = This.c.GetFieldName(SchemaName) + "_ck"
-		TableName = This.c.GetFieldName(TableName) + "_local"
+		SchemaName = This.c.GetSchemaName(SchemaName) + "_ck"
+		TableName = This.c.GetTableName(TableName) + "_local"
 
 		//只需要清空每个节点的local表即可
 		newLocalSql = fmt.Sprintf("TRUNCATE TABLE IF EXISTS %s.%s ON CLUSTER %s", SchemaName, TableName, c.p.CkClusterName)

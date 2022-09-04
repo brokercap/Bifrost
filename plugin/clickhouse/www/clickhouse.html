@@ -62,18 +62,20 @@
                     onchange="GetCkSchameTableList($(this).val());">
                 <option value="" selected="selected">自动创建CK库</option>
             </select>
+            <p style="padding-top: 10px"><input type="text" name="clickohuse_AutoSchemaPrefix" id="clickohuse_AutoSchemaPrefix" class="form-control" placeholder="库前缀,默认空"> </p>
         </div>
         <div class="col-sm-9">
             <select class="form-control" name="clickohuse_table" id="clickohuse_table"
                     onchange="GetCkTableDesc($('#clickhouse_schema').val(),$(this).val());">
                 <option value="" selected="selected">自动创建CK表</option>
             </select>
+            <p style="padding-top: 10px"><input type="text" name="clickohuse_AutoTablePrefix" id="clickohuse_AutoTablePrefix" class="form-control" placeholder="表名前缀,默认空"></p>
             <p>如果ClickHouse还没建表,<a href="javasripts:return false;" onclick="showClickHouseCreateSQL();"> 点击获取 参考建表
                     SQL</a></p>
             <p>假如选择自动创建表库，同步模式将会强制转成 insertAll(日志模式-追加) 模式,并且 clickhouse 表采用 ReplacingMergeTree
                 引擎，源端没有主键的表，会自动放弃访表同步</p>
             <p>源端 DDL 后，ClickHouse 并不支持自动 DDL 同步，但并不影响 CK </p>
-        </div>
+        </p>
     </div>
 
     <div class="form-group" id="CKTableFieldsDiv" style="display: none">
