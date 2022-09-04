@@ -5,17 +5,18 @@ import (
 	dbDriver "database/sql/driver"
 	"encoding/json"
 	"fmt"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-const VERSION = "v1.8.4"
-const BIFROST_VERION = "v1.8.3"
+const VERSION = "v1.8.5"
+const BIFROST_VERION = "v1.8.5"
 
 var l sync.RWMutex
 
@@ -72,6 +73,8 @@ type PluginParam struct {
 	PriKey                 []fieldStruct
 	SyncType               SyncType
 	AutoCreateTable        bool
+	AutoSchemaPrefix       string
+	AutoTablePrefix        string
 	NullNotTransferDefault bool //是否将null值强制转成相对应类型的默认值 , false 将 null 转成相对就的 0 或者 "" , true 不进行转换，为了兼容老版本，才反过来的
 	BifrostMustBeSuccess   bool // bifrost server 保留,数据是否能丢
 	LowerCaseTableNames    int8 // 0 源字段怎么样，就怎么样，1 转成小写，2 全部转成大写; 只对自动建表的功能有效
@@ -248,6 +251,9 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam, error) {
 	if param.AutoCreateTable == true {
 		param.SyncType = SYNCMODE_LOG_APPEND
 	}
+	if param.ModifDDLType == nil {
+		param.ModifDDLType = &DDLSupportType{}
+	}
 	This.p = &param
 	if param.AutoCreateTable == false {
 		This.getCktFieldType()
@@ -369,9 +375,18 @@ func (This *Conn) GetFieldName(Name string) string {
 
 func (This *Conn) GetSchemaName(Name string) (SchemaName string) {
 	if This.p.CkSchema == "" {
-		SchemaName = This.GetFieldName(Name)
+		SchemaName = This.p.AutoSchemaPrefix + This.GetFieldName(Name)
 	} else {
 		SchemaName = This.p.CkSchema
+	}
+	return
+}
+
+func (This *Conn) GetTableName(Name string) (TableName string) {
+	if This.p.CkTable == "" {
+		TableName = This.p.AutoTablePrefix + This.GetFieldName(Name)
+	} else {
+		TableName = Name
 	}
 	return
 }
@@ -503,9 +518,9 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 
 	switch This.p.CkEngine {
 	case 1:
-		TableName = This.GetFieldName(data.TableName)
+		TableName = This.GetTableName(data.TableName)
 	case 2:
-		TableName = This.GetFieldName(data.TableName) + "_all"
+		TableName = This.GetTableName(data.TableName) + "_all"
 	}
 
 	key := "`" + SchemaName + "`.`" + TableName + "`"

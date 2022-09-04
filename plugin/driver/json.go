@@ -1,17 +1,18 @@
 package driver
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"bytes"
-	"encoding/gob"
 	"strings"
 )
 
 func init()  {
 	gob.Register(map[string]interface{}{})
 	gob.Register([]interface{}{})
+	gob.Register(map[string][]map[string]interface{}{})
 }
 
 // 深度拷贝对象

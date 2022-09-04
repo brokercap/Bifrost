@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/juju/errors"
+	elastic "github.com/olivere/elastic/v7"
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	elastic "github.com/olivere/elastic/v7"
 )
 
 // commitNormal commitNormal
@@ -64,7 +64,7 @@ func (This *Conn) makeInsertRequest(rows []map[string]interface{}) ([]elastic.Bu
 			RetryOnConflict(This.esServerInfo.RetryCount).
 			Id(id).
 			Doc(values).DocAsUpsert(true).
-			Upsert(values).Type("_doc")
+			Upsert(values)
 
 		reqs = append(reqs, req)
 	}
@@ -80,7 +80,7 @@ func (This *Conn) makeDeleteRequest(rows []map[string]interface{}) ([]elastic.Bu
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		req := elastic.NewBulkDeleteRequest().Type("_doc").
+		req := elastic.NewBulkDeleteRequest().
 			Index(This.p.EsIndexName).
 			Id(id)
 		reqs = append(reqs, req)
@@ -104,8 +104,7 @@ func (This *Conn) makeUpdateRequest(rows []map[string]interface{}) ([]elastic.Bu
 			RetryOnConflict(This.esServerInfo.RetryCount).
 			Id(afterID).
 			Doc(rows[i+1]).DocAsUpsert(true).
-			Upsert(rows[i+1]).Type("_doc")
-
+			Upsert(rows[i+1])
 		reqs = append(reqs, req)
 	}
 	return reqs, nil

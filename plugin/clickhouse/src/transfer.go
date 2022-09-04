@@ -674,15 +674,15 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 
 	switch This.p.CkEngine {
 	case 1: //单节点
-		sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetFieldName(data.TableName) + "` ("
+		sql = "CREATE TABLE IF NOT EXISTS `" + This.GetSchemaName(data.SchemaName) + "`.`" + This.GetTableName(data.TableName) + "` ("
 	case 2: //集群
 		if This.p.CkClusterName == "" {
 			return "", "", "", nil
 		}
 		schemaNameCase1 := "`" + This.GetSchemaName(data.SchemaName) + "`"
-		tableNameLocalCase1 := "`" + This.GetFieldName(data.TableName) + "_local`"
-		tableNameDisCase1 := "`" + This.GetFieldName(data.TableName) + "_all`"
-		tableNameViewCase1 := "`" + This.GetFieldName(data.TableName) + "_all_pview`"
+		tableNameLocalCase1 := "`" + This.GetTableName(data.TableName) + "_local`"
+		tableNameDisCase1 := "`" + This.GetTableName(data.TableName) + "_all`"
+		tableNameViewCase1 := "`" + This.GetTableName(data.TableName) + "_all_pview`"
 
 		sql = "CREATE TABLE IF NOT EXISTS " + schemaNameCase1 + "." + tableNameLocalCase1 + " on cluster " + This.p.CkClusterName + " ("
 		distributeSql = "CREATE TABLE IF NOT EXISTS " + schemaNameCase1 + "." + tableNameDisCase1 + "  on cluster " + This.p.CkClusterName + " ("
@@ -736,8 +736,8 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 	case 1: //单机
 		sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
 	case 2: //集群
-		sql += val + ") ENGINE = ReplicatedReplacingMergeTree('/bifrost/clickhouse/" + This.p.CkClusterName + "/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetSchemaName(data.TableName) + "_local" + "/{shard}', '{replica}') ORDER BY (" + strings.Join(priArr, ",") + ")"
-		distributeSql += val + ") ENGINE = Distributed(" + This.p.CkClusterName + ", " + This.GetSchemaName(data.SchemaName) + ", " + This.GetSchemaName(data.TableName) + "_local" + ",sipHash64(" + strings.Join(priArr, ",") + "))"
+		sql += val + ") ENGINE = ReplicatedReplacingMergeTree('/bifrost/clickhouse/" + This.p.CkClusterName + "/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetTableName(data.TableName) + "_local" + "/{shard}', '{replica}') ORDER BY (" + strings.Join(priArr, ",") + ")"
+		distributeSql += val + ") ENGINE = Distributed(" + This.p.CkClusterName + ", " + This.GetSchemaName(data.SchemaName) + ", " + This.GetTableName(data.TableName) + "_local" + ",sipHash64(" + strings.Join(priArr, ",") + "))"
 	}
 	return
 }

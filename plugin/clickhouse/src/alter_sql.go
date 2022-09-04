@@ -80,12 +80,12 @@ func (This *AlterSQL) Transfer2CkSQL(c *Conn) (SchemaName, TableName, destAlterS
 			var tableName = TableName
 			switch c.p.CkEngine {
 			case 1: //单机模式
-				SchemaName = This.c.GetFieldName(SchemaName)
-				TableName = This.c.GetFieldName(TableName)
+				SchemaName = This.c.GetSchemaName(SchemaName)
+				TableName = This.c.GetTableName(TableName)
 			case 2: //集群模式
-				SchemaName = This.c.GetFieldName(SchemaName) + "_ck"
-				TableName = This.c.GetFieldName(TableName) + "_local"
-				disTableName = This.c.GetFieldName(tableName) + "_all"
+				SchemaName = This.c.GetSchemaName(SchemaName) + "_ck"
+				TableName = This.c.GetTableName(TableName) + "_local"
+				disTableName = This.c.GetTableName(tableName) + "_all"
 			}
 
 			// 将ALTER TABLE $TABLENAME 去掉，重新赋值给 UpperV
