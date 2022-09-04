@@ -1,3 +1,10 @@
+v1.8.5-release   2022-09-04
+1. 新增CK插件库表前缀配置功能
+2. 修复CK插件1.7.4升级到1.8版本不兼容的BUG(issue https://github.com/brokercap/Bifrost/issues/196)
+3，修复HTTP插件在BasicAuth认证推送失败的BUG(issue https://github.com/brokercap/Bifrost/issues/195)
+4. 修复ElasticSearch插件在ElasitcSearch 8.x 版本不支持type参数的BUG(issue https://github.com/brokercap/Bifrost/issues/177)
+5. 修复其他已知部分BUG
+
 v1.8.4-release   2022-08-28
 1. 修复分区表解析出错的bug
 2. 修复ClickHouse插件同步 新增索引等DDL语句同步导致的bug
