@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"runtime/debug"
@@ -11,14 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"log"
+	elastic "github.com/olivere/elastic/v7"
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	elastic "github.com/olivere/elastic/v7"
 )
 
-const VERSION = "v1.8.1-beta"
-const BIFROST_VERION = "v1.6.0"
+const VERSION = "v1.8.5-beta"
+const BIFROST_VERION = "v1.8.5"
 
 func init() {
 	pluginDriver.Register("Elasticsearch", NewConn, VERSION, BIFROST_VERION)
