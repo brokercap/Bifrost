@@ -68,6 +68,10 @@ case "$mode" in
     #echo "Starting Bifrost"
     if test -x $bin_dir/Bifrost
     then
+      # if in docker , remove $pid_file
+      if [ -f "/.dockerenv" ];then
+        rm -f $pid_file
+      fi
       $bin_dir/Bifrost -d -config $config_file -pid $pid_file
     else
       echo "Couldn't find Bifrost server ($bin_dir/Bifrost)"

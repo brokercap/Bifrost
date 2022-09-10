@@ -414,7 +414,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 					if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
 						v = int64(0)
 					} else {
-						v = data
+						v, _ = time.ParseInLocation("2006-01-02 15:04:05.999999", data.(string), time.Local)
 					}
 					break
 				}
