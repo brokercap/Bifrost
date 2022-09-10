@@ -1,3 +1,8 @@
+v1.8.6-release   2022-09-10
+1. 修复docker环境重启失败的BUG(issue https://github.com/brokercap/Bifrost/issues/198)
+2. 修复DateTime64(N) 时区问题BUG(issue https://github.com/brokercap/Bifrost/issues/191)
+3. ck plugin 单测整理
+
 v1.8.5-release   2022-09-04
 1. 新增CK插件库表前缀配置功能
 2. 修复CK插件1.7.4升级到1.8版本不兼容的BUG(issue https://github.com/brokercap/Bifrost/issues/196)
