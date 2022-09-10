@@ -2,10 +2,8 @@ package src_test
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
-	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	"log"
 	"math"
 	"math/rand"
@@ -14,9 +12,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/brokercap/Bifrost/sdk/pluginTestData"
+
+	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-var url string = "tcp://192.168.220.158:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://192.168.137.128:9000?Database=test&debug=true&compress=1"
 var engine string = "MergeTree()"
 
 //var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testjson String) ENGINE = MergeTree() ORDER BY (id);"
@@ -44,7 +47,7 @@ func initDBTable(delTable bool) {
 	c := MyPlugin.NewClickHouseDBConn(url)
 	sql1 := "CREATE DATABASE IF NOT EXISTS  `" + SchemaName + "`"
 	c.Exec(sql1, []driver.Value{})
-	sql2 := "CREATE TABLE IF NOT EXISTS " + SchemaName + "." + TableName + "(id0 UInt32,id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = " + engine + " ORDER BY (id);"
+	sql2 := "CREATE TABLE IF NOT EXISTS " + SchemaName + "." + TableName + "(id0 UInt32,id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testtimestamp2_3 DateTime64(3),bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = " + engine + " ORDER BY (id);"
 	if delTable == false {
 		c.Exec(sql2, []driver.Value{})
 	} else {
@@ -63,7 +66,7 @@ func initDBTablePriString(delTable bool) {
 	c := MyPlugin.NewClickHouseDBConn(url)
 	sql1 := "CREATE DATABASE IF NOT EXISTS  `" + SchemaName + "`"
 	c.Exec(sql1, []driver.Value{})
-	sql2 := "CREATE TABLE IF NOT EXISTS " + SchemaName + "." + TableName + "(id0 String,id String,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = MergeTree() ORDER BY (id);"
+	sql2 := "CREATE TABLE IF NOT EXISTS " + SchemaName + "." + TableName + "(id0 String,id String,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testtimestamp2_3 DateTime64(3),bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = MergeTree() ORDER BY (id);"
 	if delTable == false {
 		c.Exec(sql2, []driver.Value{})
 	} else {
@@ -142,6 +145,7 @@ func getParam(args ...bool) map[string]interface{} {
 	Field = append(Field, fieldStruct{"bifrost_event_type", "{$EventType}"})
 	Field = append(Field, fieldStruct{"testjson", "testjson"})
 	Field = append(Field, fieldStruct{"bifrost_data_version", "{$BifrostDataVersion}"})
+	Field = append(Field, fieldStruct{"testtimestamp2_3", "testtimestamp2_3"})
 
 	param["Field"] = Field
 
@@ -282,32 +286,6 @@ func TestReConnCommit(t *testing.T) {
 	t.Log("success")
 }
 
-func TestInsertNullAndChekcData(t *testing.T) {
-	testBefore()
-
-	initDBTable(true)
-	initSyncParam()
-	e := pluginTestData.NewEvent()
-	e.SetIsNull(true)
-	insertdata := e.GetTestInsertData()
-	conn.Insert(insertdata, false)
-	_, _, err2 := conn.TimeOutCommit()
-	if err2 != nil {
-		t.Fatal(err2)
-	}
-
-	c := MyPlugin.NewClickHouseDBConn(url)
-	dataList := c.GetTableDataList(insertdata.SchemaName, insertdata.TableName, "id="+fmt.Sprint(insertdata.Rows[0]["id"]))
-
-	for k, v := range dataList {
-		t.Log("k:", k)
-		for key, val := range v {
-			t.Log(key, val)
-		}
-	}
-	t.Log("success")
-}
-
 func TestCommitAndCheckData(t *testing.T) {
 	testBefore()
 	initDBTable(true)
@@ -334,7 +312,6 @@ func TestCommitAndCheckData(t *testing.T) {
 	resultData := make(map[string][]string, 0)
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
-
 	checkDataRight(m, dataList[0], resultData)
 
 	for _, v := range resultData["ok"] {
@@ -356,9 +333,17 @@ func TestCommitAndCheckData(t *testing.T) {
 func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, resultData map[string][]string) {
 	for columnName, v := range destMap {
 		if _, ok := m[columnName]; !ok {
-			resultData["error"] = append(resultData["error"], fmt.Sprint(columnName, " not exsit"))
+			resultData["ok"] = append(resultData["ok"], fmt.Sprint(columnName, " not exsit"))
+			continue
 		}
 		var result bool = false
+		if columnName == "testjson" {
+			if m[columnName] == nil && fmt.Sprint(v) == "" {
+				result = true
+				goto goResult
+			}
+		}
+
 		switch m[columnName].(type) {
 		case bool:
 			if m[columnName].(bool) == true {
@@ -373,8 +358,8 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 			}
 			break
 		case []string:
-			sourceData := strings.Replace(strings.Trim(fmt.Sprint(m[columnName]), "[]"), " ", ",", -1)
-			if fmt.Sprint(v) == sourceData {
+			sourceData, _ := json.Marshal(m[columnName])
+			if fmt.Sprint(v) == string(sourceData) {
 				result = true
 			}
 			break
@@ -386,40 +371,33 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 				result = true
 			}
 			break
-			/*
-				switch v.(type) {
-				case float64,float32:
-					floatDest,_ := strconv.ParseFloat(fmt.Sprint(v),64)
-					floatSource,_ := strconv.ParseFloat(fmt.Sprint(m[columnName]),64)
-					if math.Abs(floatDest - floatSource) < 0.05{
-						result = true
-					}
-					break
-				default :
-					if fmt.Sprint(v) == fmt.Sprint(m[columnName]){
-						result = true
-					}
-					break
-				}
-				break
-			*/
 		default:
 			switch v.(type) {
 			//这里需要去一次空格对比,因为有可能源是 带空格的字符串
-			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64:
-				if strings.Trim(fmt.Sprint(v), " ") == strings.Trim(fmt.Sprint(m[columnName]), " ") {
+			case int, uint, int8, uint8, int16, uint16, int32, uint32, int64, uint64:
+				if fmt.Sprint(v) == strings.Trim(fmt.Sprint(m[columnName]), " ") {
+					result = true
+				}
+				break
+			case float32, float64:
+				//假如目标端是浮点数，因为精度问题，都先转成string 再转成 float64 ，再做差值处理，小于0.05 就算正常了
+				floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
+				floatSource, _ := strconv.ParseFloat(fmt.Sprint(m[columnName]), 64)
+				if math.Abs(floatDest-floatSource) < 0.05 {
 					result = true
 				}
 				break
 			case time.Time:
 				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
-				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05"))
-				if descTime == fmt.Sprint(m[columnName]) || strings.Index(descTime, fmt.Sprint(m[columnName])) == 0 {
+				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05.999999"))
+				// 假如CK 中 DateTime(3)，本来原始值是  2022-09-10 15:03:44.640 ，但是实际解析出来的时候是  2022-09-10 15:03:44.64  ,没有默尾的0，其实这个时候也是对的，所以假如反过来判断 原始值包括了 读出来的时间格式化值 ，也是对的
+				var oldTimeStr = fmt.Sprint(m[columnName])
+				if descTime == oldTimeStr || strings.Index(descTime, oldTimeStr) == 0 || strings.Index(oldTimeStr, descTime) == 0 {
 					result = true
 				}
 				break
 			default:
-				if fmt.Sprint(v) == fmt.Sprint(m[columnName]) {
+				if fmt.Sprint(v) == strings.Trim(fmt.Sprint(m[columnName]), " ") {
 					result = true
 				}
 				break
@@ -427,6 +405,7 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 
 			break
 		}
+	goResult:
 		if result {
 			resultData["ok"] = append(resultData["ok"], fmt.Sprint(columnName, " dest: ", v, "(", reflect.TypeOf(v), ")", " == ", m[columnName], "(", reflect.TypeOf(m[columnName]), ")"))
 		} else {
@@ -536,7 +515,7 @@ func TestCommitAndCheckData2(t *testing.T) {
 	initSyncParam()
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
-	eventData.Rows[0]["testint"] = "1334　"
+	eventData.Rows[0]["testint"] = "1334 "
 	conn.Insert(eventData, false)
 	_, _, err2 := conn.TimeOutCommit()
 	if err2 != nil {
@@ -688,73 +667,6 @@ func TestConn_AutoCreateTableCommit(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-}
-
-func initDBTableDefaultNullVal(delTable bool) {
-	c := MyPlugin.NewClickHouseDBConn(url)
-	sql1 := "CREATE DATABASE IF NOT EXISTS  `" + SchemaName + "`"
-	c.Exec(sql1, []driver.Value{})
-	engine = " ReplacingMergeTree(id)"
-	sql2 := "CREATE TABLE IF NOT EXISTS " + SchemaName + "." + TableName + "(id UInt32,testtinyint Nullable(Int8),testsmallint Nullable(Int16),testmediumint Nullable(Int32),testint Nullable(Int32),testbigint Nullable(Int64),testvarchar Nullable(String),testchar Nullable(String),test_unsinged_tinyint Nullable(UInt8),test_unsinged_smallint Nullable(UInt16),test_unsinged_mediumint Nullable(UInt32),test_unsinged_int Nullable(UInt32),test_unsinged_bigint Nullable(UInt64),bifrost_event_type String,testjson String,bifrost_data_version Int64) ENGINE = " + engine + " ORDER BY (id);"
-	if delTable == false {
-		c.Exec(sql2, []driver.Value{})
-	} else {
-		sql3 := "DROP TABLE " + SchemaName + "." + TableName
-		c.Exec(sql3, []driver.Value{})
-		err := c.Exec(sql2, []driver.Value{})
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println(sql2)
-	}
-	c.Close()
-}
-
-func TestConn_NullNotTransferDefault_CommitAndCheck(t *testing.T) {
-	TableName = "write_nil_test"
-	testBefore()
-	event.SetIsNull(true)
-	event.SetTable(TableName)
-	initDBTableDefaultNullVal(true)
-	conn.SetParam(getParam(true))
-	eventData := event.GetTestInsertData()
-	conn.Insert(eventData, false)
-	_, _, err := conn.TimeOutCommit()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(eventData)
-	time.Sleep(1 * time.Second)
-	c := MyPlugin.NewClickHouseDBConn(url)
-	dataList := c.GetTableDataList(eventData.SchemaName, eventData.TableName, "id="+fmt.Sprint(eventData.Rows[0]["id"]))
-	if len(dataList) == 0 {
-		t.Fatal("select data len == 0")
-	}
-
-	for k, v := range dataList[0] {
-		if k == "id" {
-			if fmt.Sprint(v) != fmt.Sprint(eventData.Rows[0]["id"]) {
-				t.Fatal("id: ", eventData.Rows[0]["id"], " != ", v, "(must)")
-			}
-			continue
-		}
-		if k == "bifrost_event_type" || k == "bifrost_data_version" {
-			continue
-		}
-		// testjson 设置是 String ，不是Nullable(String)，
-		if k == "testjson" {
-			if v.(string) != "" {
-				t.Fatal("testjson: ", " !=", "''", "(must)")
-			}
-			continue
-		}
-		if v != nil {
-			t.Fatal(k, "!= nil", " data:", v)
-		}
-	}
-
-	t.Log("success")
-
 }
 
 func TestNewTableData(t *testing.T) {
