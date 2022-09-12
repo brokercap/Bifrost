@@ -1,14 +1,17 @@
 <style type="text/css">
-#ClickHouse_Contair td{
-    height: 30px; line-height: 30px; width: 50%;
-}
+    #ClickHouse_Contair td {
+        height: 30px;
+        line-height: 30px;
+        width: 50%;
+    }
 
 </style>
 <div class="form-group" id="ClickHouse_Contair">
     <div class="form-group">
         <label class="col-sm-3 control-label">同步方式：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type" onchange="ClickHouse_Sync_Type_Change();">
+            <select class="form-control" name="clickhouse_sync_type" id="clickhouse_sync_type"
+                    onchange="ClickHouse_Sync_Type_Change();">
                 <option value="Normal">普通模式</option>
                 <option value="LogUpdate">日志模式-UPDATE</option>
                 <option value="insertAll" selected="selected">日志模式-追加</option>
@@ -21,12 +24,14 @@
             </span>
         </div>
     </div>
+
     <div class="form-group">
         <label class="col-sm-3 control-label">不将Null转成默认值：</label>
         <div class="col-sm-9">
-            <select class="form-control" name="clickhouse_NullNotTransferDefault" id="clickhouse_NullNotTransferDefault">
+            <select class="form-control" name="clickhouse_NullNotTransferDefault"
+                    id="clickhouse_NullNotTransferDefault">
                 <option value="true">不转</option>
-                <option value="false">强转</option>
+                <option value="false" selected="selected">强转</option>
             </select>
             <span class="help-block m-b-none">
                 <p><strong>不转(true)：</strong> 只对 Nullable 字段有效</p>
@@ -53,71 +58,131 @@
 
     <div class="form-group">
         <div class="col-sm-3">
-            <select class="form-control" name="clickhouse_schema" id="clickhouse_schema" onchange="GetCkSchameTableList($(this).val());">
+            <select class="form-control" name="clickhouse_schema" id="clickhouse_schema"
+                    onchange="GetCkSchameTableList($(this).val());">
                 <option value="" selected="selected">自动创建CK库</option>
             </select>
+            <p style="padding-top: 10px"><input type="text" name="clickohuse_AutoSchemaPrefix" id="clickohuse_AutoSchemaPrefix" class="form-control" placeholder="库前缀,默认空"> </p>
         </div>
         <div class="col-sm-9">
-            <select class="form-control" name="clickohuse_table" id="clickohuse_table" onchange="GetCkTableDesc($('#clickhouse_schema').val(),$(this).val());" >
+            <select class="form-control" name="clickohuse_table" id="clickohuse_table"
+                    onchange="GetCkTableDesc($('#clickhouse_schema').val(),$(this).val());">
                 <option value="" selected="selected">自动创建CK表</option>
             </select>
-            <p>如果ClickHouse还没建表,<a href="javasripts:return false;" onclick="showClickHouseCreateSQL();"> 点击获取 参考建表 SQL</a></p>
-            <p>假如选择自动创建表库，同步模式将会强制转成 insertAll(日志模式-追加) 模式,并且 clickhouse 表采用  ReplacingMergeTree 引擎，源端没有主键的表，会自动放弃访表同步</p>
+            <p style="padding-top: 10px"><input type="text" name="clickohuse_AutoTablePrefix" id="clickohuse_AutoTablePrefix" class="form-control" placeholder="表名前缀,默认空"></p>
+            <p>如果ClickHouse还没建表,<a href="javasripts:return false;" onclick="showClickHouseCreateSQL();"> 点击获取 参考建表
+                    SQL</a></p>
+            <p>假如选择自动创建表库，同步模式将会强制转成 insertAll(日志模式-追加) 模式,并且 clickhouse 表采用 ReplacingMergeTree
+                引擎，源端没有主键的表，会自动放弃访表同步</p>
             <p>源端 DDL 后，ClickHouse 并不支持自动 DDL 同步，但并不影响 CK </p>
+        </p>
+    </div>
+
+    <div class="form-group" id="CKTableFieldsDiv" style="display: none">
+        <div>
+            <br><br>
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <table style="width: 100%">
+                        <thead>
+                        <tr>
+                            <th width="45%" height="35">Ck Field</th>
+                            <th width="45%">DB Field</th>
+                            <th>PRI</th>
+                        </tr>
+                        </thead>
+                        <tbody id="CKTableFieldsTable">
+
+
+                        </tbody>
+                        <!--
+                        <tr>
+                            <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
+                            <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
+                        </tr>
+                        -->
+                    </table>
+                    <p>&nbsp;</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="form-group">
-    <div class="col-sm-12" >
-        <table style="width: 100%">
-            <thead>
-            <tr>
-                <th width="45%" height="35">Ck Field</th>
-                <th width="45%">DB Field</th>
-                <th>PRI</th>
-            </tr>
-            </thead>
-            <tbody id="CKTableFieldsTable">
+        <div>
+            <label class="col-sm-3 control-label">clickhouse表引擎：</label>
+            <div class="col-sm-9">
+                <select class="form-control" name="clickhouse_engine" id="clickhouse_engine">
+                    <option value=1>ReplacingMergeTree【单机模式】</option>
+                    <option value=2 selected="selected">ReplicatedReplacingMergeTree【集群模式，至少需要两个节点】</option>
+                </select>
+                <span class="help-block m-b-none">
+                    <p></p>
+                </span>
+            </div>
+        </div>
 
-
-            </tbody>
-            <!--
-            <tr>
-                <td> <input type="text" value="mysqlsdf"  name="ck_file_name" disabled  class="form-control" placeholder=""></td>
-                <td> <input type="text"  name="mysql_file_name"  class="form-control" placeholder=""></td>
-            </tr>
-            -->
-        </table>
-        <p>&nbsp;</p>
+        <div>
+            <div class="form-group" id="ckEngineClusterNameDiv">
+                <label class="col-sm-3 control-label">ckClusterName：</label>
+                <div class="col-sm-9">
+                    <input type="text" name="ckClusterName" id="ckClusterName" value="" class="form-control" placeholder="">
+                    <span class="help-block m-b-none">*(集群模式必填，单机模式不填)</span>
+                </div>
+            </div>
+        </div>
     </div>
-    </div>
 
-    <div class="form-group">
-        <label class="col-sm-3 control-label">BatchSize：</label>
+
+
+    <div class="form-group" id="ddlDiV">
+        <label class="col-sm-3 control-label">DDL：</label>
         <div class="col-sm-9">
-            <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control" placeholder="">
-            <span class="help-block m-b-none">* 多少条刷一次数据</span>
+            <label><input type="checkbox" name="column_add" id="column_add" value="" checked
+                          style="width: 20px; height: 20px;">Add Column</label>
+            <label><input type="checkbox" name="column_modify" id="column_modify" value="" checked
+                          style="width: 20px; height: 20px;">Modify Column</label>
+            <label><input type="checkbox" name="column_drop" id="column_drop" value="" checked
+                          style="width: 20px; height: 20px;">Drop Column</label>
+            <label><input type="checkbox" name="table_rename" id="table_rename" value=""
+                          style="width: 20px; height: 20px;">Rename Table</label>
+            <label><input type="checkbox" name="drop_db_and_table" id="drop_db_and_table" value=""
+                          style="width: 20px; height: 20px;">Drop DB And Table</label>
+            <label><input type="checkbox" name="truncate" id="truncate" value=""
+                          style="width: 20px; height: 20px;">Truncate</label>
         </div>
     </div>
-</div>
-
-
-<!--show clickhouse create sql start-->
-<div class="modal inmodal fade" id="showClickHouseCreateSQL" tabindex="-1" role="dialog"  aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
-            </div>
-            <div class="modal-body">
-
-
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+    <div class="form-group">
+        <div>
+            <br><br>
+            <div class="form-group">
+                <label class="col-sm-3 control-label">BatchSize：</label>
+                <div class="col-sm-9">
+                    <input type="text" name="BatchSize" id="CK_BatchSize" value="1000" class="form-control"
+                           placeholder="">
+                    <span class="help-block m-b-none">* 多少条刷一次数据</span>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-<!--show clickhouse create sql over-->
+
+
+        <!--show clickhouse create sql start-->
+        <div class="modal inmodal fade" id="showClickHouseCreateSQL" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                    class="sr-only">Close</span></button>
+                        <h3 class="modal-title">ClickHouse CreateSQL For Table</h3>
+                    </div>
+                    <div class="modal-body">
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-sm btn-white" data-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--show clickhouse create sql over-->

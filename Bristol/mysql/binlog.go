@@ -1,11 +1,12 @@
 package mysql
 
 import (
+	"context"
 	"database/sql/driver"
-	"log"
-	"strings"
 	"fmt"
+	"log"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,6 +27,10 @@ type BinlogDump struct {
 	mysqlConn              MysqlConnection
 	mysqlConnStatus        int
 	checkSlaveStatus       bool
+	context                struct {
+		ctx        context.Context
+		cancelFunc context.CancelFunc
+	}
 }
 
 func NewBinlogDump(DataSource string, CallbackFun callback, OnlyEvent []EventType, ReplicateDoDb, ReplicateIgnoreDb map[string]map[string]uint8) *BinlogDump {
@@ -62,10 +67,10 @@ func (This *BinlogDump) SetNextEventID(id uint64) bool {
 	return false
 }
 
-func (This *BinlogDump) GetBinlog() (string, uint32, uint32,string,uint64) {
+func (This *BinlogDump) GetBinlog() (string, uint32, uint32, string, uint64) {
 	This.RLock()
 	defer This.RUnlock()
-	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp,This.parser.getGtid(),This.parser.lastEventID
+	return This.parser.binlogFileName, This.parser.binlogPosition, This.parser.binlogTimestamp, This.parser.getGtid(), This.parser.lastEventID
 }
 
 func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, ServerId uint32, result chan error, maxFileName string, maxPosition uint32) {
@@ -81,11 +86,11 @@ func (This *BinlogDump) StartDumpBinlog(filename string, position uint32, Server
 	This.StartDumpBinlog0()
 }
 
-func (This *BinlogDump) StartDumpBinlogGtid(gtid string,  ServerId uint32, result chan error) {
+func (This *BinlogDump) StartDumpBinlogGtid(gtid string, ServerId uint32, result chan error) {
 	if This.parser == nil {
 		This.parser = newEventParser(This)
 	}
-	gtidInfo,dbType,err := NewGTIDSet(gtid)
+	gtidInfo, dbType, err := NewGTIDSet(gtid)
 	if err != nil {
 		result <- err
 		return
@@ -105,7 +110,7 @@ func (This *BinlogDump) StartDumpBinlog0() {
 	for _, val := range This.OnlyEvent {
 		This.parser.eventDo[int(val)] = true
 	}
-	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.getGtid()," binlogFileName:",This.parser.binlogFileName," binlogPosition:",This.parser.binlogPosition )
+	log.Println(This.DataSource+" start DumpBinlog... gtid:", This.parser.getGtid(), " binlogFileName:", This.parser.binlogFileName, " binlogPosition:", This.parser.binlogPosition)
 	defer func() {
 		This.parser.ParserConnClose(true)
 	}()
@@ -124,8 +129,8 @@ func (This *BinlogDump) StartDumpBinlog0() {
 		}
 		This.RUnlock()
 		if first == false {
-			time.Sleep( 5 * time.Second)
-		}else{
+			time.Sleep(5 * time.Second)
+		} else {
 			first = false
 		}
 		This.parser.callbackErrChan <- fmt.Errorf(StatusFlagName(STATUS_STARTING))
@@ -247,14 +252,15 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 	}
 	This.parser.callbackErrChan <- fmt.Errorf(StatusFlagName(STATUS_RUNNING))
 	This.parser.connectionId = connectionId
-	go This.checkDumpConnection()
+	ctx, cancelFun := context.WithCancel(context.TODO())
+	go This.checkDumpConnection(ctx, connectionId)
 	//*** get connection id end
 
 	This.checksumEnabled()
 	if This.parser.isGTID == false {
-		This.mysqlConn.DumpBinlog(This.parser,This.CallbackFun)
-	}else{
-		This.mysqlConn.DumpBinlogGtid(This.parser,This.CallbackFun)
+		This.mysqlConn.DumpBinlog(This.parser, This.CallbackFun)
+	} else {
+		This.mysqlConn.DumpBinlogGtid(This.parser, This.CallbackFun)
 	}
 	This.BinlogConnCLose(true)
 	This.RLock()
@@ -268,10 +274,11 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 		break
 	}
 	This.RUnlock()
+	cancelFun()
 	This.parser.KillConnect(connectionId)
 }
 
-func (This *BinlogDump) checkDumpConnection() {
+func (This *BinlogDump) checkDumpConnection(ctx context.Context, connectionId string) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("binlog.go checkDumpConnection err:", err)
@@ -290,34 +297,44 @@ func (This *BinlogDump) checkDumpConnection() {
 		This.Unlock()
 	}()
 	var ok bool
+	timeout := 9 * time.Second
+	timer := time.NewTimer(timeout)
+
 	for {
-		time.Sleep(9 * time.Second)
-		This.Lock()
-		if This.parser.dumpBinLogStatus == STATUS_CLOSED || This.parser.dumpBinLogStatus == STATUS_KILLED {
-			This.Unlock()
-			break
-		}
-		connectionId := This.parser.connectionId
-		This.Unlock()
-
-		var m map[string]string
-		var e error
-
-		for i := 0; i < 3; i++ {
-			m, e = This.parser.GetConnectionInfo(connectionId)
-			if e != nil {
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			break
-		}
-		if m != nil  {
-			if _,ok = m["TIME"];!ok {
-				log.Println("This.mysqlConn close ,connectionId: ", connectionId)
-				This.BinlogConnCLose0(true)
+		timer.Reset(timeout)
+		select {
+		case <-timer.C:
+			timer.Stop()
+			This.Lock()
+			if This.parser.dumpBinLogStatus == STATUS_CLOSED || This.parser.dumpBinLogStatus == STATUS_KILLED {
+				This.Unlock()
 				break
 			}
+			connectionId := This.parser.connectionId
+			This.Unlock()
+
+			var m map[string]string
+			var e error
+
+			for i := 0; i < 3; i++ {
+				m, e = This.parser.GetConnectionInfo(connectionId)
+				if e != nil {
+					time.Sleep(2 * time.Second)
+					continue
+				}
+				break
+			}
+			if m != nil {
+				if _, ok = m["TIME"]; !ok {
+					log.Println("This.mysqlConn close ,connectionId: ", connectionId)
+					This.BinlogConnCLose0(true)
+					return
+				}
+			}
+		case <-ctx.Done():
+			return
 		}
+
 	}
 }
 

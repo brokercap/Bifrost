@@ -1,3 +1,38 @@
+v1.8.6-release   2022-09-10
+1. 修复docker环境重启失败的BUG(issue https://github.com/brokercap/Bifrost/issues/198)
+2. 修复DateTime64(N) 时区问题BUG(issue https://github.com/brokercap/Bifrost/issues/191)
+3. ck plugin 单测整理
+
+v1.8.5-release   2022-09-04
+1. 新增CK插件库表前缀配置功能
+2. 修复CK插件1.7.4升级到1.8版本不兼容的BUG(issue https://github.com/brokercap/Bifrost/issues/196)
+3，修复HTTP插件在BasicAuth认证推送失败的BUG(issue https://github.com/brokercap/Bifrost/issues/195)
+4. 修复ElasticSearch插件在ElasitcSearch 8.x 版本不支持type参数的BUG(issue https://github.com/brokercap/Bifrost/issues/177)
+5. 修复其他已知部分BUG
+
+v1.8.4-release   2022-08-28
+1. 修复分区表解析出错的bug
+2. 修复ClickHouse插件同步 新增索引等DDL语句同步导致的bug
+3，修复可能造成超时并不同步数据的bug(issue https://github.com/brokercap/Bifrost/issues/179)
+4. 修复其他已知bug
+
+v1.8.3-release   2022-04-16
+1. FIX CK插件同步配置选择了指定目标表的时候指定字段映射关系不显示的BUG(issue https://github.com/brokercap/Bifrost/issues/180)
+
+v1.8.2-release   2022-03-26
+1. 修复ck插件集群模式同步不了数据的bug
+2. Binlog解析测试新增所有字段类型的null值测试
+3. 生成测试数据新增所有字段类型的null值字段
+
+v1.8.1-release   2022-02-27
+===========================
+1. ClickHouse DDL 支持完善，包含：增加字段，删除字段，修改字段类型，修改字段名称，修改表名称等
+2. 支持 ClickHouse ReplicatedReplacingMergeTree 分布式集群模式写入（由于涉及到final 效率问题，推荐ck版本为 v20.5.2.7-stable以上（包含））
+3. 新增 ElasticSearch 插件支持
+4. 修复数据包超过16MB时无法完全解析的BUG
+5. 优化某个表没有数据写入，其他表有数据写入的情况下，造成没有数据更变的表，并不会5秒进行超时同步的BUG
+6. 优化Binlog连接断开重连的功能
+
 v1.8.0-beta.01   2021-03-14
 ===========================
 1. mysql caching_sha2_password supported

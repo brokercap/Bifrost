@@ -1,0 +1,33 @@
+<div id="ActiveMQ_Plugin_Contair">
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">IndeName: </label>
+        <div class="col-sm-9">
+            <input type="text" name="Elasticsearch_IndexName" id="Elasticsearch_IndexName" class="form-control"
+                value="{$SchemaName}-{$TableName}" placeholder="{$SchemaName}-{$TableName}">
+            <span class="help-block m-b-none">* 索引名,支持原数据标签 {$SchemaName},{$TableName}</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">PrimaryKey ：</label>
+        <div class="col-sm-9">
+            <input type="text" name="Elasticsearch_PrimaryKey" id="Elasticsearch_PrimaryKey" class="form-control"
+                placeholder="">
+            <span class="help-block m-b-none">
+                Elasticsearch文档ID对应数据源中的字段名,一般填主键
+            </span>
+            <span class="help-block m-b-none">
+                为空，则自动别数据源中的主键
+            </span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">BatchSize：</label>
+        <div class="col-sm-9">
+            <input type="text" name="BatchSize" id="ES_BatchSize" value="100" class="form-control" placeholder="">
+            <span class="help-block m-b-none">* 多少条刷一次数据</span>
+        </div>
+    </div>
+</div>

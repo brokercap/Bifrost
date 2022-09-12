@@ -7,20 +7,20 @@ import (
 )
 
 type DataStruct struct {
-	Id 							uint32 `json:"id"`
-	Test_unsinged_bigint		uint64 `json:"test_unsinged_bigint"`
-	Test_unsinged_int			uint32 `json:"test_unsinged_int"`
-	Test_unsinged_mediumint		uint32 `json:"test_unsinged_mediumint"`
-	Test_unsinged_smallint		uint16 `json:"test_unsinged_smallint"`
-	Test_unsinged_tinyint		uint8  `json:"test_unsinged_tinyint"`
+	Id 							uint32 `json:"id,string"`
+	Test_unsinged_bigint		uint64 `json:"test_unsinged_bigint,string"`
+	Test_unsinged_int			uint32 `json:"test_unsinged_int,string"`
+	Test_unsinged_mediumint		uint32 `json:"test_unsinged_mediumint,string"`
+	Test_unsinged_smallint		uint16 `json:"test_unsinged_smallint,string"`
+	Test_unsinged_tinyint		uint8  `json:"test_unsinged_tinyint,string"`
 
-	Testtinyint					int8  `json:"testtinyint"`
-	Testsmallint				int16  `json:"testsmallint"`
-	Testmediumint				int32  `json:"testmediumint"`
-	Testint						int32  `json:"testint"`
-	Testbigint					int64  `json:"testbigint"`
+	Testtinyint					int8  `json:"testtinyint,string"`
+	Testsmallint				int16  `json:"testsmallint,string"`
+	Testmediumint				int32  `json:"testmediumint,string"`
+	Testint						int32  `json:"testint,string"`
+	Testbigint					int64  `json:"testbigint,string"`
 
-	Testbit						int64  `json:"testbit"`
+	Testbit						int64  `json:"testbit,string"`
 	Testbool					bool   `json:"testbool"`
 
 	Testvarchar					string  `json:"testvarchar"`

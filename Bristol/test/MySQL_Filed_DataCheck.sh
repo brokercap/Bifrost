@@ -153,7 +153,7 @@ echo "docker -P" $port
 sleep 15
 
 
-$path/MySQL_Filed_DataCheck -u root -p $pwd -h 127.0.0.1 -P $port -database bifrost_test -table "" -longstring false
+$path/MySQL_Filed_DataCheck -u root -p $pwd -h 127.0.0.1 -P $port -database bifrost_test -table "" -longstring true
 
 
 docker stop $dockerName

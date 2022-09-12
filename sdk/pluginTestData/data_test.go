@@ -3,6 +3,7 @@ package pluginTestData
 import (
 	"testing"
 	"encoding/json"
+	"unsafe"
 )
 
 func TestGetTestData(t *testing.T){
@@ -137,5 +138,19 @@ func TestGetTestNullData(t *testing.T){
 		}
 	}
 
+	t.Log("test over")
+}
+
+
+func TestSizeOfData(t *testing.T){
+	e := NewEvent()
+	e.SetIsNull(true)
+
+	data := e.GetTestInsertData()
+
+	EventSize := unsafe.Pointer(unsafe.Sizeof(data.Rows))
+
+	t.Log("data:",*data)
+	t.Log("EventSize:",EventSize)
 	t.Log("test over")
 }
