@@ -1,7 +1,7 @@
-## Bifrost ---- 面向生产环境的 MySQL 同步到Redis,ClickHouse等服务的异构中间件
+## Bifrost ---- 面向生产环境的 MySQL,MariaDB 同步到Redis,ClickHouse,Elasticsearch等服务的异构中间件
 
 [![Gitter](https://badges.gitter.im/brokercap-Bifrost/Bifrost.svg)](https://gitter.im/brokercap-Bifrost/Bifrost?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.8.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://app.travis-ci.com/brokercap/Bifrost.svg?branch=v1.8.x)](https://app.travis-ci.com/github/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 [English](https://github.com/brokercap/Bifrost/blob/v1.8.x/README.EN.MD)
@@ -31,7 +31,7 @@
 
 #### Bifrost 特点
 
-* 支持 MySQL 所有存储类型
+* 支持 MySQL,MariaDB 所有存储类型
 
 * **界面化**动态灵活配置不同的数据表及目标库
 
