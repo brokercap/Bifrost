@@ -16,101 +16,117 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/brokercap/Bifrost/server/user"
-	"strings"
 	"net/http"
+	"strings"
+
 	"github.com/brokercap/Bifrost/admin/xgo"
 	"github.com/brokercap/Bifrost/config"
+	"github.com/brokercap/Bifrost/server/user"
 )
-
 
 type CommonController struct {
 	xgo.Controller
 }
 
-
-var writeRequestOp = []string{"/add","/del","/start","/stop","/close","/deal","/update","/export","/import","kill"}
+var writeRequestOp = []string{"/add", "/del", "/start", "/stop", "/close", "/deal", "/update", "/export", "/import", "kill"}
+var skipCheckAuthUriMap = map[string]bool{
+	"/login/index": true,
+	"/dologin":     true,
+	"/logout":      true,
+}
 
 //判断是否为写操作
 func (c *CommonController) checkWriteRequest(uri string) bool {
-	for _,v := range writeRequestOp{
-		if strings.Contains(uri,v){
+	for _, v := range writeRequestOp {
+		if strings.Contains(uri, v) {
 			return true
 		}
 	}
 	return false
 }
 
-func (c *CommonController) Prepare()  {
-	if c.Ctx.Request.Header.Get("Authorization") != ""{
-		c.basicAuthor()
-	}else{
-		c.normalAuthor()
+func (c *CommonController) Prepare() {
+	var ok bool
+	if c.Ctx.Request.Header.Get("Authorization") != "" {
+		ok = c.basicAuthor()
+	} else {
+		ok = c.normalAuthor()
 		c.Data["Version"] = config.VERSION
+	}
+	if !ok {
+		c.authErrExit()
 	}
 }
 
-func (c *CommonController) basicAuthor() bool{
-	UserName,Password,ok := c.Ctx.Request.BasicAuth()
-	if !ok || UserName == "" {
-		c.SetJsonData(ResultDataStruct{Status:-1,Msg:"Author error",Data:nil})
-		c.StopServeJSON()
-		return false
-	}
-	_,err := user.CheckUserWithIP(UserName,Password,c.GetRemoteIp())
-	if err != nil {
-		c.SetJsonData(ResultDataStruct{Status:-1,Msg:err.Error(),Data:nil})
+func (c *CommonController) checkAdminWriteRequest(group string) bool {
+	if group != "administrator" && c.checkWriteRequest(c.Ctx.Request.RequestURI) {
+		c.SetJsonData(ResultDataStruct{Status: -1, Msg: "user group : [ " + group + " ] no authority", Data: nil})
 		c.StopServeJSON()
 		return false
 	}
 	return true
 }
 
-func (c *CommonController)  normalAuthor() bool{
-	var sessionID= c.Ctx.Session.CheckCookieValid(c.Ctx.ResponseWriter, c.Ctx.Request)
+func (c *CommonController) authErrExit() {
+	c.SetJsonData(ResultDataStruct{Status: -1, Msg: "Author error", Data: nil})
+	c.StopServeJSON()
+}
+
+func (c *CommonController) basicAuthor() bool {
+	UserName, Password, ok := c.Ctx.Request.BasicAuth()
+	if !ok || UserName == "" {
+		c.authErrExit()
+		return false
+	}
+	userInfo, err := user.CheckUserWithIP(UserName, Password, c.GetRemoteIp())
+	if err != nil {
+		c.SetJsonData(ResultDataStruct{Status: -1, Msg: err.Error(), Data: nil})
+		c.StopServeJSON()
+		return false
+	}
+	return c.checkAdminWriteRequest(userInfo.Group)
+}
+
+func (c *CommonController) normalAuthor() bool {
+	var sessionID = c.Ctx.Session.CheckCookieValid(c.Ctx.ResponseWriter, c.Ctx.Request)
 	if sessionID != "" {
-		if _,ok:=c.Ctx.Session.GetSessionVal(sessionID,"UserName");ok{
+		if _, ok := c.Ctx.Session.GetSessionVal(sessionID, "UserName"); ok {
 			//非administrator用户 用户，没有写操作权限
-			Group,_ := c.Ctx.Session.GetSessionVal(sessionID,"Group")
-			if Group.(string) != "administrator" && c.checkWriteRequest(c.Ctx.Request.RequestURI){
-				c.SetJsonData(ResultDataStruct{Status:-1,Msg:"user group : [ "+Group.(string)+" ] no authority",Data:nil})
-				c.StopServeJSON()
-				return false
-			}
-			return true
-		}else{
+			Group, _ := c.Ctx.Session.GetSessionVal(sessionID, "Group")
+			return c.checkAdminWriteRequest(Group.(string))
+		} else {
 			goto toLogin
 		}
-	}else{
+	} else {
 		goto toLogin
 	}
 
 toLogin:
-	if c.Ctx.Request.RequestURI != "/login/index" &&  c.Ctx.Request.RequestURI != "/dologin" &&  c.Ctx.Request.RequestURI != "/logout"{
+	if _, ok := skipCheckAuthUriMap[c.Ctx.Request.RequestURI]; !ok {
 		if c.IsHtmlOutput() {
 			http.Redirect(c.Ctx.ResponseWriter, c.Ctx.Request, "/login/index", http.StatusFound)
 			return false
 		}
-		c.SetJsonData(ResultDataStruct{Status:-1,Msg:"session time out",Data:nil})
+		c.SetJsonData(ResultDataStruct{Status: -1, Msg: "session time out", Data: nil})
 		c.StopServeJSON()
 		return false
 	}
 	return true
 }
 
-func (c *CommonController) SetTitle(title string)  {
-	c.SetData("Title",title+" - Bifrost")
+func (c *CommonController) SetTitle(title string) {
+	c.SetData("Title", title+" - Bifrost")
 }
 
-func (c *CommonController) AddAdminTemplate(tpl ...string)  {
-	for _,tplName := range tpl {
-		c.AddTemplate(AdminTemplatePath("/template/"+tplName))
+func (c *CommonController) AddAdminTemplate(tpl ...string) {
+	for _, tplName := range tpl {
+		c.AddTemplate(AdminTemplatePath("/template/" + tplName))
 	}
 }
 
-func (c *CommonController) AddPluginTemplate(tpl ...string)  {
-	for _,tplName := range tpl {
-		c.AddTemplate(PluginTemplatePath("/plugin/"+tplName))
+func (c *CommonController) AddPluginTemplate(tpl ...string) {
+	for _, tplName := range tpl {
+		c.AddTemplate(PluginTemplatePath("/plugin/" + tplName))
 	}
 }
 
@@ -118,7 +134,7 @@ func (c *CommonController) GetRemoteIp() string {
 	// 这里也可以通过X-Forwarded-For请求头的第一个值作为用户的ip
 	// 但是要注意的是这两个请求头代表的ip都有可能是伪造的
 	ip := c.Ctx.Request.Header.Get("X-Real-IP")
-	if ip == ""{
+	if ip == "" {
 		// 当请求头不存在即不存在代理时直接获取ip
 		ip = strings.Split(c.Ctx.Request.RemoteAddr, ":")[0]
 	}

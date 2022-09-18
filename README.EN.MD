@@ -1,10 +1,10 @@
 
-## Bifrost ---- A heterogeneous middleware which can synchronize MySQL binlog data To Redis,MongoDB,ClickHouse...
+## Bifrost ---- A heterogeneous middleware which can synchronize MySQL/MariaDB binlog data To Redis,MongoDB,ClickHouse,Elasticsearch...
 
 ##### *Real time data synchronization, only use mouse .....*
 
 [![Gitter](https://badges.gitter.im/brokercap-Bifrost/Bifrost.svg)](https://gitter.im/brokercap-Bifrost/Bifrost?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![Build Status](https://travis-ci.org/brokercap/Bifrost.svg?branch=v1.8.x)](https://travis-ci.org/brokercap/Bifrost)
+[![Build Status](https://app.travis-ci.com/brokercap/Bifrost.svg?branch=v1.8.x)](https://app.travis-ci.com/github/brokercap/Bifrost)
 [![License](https://img.shields.io/github/license/jc3wish/Bifrost.svg)](https://opensource.org/licenses/apache2.0)
 
 [中文](https://github.com/brokercap/Bifrost/blob/v1.8.x/README.MD)
@@ -50,7 +50,7 @@ http://www.xbifrost.com/demo/
 ### Points
 
 
-* Support all save types of MySQL
+* Support all save types of MySQL/MariaDB
 
 * Interface **dynamics** can dispose different data sheet and target database flexibly
 
@@ -101,11 +101,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.8.6-release/bifrost_v1.8.6-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v1.8.7-release/bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.8.6-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.8.6-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v1.8.7-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
