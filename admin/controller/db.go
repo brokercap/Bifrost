@@ -31,8 +31,8 @@ type DBController struct {
 
 type DbUpdateParam struct {
 	DbName            string
-	InputType		  string
-	SchemaName 		  string
+	InputType         string
+	SchemaName        string
 	TableName         string
 	Uri               string
 	BinlogFileName    string
@@ -41,8 +41,8 @@ type DbUpdateParam struct {
 	MaxBinlogFileName string
 	MaxBinlogPosition uint32
 	UpdateToServer    int8
-	CheckPrivilege	  bool
-	Gtid			  string
+	CheckPrivilege    bool
+	Gtid              string
 }
 
 func (c *DBController) getParam() *DbUpdateParam {
@@ -60,6 +60,9 @@ func (c *DBController) getParam() *DbUpdateParam {
 		c.StopServeJSON()
 		return nil
 	}
+	if data.InputType == "" {
+		data.InputType = "mysql"
+	}
 	return &data
 }
 
@@ -68,7 +71,7 @@ func (c *DBController) Index() {
 	dbList := server.GetListDb()
 	c.SetData("Title", "db list")
 	c.SetData("DBList", dbList)
-	c.AddAdminTemplate("db.list.html","header.html","footer.html")
+	c.AddAdminTemplate("db.list.html", "header.html", "footer.html")
 }
 
 // db list
@@ -99,13 +102,13 @@ func (c *DBController) Add() {
 	}
 	defer server.SaveDBConfigInfo()
 	inputInfo := inputDriver.InputInfo{
-		ConnectUri:data.Uri,
-		GTID:data.Gtid,
-		BinlogFileName:data.BinlogFileName,
-		BinlogPostion:data.BinlogPosition,
-		ServerId:data.ServerId,
-		MaxFileName:data.MaxBinlogFileName,
-		MaxPosition:data.MaxBinlogPosition,
+		ConnectUri:     data.Uri,
+		GTID:           data.Gtid,
+		BinlogFileName: data.BinlogFileName,
+		BinlogPostion:  data.BinlogPosition,
+		ServerId:       data.ServerId,
+		MaxFileName:    data.MaxBinlogFileName,
+		MaxPosition:    data.MaxBinlogPosition,
 	}
 	server.AddNewDB(data.DbName, data.InputType, inputInfo, time.Now().Unix())
 	channel, _ := server.GetDBObj(data.DbName).AddChannel("default", 1)
@@ -135,13 +138,13 @@ func (c *DBController) Update() {
 		}
 	}
 	inputInfo := inputDriver.InputInfo{
-		ConnectUri:data.Uri,
-		GTID:data.Gtid,
-		BinlogFileName:data.BinlogFileName,
-		BinlogPostion:data.BinlogPosition,
-		ServerId:data.ServerId,
-		MaxFileName:data.MaxBinlogFileName,
-		MaxPosition:data.MaxBinlogPosition,
+		ConnectUri:     data.Uri,
+		GTID:           data.Gtid,
+		BinlogFileName: data.BinlogFileName,
+		BinlogPostion:  data.BinlogPosition,
+		ServerId:       data.ServerId,
+		MaxFileName:    data.MaxBinlogFileName,
+		MaxPosition:    data.MaxBinlogPosition,
 	}
 	err := server.UpdateDB(data.DbName, data.InputType, inputInfo, time.Now().Unix(), data.UpdateToServer)
 	if err != nil {
@@ -252,8 +255,8 @@ func (c *DBController) CheckUri() {
 		MaxFileName:    "",
 		MaxPosition:    0,
 	}
-	o := inputDriver.Open(data.InputType,inputInfo)
-	CheckUriResult,err := o.CheckUri(data.CheckPrivilege)
+	o := inputDriver.Open(data.InputType, inputInfo)
+	CheckUriResult, err := o.CheckUri(data.CheckPrivilege)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
@@ -268,10 +271,10 @@ func (c *DBController) GetLastPosition() {
 		BinlogFile            string
 		BinlogPosition        int
 		BinlogTimestamp       uint32
-		Gtid			      string
+		Gtid                  string
 		CurrentBinlogFile     string
 		CurrentBinlogPosition int
-		CurrentGtid			  string
+		CurrentGtid           string
 		NowTimestamp          uint32
 		DelayedTime           uint32
 	}
@@ -290,11 +293,11 @@ func (c *DBController) GetLastPosition() {
 		result.Msg = data.DbName + " no exsit"
 		return
 	}
-	dbInfo := &dbInfoStruct{ NowTimestamp: uint32(time.Now().Unix()) }
+	dbInfo := &dbInfoStruct{NowTimestamp: uint32(time.Now().Unix())}
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
 	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
 	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
-	dbInfo.Gtid			  = dbObj.Gtid
+	dbInfo.Gtid = dbObj.Gtid
 
 	inputInfo := inputDriver.InputInfo{
 		IsGTID:         false,
@@ -306,8 +309,8 @@ func (c *DBController) GetLastPosition() {
 		MaxFileName:    "",
 		MaxPosition:    0,
 	}
-	o := inputDriver.Open(dbObj.InputType,inputInfo)
-	MasterBinlogInfo,err := o.GetCurrentPosition()
+	o := inputDriver.Open(dbObj.InputType, inputInfo)
+	MasterBinlogInfo, err := o.GetCurrentPosition()
 	if err != nil {
 		result.Msg = err.Error()
 		return
@@ -319,7 +322,7 @@ func (c *DBController) GetLastPosition() {
 	dbInfo.CurrentBinlogFile = MasterBinlogInfo.BinlogFileName
 	dbInfo.CurrentBinlogPosition = int(MasterBinlogInfo.BinlogPostion)
 	dbInfo.CurrentGtid = MasterBinlogInfo.GTID
-	if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile &&  dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
+	if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile && dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
 		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 	}
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: dbInfo}
@@ -349,7 +352,7 @@ func (c *DBController) GetVersion() {
 		MaxFileName:    "",
 		MaxPosition:    0,
 	}
-	o := inputDriver.Open(dbObj.InputType,inputInfo)
-	Version,_ := o.GetVersion()
+	o := inputDriver.Open(dbObj.InputType, inputInfo)
+	Version, _ := o.GetVersion()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: Version}
 }

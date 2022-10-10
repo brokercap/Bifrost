@@ -219,7 +219,7 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 		}
 	}()
 	dbconn := c.GetConn()
-	if dbconn != nil {
+	if dbconn == nil {
 		err = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
 	}
 	if err != nil {
@@ -235,8 +235,8 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 	Msg := make([]string, 0)
 	MasterBinlogInfo := GetBinLogInfo(dbconn)
 	if MasterBinlogInfo.File != "" {
-		CheckUriResult.BinlogFileName = MasterBinlogInfo.File
-		CheckUriResult.BinlogPostion = MasterBinlogInfo.Position
+		CheckUriResult.BinlogFile = MasterBinlogInfo.File
+		CheckUriResult.BinlogPosition = MasterBinlogInfo.Position
 		CheckUriResult.Gtid = MasterBinlogInfo.Executed_Gtid_Set
 		CheckUriResult.ServerId = GetServerId(dbconn)
 		variablesMap := GetVariables(dbconn, "binlog_format")
@@ -249,6 +249,7 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 			default:
 				Msg = append(Msg, fmt.Sprintf("binlog_format(%s) != row", binlogFormat))
 			}
+			CheckUriResult.BinlogFormat = binlogFormat
 		}
 		if binlogRowImage, ok := BinlogRowImageMap["binlog_row_image"]; ok {
 			switch strings.ToLower(binlogRowImage) {
@@ -257,6 +258,7 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 			default:
 				Msg = append(Msg, fmt.Sprintf("binlog_row_image(%s) != full", binlogRowImage))
 			}
+			CheckUriResult.BinlogRowImage = binlogRowImage
 		}
 	} else {
 		err = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")

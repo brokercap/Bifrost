@@ -1,14 +1,14 @@
 package driver
 
 type InputInfo struct {
-	IsGTID bool
-	ConnectUri string
-	GTID string
+	IsGTID         bool
+	ConnectUri     string
+	GTID           string
 	BinlogFileName string
-	BinlogPostion uint32
-	ServerId uint32
-	MaxFileName string
-	MaxPosition uint32
+	BinlogPostion  uint32
+	ServerId       uint32
+	MaxFileName    string
+	MaxPosition    uint32
 }
 
 type PluginStatus struct {
@@ -17,11 +17,11 @@ type PluginStatus struct {
 }
 
 type PluginPosition struct {
-	GTID string
+	GTID           string
 	BinlogFileName string
-	BinlogPostion uint32
-	Timestamp uint32
-	EventID	  uint64
+	BinlogPostion  uint32
+	Timestamp      uint32
+	EventID        uint64
 }
 
 type TableList struct {
@@ -30,22 +30,24 @@ type TableList struct {
 }
 
 type TableFieldInfo struct {
-	ColumnName		  *string
-	ColumnDefault	  *string
-	IsNullable		  bool
-	ColumnType		  *string
-	IsAutoIncrement	  bool
-	Comment		     *string
+	ColumnName       *string
+	ColumnDefault    *string
+	IsNullable       bool
+	ColumnType       *string
+	IsAutoIncrement  bool
+	Comment          *string
 	DataType         *string
 	NumericPrecision *uint64
-	NumericScale	 *uint64
-	ColumnKey		 *string
+	NumericScale     *uint64
+	ColumnKey        *string
 }
 
 type CheckUriResult struct {
-	BinlogFileName    string
-	BinlogPostion int
-	Gtid		   string
+	BinlogFile     string
+	BinlogPosition int
+	BinlogFormat   string
+	BinlogRowImage string
+	Gtid           string
 	ServerId       int
-	Msg			[]string
+	Msg            []string
 }

@@ -45,23 +45,24 @@ func (c *MysqlInput) MySQLCallback(data *mysql.EventReslut) {
 	if c.callback == nil {
 		return
 	}
+	c.eventID = data.EventID
 	i := strings.IndexAny(data.BinlogFileName, ".")
 	intString := data.BinlogFileName[i+1:]
-	BinlogFileNum,_:=strconv.Atoi(intString)
+	BinlogFileNum, _ := strconv.Atoi(intString)
 	data0 := &pluginDriver.PluginDataType{
-		EventSize: data.Header.EventSize,
-		Timestamp: data.Header.Timestamp,
-		EventType:evenTypeName(data.Header.EventType),
-		SchemaName:data.SchemaName,
-		TableName:data.TableName,
-		Rows:data.Rows,
-		BinlogFileNum:BinlogFileNum,
-		BinlogPosition:data.Header.LogPos,
-		Query:data.Query,
-		Gtid:data.Gtid,
-		Pri:data.Pri,
-		ColumnMapping: data.ColumnMapping,
-		EventID: data.EventID,
+		EventSize:      data.Header.EventSize,
+		Timestamp:      data.Header.Timestamp,
+		EventType:      evenTypeName(data.Header.EventType),
+		SchemaName:     data.SchemaName,
+		TableName:      data.TableName,
+		Rows:           data.Rows,
+		BinlogFileNum:  BinlogFileNum,
+		BinlogPosition: data.Header.LogPos,
+		Query:          data.Query,
+		Gtid:           data.Gtid,
+		Pri:            data.Pri,
+		ColumnMapping:  data.ColumnMapping,
+		EventID:        data.EventID,
 	}
 	c.callback(data0)
 }
