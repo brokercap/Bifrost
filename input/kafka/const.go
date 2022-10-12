@@ -15,26 +15,4 @@ limitations under the License.
 */
 package kafka
 
-import "github.com/Shopify/sarama"
-
-func (c *Input) Setup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (c *Input) Cleanup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
-func (c *Input) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	for {
-		select {
-		case kafkaMsg := <-claim.Messages():
-			c.InputCallback(kafkaMsg)
-			break
-		case p := <-c.waitCommitOffset:
-			sess.MarkOffset(p.topic, p.partition, p.offset, "")
-			break
-		}
-	}
-	return nil
-}
+const defaultKafkaGroupId string = "bifrost_input_kafka_group"

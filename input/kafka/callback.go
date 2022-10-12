@@ -19,7 +19,7 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-func (c *Input) InputCallback(kafkaMsg *sarama.Message) {
+func (c *Input) InputCallback(kafkaMsg *sarama.ConsumerMessage) {
 	if c.childCallBack != nil {
 		c.childCallBack(kafkaMsg)
 	}

@@ -33,6 +33,8 @@ type PluginDataType struct {
 	Query          	string
 	SchemaName     	string
 	TableName      	string
+	AliasSchemaName     	string
+	AliasTableName      	string
 	BinlogFileNum 	int
 	BinlogPosition 	uint32
 	Gtid			string
