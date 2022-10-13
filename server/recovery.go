@@ -544,6 +544,7 @@ func SaveDBInfoToFileData() interface{} {
 		db.Lock()
 		data[k] = dbSaveInfo{
 			Name:                  db.Name,
+			InputType:             db.InputType,
 			ConnectUri:            db.ConnectUri,
 			ConnStatus:            db.ConnStatus,
 			LastChannelID:         db.LastChannelID,
@@ -571,7 +572,7 @@ func SaveDBInfoToFileData() interface{} {
 			}
 			c.Unlock()
 		}
-		log.Println(k,data[k])
+		log.Println(k, data[k])
 		db.Unlock()
 	}
 	DbLock.Unlock()

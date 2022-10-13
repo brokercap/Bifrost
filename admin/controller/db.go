@@ -18,11 +18,13 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
-	inputDriver "github.com/brokercap/Bifrost/input/driver"
-	"github.com/brokercap/Bifrost/server"
 	"io/ioutil"
 	"time"
+
+	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"github.com/brokercap/Bifrost/server"
+
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 )
 
 type DBController struct {
@@ -69,8 +71,10 @@ func (c *DBController) getParam() *DbUpdateParam {
 // 数据源列表，界面显示
 func (c *DBController) Index() {
 	dbList := server.GetListDb()
+	inputPluginsMap := inputDriver.Drivers()
 	c.SetData("Title", "db list")
 	c.SetData("DBList", dbList)
+	c.SetData("inputPluginsMap", inputPluginsMap)
 	c.AddAdminTemplate("db.list.html", "header.html", "footer.html")
 }
 
