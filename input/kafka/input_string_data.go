@@ -40,9 +40,11 @@ func NewInputStringData0() *InputStringData {
 	c := &InputStringData{}
 	c.childCallBack = c.CallBack
 	c.columnMapping = map[string]string{
+		"queue_data":      "text",
+		"queue_topic":     "varchar(256)",
 		"queue_timestamp": "timestamp",
-		"queue_partition": "int",
-		"queue_offset":    "bigint",
+		"queue_partition": "int32",
+		"queue_offset":    "int64",
 	}
 	c.pri = []string{"queue_topic", "queue_partition", "queue_offset"}
 	return c
