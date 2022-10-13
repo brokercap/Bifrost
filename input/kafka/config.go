@@ -20,66 +20,47 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"time"
-
 	"github.com/Shopify/sarama"
+	"io/ioutil"
+	"strings"
 )
 
-type ConsumerConfig struct {
+type Config struct {
 	BrokerServerList []string
-	GroupID          string
-	config           *sarama.Config
-}
-
-type NetConfig struct {
-	TimeoutMs   int `json:"timeout.ms,string"`
-	KeepAliveMs int `keepalive.ms,string`
+	GroupId          string
+	Topics           []string
+	ParamConfig      *sarama.Config
 }
 
 type TLSConfig struct {
-	Cert                string `json:"cert"`
-	Key                 string `json:"key"`
-	CA                  string `json:"ca"`
-	InsescureSkipVerify bool   `json:"insecure.skip.verify,bool"`
-	ServerName          string `json:"servername"`
+	TLSEnabled             bool   `json:"net.tls.enabled,bool"`
+	TLSCert                string `json:"net.tls.cert"`
+	TLSKey                 string `json:"net.tls.key"`
+	TLSCA                  string `json:"net.tls.ca"`
+	TLSInsescureSkipVerify bool   `json:"net.tls.insecure.skip.verify,bool"`
+	TLSServerName          string `json:"net.tls.servername"`
 }
 
 type SaslConfig struct {
-	SaslMechanism string `json:"sasl.mechanism"`
-	SaslUser      string `json:"sasl.user"`
-	SaslPassword  string `json:"sasl.password"`
+	SaslMechanism string `json:"net.sasl.mechanism"`
+	SaslUser      string `json:"net.sasl.user"`
+	SaslPassword  string `json:"net.sasl.password"`
 }
 
-type KafkaConfig struct {
-	NetConfig
+type ConnectorParamConfig struct {
 	*SaslConfig
-	ClientID             string `json:"client.id"`
-	GroupID              string `json:"group.id"`
-	RetryBackOffMS       int    `json:"retry.backoff.ms,int"`
-	MetadataMaxAgeMS     int    `json:"metadata.max.age.ms,int"`
-	SessionTimeoutMS     int32  `json:"session.timeout.ms,int32"`
-	FetchMaxWaitMS       int32  `json:"fetch.max.wait.ms,int32"`
-	FetchMaxBytes        int32  `json:"fetch.max.bytes,int32"`
-	FetchMinBytes        int32  `json:"fetch.min.bytes,int32"`
-	FromBeginning        bool   `json:"from.beginning,bool"`
-	AutoCommit           bool   `json:"auto.commit,bool"`
-	AutoCommitIntervalMS int    `json:"auto.commit.interval.ms,int"`
-
-	TLSEnabled bool       `json:"tls.enabled,bool"`
-	TLS        *TLSConfig `json:"tls"`
+	ClientID string `json:"client.id"`
+	GroupID  string `json:"group.id"`
+	*TLSConfig
+	FromBeginning bool `json:"from.beginning,bool"`
 }
 
-func defaultConsumerConfig() *KafkaConfig {
-	c := &KafkaConfig{
-		GroupID:       defaultKafkaGroupId,
-		FromBeginning: false,
-		AutoCommit:    false,
-	}
+func defaultConnectorParamConfig() *ConnectorParamConfig {
+	c := &ConnectorParamConfig{}
 	return c
 }
 
-func createTLSConfig(certFile, keyFile, caFile string, verify bool) (tlsConfig *tls.Config, err error) {
+func createTLSConfig(certFile, keyFile, caFile string, verify bool, serverName string) (tlsConfig *tls.Config, err error) {
 	if certFile == "" || keyFile == "" || caFile == "" {
 		return nil, fmt.Errorf("cert not found")
 	}
@@ -101,16 +82,23 @@ func createTLSConfig(certFile, keyFile, caFile string, verify bool) (tlsConfig *
 		Certificates:       []tls.Certificate{cert},
 		RootCAs:            rootsCAs,
 		InsecureSkipVerify: verify,
+		ServerName:         serverName,
 	}
 	return
 }
 
-func getConsumerConfig(version string, config map[string]interface{}) (kafkaConnectConfig *sarama.Config, err error) {
+func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config, err error) {
 	b, err := json.Marshal(config)
 	if err != nil {
 		return
 	}
-	rawConfig := defaultConsumerConfig()
+	var version string
+	if _, ok := config["version"]; !ok {
+		version = defaultKafkaVersion
+	} else {
+		version = fmt.Sprint(config["version"])
+	}
+	rawConfig := defaultConnectorParamConfig()
 	err = json.Unmarshal(b, rawConfig)
 	if err != nil {
 		return
@@ -121,12 +109,6 @@ func getConsumerConfig(version string, config map[string]interface{}) (kafkaConn
 	}
 	if rawConfig.ClientID != "" {
 		cfg.ClientID = rawConfig.ClientID
-	}
-	if rawConfig.MetadataMaxAgeMS > 0 {
-		cfg.Metadata.Timeout = time.Duration(rawConfig.MetadataMaxAgeMS) * time.Millisecond
-	}
-	if rawConfig.RetryBackOffMS > 0 {
-		cfg.Consumer.Retry.Backoff = time.Duration(rawConfig.RetryBackOffMS) * time.Millisecond
 	}
 
 	if rawConfig.FromBeginning {
@@ -140,11 +122,28 @@ func getConsumerConfig(version string, config map[string]interface{}) (kafkaConn
 		cfg.Net.SASL.Password = rawConfig.SaslPassword
 		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(rawConfig.SaslMechanism)
 	}
-	if rawConfig.TLS != nil && rawConfig.TLSEnabled {
+	if rawConfig.TLSEnabled {
 		cfg.Net.TLS.Enable = true
-		cfg.Net.TLS.Config, err = createTLSConfig(rawConfig.TLS.Cert, rawConfig.TLS.Key, rawConfig.TLS.CA, rawConfig.TLS.InsescureSkipVerify)
+		cfg.Net.TLS.Config, err = createTLSConfig(rawConfig.TLSCert, rawConfig.TLSKey, rawConfig.TLSCA, rawConfig.TLSInsescureSkipVerify, rawConfig.TLSServerName)
+	}
+	cfg.Consumer.Return.Errors = true
+	cfg.Consumer.Offsets.AutoCommit.Enable = false
+
+	kafkaConnectConfig.ParamConfig = cfg
+
+	if rawConfig.GroupID != "" {
+		kafkaConnectConfig.GroupId = rawConfig.GroupID
+	} else {
+		kafkaConnectConfig.GroupId = defaultKafkaGroupId
 	}
 
-	return cfg, err
+	if _, ok := config["topics"]; !ok {
+		kafkaConnectConfig.Topics = strings.Split(fmt.Sprint(config["topics"]), ",")
+	}
+	if _, ok := config["addr"]; !ok {
+		kafkaConnectConfig.BrokerServerList = strings.Split(fmt.Sprint(config["addr"]), ",")
+	}
+
+	return kafkaConnectConfig, err
 
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/Shopify/sarama"
 
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
-
 )
 
 type waitCommitOffset struct {
@@ -49,6 +48,8 @@ type Input struct {
 	PluginStatusChan chan *inputDriver.PluginStatus
 	eventID          uint64
 
+	config *Config
+
 	callback      inputDriver.Callback
 	childCallBack func(message *sarama.ConsumerMessage) error
 
@@ -66,15 +67,18 @@ type Input struct {
 	waitCommitOffset chan *waitCommitOffset
 }
 
-func NewInputPlugin() inputDriver.Driver {
-	return &Input{}
-}
-
 func (c *Input) GetUriExample() (string, string) {
-	return "127.0.0.1:9092", ""
+	notesHtml := `
+	<p><span class="help-block m-b-none">127.0.0.1:9092</span></p>
+	<p><span class="help-block m-b-none">127.0.0.1:9092,192.168.1.10</span></p>
+	<p><span class="help-block m-b-none">127.0.0.1:9092,192.168.1.10/topic1,topic2?from.beginning=false</span></p>
+`
+	return "127.0.0.1:9092,192.168.1.10/[topic_name1,topic_name2]][?client.id=&from.beginning=false]", notesHtml
 }
 
 func (c *Input) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
+	dsnMap := ParseDSN(inputInfo.ConnectUri)
+	c.config, c.err = getKafkaConnectConfig(dsnMap)
 	c.inputInfo = inputInfo
 	c.positionMap = make(map[string]map[int32]int64, 0)
 	c.topics = make(map[string]map[string]bool, 0)
@@ -109,11 +113,12 @@ func (c *Input) Start0() error {
 }
 
 func (c *Input) Start1() error {
-	config := sarama.NewConfig()
-	config.Version, _ = sarama.ParseKafkaVersion("2.7.0")
-	config.Consumer.Return.Errors = true
-	config.Consumer.Offsets.AutoCommit.Enable = false
-	c.kafkaGroup, c.err = sarama.NewConsumerGroup(c.brokerList, defaultKafkaGroupId, config)
+	client, err := c.GetConn()
+	if err != nil {
+		c.err = err
+		return err
+	}
+	c.kafkaGroup, c.err = sarama.NewConsumerGroupFromClient(c.config.GroupId, client)
 	if c.err != nil {
 		return c.err
 	}

@@ -24,12 +24,21 @@ import (
 )
 
 func (c *Input) GetConn() (sarama.Client, error) {
-	config := sarama.NewConfig()
-	client, err := sarama.NewClient(c.brokerList, config)
+	if c.config == nil {
+		return nil, fmt.Errorf("kafka config init err")
+	}
+	if len(c.config.BrokerServerList) == 0 {
+		return nil, fmt.Errorf("kafka broker server is empty")
+	}
+	client, err := sarama.NewClient(c.config.BrokerServerList, c.config.ParamConfig)
 	return client, err
 }
 
 func (c *Input) GetSchemaList() (data []string, err error) {
+	// 假如连接的时候有指定Topics列表，则指定Topics
+	if c.config != nil && len(c.config.Topics) > 0 {
+		return c.config.Topics, nil
+	}
 	client, err := c.GetConn()
 	if err != nil {
 		return data, err
@@ -94,4 +103,8 @@ func (c *Input) GetVersion() (Version string, err error) {
 	defer client.Close()
 	Version = client.Config().Version.String()
 	return
+}
+
+func (c *Input) FormatPartitionTableName(partition int32) string {
+	return fmt.Sprintf(partitionTableNamePrefix+"%d", partition)
 }

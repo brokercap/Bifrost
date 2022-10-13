@@ -17,8 +17,6 @@ package kafka
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"github.com/Shopify/sarama"
 
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
@@ -54,7 +52,7 @@ func (c *BifrostDataInput) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 	data.BinlogPosition = 0
 	data.EventID = c.getNextEventID()
 	data.AliasSchemaName = kafkaMsg.Topic
-	data.AliasTableName = fmt.Sprintf("partition_%d", kafkaMsg.Partition)
+	data.AliasTableName = c.FormatPartitionTableName(kafkaMsg.Partition)
 	c.callback(&data)
 	return nil
 }

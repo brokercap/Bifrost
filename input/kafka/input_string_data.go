@@ -16,8 +16,6 @@ limitations under the License.
 package kafka
 
 import (
-	"fmt"
-
 	"github.com/Shopify/sarama"
 
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
@@ -61,6 +59,7 @@ func (c *InputStringData) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 		"queue_partition": kafkaMsg.Partition,
 		"queue_offset":    kafkaMsg.Offset,
 	}
+	TableName := c.FormatPartitionTableName(kafkaMsg.Partition)
 	data := &outputDriver.PluginDataType{
 		Timestamp:       uint32(kafkaMsg.Timestamp.Second()),
 		EventSize:       uint32(len(kafkaMsg.Value)),
@@ -68,9 +67,9 @@ func (c *InputStringData) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 		Rows:            []map[string]interface{}{msgData},
 		Query:           "",
 		SchemaName:      kafkaMsg.Topic,
-		TableName:       fmt.Sprintf("partition_%d", kafkaMsg.Partition),
+		TableName:       TableName,
 		AliasSchemaName: kafkaMsg.Topic,
-		AliasTableName:  fmt.Sprintf("partition_%d", kafkaMsg.Partition),
+		AliasTableName:  TableName,
 		BinlogFileNum:   1,
 		BinlogPosition:  0,
 		Gtid:            c.SetTopicPartitionOffsetAndReturnGTID(kafkaMsg),

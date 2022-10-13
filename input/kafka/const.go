@@ -16,3 +16,7 @@ limitations under the License.
 package kafka
 
 const defaultKafkaGroupId string = "bifrost_input_kafka_group"
+
+const defaultKafkaVersion string  =  "2.7.0"
+
+const partitionTableNamePrefix  = "partition_"
