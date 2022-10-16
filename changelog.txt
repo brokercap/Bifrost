@@ -1,3 +1,11 @@
+v1.8.8-release   2022-10-16
+1. 修复通过X-Real-IP等伪造IP进行无限爆破密码漏洞
+2. 修复mariaDB环境下位点可能不会被保证的BUG
+
+v1.8.7-release   2022-09-18
+1. 修复basicAuth权限验证对 monitor 用户组不进行权限校验的安全BUG(issue https://github.com/brokercap/Bifrost/issues/200)
+2. 修复monitor用户组无权限但不提示的BUG
+
 v1.8.6-release   2022-09-10
 1. 修复docker环境重启失败的BUG(issue https://github.com/brokercap/Bifrost/issues/198)
 2. 修复DateTime64(N) 时区问题BUG(issue https://github.com/brokercap/Bifrost/issues/191)

@@ -20,8 +20,8 @@ function Ajax(method,url,data,callbackFun,sync) {
         contentType: "application/json",
         success:function(callbackData){ //请求成功的回调函数
             if (callbackData.hasOwnProperty("status")){
-                if (data.status == -1) {
-                    alert(data.msg);
+                if (callbackData.status == -1) {
+                    alert(callbackData.msg);
                     return;
                 }
             }
@@ -46,8 +46,8 @@ function AjaxGet(method,url,data,callbackFun,async) {
         async:async,
         success:function(callbackData){ //请求成功的回调函数
             if (callbackData.hasOwnProperty("status")){
-                if (data.status == -1) {
-                    alert(data.msg);
+                if (callbackData.status == -1) {
+                    alert(callbackData.msg);
                     return;
                 }
             }

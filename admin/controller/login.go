@@ -16,8 +16,9 @@ limitations under the License.
 package controller
 
 import (
-	"github.com/brokercap/Bifrost/server/user"
 	"net/http"
+
+	"github.com/brokercap/Bifrost/server/user"
 )
 
 type LoginController struct {
@@ -37,11 +38,12 @@ func (c *LoginController) Login() {
 		c.StopServeJSON()
 	}()
 	if param.UserName == "" {
-		result.Msg = "user no exsit"
+		result.Msg = "user not exist"
 		return
 	}
 	var sessionID = c.Ctx.Session.StartSession(c.Ctx.ResponseWriter, c.Ctx.Request)
-	UserInfo,err := user.CheckUserWithIP(param.UserName,param.Password,c.GetRemoteIp())
+	mayXRealIP, remoteAddrIp := c.GetRemoteIp()
+	UserInfo, err := user.CheckUserWithIP(param.UserName, param.Password, mayXRealIP, remoteAddrIp)
 	if err == nil {
 		c.Ctx.Session.SetSessionVal(sessionID, "UserName", param.UserName)
 		c.Ctx.Session.SetSessionVal(sessionID, "Group", UserInfo.Group)
@@ -57,7 +59,7 @@ func (c *LoginController) Logout() {
 	if c.IsHtmlOutput() {
 		c.SetOutputByUser()
 		http.Redirect(c.Ctx.ResponseWriter, c.Ctx.Request, "/login/index", http.StatusFound)
-	}else{
+	} else {
 		result := ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 		c.SetJsonData(result)
 		c.StopServeJSON()
