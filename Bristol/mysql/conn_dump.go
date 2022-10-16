@@ -152,6 +152,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 					break
 				}
 			}
+			//log.Println("event.Header.EventType：", event.Header.EventType, event.Header.EventName(), event.Query)
 			event.EventID = parser.getNextEventID()
 			switch event.Header.EventType {
 			//这里要判断一下如果是row事件
@@ -162,6 +163,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				}
 				break
 			case QUERY_EVENT:
+				parser.saveBinlog(event)
 				if event.Query == "COMMIT" {
 					if !commitEventOk {
 						continue
@@ -188,7 +190,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				}
 				if event.TableName != "" {
 					if parser.binlogDump.CheckReplicateDb(event.SchemaName, event.TableName) == false {
-						parser.saveBinlog(event)
+						//parser.saveBinlog(event)
 						continue
 					}
 					if noReloadTableInfo {
@@ -204,7 +206,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				// 假如 drop database schemaName 这样的语句，只有 SchemaName，而没有 TableName的，则匹配是否要过滤整个库
 				if event.SchemaName != "" {
 					if parser.binlogDump.CheckReplicateDb(event.SchemaName, "*") == false {
-						parser.saveBinlog(event)
+						//parser.saveBinlog(event)
 						continue
 					}
 				}
@@ -236,6 +238,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				parser.saveBinlog(event)
 				continue
 			}
+			//log.Println(event.BinlogFileName,event.BinlogPosition,event.Gtid,event.EventID,event.Header.EventName())
 			// no commit event after ddl
 			// so we need need callback a begin event and a commit event
 			if isDDL {
@@ -275,7 +278,13 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 			} else {
 				callbackFun(event)
 				parser.saveBinlog(event)
-				commitEventOk = false
+				switch event.Header.EventType {
+				case WRITE_ROWS_EVENTv0, WRITE_ROWS_EVENTv1, WRITE_ROWS_EVENTv2, UPDATE_ROWS_EVENTv0, UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2, DELETE_ROWS_EVENTv0, DELETE_ROWS_EVENTv1, DELETE_ROWS_EVENTv2:
+					commitEventOk = true
+					break
+				default:
+					commitEventOk = false
+				}
 			}
 		} else {
 			parser.callbackErrChan <- fmt.Errorf("Unknown packet:\n%s\n\n", hex.Dump(pkt))
