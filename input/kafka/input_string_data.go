@@ -27,7 +27,7 @@ func init() {
 }
 
 type InputStringData struct {
-	Input
+	InputKafka
 	columnMapping map[string]string
 	pri           []string
 }
@@ -38,6 +38,7 @@ func NewInputStringData() inputDriver.Driver {
 
 func NewInputStringData0() *InputStringData {
 	c := &InputStringData{}
+	c.Init()
 	c.childCallBack = c.CallBack
 	c.columnMapping = map[string]string{
 		"queue_data":      "text",
@@ -63,7 +64,7 @@ func (c *InputStringData) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 	}
 	TableName := c.FormatPartitionTableName(kafkaMsg.Partition)
 	data := &outputDriver.PluginDataType{
-		Timestamp:       uint32(kafkaMsg.Timestamp.Second()),
+		Timestamp:       uint32(kafkaMsg.Timestamp.Unix()),
 		EventSize:       uint32(len(kafkaMsg.Value)),
 		EventType:       "insert",
 		Rows:            []map[string]interface{}{msgData},
@@ -79,6 +80,6 @@ func (c *InputStringData) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 		ColumnMapping:   c.columnMapping,
 		Pri:             c.pri,
 	}
-	c.callback(data)
+	c.ToInputCallback(data)
 	return nil
 }

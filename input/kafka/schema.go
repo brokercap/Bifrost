@@ -23,7 +23,7 @@ import (
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 )
 
-func (c *Input) GetConn() (sarama.Client, error) {
+func (c *InputKafka) GetConn() (sarama.Client, error) {
 	if c.config == nil {
 		return nil, fmt.Errorf("kafka config init err")
 	}
@@ -34,7 +34,7 @@ func (c *Input) GetConn() (sarama.Client, error) {
 	return client, err
 }
 
-func (c *Input) GetSchemaList() (data []string, err error) {
+func (c *InputKafka) GetSchemaList() (data []string, err error) {
 	// 假如连接的时候有指定Topics列表，则指定Topics
 	if c.config != nil && len(c.config.Topics) > 0 {
 		return c.config.Topics, nil
@@ -47,7 +47,7 @@ func (c *Input) GetSchemaList() (data []string, err error) {
 	return client.Topics()
 }
 
-func (c *Input) GetSchemaTableList(schema string) (tableList []inputDriver.TableList, err error) {
+func (c *InputKafka) GetSchemaTableList(schema string) (tableList []inputDriver.TableList, err error) {
 	client, err := c.GetConn()
 	if err != nil {
 		return tableList, err
@@ -66,15 +66,19 @@ func (c *Input) GetSchemaTableList(schema string) (tableList []inputDriver.Table
 	return tableList, nil
 }
 
-func (c *Input) GetSchemaTableFieldList(schema string, table string) (FieldList []inputDriver.TableFieldInfo, err error) {
+func (c *InputKafka) GetSchemaTableFieldList(schema string, table string) (FieldList []inputDriver.TableFieldInfo, err error) {
 	return make([]inputDriver.TableFieldInfo, 0), nil
 }
 
-func (c *Input) CheckPrivilege() (err error) {
+func (c *InputKafka) CheckPrivilege() (err error) {
 	return
 }
 
-func (c *Input) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.CheckUriResult, err error) {
+func (c *InputKafka) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.CheckUriResult, err error) {
+	if c.err != nil {
+		err = c.err
+		return
+	}
 	client, err := c.GetConn()
 	if err != nil {
 		return CheckUriResult, err
@@ -91,11 +95,11 @@ func (c *Input) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.CheckU
 	return result, nil
 }
 
-func (c *Input) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
+func (c *InputKafka) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
 	return
 }
 
-func (c *Input) GetVersion() (Version string, err error) {
+func (c *InputKafka) GetVersion() (Version string, err error) {
 	client, err := c.GetConn()
 	if err != nil {
 		return Version, err
@@ -105,6 +109,6 @@ func (c *Input) GetVersion() (Version string, err error) {
 	return
 }
 
-func (c *Input) FormatPartitionTableName(partition int32) string {
+func (c *InputKafka) FormatPartitionTableName(partition int32) string {
 	return fmt.Sprintf(partitionTableNamePrefix+"%d", partition)
 }

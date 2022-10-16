@@ -17,7 +17,7 @@ package kafka
 
 import "fmt"
 
-func (c *Input) GetTopics() (topics []string, err error) {
+func (c *InputKafka) GetTopics() (topics []string, err error) {
 	topics, err = c.GetTopics0()
 	if err != nil {
 		return
@@ -28,7 +28,7 @@ func (c *Input) GetTopics() (topics []string, err error) {
 	return c.GetTopics1()
 }
 
-func (c *Input) GetTopics0() (topics []string, err error) {
+func (c *InputKafka) GetTopics0() (topics []string, err error) {
 	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.topics["*"]; !ok {
@@ -44,7 +44,7 @@ func (c *Input) GetTopics0() (topics []string, err error) {
 	return
 }
 
-func (c *Input) GetTopics1() (topics []string, err error) {
+func (c *InputKafka) GetTopics1() (topics []string, err error) {
 	c.Lock()
 	defer c.Unlock()
 	for topic, _ := range c.topics {
@@ -53,7 +53,7 @@ func (c *Input) GetTopics1() (topics []string, err error) {
 	return
 }
 
-func (c *Input) AddReplicateDoDb(SchemaName, TableName string) (err error) {
+func (c *InputKafka) AddReplicateDoDb(SchemaName, TableName string) (err error) {
 	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.topics[SchemaName]; !ok {
@@ -63,7 +63,7 @@ func (c *Input) AddReplicateDoDb(SchemaName, TableName string) (err error) {
 	return nil
 }
 
-func (c *Input) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+func (c *InputKafka) DelReplicateDoDb(SchemaName, TableName string) (err error) {
 	defer c.Unlock()
 	if _, ok := c.topics[SchemaName]; !ok {
 		return

@@ -106,6 +106,7 @@ func (c *DBController) Add() {
 	}
 	defer server.SaveDBConfigInfo()
 	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
 		ConnectUri:     data.Uri,
 		GTID:           data.Gtid,
 		BinlogFileName: data.BinlogFileName,
@@ -142,6 +143,7 @@ func (c *DBController) Update() {
 		}
 	}
 	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
 		ConnectUri:     data.Uri,
 		GTID:           data.Gtid,
 		BinlogFileName: data.BinlogFileName,
@@ -250,6 +252,7 @@ func (c *DBController) CheckUri() {
 		return
 	}
 	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
 		IsGTID:         false,
 		ConnectUri:     data.Uri,
 		GTID:           "",
@@ -304,6 +307,7 @@ func (c *DBController) GetLastPosition() {
 	dbInfo.Gtid = dbObj.Gtid
 
 	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
 		IsGTID:         false,
 		ConnectUri:     dbObj.ConnectUri,
 		GTID:           "",
@@ -347,6 +351,7 @@ func (c *DBController) GetVersion() {
 		return
 	}
 	inputInfo := inputDriver.InputInfo{
+		DbName:         DbName,
 		IsGTID:         false,
 		ConnectUri:     dbObj.ConnectUri,
 		GTID:           "",

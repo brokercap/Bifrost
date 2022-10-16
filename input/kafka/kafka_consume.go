@@ -15,25 +15,33 @@ limitations under the License.
 */
 package kafka
 
-import "github.com/Shopify/sarama"
+import (
+	"context"
+	"github.com/Shopify/sarama"
+)
 
-func (c *Input) Setup(sarama.ConsumerGroupSession) error {
+func (c *InputKafka) Setup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-func (c *Input) Cleanup(sarama.ConsumerGroupSession) error {
+func (c *InputKafka) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-func (c *Input) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (c *InputKafka) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	ConsumeClaimCtx, ConsumeClaimCancle := context.WithCancel(c.kafkaGroupCtx)
+	defer ConsumeClaimCancle()
+	go c.ConsumePluginPosition(sess, ConsumeClaimCtx)
 	for {
 		select {
 		case kafkaMsg := <-claim.Messages():
-			c.InputCallback(kafkaMsg)
+			if kafkaMsg == nil {
+				return nil
+			}
+			c.ToChildCallback(kafkaMsg)
 			break
-		case p := <-c.waitCommitOffset:
-			sess.MarkOffset(p.topic, p.partition, p.offset, "")
-			break
+		case _ = <-c.kafkaGroupCtx.Done():
+			return nil
 		}
 	}
 	return nil

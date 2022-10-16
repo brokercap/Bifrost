@@ -43,4 +43,11 @@ func TestParseDSN(t *testing.T) {
 	if p["from.beginning"] != "false" {
 		t.Fatalf("from.beginning != %s", "false")
 	}
+
+	url = "127.0.0.1:9092/?from.beginning=true"
+	p = ParseDSN(url)
+	if len(p) != 3 {
+		t.Fatalf("len(p) != 3 (%s)", p)
+	}
+
 }

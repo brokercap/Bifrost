@@ -4,6 +4,18 @@ type PluginDriverInterface struct {
 
 }
 
+func NewPluginDriverInterface() Driver{
+	return &PluginDriverInterface{}
+}
+
+func (c *PluginDriverInterface) IsSupported(supportType SupportType) bool {
+	switch supportType {
+	case SupportFull,SupportIncre:
+		return true
+	}
+	return false
+}
+
 func (c *PluginDriverInterface)  SetOption(inputInfo InputInfo,param map[string]interface{}) {
 
 }
@@ -48,8 +60,8 @@ func (c *PluginDriverInterface) SetCallback(callback Callback) {
 
 }
 
-func (c *PluginDriverInterface) CheckPrivilege() bool {
-	return false
+func (c *PluginDriverInterface) CheckPrivilege() error {
+	return nil
 }
 
 func (c *PluginDriverInterface) CheckUri(CheckPrivilege bool) (CheckUriResult CheckUriResult,err error) {
@@ -77,5 +89,8 @@ func (c *PluginDriverInterface) GetSchemaTableList(schema string) (tableList []T
 }
 
 func (c *PluginDriverInterface) GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo,err error) {
+	return
+}
+func (c *PluginDriverInterface) DoneMinPosition(p *PluginPosition) (err error) {
 	return
 }

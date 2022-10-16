@@ -1,18 +1,25 @@
 module github.com/brokercap/Bifrost
 
+go 1.16
+
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
-	github.com/Shopify/sarama v1.26.4
+	github.com/Shopify/sarama v1.29.0
+	github.com/StackExchange/wmi v1.2.1
+	github.com/agiledragon/gomonkey v2.0.2+incompatible
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/gmallard/stompngo v1.0.11
-	github.com/go-redis/redis/v8 v8.7.1 // indirect
+	github.com/go-redis/redis/v8 v8.7.1
 	github.com/hprose/hprose-golang v2.0.4+incompatible
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/testing v0.0.0-20201216035041-2be42bba85f3 // indirect
-	github.com/olivere/elastic/v7 v7.0.24 // indirect
+	github.com/olivere/elastic/v7 v7.0.24
 	github.com/satori/go.uuid v1.2.0
+	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
+	golang.org/x/net v0.0.0-20210427231257-85d9c07bbe3a
+	golang.org/x/sys v0.0.0-20210112080510-489259a85091
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 )
 

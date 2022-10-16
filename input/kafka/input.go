@@ -18,7 +18,7 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"strings"
+	"regexp"
 	"sync"
 	"sync/atomic"
 
@@ -39,7 +39,7 @@ type TopicPartionInfo struct {
 	Offset  uint64
 }
 
-type Input struct {
+type InputKafka struct {
 	sync.RWMutex
 	inputDriver.PluginDriverInterface
 	inputInfo        inputDriver.InputInfo
@@ -53,8 +53,6 @@ type Input struct {
 	callback      inputDriver.Callback
 	childCallBack func(message *sarama.ConsumerMessage) error
 
-	brokerList []string
-
 	kafkaGroup sarama.ConsumerGroup
 
 	kafkaGroupCtx    context.Context
@@ -64,61 +62,78 @@ type Input struct {
 
 	positionMap map[string]map[int32]int64
 
-	waitCommitOffset chan *waitCommitOffset
+	waitCommitOffset chan *inputDriver.PluginPosition
 }
 
-func (c *Input) GetUriExample() (string, string) {
+func NewInputKafka() *InputKafka {
+	c := &InputKafka{}
+	c.Init()
+	return c
+}
+
+func (c *InputKafka) GetUriExample() (string, string) {
 	notesHtml := `
 	<p><span class="help-block m-b-none">127.0.0.1:9092</span></p>
 	<p><span class="help-block m-b-none">127.0.0.1:9092,192.168.1.10</span></p>
 	<p><span class="help-block m-b-none">127.0.0.1:9092,192.168.1.10/topic1,topic2?from.beginning=false</span></p>
+	<p><span class="help-block m-b-none">string_kafka: 将kafka中整条数据作为一个key进行处理</span></p>
+	<p><span class="help-block m-b-none">canal_kafka: 支持将kafka中canal的json数据进行解析</span></p>
+	<p><span class="help-block m-b-none">bifrost_kafka: 支持解析bifrost写入到kafka中的json数据</span></p>
+	<p><span class="help-block m-b-none" style="color:#F00">如果新增了 Topic 等同步，需要手工进行对数据源 进行 Start 一次</span></p>
 `
 	return "127.0.0.1:9092,192.168.1.10/[topic_name1,topic_name2]][?client.id=&from.beginning=false]", notesHtml
 }
 
-func (c *Input) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
+func (c *InputKafka) Init() {
+	c.positionMap = make(map[string]map[int32]int64, 0)
+	c.topics = make(map[string]map[string]bool, 0)
+	c.waitCommitOffset = make(chan *inputDriver.PluginPosition, 500)
+}
+
+func (c *InputKafka) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
 	dsnMap := ParseDSN(inputInfo.ConnectUri)
 	c.config, c.err = getKafkaConnectConfig(dsnMap)
 	c.inputInfo = inputInfo
-	c.positionMap = make(map[string]map[int32]int64, 0)
-	c.topics = make(map[string]map[string]bool, 0)
-	c.brokerList = strings.Split(inputInfo.ConnectUri, ",")
-	c.waitCommitOffset = make(chan *waitCommitOffset, 500)
 }
 
-func (c *Input) setStatus(status inputDriver.StatusFlag) {
+func (c *InputKafka) setStatus(status inputDriver.StatusFlag) {
 	c.status = status
+	switch status {
+	case inputDriver.CLOSED:
+		c.err = fmt.Errorf("")
+		break
+	}
 	if c.PluginStatusChan != nil {
 		c.PluginStatusChan <- &inputDriver.PluginStatus{Status: status, Error: c.err}
 	}
 }
 
-func (c *Input) Start(ch chan *inputDriver.PluginStatus) error {
+func (c *InputKafka) Start(ch chan *inputDriver.PluginStatus) error {
 	c.PluginStatusChan = ch
-	c.setStatus(inputDriver.STARTING)
 	return c.Start0()
 }
 
-func (c *Input) Start0() error {
+func (c *InputKafka) Start0() error {
 	c.kafkaGroupCtx, c.kafkaGroupCancel = context.WithCancel(context.Background())
 	for {
+		c.setStatus(inputDriver.STARTING)
 		c.Start1()
 		select {
 		case _ = <-c.kafkaGroupCtx.Done():
-			break
+			return nil
 		default:
 			break
 		}
 	}
 }
 
-func (c *Input) Start1() error {
+func (c *InputKafka) Start1() error {
 	client, err := c.GetConn()
 	if err != nil {
 		c.err = err
 		return err
 	}
-	c.kafkaGroup, c.err = sarama.NewConsumerGroupFromClient(c.config.GroupId, client)
+	c.kafkaGroup, c.err = sarama.NewConsumerGroupFromClient(c.GetCosumeGroupId(c.config.GroupId), client)
 	if c.err != nil {
 		return c.err
 	}
@@ -126,7 +141,17 @@ func (c *Input) Start1() error {
 	return nil
 }
 
-func (c *Input) GroupCosume() {
+func (c *InputKafka) GetCosumeGroupId(paramGroupId string) string {
+	if paramGroupId != "" {
+		return paramGroupId
+	} else {
+		// 只支持 英文 数字 _ 其他过滤
+		reg := regexp.MustCompile(`[\W]{1,}`)
+		return fmt.Sprintf("%s%s", defaultKafkaGroupIdPrefix, reg.ReplaceAllString(c.inputInfo.DbName, ""))
+	}
+}
+
+func (c *InputKafka) GroupCosume() {
 	defer c.kafkaGroup.Close()
 	defer c.setStatus(inputDriver.STOPPED)
 	topics, err := c.GetTopics()
@@ -136,6 +161,9 @@ func (c *Input) GroupCosume() {
 	}
 	if len(topics) == 0 {
 		c.err = fmt.Errorf("topics is empty")
+		// 假如是找不到 topics 的情况下，直接进行close
+		// 都没找到 topics 消费个啥
+		c.Close()
 		return
 	}
 	c.setStatus(inputDriver.RUNNING)
@@ -144,8 +172,6 @@ func (c *Input) GroupCosume() {
 		//正常情况下：Consume()方法会一直阻塞
 		//我测试发现，约30分钟左右，Consume()会返回，但没有error
 		//无error的情况下，可以重复调用Consume()方法
-		//当有error产生的时候，不确定Consume()是否能够继续完善的执行。
-		//因此保险的办法是抛出panic，让进程重启。
 		c.err = c.kafkaGroup.Consume(c.kafkaGroupCtx, topics, c)
 		if c.err != nil {
 			return
@@ -153,39 +179,42 @@ func (c *Input) GroupCosume() {
 	}
 }
 
-func (c *Input) Stop() error {
+func (c *InputKafka) Stop() error {
 	c.setStatus(inputDriver.STOPPING)
 	if c.kafkaGroupCancel != nil {
 		c.kafkaGroupCancel()
 	}
 	c.kafkaGroupCancel = nil
+	if c.kafkaGroup != nil {
+		c.kafkaGroup.Close()
+	}
 	return nil
 }
 
-func (c *Input) Close() error {
+func (c *InputKafka) Close() error {
 	c.setStatus(inputDriver.CLOSED)
 	return nil
 }
 
-func (c *Input) Kill() error {
+func (c *InputKafka) Kill() error {
 	c.Stop()
 	return nil
 }
 
-func (c *Input) GetLastPosition() *inputDriver.PluginPosition {
+func (c *InputKafka) GetLastPosition() *inputDriver.PluginPosition {
 	return nil
 }
 
-func (c *Input) SetCallback(callback inputDriver.Callback) {
+func (c *InputKafka) SetCallback(callback inputDriver.Callback) {
 	c.callback = callback
 }
 
-func (c *Input) SetEventID(eventId uint64) error {
+func (c *InputKafka) SetEventID(eventId uint64) error {
 	c.eventID = eventId
 	return nil
 }
 
-func (c *Input) getNextEventID() uint64 {
+func (c *InputKafka) getNextEventID() uint64 {
 	atomic.AddUint64(&c.eventID, 1)
 	return c.eventID
 }

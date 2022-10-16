@@ -13,10 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package kafka
+package controller
 
-const defaultKafkaGroupIdPrefix string = "bifrost_input_group_"
+import (
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
+)
 
-const defaultKafkaVersion string = "2.7.0"
+type InputController struct {
+	CommonController
+}
 
-const partitionTableNamePrefix = "partition_"
+func (c *InputController) List() {
+	driversMap := inputDriver.Drivers()
+	c.SetJsonData(driversMap)
+	c.StopServeJSON()
+}

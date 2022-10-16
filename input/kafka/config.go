@@ -30,14 +30,15 @@ type Config struct {
 	GroupId          string
 	Topics           []string
 	ParamConfig      *sarama.Config
+	SkipSerializeErr bool
 }
 
 type TLSConfig struct {
-	TLSEnabled             bool   `json:"net.tls.enabled,bool"`
+	TLSEnabled             bool   `json:"net.tls.enabled,string"`
 	TLSCert                string `json:"net.tls.cert"`
 	TLSKey                 string `json:"net.tls.key"`
 	TLSCA                  string `json:"net.tls.ca"`
-	TLSInsescureSkipVerify bool   `json:"net.tls.insecure.skip.verify,bool"`
+	TLSInsescureSkipVerify bool   `json:"net.tls.insecure.skip.verify,string"`
 	TLSServerName          string `json:"net.tls.servername"`
 }
 
@@ -52,7 +53,7 @@ type ConnectorParamConfig struct {
 	ClientID string `json:"client.id"`
 	GroupID  string `json:"group.id"`
 	*TLSConfig
-	FromBeginning bool `json:"from.beginning,bool"`
+	FromBeginning bool `json:"from.beginning,string"`
 }
 
 func defaultConnectorParamConfig() *ConnectorParamConfig {
@@ -88,6 +89,7 @@ func createTLSConfig(certFile, keyFile, caFile string, verify bool, serverName s
 }
 
 func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config, err error) {
+	kafkaConnectConfig = &Config{}
 	b, err := json.Marshal(config)
 	if err != nil {
 		return
@@ -122,7 +124,7 @@ func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config
 		cfg.Net.SASL.Password = rawConfig.SaslPassword
 		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(rawConfig.SaslMechanism)
 	}
-	if rawConfig.TLSEnabled {
+	if rawConfig.TLSConfig != nil && rawConfig.TLSEnabled {
 		cfg.Net.TLS.Enable = true
 		cfg.Net.TLS.Config, err = createTLSConfig(rawConfig.TLSCert, rawConfig.TLSKey, rawConfig.TLSCA, rawConfig.TLSInsescureSkipVerify, rawConfig.TLSServerName)
 	}
@@ -133,15 +135,18 @@ func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config
 
 	if rawConfig.GroupID != "" {
 		kafkaConnectConfig.GroupId = rawConfig.GroupID
-	} else {
-		kafkaConnectConfig.GroupId = defaultKafkaGroupId
 	}
 
-	if _, ok := config["topics"]; !ok {
-		kafkaConnectConfig.Topics = strings.Split(fmt.Sprint(config["topics"]), ",")
+	if _, ok := config["topics"]; ok {
+		if config["topics"] != "" {
+			kafkaConnectConfig.Topics = strings.Split(fmt.Sprint(config["topics"]), ",")
+		}
 	}
-	if _, ok := config["addr"]; !ok {
+	if _, ok := config["addr"]; ok {
 		kafkaConnectConfig.BrokerServerList = strings.Split(fmt.Sprint(config["addr"]), ",")
+	}
+	if _, ok := config["skip.serialize.err"]; ok {
+		kafkaConnectConfig.SkipSerializeErr = true
 	}
 
 	return kafkaConnectConfig, err

@@ -35,6 +35,11 @@ type Driver interface {
 	GetSchemaList() ([]string, error)
 	GetSchemaTableList(schema string) (tableList []TableList, err error)
 	GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo, err error)
+
+	// 由server层计算出来当前最小的位点，再提交到 input 插件层
+	DoneMinPosition(p *PluginPosition) (err error)
+
+	IsSupported(supportType SupportType) bool // 是否支持指定功能
 }
 
 type DriverStructure struct {

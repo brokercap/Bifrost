@@ -16,36 +16,36 @@ limitations under the License.
 package kafka
 
 import (
-	"encoding/json"
 	"github.com/Shopify/sarama"
+
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 func init() {
-	inputDriver.Register("bifrost_kafka", NewBifrostDataInput, VERSION, BIFROST_VERSION)
+	inputDriver.Register("canal_kafka", NewCanalDataInput, VERSION, BIFROST_VERSION)
 }
 
-type BifrostDataInput struct {
+type CanalDataInput struct {
 	InputKafka
 }
 
-func NewBifrostDataInput() inputDriver.Driver {
-	c := &BifrostDataInput{}
+func NewCanalDataInput() inputDriver.Driver {
+	c := &CanalDataInput{}
 	c.Init()
 	c.childCallBack = c.CallBack
 	return c
 }
 
-func (c *BifrostDataInput) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
+func (c *CanalDataInput) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 	if c.callback == nil {
 		return nil
 	}
-	var data outputDriver.PluginDataType
-	c.err = json.Unmarshal(kafkaMsg.Value, &data)
-	if c.err != nil {
-		return c.err
+	canal, err := outputDriver.NewPluginDataCanal(kafkaMsg.Value)
+	if err != nil {
+		return err
 	}
+	data := canal.ToBifrostOutputPluginData()
 	data.Gtid = c.SetTopicPartitionOffsetAndReturnGTID(kafkaMsg)
 	data.EventSize = uint32(len(kafkaMsg.Value))
 	data.BinlogFileNum = 1
@@ -53,6 +53,6 @@ func (c *BifrostDataInput) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 	data.EventID = c.getNextEventID()
 	data.AliasSchemaName = kafkaMsg.Topic
 	data.AliasTableName = c.FormatPartitionTableName(kafkaMsg.Partition)
-	c.ToInputCallback(&data)
+	c.ToInputCallback(data)
 	return nil
 }

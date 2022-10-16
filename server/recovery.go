@@ -486,8 +486,9 @@ func recoveryData(data map[string]dbSaveInfo, isStop bool) {
 		if dbInfo.ConnStatus == CLOSING {
 			dbInfo.ConnStatus = CLOSED
 		}
-		if dbInfo.ConnStatus != CLOSED && dbInfo.ConnStatus != STOPPED && !isStop {
-			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName && dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition {
+		if dbInfo.ConnStatus != CLOSED && dbInfo.ConnStatus != STOPPED && dbInfo.ConnStatus != STOPPING && !isStop {
+			// 只要其中一个不相等，就说明位点是不一样
+			if dbInfo.BinlogDumpFileName != dbInfo.MaxBinlogDumpFileName || dbInfo.BinlogDumpPosition != dbInfo.MaxinlogDumpPosition {
 				go db.Start()
 			}
 		}

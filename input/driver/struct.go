@@ -1,6 +1,7 @@
 package driver
 
 type InputInfo struct {
+	DbName         string
 	IsGTID         bool
 	ConnectUri     string
 	GTID           string
