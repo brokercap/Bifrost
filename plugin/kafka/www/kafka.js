@@ -7,6 +7,7 @@ function doGetPluginParam(){
 	var BatchSize = $("#Kafka_BatchSize").val();
     var Timeout = $("#Kafka_Timeout").val();
     var RequiredAcks = $("#Kafka_RequiredAcks").val();
+    var OtherObjectType = $("#Kafka_OtherObjectType").val();
 	
     if (Topic == ""){
 		result.msg = "Topic can't be empty"
@@ -31,6 +32,7 @@ function doGetPluginParam(){
 	data["BatchSize"] = parseInt(BatchSize);
     data["Timeout"] = parseInt(Timeout);
     data["RequiredAcks"] = parseInt(RequiredAcks);
+    data["OtherObjectType"] = OtherObjectType;
 
 	result.data = data;
 	result.msg = "success";
