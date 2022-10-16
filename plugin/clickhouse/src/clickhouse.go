@@ -529,7 +529,7 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	}
 	var ckField []fieldStruct
 	//获取 ck mysql 字段对应关系   {CK: v.Name, MySQL: MySQLFieldName, CkType: v.Type}
-	ckField, _ = This.getAutoCreateCkTableFieldType(SchemaName, TableName, data.Rows[0])
+	ckField, _ = This.getAutoCreateCkTableFieldType(SchemaName, TableName, data.Rows[len(data.Rows)-1])
 	if ckField == nil || len(ckField) == 0 {
 		ckField, err = This.CreateCkTable(data)
 	}

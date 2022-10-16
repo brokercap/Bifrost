@@ -1,3 +1,8 @@
+v2.0.0-beta   2022-10-16
+1. 支持多源架构
+2. 新增kafka增量源，支持 kafka中 string,canal json,bifrost json 格式进行同步
+3. kafka目标端支持以canal格式写入
+
 v1.8.8-release   2022-10-16
 1. 修复通过X-Real-IP等伪造IP进行无限爆破密码漏洞
 2. 修复mariaDB环境下位点可能不会被保证的BUG

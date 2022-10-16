@@ -15,19 +15,32 @@ Source: [Github](https://github.com/brokercap/Bifrost/)  , [Gitee](https://gitee
 
 Your star is the biggest support for Bifrost!!!
 
-*Bifrsot* Support plugin, for example:
+##### TO
 
-* Redis
-* Memcache
-* RabbitMQ
-* ActiveMQ
-* Kafka
-* Mongodb
-* ClickHouse(supported DDL)
-* MySQL(supported DDL)
-* ElastiSearch
-* [Http](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)
+| ToServer        | DDL | Notes        |
+|------------|-----|-----------|
+| Redis      | NO  |           |
+| MongoDB    | NO  |           |
+| MySQL      | YES |           |
+| ClickHouse | YES |           |
+| Memcache   | NO  |           |
+| RabbitMQ   | YES |           |
+| Kafka      | YES | support canal json data |
+| ActiveMQ   | YES |           |
+| [Http](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |       |
+| [Hprose RPC](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |       |
+
+
+##### FROM
+
+| 源端      | 全量  | 增量  | 格式               | 备注                   |
+|---------|-----|-----|------------------|----------------------|
+| MySQL   | YES | YES | Binglog & Select | MySQL Slave    |
+| MariaDB | YES | YES | Binglog & Select | MySQL Slave    |
+| Percona | YES | YES | Binglog & Select | MySQL Slave    |
+| Kafka   | NO  | YES | string           | kafka data to field "queue_data"                     |
+| Kafka   | NO  | YES | canal            | canal json to bifrost data                     |
+| kafka   | NO  | YES | bifrost          | bifrost to kafka,kafka to bifrost |
 
 ---
 
@@ -101,11 +114,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v1.8.7-release/bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.0.0-apha/bifrost_v2.0.0-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.0.0-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.8.7-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.0.0-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
