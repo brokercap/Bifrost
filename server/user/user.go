@@ -1,44 +1,45 @@
 package user
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/server/storage"
-	"encoding/json"
-	"log"
-	"fmt"
-	"time"
-	"errors"
-	"strings"
 )
 
-const USER_PREFIX  string = "bifrost_UserList_"
+const USER_PREFIX string = "bifrost_UserList_"
 
 type UserGroupType string
 
 type UserInfo struct {
-	Name string
-	Password string
-	Group string
-	Host  string
-	AddTime int64
+	Name       string
+	Password   string
+	Group      string
+	Host       string
+	AddTime    int64
 	UpdateTime int64
 }
 
-func init()  {
+func init() {
 
 }
 
-func getUserGroup(groupName string) string  {
-	if groupName != "administrator"{
+func getUserGroup(groupName string) string {
+	if groupName != "administrator" {
 		return "monitor"
 	}
 	return groupName
 }
 
-func InitUser()  {
+func InitUser() {
 	userList := storage.GetListByPrefix([]byte(USER_PREFIX))
 	//假如 userList 为空的情况下,则需要将 etc 配置文件中的用户名和密码导入到存储中
-	if len(userList) != 0{
+	if len(userList) != 0 {
 		return
 	}
 	func() {
@@ -47,56 +48,54 @@ func InitUser()  {
 		// 可能是因为 leveldb 包里用了go 里的某个特性,go 1.11 中还存在bug
 		// 所以这里我们并不异步,要求 go1.12+ 版本编译
 		// time.Sleep( time.Duration(5) * time.Second)
-		for Name,Password := range config.GetConf("user"){
-			UserGroup := getUserGroup(config.GetConfigVal("groups",Name))
+		for Name, Password := range config.GetConf("user") {
+			UserGroup := getUserGroup(config.GetConfigVal("groups", Name))
 			User := UserInfo{
-				Name:Name,
-				Password:Password,
-				Group:UserGroup,
-				Host: "%",
-				AddTime:time.Now().Unix(),
-				UpdateTime:time.Now().Unix(),
+				Name:       Name,
+				Password:   Password,
+				Group:      UserGroup,
+				Host:       "%",
+				AddTime:    time.Now().Unix(),
+				UpdateTime: time.Now().Unix(),
 			}
-			b,_:=json.Marshal(User)
-			err := storage.PutKeyVal([]byte(USER_PREFIX+Name),b)
-			if err != nil{
-				log.Println("InitUser error:",err," user:",User)
+			b, _ := json.Marshal(User)
+			err := storage.PutKeyVal([]byte(USER_PREFIX+Name), b)
+			if err != nil {
+				log.Println("InitUser error:", err, " user:", User)
 			}
 		}
 	}()
 }
 
-
-func RecoveryUser(content *json.RawMessage)  {
-	if content == nil{
+func RecoveryUser(content *json.RawMessage) {
+	if content == nil {
 		return
 	}
 	var data []*UserInfo
-	errors := json.Unmarshal(*content,&data)
-	if errors != nil{
-		log.Println( "recorery user content errors;",errors," content:",content)
+	errors := json.Unmarshal(*content, &data)
+	if errors != nil {
+		log.Println("recovery user content errors;", errors, " content:", content)
 		return
 	}
 
-	for _,User := range data{
-		b,_:=json.Marshal(User)
-		storage.PutKeyVal([]byte(USER_PREFIX+User.Name),b)
+	for _, User := range data {
+		b, _ := json.Marshal(User)
+		storage.PutKeyVal([]byte(USER_PREFIX+User.Name), b)
 	}
 }
 
-
 func GetUserList() []UserInfo {
-	userListString:= storage.GetListByPrefix([]byte(USER_PREFIX))
+	userListString := storage.GetListByPrefix([]byte(USER_PREFIX))
 	if len(userListString) == 0 {
 		return []UserInfo{}
 	}
-	UserList := make([]UserInfo,0)
-	for _,v := range userListString{
+	UserList := make([]UserInfo, 0)
+	for _, v := range userListString {
 		var User UserInfo
-		err := json.Unmarshal([]byte(v.Value),&User)
-		if err == nil{
-			UserList = append(UserList,User)
-			if User.Name == ""{
+		err := json.Unmarshal([]byte(v.Value), &User)
+		if err == nil {
+			UserList = append(UserList, User)
+			if User.Name == "" {
 				storage.DelKeyVal([]byte(v.Key))
 			}
 		}
@@ -105,116 +104,119 @@ func GetUserList() []UserInfo {
 }
 
 func DelUser(Name string) error {
-	key := USER_PREFIX+Name
+	key := USER_PREFIX + Name
 	return storage.DelKeyVal([]byte(key))
 }
 
-func AddUser(Name,Password,GroupName string ,Host string) error {
-	return UpdateUser(Name,Password,GroupName,Host)
+func AddUser(Name, Password, GroupName string, Host string) error {
+	return UpdateUser(Name, Password, GroupName, Host)
 }
 
-func UpdateUser(Name,Password,GroupName string,Host string ) error {
-	if Name == "" || Password == ""{
-		return fmt.Errorf("Name and Password not be empty!")
+func UpdateUser(Name, Password, GroupName string, Host string) error {
+	if Name == "" || Password == "" {
+		return fmt.Errorf("name and password not be empty")
 	}
 	OldUserInfo := GetUserInfo(Name)
 	User := &UserInfo{
-		Name:Name,
-		Password:Password,
-		Host: Host,
-		Group:getUserGroup(GroupName),
+		Name:     Name,
+		Password: Password,
+		Host:     Host,
+		Group:    getUserGroup(GroupName),
 	}
-	if OldUserInfo.Name == ""{
+	if OldUserInfo.Name == "" {
 		User.AddTime = time.Now().Unix()
 		User.UpdateTime = time.Now().Unix()
-	}else{
+	} else {
 		User.AddTime = OldUserInfo.AddTime
 		User.UpdateTime = time.Now().Unix()
 	}
-	key := USER_PREFIX+Name
-	b,_:=json.Marshal(User)
-	return storage.PutKeyVal([]byte(key),b)
+	key := USER_PREFIX + Name
+	b, _ := json.Marshal(User)
+	return storage.PutKeyVal([]byte(key), b)
 }
 
 func GetUserInfo(Name string) *UserInfo {
-	b,err := storage.GetKeyVal([]byte(USER_PREFIX+Name))
-	if err != nil{
+	b, err := storage.GetKeyVal([]byte(USER_PREFIX + Name))
+	if err != nil {
 		return &UserInfo{}
 	}
 	var User UserInfo
-	err = json.Unmarshal(b,&User)
-	if err != nil{
+	err = json.Unmarshal(b, &User)
+	if err != nil {
 		return &UserInfo{}
 	}
 	return &User
 }
 
-func CheckUser(Name,Password string) (userInfo *UserInfo,err error) {
+func CheckUser(Name, Password string) (userInfo *UserInfo, err error) {
 	userInfo = GetUserInfo(Name)
 	if userInfo.Name == "" {
-		err = errors.New("user not exsit!")
+		err = errors.New("user not exist")
 		return
 	}
 	if userInfo.Password != Password {
-		err = errors.New("password error!")
+		err = errors.New("password error")
 		return
 	}
 	return
 }
 
-func CheckUserWithIP(Name,Password string,IP string ) (userInfo *UserInfo,err error) {
-	if IP != "127.0.0.1" && CheckRefuseIp(IP) {
+// IP 有可能是nginx代理转发采用的 X-Real-IP
+// RemoteAddrIp 直接采用的是HTTP源头的IP
+// RemoteAddrIp 假如是 127.0.0.1(进程当前机器访问) 可直接跳过，不进行验证
+func CheckUserWithIP(Name, Password string, IP string, RemoteAddrIp string) (userInfo *UserInfo, err error) {
+	if RemoteAddrIp != "127.0.0.1" && CheckRefuseIp(IP) {
 		return nil, errors.New("ip is refused")
 	}
-	userInfo,err = CheckUser(Name,Password)
+	userInfo, err = CheckUser(Name, Password)
 	if err != nil {
 		AddFailedIp(IP)
-		appendLoginLog("IP:%s UserName:%s Password:%s login failed",IP,Name,Password)
-		return
+		appendLoginLog("IP:%s UserName:%s Password:%s login failed", IP, Name, Password)
+		return nil, errors.New("user or password error")
 	}
-	err = CheckUserHost(IP,userInfo.Host)
+	err = CheckUserHost(IP, userInfo.Host)
 	if userInfo.Group == "" {
 		userInfo.Group = "monitor"
 	}
 	if err != nil {
 		AddFailedIp(IP)
-		appendLoginLog("IP:%s UserName:%s CheckUserHost failed",IP,Name)
-	}else{
-		appendLoginLog("IP:%s UserName:%s login success",IP,Name)
+		appendLoginLog("IP:%s UserName:%s CheckUserHost failed", IP, Name)
+	} else {
+		appendLoginLog("IP:%s UserName:%s login success", IP, Name)
 	}
 	return
 }
 
-func CheckUserHost(IP , Host string) (err error) {
+func CheckUserHost(IP, Host string) (err error) {
 	if IP == Host {
 		return
 	}
 	switch Host {
-	case "","%":
+	case "", "%":
 		return
 	default:
 		break
 	}
-	ipArr := strings.Split(IP,".")
+	ipArr := strings.Split(IP, ".")
 	var ok bool
-	for _,HostName := range strings.Split(Host,",") {
-		ok = CheckUserHost0(ipArr,HostName)
+	for _, HostName := range strings.Split(Host, ",") {
+		ok = CheckUserHost0(ipArr, HostName)
 		if ok {
 			return nil
 		}
 	}
-	return errors.New("No login permission!")
+	return errors.New("no login permission")
 }
 
-func CheckUserHost0(ipArr []string , Host string) bool {
+func CheckUserHost0(ipArr []string, Host string) bool {
 	switch Host {
 	case "%":
 		return true
 	default:
 		break
 	}
-	hostArr := strings.Split(Host,".")
-	for i,v := range hostArr {
+	hostArr := strings.Split(Host, ".")
+	for i, v := range hostArr {
 		if v == "%" {
 			continue
 		}
