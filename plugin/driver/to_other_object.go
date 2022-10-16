@@ -5,13 +5,14 @@ import "fmt"
 type OtherObjectType string
 
 const (
-	CanalType OtherObjectType = "canal"
+	CanalType   OtherObjectType = "canal"
+	BifrostType OtherObjectType = "bifrost"
 )
 
-func ToOtherObject(data PluginDataType, otherObjectType OtherObjectType) (interface{}, error) {
+func ToOtherObject(data *PluginDataType, otherObjectType OtherObjectType) (interface{}, error) {
 	switch otherObjectType {
 	case CanalType:
 		return data.ToCanalJsonObject()
 	}
-	return nil, fmt.Errorf("not supported %s", otherObjectType)
+	return data, fmt.Errorf("not supported %s", otherObjectType)
 }

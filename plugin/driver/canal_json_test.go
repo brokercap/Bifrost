@@ -15,3 +15,35 @@ func TestNewPluginDataCanal(t *testing.T) {
 		So(c.Type, ShouldEqual, "UPDATE")
 	})
 }
+
+func TestNewPluginDataCanal2(t *testing.T) {
+	Convey("奇数", t, func() {
+		i := 1
+		So(i&1, ShouldNotEqual, 0)
+	})
+
+	Convey("偶数", t, func() {
+		i := 1
+		So(i&1, ShouldEqual, 0)
+	})
+
+	Convey("偶数", t, func() {
+		dataType := "Nullable(int(11))"
+		dataType = dataType[9 : len(dataType)-1]
+		So(dataType, ShouldEqual, "int")
+	})
+
+	Convey("update event", t, func() {
+		c, err := NewPluginDataCanal([]byte(canal_update_event_data))
+		So(err, ShouldEqual, nil)
+		bifrostEventData := c.ToBifrostOutputPluginData()
+		So(bifrostEventData.EventType, ShouldEqual, "update")
+		So(bifrostEventData.Pri, ShouldResemble, c.PkNames)
+		So(bifrostEventData.Rows[1], ShouldResemble, c.Data[0])
+		So(bifrostEventData.Rows[0], ShouldResemble, c.Old[0])
+		So(bifrostEventData.SchemaName, ShouldNotEqual, "")
+		So(bifrostEventData.TableName, ShouldNotEqual, "")
+		So(bifrostEventData.SchemaName, ShouldEqual, c.Database)
+		So(bifrostEventData.TableName, ShouldNotEqual, c.Table)
+	})
+}

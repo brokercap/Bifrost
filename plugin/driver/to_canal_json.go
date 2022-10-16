@@ -59,7 +59,7 @@ func (c *PluginDataType) ToCanalJsonMysqlAndSqlType() (map[string]string, map[st
 			columnType = dataType[9 : len(dataType)-1]
 		}
 		var sqlType int16
-		switch columnType {
+		switch dataType {
 		case "bool":
 			columnType = "tinyint(1)"
 			sqlType = GetCanalSqlTypeByDataType("bool")
