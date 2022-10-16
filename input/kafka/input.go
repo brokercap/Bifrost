@@ -170,8 +170,8 @@ func (c *InputKafka) GroupCosume() {
 	for {
 		//关键代码
 		//正常情况下：Consume()方法会一直阻塞
-		//我测试发现，约30分钟左右，Consume()会返回，但没有error
-		//无error的情况下，可以重复调用Consume()方法
+		//但是存在会自动退出，但没有error
+		//所以无error的情况下，可以重复调用Consume()方法
 		c.err = c.kafkaGroup.Consume(c.kafkaGroupCtx, topics, c)
 		if c.err != nil {
 			return

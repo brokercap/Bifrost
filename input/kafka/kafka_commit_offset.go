@@ -13,7 +13,10 @@ import (
 )
 
 func (c *InputKafka) ConsumePluginPosition(sess sarama.ConsumerGroupSession, ctx context.Context) {
-	log.Println("ConsumePluginPosition starting")
+	log.Printf("DbName:%s ConsumePluginPosition starting \r\n", c.inputInfo.DbName)
+	defer func() {
+		log.Printf("DbName:%s ConsumePluginPosition over \r\n", c.inputInfo.DbName)
+	}()
 	var lastEventId uint64 = 0
 	for {
 		select {
