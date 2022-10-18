@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
 import (
@@ -21,6 +22,7 @@ import (
 	"regexp"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/Shopify/sarama"
 
@@ -115,13 +117,19 @@ func (c *InputKafka) Start(ch chan *inputDriver.PluginStatus) error {
 
 func (c *InputKafka) Start0() error {
 	c.kafkaGroupCtx, c.kafkaGroupCancel = context.WithCancel(context.Background())
+	timeout := 2 * time.Second
+	var timer *time.Timer
 	for {
 		c.setStatus(inputDriver.STARTING)
 		c.Start1()
+		timer = time.NewTimer(timeout)
+		timer.Reset(timeout)
 		select {
-		case _ = <-c.kafkaGroupCtx.Done():
+		case <-c.kafkaGroupCtx.Done():
+			timer.Stop()
 			return nil
-		default:
+		case <-time.NewTimer(timeout).C:
+			timer.Stop()
 			break
 		}
 	}
@@ -153,7 +161,6 @@ func (c *InputKafka) GetCosumeGroupId(paramGroupId string) string {
 
 func (c *InputKafka) GroupCosume() {
 	defer c.kafkaGroup.Close()
-	defer c.setStatus(inputDriver.STOPPED)
 	topics, err := c.GetTopics()
 	if err != nil {
 		c.err = err
@@ -167,6 +174,7 @@ func (c *InputKafka) GroupCosume() {
 		return
 	}
 	c.setStatus(inputDriver.RUNNING)
+	defer c.setStatus(inputDriver.STOPPED)
 	for {
 		//关键代码
 		//正常情况下：Consume()方法会一直阻塞
@@ -192,12 +200,14 @@ func (c *InputKafka) Stop() error {
 }
 
 func (c *InputKafka) Close() error {
+	c.Stop()
 	c.setStatus(inputDriver.CLOSED)
 	return nil
 }
 
 func (c *InputKafka) Kill() error {
 	c.Stop()
+	c.Close()
 	return nil
 }
 

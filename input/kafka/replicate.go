@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func (c *InputKafka) GetTopics() (topics []string, err error) {
 	topics, err = c.GetTopics0()
@@ -48,6 +51,9 @@ func (c *InputKafka) GetTopics1() (topics []string, err error) {
 	c.Lock()
 	defer c.Unlock()
 	for topic, _ := range c.topics {
+		if topic == "" {
+			continue
+		}
 		topics = append(topics, topic)
 	}
 	return
