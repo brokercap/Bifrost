@@ -41,7 +41,8 @@ func NewInputStringData0() *InputStringData {
 	c.Init()
 	c.childCallBack = c.CallBack
 	c.columnMapping = map[string]string{
-		"queue_data":      "text",
+		"queue_key":       "text",
+		"queue_value":     "text",
 		"queue_topic":     "varchar(256)",
 		"queue_timestamp": "timestamp",
 		"queue_partition": "int32",
@@ -56,7 +57,8 @@ func (c *InputStringData) CallBack(kafkaMsg *sarama.ConsumerMessage) error {
 		return nil
 	}
 	msgData := map[string]interface{}{
-		"queue_data":      string(kafkaMsg.Value),
+		"queue_key":       string(kafkaMsg.Key),
+		"queue_value":     string(kafkaMsg.Value),
 		"queue_timestamp": kafkaMsg.Timestamp.Format("2006-01-02 15:04:05"),
 		"queue_topic":     kafkaMsg.Topic,
 		"queue_partition": kafkaMsg.Partition,
