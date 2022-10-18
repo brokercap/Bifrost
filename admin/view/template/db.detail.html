@@ -13,7 +13,7 @@
                 <div class="ibox-content">
                     <div class="list-group" id="DatabaseListContair">
                     {{range $i, $v := .DataBaseList}}
-                        <a class="list-group-item" id="Schema-{{$v}}">
+                        <a class="list-group-item" id="Schema-{{$i}}">
                             <h3 class="list-group-item-heading">{{$v}}</h3>
                         </a>
                     {{end}}
