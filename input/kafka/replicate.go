@@ -70,6 +70,7 @@ func (c *InputKafka) AddReplicateDoDb(SchemaName, TableName string) (err error) 
 }
 
 func (c *InputKafka) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+	c.Lock()
 	defer c.Unlock()
 	if _, ok := c.topics[SchemaName]; !ok {
 		return
