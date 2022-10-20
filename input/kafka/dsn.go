@@ -1,42 +1,42 @@
 package kafka
 
 import (
-	"regexp"
 	"strings"
 )
 
-func ParseDSN(dsn string) map[string]string {
-	var dsnPattern *regexp.Regexp
-	dsnPattern = regexp.MustCompile(
-		`(?:(?P<addr>[^\)]*)?)?` + // [addr]
-			`\/(?P<topics>.*?)` + // /topics>.*?)`
-			`(?:\?(?P<params>[^\?]*))?$`) // [?param1=value1&paramN=valueN]
-
-	params := make(map[string]string)
-
-	// 假如 dsn 只有 127.0.0.1:9092,192.168.1.100 不带 / 参数则认为只有 addr
-	if !strings.Contains(dsn, "/") {
-		params["addr"] = dsn
+func ParseDSN(dsn string) (params map[string]string) {
+	params = make(map[string]string, 0)
+	if dsn == "" {
+		return
 	}
-	matches := dsnPattern.FindStringSubmatch(dsn)
-	names := dsnPattern.SubexpNames()
-
-	for i, match := range matches {
-		switch names[i] {
-		case "addr":
-			params["addr"] = match
-			break
-		case "topics":
-			params["topics"] = match
-		case "params":
-			for _, v := range strings.Split(match, "&") {
-				param := strings.SplitN(v, "=", 2)
-				if len(param) != 2 {
-					continue
-				}
-				params[param[0]] = param[1]
-			}
+	var index int
+	var addrAndTopics string
+	var paramStr string
+	index = strings.Index(dsn, "?")
+	// 127.0.0.1:9092,192.168.1.100/topic1,topic2?param=p1&param2=p2
+	// ==> 127.0.0.1:9092,192.168.1.100    topic1,topic2   param=p1   param2=p2
+	//  127.0.0.1:9092,192.168.1.100?param=p1&param2=p2
+	// ==> 127.0.0.1:9092,192.168.1.100  param=p1   param2=p2
+	if index <= 0 {
+		addrAndTopics = dsn
+	} else {
+		addrAndTopics = dsn[0:index]
+		paramStr = dsn[index+1:]
+	}
+	addrAndTopicsArr := strings.Split(addrAndTopics, "/")
+	params["addr"] = addrAndTopicsArr[0]
+	if len(addrAndTopicsArr) > 1 {
+		params["topics"] = addrAndTopicsArr[1]
+	}
+	if paramStr == "" {
+		return
+	}
+	for _, v := range strings.Split(paramStr, "&") {
+		param := strings.SplitN(v, "=", 2)
+		if len(param) != 2 {
+			continue
 		}
+		params[param[0]] = param[1]
 	}
 	return params
 }
