@@ -1,3 +1,19 @@
+/*
+Copyright [2018] [jc3wish]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package driver
 
 import (
@@ -5,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DebeziumSchema struct {
@@ -204,16 +221,55 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 		}
 		switch v.Type {
 		case "int64":
-			if toVal != nil {
-				toVal, _ = strconv.ParseInt(toVal.(string), 10, 64)
+			switch v.Name {
+			case "io.debezium.time.MicroTime":
+				// 65191098000 ==> 18:06:31.098000
+				// 65191 是当天第几秒
+				if toVal != nil {
+					tmpInt, _ := strconv.Atoi(toVal.(string))
+					sec := tmpInt / 1000000
+					hour := sec / 3600
+					minute := sec % 3600 / 60
+					second := sec % 60
+					mSec := tmpInt % 1000000
+					if mSec > 0 {
+						// 没有办法区分是time(1) 或者是 time(6)，所有只要不是time 就全转成time(6)
+						toVal = fmt.Sprintf("%02d:%02d:%02d.%06d", hour, minute, second, mSec)
+						fieldType = "time(6)"
+					} else {
+						toVal = fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
+						fieldType = "time"
+					}
+				} else {
+					fieldType = "time(6)"
+				}
+				break
+			default:
+				if toVal != nil {
+					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 64)
+					toVal = int32(tmpInt64)
+				}
+				fieldType = "int64"
 			}
-			fieldType = "int64"
 		case "int32":
-			if toVal != nil {
-				intA, _ := strconv.ParseInt(toVal.(string), 10, 32)
-				toVal = int32(intA)
+			switch v.Name {
+			case "io.debezium.time.Date":
+				// 19280 ==> 2022-10-15
+				if toVal != nil {
+					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 32)
+					now := time.Now()
+					// 当时时间戳 / 86400 算出当前距离1970的天数，再和 目标值（date int）的中的数字 对比，相差了几天，然后进行相加减，再格式化
+					toVal = now.AddDate(0, 0, int(tmpInt64-now.Unix()/86400)).Format("2006-01-02")
+				}
+				fieldType = "date"
+				break
+			default:
+				if toVal != nil {
+					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 64)
+					toVal = int32(tmpInt64)
+				}
+				fieldType = "int32"
 			}
-			fieldType = "int32"
 		case "int16":
 			if toVal != nil {
 				intA, _ := strconv.Atoi(toVal.(string))

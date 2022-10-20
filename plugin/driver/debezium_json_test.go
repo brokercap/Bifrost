@@ -63,5 +63,9 @@ func TestNewDebezium(t *testing.T) {
 		So(bifrostEventData.Rows[1]["testtimestamp"], ShouldEqual, "2022-10-15 10:06:31")
 		So(strings.Contains(bifrostEventData.Rows[1]["test_json"].(string), "\\\""), ShouldEqual, false)
 		So(bifrostEventData.Rows[1]["testblob"], ShouldEqual, "Iw==")
+		So(bifrostEventData.Rows[1]["testdate"], ShouldEqual, "2022-10-15")
+		So(bifrostEventData.Rows[1]["testtime"], ShouldEqual, "18:06:31")
+		So(bifrostEventData.Rows[1]["testtime2_6"], ShouldEqual, "18:06:31.098335")
+		So(bifrostEventData.Rows[1]["testtime2_5"], ShouldEqual, "18:06:31.098300")
 	})
 }
