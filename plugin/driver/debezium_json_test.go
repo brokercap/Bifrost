@@ -19,6 +19,7 @@ package driver
 import (
 	. "github.com/smartystreets/goconvey/convey"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -60,5 +61,7 @@ func TestNewDebezium(t *testing.T) {
 		So(bifrostEventData.Rows[1]["testchar"], ShouldEqual, "")
 		So(bifrostEventData.Rows[1]["testenum"], ShouldEqual, "en1")
 		So(bifrostEventData.Rows[1]["testtimestamp"], ShouldEqual, "2022-10-15 10:06:31")
+		So(strings.Contains(bifrostEventData.Rows[1]["test_json"].(string), "\\\""), ShouldEqual, false)
+		So(bifrostEventData.Rows[1]["testblob"], ShouldEqual, "Iw==")
 	})
 }

@@ -196,11 +196,11 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 		name := v.FieldName
 		var fieldType string = "text"
 		var toVal interface{}
-		var jsonData *json.RawMessage = dataMap[name]
-		if jsonData == nil {
+		var jsonRawMessage *json.RawMessage = dataMap[name]
+		if jsonRawMessage == nil {
 			toVal = nil
 		} else {
-			toVal = string(*jsonData)
+			toVal = string(*jsonRawMessage)
 		}
 		switch v.Type {
 		case "int64":
@@ -278,13 +278,13 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 				}
 				// string(json.RawMessage) 假如是字符串的情况下 是会前后增加引号的，比如 空字符串， string(json.RawMessage) == "\"\"" ,有个引号
 				if toVal != nil {
-					toVal = strings.Trim(toVal.(string), "\"")
+					toVal, _ = strconv.Unquote(toVal.(string))
 				}
 				break
 			case "io.debezium.time.Timestamp":
 				if toVal != nil {
 					// 这里不进行 time.Parse("2006-01-02 15:04:05", v) 的方式，是因为这里没办法区分 2006-01-02 15:04:05.999999 小数点后到底有几位等操作，下同
-					toVal = strings.ReplaceAll(strings.ReplaceAll(strings.Trim(toVal.(string), "\""), "T", " "), "Z", "")
+					toVal = c.TransToGoTimestampFormatStr(toVal.(string))
 				}
 				break
 			case "io.debezium.data.Bits":
@@ -294,7 +294,7 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 				fieldType = "bit"
 			default:
 				if toVal != nil {
-					toVal = strings.Trim(toVal.(string), "\"")
+					toVal, _ = strconv.Unquote(toVal.(string))
 				}
 				fieldType = "text"
 			}
@@ -304,7 +304,7 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 			//	fieldType = "text"
 			case "io.debezium.time.ZonedTimestamp":
 				if toVal != nil {
-					toVal = strings.ReplaceAll(strings.ReplaceAll(strings.Trim(toVal.(string), "\""), "T", " "), "Z", "")
+					toVal = c.TransToGoTimestampFormatStr(toVal.(string))
 				}
 				fieldType = "timestamp"
 			case "io.debezium.data.Json":
@@ -312,12 +312,13 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 				if toVal != nil {
 					// string(json.RawMessage) 出来结果如下：
 					// "{\"key1\":[2147483647,-2147483648,\"2\",null,true,922337203685477,-922337203685477,{\"key2\":\"qoY`uY,Np5Q\\\\OpX9&'o8试测测试据试数数数试试测据试测测\"},{\"key2\":false}]}"
-					toVal = strings.ReplaceAll(strings.Trim(toVal.(string), "\""), "\\\"", "\"")
+					//toVal = strings.ReplaceAll(strings.Trim(toVal.(string), "\""), "\\\"", "\"")
+					toVal, _ = strconv.Unquote(toVal.(string))
 				}
 			default:
 				fieldType = "text"
 				if toVal != nil {
-					toVal = strings.Trim(toVal.(string), "\"")
+					toVal, _ = strconv.Unquote(toVal.(string))
 				}
 			}
 			break
@@ -329,4 +330,8 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 		columnMap[name] = fieldType
 	}
 	return
+}
+
+func (c *Debezium) TransToGoTimestampFormatStr(str string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.Trim(str, "\""), "T", " "), "Z", "")
 }
