@@ -65,6 +65,8 @@ type InputKafka struct {
 	positionMap map[string]map[int32]int64
 
 	waitCommitOffset chan *inputDriver.PluginPosition
+
+	lastOffset *inputDriver.PluginPosition
 }
 
 func NewInputKafka() *InputKafka {
@@ -213,7 +215,10 @@ func (c *InputKafka) Kill() error {
 }
 
 func (c *InputKafka) GetLastPosition() *inputDriver.PluginPosition {
-	return nil
+	if c.lastOffset == nil {
+		return nil
+	}
+	return c.lastOffset
 }
 
 func (c *InputKafka) SetCallback(callback inputDriver.Callback) {
