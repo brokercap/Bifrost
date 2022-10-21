@@ -65,7 +65,7 @@ function formatDate(timestamp) {
                                                         <p class="DbNameInputType">{{$v.InputType}}</p>
                                                         <p class="Version"><button data-toggle="button" class="btn-sm btn-primary GetVersionBtn" type="button">Version</button></p>
                                                     </td>
-                                                    <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
+                                                    <td title="{{$v.ConnectUri}}" style="max-width: 500px; word-break:break-all"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
                                                     	{{if eq $v.ConnStatus "closed"}}
@@ -92,8 +92,8 @@ function formatDate(timestamp) {
 
                                                     </td>
                                                     <td>
-                                                        <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
-                                                        <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_binlog" style="max-width: 400px; word-break:break-all" >{{$v.BinlogDumpFileName}}</p>
+                                                        <p class="db_last_position" style="max-width: 400px; word-break:break-all">{{$v.BinlogDumpPosition}}</p>
                                                         {{if eq $v.IsGtid true}}
                                                         <p class="db_last_gtid">{{$v.Gtid}}</p>
                                                         {{end}}
