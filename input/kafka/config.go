@@ -31,6 +31,7 @@ type Config struct {
 	Topics           []string
 	ParamConfig      *sarama.Config
 	SkipSerializeErr bool
+	ParamMap         map[string]string
 }
 
 type TLSConfig struct {

@@ -95,6 +95,7 @@ func (c *InputKafka) Init() {
 func (c *InputKafka) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
 	dsnMap := ParseDSN(inputInfo.ConnectUri)
 	c.config, c.err = getKafkaConnectConfig(dsnMap)
+	c.config.ParamMap = dsnMap
 	c.inputInfo = inputInfo
 }
 
