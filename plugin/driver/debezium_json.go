@@ -19,9 +19,6 @@ package driver
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type DebeziumSchema struct {
@@ -214,170 +211,61 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 		var fieldType string = "text"
 		var toVal interface{}
 		var jsonRawMessage *json.RawMessage = dataMap[name]
-		if jsonRawMessage == nil {
-			toVal = nil
-		} else {
+		if jsonRawMessage != nil {
 			toVal = string(*jsonRawMessage)
 		}
-		switch v.Type {
-		case "int64":
-			switch v.Name {
-			case "io.debezium.time.MicroTime":
-				// 65191098000 ==> 18:06:31.098000
-				// 65191 是当天第几秒
-				if toVal != nil {
-					tmpInt, _ := strconv.Atoi(toVal.(string))
-					sec := tmpInt / 1000000
-					hour := sec / 3600
-					minute := sec % 3600 / 60
-					second := sec % 60
-					mSec := tmpInt % 1000000
-					if mSec > 0 {
-						// 没有办法区分是time(1) 或者是 time(6)，所有只要不是time 就全转成time(6)
-						toVal = fmt.Sprintf("%02d:%02d:%02d.%06d", hour, minute, second, mSec)
-						fieldType = "time(6)"
-					} else {
-						toVal = fmt.Sprintf("%02d:%02d:%02d", hour, minute, second)
-						fieldType = "time"
-					}
-				} else {
-					fieldType = "time(6)"
-				}
-				break
-			default:
-				if toVal != nil {
-					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 64)
-					toVal = int32(tmpInt64)
-				}
-				fieldType = "int64"
-			}
-		case "int32":
-			switch v.Name {
-			case "io.debezium.time.Date":
-				// 19280 ==> 2022-10-15
-				if toVal != nil {
-					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 32)
-					now := time.Now()
-					// 当时时间戳 / 86400 算出当前距离1970的天数，再和 目标值（date int）的中的数字 对比，相差了几天，然后进行相加减，再格式化
-					toVal = now.AddDate(0, 0, int(tmpInt64-now.Unix()/86400)).Format("2006-01-02")
-				}
-				fieldType = "date"
-				break
-			default:
-				if toVal != nil {
-					tmpInt64, _ := strconv.ParseInt(toVal.(string), 10, 64)
-					toVal = int32(tmpInt64)
-				}
-				fieldType = "int32"
-			}
-		case "int16":
-			if toVal != nil {
-				intA, _ := strconv.Atoi(toVal.(string))
-				toVal = int16(intA)
-			}
-			fieldType = "int16"
-		case "int8":
-			if toVal != nil {
-				intA, _ := strconv.Atoi(toVal.(string))
-				toVal = int8(intA)
-			}
-			fieldType = "int8"
-		case "uint64":
-			if toVal != nil {
-				toVal, _ = strconv.ParseUint(toVal.(string), 10, 64)
-			}
-			fieldType = "uint64"
-		case "uint32":
-			if toVal != nil {
-				intA, _ := strconv.ParseUint(toVal.(string), 10, 32)
-				toVal = uint32(intA)
-			}
-			fieldType = "uint32"
-		case "uint16":
-			if toVal != nil {
-				intA, _ := strconv.Atoi(toVal.(string))
-				toVal = uint16(intA)
-			}
-			fieldType = "uint16"
-		case "uint8":
-			if toVal != nil {
-				intA, _ := strconv.Atoi(toVal.(string))
-				toVal = uint8(intA)
-			}
-			fieldType = "uint8"
-		case "float":
-			if toVal != nil {
-				float64Val, _ := strconv.ParseFloat(toVal.(string), 32)
-				toVal = float32(float64Val)
-			}
-			fieldType = "float"
-		case "double":
-			if toVal != nil {
-				toVal, _ = strconv.ParseFloat(toVal.(string), 64)
-			}
-			fieldType = "double"
-		case "bytes":
-			switch v.Name {
-			case "org.apache.kafka.connect.data.Decimal":
-				var scale interface{}
-				if v.Parameters != nil {
-					if _, ok := v.Parameters["scale"]; ok {
-						scale = v.Parameters["scale"]
-					} else {
-						// 假如没有 scale 则说明没有 precision,scale
-						fieldType = "decimal"
-						break
-					}
-					fieldType = fmt.Sprintf("decimal(%s,%s)", v.Parameters["connect.decimal.precision"], scale)
-				} else {
-					fieldType = "decimal"
-				}
-				// string(json.RawMessage) 假如是字符串的情况下 是会前后增加引号的，比如 空字符串， string(json.RawMessage) == "\"\"" ,有个引号
-				if toVal != nil {
-					toVal, _ = strconv.Unquote(toVal.(string))
-				}
-				break
-			case "io.debezium.time.Timestamp":
-				if toVal != nil {
-					// 这里不进行 time.Parse("2006-01-02 15:04:05", v) 的方式，是因为这里没办法区分 2006-01-02 15:04:05.999999 小数点后到底有几位等操作，下同
-					toVal = c.TransToGoTimestampFormatStr(toVal.(string))
-				}
-				break
-			case "io.debezium.data.Bits":
-				if toVal != nil {
-					toVal, _ = strconv.ParseInt(toVal.(string), 10, 64)
-				}
-				fieldType = "bit"
-			default:
-				if toVal != nil {
-					toVal, _ = strconv.Unquote(toVal.(string))
-				}
-				fieldType = "text"
-			}
+		jsonRawMessageOjb := DebeziumJsonMsg{
+			DebeziumParameters: v.Parameters,
+			DebeziumVal:        toVal,
+			DebeziumType:       v.Type,
+		}
+		switch v.Name {
+		case "io.debezium.time.Timestamp":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostTimestamp()
+		case "io.debezium.time.ZonedTimestamp":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostTimestamp()
+		case "io.debezium.time.MicroTimestamp":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostTimestamp()
+		case "io.debezium.time.MicroTime":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostTime()
+		case "io.debezium.time.Date":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostDate()
+		case "io.debezium.time.Year":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostYear()
+		case "io.debezium.data.Json":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostJson()
+		case "io.debezium.data.Bits":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostBits()
+		case "org.apache.kafka.connect.data.Decimal":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostDecimal()
+		case "io.debezium.data.Enum":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostEnum()
+		case "io.debezium.data.EnumSet":
+			toVal, fieldType = jsonRawMessageOjb.ToBifrostSet()
+
 		default:
-			switch v.Name {
-			//case "io.debezium.data.Enum", "io.debezium.data.EnumSet":
-			//	fieldType = "text"
-			case "io.debezium.time.ZonedTimestamp":
-				if toVal != nil {
-					toVal = c.TransToGoTimestampFormatStr(toVal.(string))
-				}
-				fieldType = "timestamp"
-			case "io.debezium.data.Json":
-				fieldType = "json"
-				if toVal != nil {
-					// string(json.RawMessage) 出来结果如下：
-					// "{\"key1\":[2147483647,-2147483648,\"2\",null,true,922337203685477,-922337203685477,{\"key2\":\"qoY`uY,Np5Q\\\\OpX9&'o8试测测试据试数数数试试测据试测测\"},{\"key2\":false}]}"
-					//toVal = strings.ReplaceAll(strings.Trim(toVal.(string), "\""), "\\\"", "\"")
-					toVal, _ = strconv.Unquote(toVal.(string))
-				}
+			switch v.Type {
+			case "int64":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostInt64()
+			case "int32":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostInt32()
+			case "int16":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostInt16()
+			case "int8":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostInt8()
+			case "uint64":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostUint64()
+			case "uint32":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostUint32()
+			case "uint16":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostUint16()
+			case "uint8":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostUint8()
+			case "bytes":
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostLongText()
 			default:
-				fieldType = "text"
-				if toVal != nil {
-					toVal, _ = strconv.Unquote(toVal.(string))
-				}
+				toVal, fieldType = jsonRawMessageOjb.ToBifrostText()
 			}
-			break
 		}
 		if v.Nullable {
 			fieldType = fmt.Sprintf("Nullable(%s)", fieldType)
@@ -386,8 +274,4 @@ func (c *Debezium) GetToBifrostRowsAndMapping(dataMap map[string]*json.RawMessag
 		columnMap[name] = fieldType
 	}
 	return
-}
-
-func (c *Debezium) TransToGoTimestampFormatStr(str string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(strings.Trim(str, "\""), "T", " "), "Z", "")
 }

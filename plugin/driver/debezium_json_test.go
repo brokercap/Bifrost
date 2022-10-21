@@ -17,10 +17,11 @@ limitations under the License.
 package driver
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"runtime"
 	"strings"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 var DebeziumInsertData, DebeziumUpdateData map[string]string
@@ -67,5 +68,7 @@ func TestNewDebezium(t *testing.T) {
 		So(bifrostEventData.Rows[1]["testtime"], ShouldEqual, "18:06:31")
 		So(bifrostEventData.Rows[1]["testtime2_6"], ShouldEqual, "18:06:31.098335")
 		So(bifrostEventData.Rows[1]["testtime2_5"], ShouldEqual, "18:06:31.098300")
+		So(bifrostEventData.Rows[1]["testenum"], ShouldEqual, "en1")
+		So(bifrostEventData.Rows[1]["testset"], ShouldEqual, "set1,set3")
 	})
 }
