@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
 import (
@@ -96,7 +97,7 @@ func (c *InputKafka) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 }
 
 func (c *InputKafka) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
-	return
+	return nil, fmt.Errorf("not supported")
 }
 
 func (c *InputKafka) GetVersion() (Version string, err error) {
