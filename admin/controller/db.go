@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controller
 
 import (
@@ -198,7 +199,7 @@ func (c *DBController) Stop() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Stop()
+	server.GetDB(data.DbName).Stop()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -216,7 +217,7 @@ func (c *DBController) Start() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Start()
+	server.GetDB(data.DbName).Start()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -234,7 +235,7 @@ func (c *DBController) Close() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Close()
+	server.GetDB(data.DbName).Close()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -306,30 +307,18 @@ func (c *DBController) GetLastPosition() {
 	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
 	dbInfo.Gtid = dbObj.Gtid
 
-	inputInfo := inputDriver.InputInfo{
-		DbName:         data.DbName,
-		IsGTID:         false,
-		ConnectUri:     dbObj.ConnectUri,
-		GTID:           "",
-		BinlogFileName: "",
-		BinlogPostion:  0,
-		ServerId:       0,
-		MaxFileName:    "",
-		MaxPosition:    0,
-	}
-	o := inputDriver.Open(dbObj.InputType, inputInfo)
-	MasterBinlogInfo, err := o.GetCurrentPosition()
+	CurrentPositionInfo, err := server.GetDB(data.DbName).GetCurrentPosition()
 	if err != nil {
 		result.Msg = err.Error()
 		return
 	}
-	if MasterBinlogInfo == nil {
+	if CurrentPositionInfo == nil {
 		result.Msg = fmt.Sprintf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
 		return
 	}
-	dbInfo.CurrentBinlogFile = MasterBinlogInfo.BinlogFileName
-	dbInfo.CurrentBinlogPosition = int(MasterBinlogInfo.BinlogPostion)
-	dbInfo.CurrentGtid = MasterBinlogInfo.GTID
+	dbInfo.CurrentBinlogFile = CurrentPositionInfo.BinlogFileName
+	dbInfo.CurrentBinlogPosition = int(CurrentPositionInfo.BinlogPostion)
+	dbInfo.CurrentGtid = CurrentPositionInfo.GTID
 	if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile && dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
 		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
 	}

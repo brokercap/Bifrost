@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
 import (
@@ -31,8 +32,12 @@ func (c *InputKafka) SetTopicPartitionOffsetAndReturnGTID(kafkaMsg *sarama.Consu
 		}
 		c.positionMap[kafkaMsg.Topic][kafkaMsg.Partition] = kafkaMsg.Offset
 	}
+	return c.positionMapToGTID(c.positionMap)
+}
+
+func (c *InputKafka) positionMapToGTID(positionMap map[string]map[int32]int64) (GTID string) {
 	var gtids = make([]string, 0)
-	for topic, p := range c.positionMap {
+	for topic, p := range positionMap {
 		for partition, offset := range p {
 			gtids = append(gtids, fmt.Sprintf("%s:%d:%d", topic, partition, offset))
 		}

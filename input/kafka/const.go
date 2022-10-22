@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
 const defaultKafkaGroupIdPrefix string = "bifrost_input_group_"
@@ -20,3 +21,7 @@ const defaultKafkaGroupIdPrefix string = "bifrost_input_group_"
 const defaultKafkaVersion string = "2.7.0"
 
 const partitionTableNamePrefix = "partition_"
+
+const DefaultBinlogFileName = "bifrost.000001"
+
+const DefaultBinlogPosition = 0

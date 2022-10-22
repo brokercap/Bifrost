@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package server
 
 import (
@@ -66,6 +67,12 @@ var DbList map[string]*db
 
 func init() {
 	DbList = make(map[string]*db, 0)
+}
+
+func GetDB(Name string) *db {
+	DbLock.Lock()
+	defer DbLock.Unlock()
+	return DbList[Name]
 }
 
 func AddNewDB(Name string, InputType string, inputInfo inputDriver.InputInfo, AddTime int64) *db {
@@ -438,30 +445,15 @@ func (db *db) Start() (b bool) {
 	switch db.ConnStatus {
 	case CLOSED:
 		db.ConnStatus = STARTING
-
-		inputInfo := inputDriver.InputInfo{
-			DbName:         db.Name,
-			ConnectUri:     db.ConnectUri,
-			GTID:           db.gtid,
-			BinlogFileName: db.binlogDumpFileName,
-			BinlogPostion:  db.binlogDumpPosition,
-
-			ServerId:    db.serverId,
-			MaxFileName: db.maxBinlogDumpFileName,
-			MaxPosition: db.maxBinlogDumpPosition,
-		}
-		if !db.isGtid {
-			inputInfo.GTID = ""
-		}
-		db.inputStatusChan = make(chan *inputDriver.PluginStatus, 10)
-		db.inputDriverObj = inputDriver.Open(db.InputType, inputInfo)
-		db.inputDriverObj.SetCallback(db.Callback)
-		for key, _ := range db.tableMap {
-			schemaName, TableName := GetSchemaAndTableBySplit(key)
-			db.AddReplicateDoDb(schemaName, TableName, false)
-		}
-		db.inputDriverObj.SetEventID(db.lastEventID)
+		// 这里加一个加一个方法里再去执行初始化input,是为防止初始化有空指针等异常导致，不释放锁
+		// 不放到 InitInputDriver 中去加锁，因为 GetCurrentPosition 中也会去获取Input，不存在的情况下，也会去初始化一次
+		func() {
+			db.Lock()
+			defer db.Unlock()
+			db.InitInputDriver()
+		}()
 		go db.inputDriverObj.Start(db.inputStatusChan)
+		log.Println("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 		go db.monitorDump()
 		break
 	case STOPPED:
@@ -474,6 +466,37 @@ func (db *db) Start() (b bool) {
 	}
 	go db.CronCalcMinPosition()
 	return true
+}
+
+/*
+InitInputDriver 不进行加锁，是把加锁动作放到外层去做，因为Start方法每次启动都需要强制启动一个新的
+并且其GetCurrentPosition也有可能会需要初始化操作
+*/
+
+func (db *db) InitInputDriver() {
+	inputInfo := inputDriver.InputInfo{
+		DbName:         db.Name,
+		ConnectUri:     db.ConnectUri,
+		GTID:           db.gtid,
+		BinlogFileName: db.binlogDumpFileName,
+		BinlogPostion:  db.binlogDumpPosition,
+
+		ServerId:    db.serverId,
+		MaxFileName: db.maxBinlogDumpFileName,
+		MaxPosition: db.maxBinlogDumpPosition,
+	}
+	if !db.isGtid {
+		inputInfo.GTID = ""
+	}
+	db.inputStatusChan = make(chan *inputDriver.PluginStatus, 10)
+	db.inputDriverObj = inputDriver.Open(db.InputType, inputInfo)
+	db.inputDriverObj.SetCallback(db.Callback)
+	for key, _ := range db.tableMap {
+		schemaName, TableName := GetSchemaAndTableBySplit(key)
+		db.AddReplicateDoDb(schemaName, TableName, false)
+	}
+	db.inputDriverObj.SetEventID(db.lastEventID)
+
 }
 
 func (db *db) Stop() bool {
@@ -748,7 +771,8 @@ func (db *db) GetTableByChannelKey(schemaName string, ChanneKey int) (TableMap m
 	return
 }
 
-/**
+/*
+*
 删除表和通道的绑定关系
 假如存在表和同步关系，则需要将这个表从 binlog 解析中也去删除掉
 */
@@ -820,4 +844,17 @@ func (db *db) GetChannel(channelID int) *Channel {
 		return nil
 	}
 	return db.channelMap[channelID]
+}
+
+/*
+获取 input 当前最新位点信息
+*/
+
+func (db *db) GetCurrentPosition() (*inputDriver.PluginPosition, error) {
+	db.Lock()
+	defer db.Unlock()
+	if db.inputDriverObj == nil {
+		db.InitInputDriver()
+	}
+	return db.inputDriverObj.GetCurrentPosition()
 }

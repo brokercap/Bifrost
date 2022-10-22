@@ -18,6 +18,9 @@ package kafka
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/Shopify/sarama"
 
@@ -60,7 +63,7 @@ func (c *InputKafka) GetSchemaTableList(schema string) (tableList []inputDriver.
 	}
 	for _, partition := range partitionsArr {
 		tableList = append(tableList, inputDriver.TableList{
-			TableName: fmt.Sprintf("partition_%d", partition),
+			TableName: c.FormatPartitionTableName(partition),
 			TableType: "",
 		})
 	}
@@ -86,8 +89,8 @@ func (c *InputKafka) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 	}
 	defer client.Close()
 	result := inputDriver.CheckUriResult{
-		BinlogFile:     "bifrost.000001",
-		BinlogPosition: 0,
+		BinlogFile:     DefaultBinlogFileName,
+		BinlogPosition: DefaultBinlogPosition,
 		Gtid:           "",
 		ServerId:       1,
 		BinlogFormat:   "row",
@@ -96,8 +99,51 @@ func (c *InputKafka) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 	return result, nil
 }
 
+// 获取队列最新的位点
+
 func (c *InputKafka) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
-	return nil, fmt.Errorf("not supported")
+	var topics []string
+	topics, err = c.GetTopics()
+	if err != nil {
+		return nil, err
+	}
+	if len(topics) <= 0 {
+		return nil, fmt.Errorf("not found topics")
+	}
+	positionMap := make(map[string]map[int32]int64, 0)
+	client, err0 := c.GetConn()
+	if err0 != nil {
+		return nil, err0
+	}
+	defer client.Close()
+	for _, topicName := range topics {
+		partitionArr, err := client.Partitions(topicName)
+		if err != nil {
+			continue
+		}
+		var ok bool
+		var partitionOffsetMap map[int32]int64
+		if partitionOffsetMap, ok = positionMap[topicName]; !ok {
+			partitionOffsetMap = make(map[int32]int64, 0)
+			positionMap[topicName] = partitionOffsetMap
+		}
+		for _, partition := range partitionArr {
+			offset, err := client.GetOffset(topicName, partition, sarama.OffsetNewest)
+			if err != nil {
+				continue
+			}
+			positionMap[topicName][partition] = offset
+		}
+	}
+	gtids := c.positionMapToGTID(positionMap)
+	p = &inputDriver.PluginPosition{
+		GTID:           gtids,
+		BinlogFileName: DefaultBinlogFileName,
+		BinlogPostion:  DefaultBinlogPosition,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventID:        c.eventID,
+	}
+	return p, nil
 }
 
 func (c *InputKafka) GetVersion() (Version string, err error) {
@@ -112,4 +158,10 @@ func (c *InputKafka) GetVersion() (Version string, err error) {
 
 func (c *InputKafka) FormatPartitionTableName(partition int32) string {
 	return fmt.Sprintf(partitionTableNamePrefix+"%d", partition)
+}
+
+func (c *InputKafka) GetPartitionByTableName(partitionTableName string) (partition int32) {
+	partitionStr := strings.ReplaceAll(partitionTableName, partitionTableNamePrefix, "")
+	tmpInt, _ := strconv.Atoi(partitionStr)
+	return int32(tmpInt)
 }
