@@ -1,3 +1,10 @@
+v2.0.1-beta   2022-10-22
+1. kafka源支持debezium mysql 数据结构
+2. kafka源支持查看最新位点
+3. 修复其他Kafka源的BUG
+4. 修复库名带 . 不可用的BUG
+5. 修复其他部分BUG
+
 v2.0.0-beta   2022-10-16
 1. 支持多源架构
 2. 新增kafka增量源，支持 kafka中 string,canal json,bifrost json 格式进行同步
