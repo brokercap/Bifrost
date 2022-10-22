@@ -101,11 +101,9 @@ function formatDate(timestamp) {
                                                         <p class="db_last_eventId">EventID: {{$v.LastEventID}}</p>
 
                                                     {{if eq $v.ConnStatus "closed"}}
-                                                    {{if  eq $v.ConnErr ""}}
+
                                                         <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
-                                                    {{else if eq $v.ConnErr "close"}}
-                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
-                                                    {{end}}
+
                                                     {{end}}
                                                     </td>
 
