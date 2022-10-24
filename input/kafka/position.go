@@ -22,9 +22,9 @@ import (
 	"strings"
 )
 
+// 最上层回调 已经加锁
+
 func (c *InputKafka) SetTopicPartitionOffsetAndReturnGTID(kafkaMsg *sarama.ConsumerMessage) (GTID string) {
-	c.Lock()
-	defer c.Unlock()
 	if kafkaMsg != nil {
 		var ok bool
 		if _, ok = c.positionMap[kafkaMsg.Topic]; !ok {

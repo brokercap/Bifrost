@@ -60,6 +60,9 @@ type InputKafka struct {
 	kafkaGroupCtx    context.Context
 	kafkaGroupCancel context.CancelFunc
 
+	consumeClaimCtx    context.Context
+	consumeClaimCancle context.CancelFunc
+
 	topics map[string]map[string]bool
 
 	positionMap map[string]map[int32]int64
