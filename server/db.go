@@ -453,7 +453,6 @@ func (db *db) Start() (b bool) {
 			db.InitInputDriver()
 		}()
 		go db.inputDriverObj.Start(db.inputStatusChan)
-		log.Println("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 		go db.monitorDump()
 		break
 	case STOPPED:
