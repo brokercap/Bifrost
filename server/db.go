@@ -479,6 +479,7 @@ func (db *db) InitInputDriver() {
 		GTID:           db.gtid,
 		BinlogFileName: db.binlogDumpFileName,
 		BinlogPostion:  db.binlogDumpPosition,
+		IsGTID:         db.isGtid,
 
 		ServerId:    db.serverId,
 		MaxFileName: db.maxBinlogDumpFileName,
