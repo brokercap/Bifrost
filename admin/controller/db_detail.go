@@ -16,6 +16,7 @@ limitations under the License.
 package controller
 
 import (
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	toserver "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/server"
 	"strings"
@@ -23,19 +24,15 @@ import (
 
 func (c *DBController) Detail() {
 	DbName := c.Ctx.Request.Form.Get("DbName")
-	dbUri := server.GetDBObj(DbName).ConnectUri
-	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
-		return
-	}
-	defer dbConn.Close()
-	DataBaseList := GetSchemaList(dbConn)
+	dbInfo := server.GetDBObj(DbName)
+	o :=inputDriver.Open(dbInfo.InputType,inputDriver.InputInfo{ConnectUri:dbInfo.ConnectUri})
+	DataBaseList,_ := o.GetSchemaList()
 	DataBaseList = append(DataBaseList, "AllDataBases")
 
 	c.SetData("DbName", DbName)
 	c.SetData("DataBaseList", DataBaseList)
 	c.SetData("ToServerList", toserver.GetToServerMap())
-	c.SetData("ChannelList:", server.GetDBObj(DbName).ListChannel())
+	c.SetData("ChannelList:", dbInfo.ListChannel())
 	c.SetData("Title", DbName+" - Detail")
 	c.AddAdminTemplate("db.detail.html","header.html","db.detail.table.add.html","db.detail.history.add.html","footer.html")
 }
@@ -48,14 +45,9 @@ func (c *DBController) GetTableFields() {
 	SchemaName = tansferSchemaName(SchemaName)
 	TableName = tansferTableName(TableName)
 
-	DBObj := server.GetDBObj(DbName)
-	dbUri := DBObj.ConnectUri
-	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
-		return
-	}
-	defer dbConn.Close()
-	TableFieldsList := GetSchemaTableFieldList(dbConn, SchemaName, TableName)
+	dbInfo := server.GetDBObj(DbName)
+	o :=inputDriver.Open(dbInfo.InputType,inputDriver.InputInfo{ConnectUri:dbInfo.ConnectUri})
+	TableFieldsList,_ := o.GetSchemaTableFieldList(SchemaName, TableName)
 	c.SetJsonData(TableFieldsList)
 	c.StopServeJSON()
 }
@@ -64,12 +56,7 @@ func (c *DBController) TableList() {
 	DbName := c.Ctx.Request.Form.Get("DbName")
 	SchemaName := c.Ctx.Request.Form.Get("SchemaName")
 	DBObj := server.GetDBObj(DbName)
-	dbUri := DBObj.ConnectUri
-	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
-		return
-	}
-	defer dbConn.Close()
+	o :=inputDriver.Open(DBObj.InputType,inputDriver.InputInfo{ConnectUri:DBObj.ConnectUri})
 	type ResultType struct {
 		TableName   string
 		ChannelName string
@@ -79,8 +66,8 @@ func (c *DBController) TableList() {
 	}
 	var data []ResultType
 	data = make([]ResultType, 0)
-	TableList := GetSchemaTableList(dbConn, SchemaName)
-	TableList = append(TableList, TableListStruct{TableName: "AllTables", TableType: "LIKE"})
+	TableList,_ := o.GetSchemaTableList(SchemaName)
+	TableList = append(TableList, inputDriver.TableList{TableName: "AllTables", TableType: "LIKE"})
 	var schemaName0, tableName0 string
 	schemaName0 = tansferSchemaName(SchemaName)
 
@@ -120,24 +107,4 @@ func (c *DBController) TableList() {
 	}
 	c.SetJsonData(data)
 	c.StopServeJSON()
-}
-
-func (c *DBController) ShowCreateSQL() {
-	DbName := c.Ctx.Request.Form.Get("DbName")
-	SchemaName := c.Ctx.Request.Form.Get("SchemaName")
-	TableName := c.Ctx.Request.Form.Get("TableName")
-
-	SchemaName = tansferSchemaName(SchemaName)
-	TableName = tansferTableName(TableName)
-
-	DBObj := server.GetDBObj(DbName)
-	dbUri := DBObj.ConnectUri
-	dbConn := DBConnect(dbUri)
-	if dbConn == nil {
-		return
-	}
-	defer dbConn.Close()
-	sql := ShowTableCreate(dbConn, SchemaName, TableName)
-	c.SetOutputByUser()
-	c.Ctx.ResponseWriter.Write([]byte(sql))
 }

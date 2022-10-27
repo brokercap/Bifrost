@@ -36,7 +36,8 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			break
 		case "update":
 			for k := 0; k < l ;k++{
-				if k%2 != 0 {
+				// 取奇数下标，则为更新的具体值
+				if k&1 == 1 {
 					for _, v := range This.p.Field {
 						var toV interface{}
 						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)

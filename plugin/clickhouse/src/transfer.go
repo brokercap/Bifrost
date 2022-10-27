@@ -698,7 +698,7 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 				return This.TransferToCkTypeByColumnType(columnType, nullable)
 			}
 		}
-		return This.TransferToCkTypeByColumnData(data.Rows[0][fieldName], nullable)
+		return This.TransferToCkTypeByColumnData(data.Rows[len(data.Rows)-1][fieldName], nullable)
 	}
 	var val = ""
 	var addCkField = func(ckFieldName, mysqlFieldName, ckType string) {
@@ -721,7 +721,7 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 		addCkField(fileName0, priK, toCkType)
 	}
 	var ok bool
-	for fileName, _ := range data.Rows[0] {
+	for fileName, _ := range data.Rows[len(data.Rows)-1] {
 		fileName0 := This.GetFieldName(fileName)
 		if _, ok = priMap[fileName0]; ok {
 			continue

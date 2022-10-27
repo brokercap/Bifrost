@@ -10,8 +10,8 @@ import (
 )
 
 
-const VERSION  = "v1.6.0"
-const BIFROST_VERION = "v1.6.0"
+const VERSION  = "v2.0.0"
+const BIFROST_VERION = "v2.0.0"
 
 func init(){
 	pluginDriver.Register("kafka",NewConn,VERSION,BIFROST_VERION)
@@ -33,6 +33,7 @@ type Conn struct {
 }
 
 type PluginParam struct {
+	OtherObjectType	pluginDriver.OtherObjectType
 	Topic 			string
 	Key   			string
 	BatchSize 		int
@@ -212,8 +213,8 @@ func (This *Conn) getMsg(data *pluginDriver.PluginDataType) (*sarama.ProducerMes
 		Key := fmt.Sprint(pluginDriver.TransfeResult(This.p.Key,data,len(data.Rows)-1))
 		msg.Key = sarama.StringEncoder(Key)
 	}
-
-	c,err := json.Marshal(data)
+	toOtherObjectTypeData,_ := pluginDriver.ToOtherObject(data,This.p.OtherObjectType)
+	c,err := json.Marshal(toOtherObjectTypeData)
 	if err != nil{
 		return nil,err
 	}

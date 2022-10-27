@@ -18,8 +18,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/brokercap/Bifrost/config"
 	manager "github.com/brokercap/Bifrost/admin"
+	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/plugin"
 	"github.com/brokercap/Bifrost/server"
 	"io"
@@ -38,8 +38,10 @@ import (
 	"time"
 )
 import _ "github.com/brokercap/Bifrost/plugin/load"
+import _ "github.com/brokercap/Bifrost/input"
 
 var l sync.Mutex
+var saveDbInfoStatus bool
 
 var logo = `
 ___         ___                   _   
@@ -84,9 +86,7 @@ func main() {
 	var Version bool
 	var Help bool
 	defer func() {
-		server.StopAllChannel()
-		doSaveDbInfo()
-		server.Close()
+		doSeverDbInfoFun()
 		if os.Getppid() == 1 && config.BifrostPidFile != ""{
 			os.Remove(config.BifrostPidFile)
 		}
@@ -240,6 +240,26 @@ func doRecovery(){
 	server.DoRecoverySnapshotData()
 }
 
+func doSeverDbInfoFun()  {
+	log.Println("save db server info data start... ")
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println(err)
+			log.Println(string(debug.Stack()))
+		}
+	}()
+	l.Lock()
+	defer l.Unlock()
+	if saveDbInfoStatus {
+		return
+	}
+	server.StopAllChannel()
+	doSaveDbInfo()
+	saveDbInfoStatus = true
+	server.Close()
+	log.Println("save db server info data success! ")
+}
+
 func ListenSignal(){
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
@@ -247,12 +267,10 @@ func ListenSignal(){
 		if sig == nil{
 			continue
 		}
-		server.StopAllChannel()
-		doSaveDbInfo()
+		doSeverDbInfoFun()
 		if config.BifrostPidFile != ""{
 			os.Remove(config.BifrostPidFile)
 		}
-		server.Close()
 		os.Exit(0)
 	}
 }

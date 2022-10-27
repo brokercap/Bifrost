@@ -152,4 +152,7 @@ func init()  {
 	xgo.Router("/refuseip/index",&controller.RefuseIpController{},"*:Index")
 	xgo.Router("/refuseip/list",&controller.RefuseIpController{},"*:List")
 	xgo.Router("/refuseip/del",&controller.RefuseIpController{},"POST,DELETE:Del")
+
+	//input plugin
+	xgo.Router("/plugin/input/list",&controller.InputController{},"*:List")
 }

@@ -13,25 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package controller
 
-import "testing"
+package kafka
 
-func TestGetGrantsFor(t *testing.T) {
-	uri := "xxtest:xxtest@tcp(192.168.0.114:3306)/test"
-	sql,err := GetGrantsFor(DBConnect(uri))
-	if err != nil{
-		t.Fatal(err)
-	}
-	t.Log(sql)
-}
+const defaultKafkaGroupIdPrefix string = "bifrost_input_group_"
 
+const defaultKafkaVersion string = "2.7.0"
 
-func TestCheckUserSlavePrivilege(t *testing.T) {
-	uri := "xxtest:xxtest@tcp(127.0.0.1:3306)/test"
-	err := CheckUserSlavePrivilege(DBConnect(uri))
-	if err != nil{
-		t.Fatal(err)
-	}
-	t.Log("test success")
-}
+const partitionTableNamePrefix = "partition_"
+
+const DefaultBinlogFileName = "bifrost.000001"
+
+const DefaultBinlogPosition = 0

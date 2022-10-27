@@ -9,19 +9,36 @@
 ##### 漫威里的彩虹桥可以将 雷神 送到 阿斯加德 和 地球
 
 
-#### 而这个 Bifrost 可以将 你 MySQL 里的数据 <font color="#F00">全量</font> , <font color="#F00">实时</font>的同步到 :
+#### 而这个 Bifrost 可以将数据 <font color="#F00">全量</font> , <font color="#F00">实时</font>的同步到 多个目标端
 
-* Redis
-* MongoDB
-* ClickHouse(支持DDL)
-* MySQL(支持DDL)
-* Memcahe
-* RabbitMQ
-* ActiveMQ
-* Kafka
-* ElasticSearch
-* [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)
-* [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)
+
+##### 目标端支持
+
+| 目标端        | DDL | 备注                               |
+|------------|-----|----------------------------------|
+| Redis      | NO  |                                  |
+| MongoDB    | NO  |                                  |
+| MySQL      | YES |                                  |
+| ClickHouse | YES |                                  |
+| Memcache   | NO  |                                  |
+| RabbitMQ   | YES |                                  |
+| Kafka      | YES | 支持canal,debezium格式，以及kafka 消息字符串 |
+| ActiveMQ   | YES |                                  |
+| [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |                                  |
+| [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |                                  |
+
+
+##### 源端支持
+
+| 源端      | 全量  | 增量  | 格式               | 备注                                         |
+|---------|-----|-----|------------------|--------------------------------------------|
+| MySQL   | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| MariaDB | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| Percona | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| Kafka   | NO  | YES | string           | 将kafka数据作为一个queue_data字段进行处理               |
+| Kafka   | NO  | YES | canal            | 将canal的格式自动转成biforst格式进行处理                 |
+| kafka   | NO  | YES | bifrost          | Bifrost可以作为源写入到kafka,再由Bifrost消费kafka的数据   |
+| kafka   | NO  | YES | debezium         | debezium将数据写入kafka，Bifrost消费kafka的数据自动转换处理 |
 
 ---
 
@@ -35,7 +52,7 @@
 
 * **界面化**动态灵活配置不同的数据表及目标库
 
-* 多数据源,**多种目标库**支持
+* 多种数据源,**多种目标库**支持
 
 * 同时支持 **增量** 及 **全量** 数据同步
 
@@ -101,11 +118,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v1.8.7-release/bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.0.1-beta/bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v1.8.7-release_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v1.8.7-release_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.0.2-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 

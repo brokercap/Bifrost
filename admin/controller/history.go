@@ -17,6 +17,8 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	"github.com/brokercap/Bifrost/server"
 	"github.com/brokercap/Bifrost/server/history"
 	"io/ioutil"
@@ -155,6 +157,20 @@ func (c *HistoryController) Add() {
 		c.SetJsonData(result)
 		c.StopServeJSON()
 	}()
+	db := server.GetDbInfo(param.DbName)
+	if db == nil {
+		result.Msg = fmt.Sprintf("DbName: %s not esxit",param.DbName)
+		return
+	}
+	o := inputDriver.Open(db.InputType, inputDriver.InputInfo{})
+	if o == nil {
+		result.Msg = fmt.Sprintf("DbName: %s Input: %s not esxit",db.Name,db.InputType)
+		return
+	}
+	if !o.IsSupported(inputDriver.SupportFull) {
+		result.Msg = fmt.Sprintf("DbName: %s Input: %s Full is not supported",db.Name,db.InputType)
+		return
+	}
 	if tansferTableName(param.SchemaName) == "*" {
 		result.Msg = "不能给 AllDataBases 添加全量任务!"
 		return

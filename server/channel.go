@@ -17,18 +17,18 @@ limitations under the License.
 package server
 
 import (
+	"runtime/debug"
 	"sync"
-
-	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"github.com/brokercap/Bifrost/server/count"
 	"github.com/brokercap/Bifrost/config"
 	"log"
+	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 type Channel struct {
 	sync.RWMutex
 	Name string
-	chanName         chan mysql.EventReslut
+	chanName         chan *outputDriver.PluginDataType
 	MaxThreadNum     int // 消费通道的最大线程数
 	CurrentThreadNum int
 	Status           StatusFlag //stop ,starting,running,wait
@@ -39,7 +39,7 @@ type Channel struct {
 func NewChannel(MaxThreadNum int,Name string, db *db) *Channel {
 	return &Channel{
 		Name:					Name,
-		chanName:             	make(chan mysql.EventReslut, MaxThreadNum*config.ChannelQueueSize),
+		chanName:             	make(chan *outputDriver.PluginDataType, MaxThreadNum*config.ChannelQueueSize),
 		MaxThreadNum:     		MaxThreadNum,
 		CurrentThreadNum: 		0,
 		Status:           		STOPPED,
@@ -79,7 +79,7 @@ func (Channel *Channel) GetCountChan() chan *count.FlowCount {
 	return Channel.countChan
 }
 
-func (Channel *Channel) Start() chan mysql.EventReslut {
+func (Channel *Channel) Start() chan *outputDriver.PluginDataType {
 	Channel.Lock()
 	defer Channel.Unlock()
 	log.Println(Channel.db.Name,"Channel:",Channel.Name,"start")
@@ -94,7 +94,7 @@ func (Channel *Channel) Start() chan mysql.EventReslut {
 }
 
 
-func (Channel *Channel) GetChannel() chan mysql.EventReslut {
+func (Channel *Channel) GetChannel() chan *outputDriver.PluginDataType {
 	return Channel.chanName
 }
 
@@ -130,7 +130,7 @@ func (c *Channel) channelConsume() {
 	c.Unlock()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("channelConsume err:",err)
+			log.Println("channelConsume err:",err,string(debug.Stack()))
 			c.Lock()
 			c.CurrentThreadNum--
 			c.Unlock()

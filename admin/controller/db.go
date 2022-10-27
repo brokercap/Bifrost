@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controller
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/brokercap/Bifrost/server"
 	"io/ioutil"
-	"log"
-	"runtime/debug"
 	"time"
+
 	"github.com/brokercap/Bifrost/Bristol/mysql"
-	"strings"
+	"github.com/brokercap/Bifrost/server"
+
+	inputDriver "github.com/brokercap/Bifrost/input/driver"
 )
 
 type DBController struct {
@@ -33,7 +34,8 @@ type DBController struct {
 
 type DbUpdateParam struct {
 	DbName            string
-	SchemaName 		  string
+	InputType         string
+	SchemaName        string
 	TableName         string
 	Uri               string
 	BinlogFileName    string
@@ -42,8 +44,8 @@ type DbUpdateParam struct {
 	MaxBinlogFileName string
 	MaxBinlogPosition uint32
 	UpdateToServer    int8
-	CheckPrivilege	  bool
-	Gtid			  string
+	CheckPrivilege    bool
+	Gtid              string
 }
 
 func (c *DBController) getParam() *DbUpdateParam {
@@ -61,15 +63,20 @@ func (c *DBController) getParam() *DbUpdateParam {
 		c.StopServeJSON()
 		return nil
 	}
+	if data.InputType == "" {
+		data.InputType = "mysql"
+	}
 	return &data
 }
 
 // 数据源列表，界面显示
 func (c *DBController) Index() {
 	dbList := server.GetListDb()
+	inputPluginsMap := inputDriver.Drivers()
 	c.SetData("Title", "db list")
 	c.SetData("DBList", dbList)
-	c.AddAdminTemplate("db.list.html","header.html","footer.html")
+	c.SetData("inputPluginsMap", inputPluginsMap)
+	c.AddAdminTemplate("db.list.html", "header.html", "footer.html")
 }
 
 // db list
@@ -87,7 +94,7 @@ func (c *DBController) Add() {
 		c.StopServeJSON()
 	}()
 	data := c.getParam()
-	if data.DbName == "" || data.Uri == "" || data.BinlogFileName == "" || data.BinlogPosition <= 0 || data.ServerId <= 0 {
+	if data.DbName == "" || data.Uri == "" || data.BinlogFileName == "" || data.BinlogPosition < 0 || data.ServerId <= 0 {
 		result.Msg = " param error!"
 		return
 	}
@@ -99,7 +106,17 @@ func (c *DBController) Add() {
 		}
 	}
 	defer server.SaveDBConfigInfo()
-	server.AddNewDB(data.DbName, data.Uri, data.Gtid, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix())
+	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
+		ConnectUri:     data.Uri,
+		GTID:           data.Gtid,
+		BinlogFileName: data.BinlogFileName,
+		BinlogPostion:  data.BinlogPosition,
+		ServerId:       data.ServerId,
+		MaxFileName:    data.MaxBinlogFileName,
+		MaxPosition:    data.MaxBinlogPosition,
+	}
+	server.AddNewDB(data.DbName, data.InputType, inputInfo, time.Now().Unix())
 	channel, _ := server.GetDBObj(data.DbName).AddChannel("default", 1)
 	if channel != nil {
 		channel.Start()
@@ -115,7 +132,7 @@ func (c *DBController) Update() {
 		c.StopServeJSON()
 	}()
 	data := c.getParam()
-	if data.DbName == "" || data.Uri == "" || data.BinlogFileName == "" || data.BinlogPosition <= 0 || data.ServerId <= 0 {
+	if data.DbName == "" || data.Uri == "" || data.BinlogFileName == "" || data.BinlogPosition < 0 || data.ServerId <= 0 {
 		result.Msg = " param error!"
 		return
 	}
@@ -126,7 +143,17 @@ func (c *DBController) Update() {
 			return
 		}
 	}
-	err := server.UpdateDB(data.DbName, data.Uri, data.Gtid, data.BinlogFileName, data.BinlogPosition, data.ServerId, data.MaxBinlogFileName, data.MaxBinlogPosition, time.Now().Unix(), data.UpdateToServer)
+	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
+		ConnectUri:     data.Uri,
+		GTID:           data.Gtid,
+		BinlogFileName: data.BinlogFileName,
+		BinlogPostion:  data.BinlogPosition,
+		ServerId:       data.ServerId,
+		MaxFileName:    data.MaxBinlogFileName,
+		MaxPosition:    data.MaxBinlogPosition,
+	}
+	err := server.UpdateDB(data.DbName, data.InputType, inputInfo, time.Now().Unix(), data.UpdateToServer)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
@@ -172,7 +199,7 @@ func (c *DBController) Stop() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Stop()
+	server.GetDB(data.DbName).Stop()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -190,7 +217,7 @@ func (c *DBController) Start() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Start()
+	server.GetDB(data.DbName).Start()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -208,7 +235,7 @@ func (c *DBController) Close() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.DbList[data.DbName].Close()
+	server.GetDB(data.DbName).Close()
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
@@ -225,73 +252,23 @@ func (c *DBController) CheckUri() {
 		result.Msg = " Uri not be empty!"
 		return
 	}
-	type dbInfoStruct struct {
-		BinlogFile     string
-		BinlogPosition int
-		Gtid		   string
-		ServerId       int
-		BinlogFormat   string
-		BinlogRowImage string
+	inputInfo := inputDriver.InputInfo{
+		DbName:         data.DbName,
+		IsGTID:         false,
+		ConnectUri:     data.Uri,
+		GTID:           "",
+		BinlogFileName: "",
+		BinlogPostion:  0,
+		ServerId:       0,
+		MaxFileName:    "",
+		MaxPosition:    0,
 	}
-	dbInfo := &dbInfoStruct{}
-	var checkFun = func() (e error) {
-		e = nil
-		defer func() {
-			if err := recover(); err != nil {
-				log.Println(string(debug.Stack()))
-				e = fmt.Errorf(fmt.Sprint(err))
-				return
-			}
-		}()
-		dbconn := DBConnect(data.Uri)
-		if dbconn != nil {
-			e = nil
-		} else {
-			e = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
-		}
-		if e != nil {
-			return
-		}
-		defer dbconn.Close()
-		if data.CheckPrivilege {
-			e = CheckUserSlavePrivilege(dbconn)
-			if e != nil {
-				return
-			}
-		}
-		MasterBinlogInfo := GetBinLogInfo(dbconn)
-		if MasterBinlogInfo.File != "" {
-			dbInfo.BinlogFile = MasterBinlogInfo.File
-			dbInfo.BinlogPosition = MasterBinlogInfo.Position
-			dbInfo.Gtid = MasterBinlogInfo.Executed_Gtid_Set
-			dbInfo.ServerId = GetServerId(dbconn)
-			variablesMap := GetVariables(dbconn, "binlog_format")
-			BinlogRowImageMap := GetVariables(dbconn, "binlog_row_image")
-			if _, ok := variablesMap["binlog_format"]; ok {
-				dbInfo.BinlogFormat = variablesMap["binlog_format"]
-			}
-			if _, ok := BinlogRowImageMap["binlog_row_image"]; ok {
-				dbInfo.BinlogRowImage = BinlogRowImageMap["binlog_row_image"]
-			}
-		} else {
-			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
-		}
-		MasterVersion := GetMySQLVersion(dbconn)
-		if strings.Contains(MasterVersion,"MariaDB") {
-			m := GetVariables(dbconn,"gtid_binlog_pos")
-			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
-				dbInfo.Gtid = gtidBinlogPos
-			}
-		}
-		return
-	}
-
-	err := checkFun()
-
+	o := inputDriver.Open(data.InputType, inputInfo)
+	CheckUriResult, err := o.CheckUri(data.CheckPrivilege)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
-		result = ResultDataStruct{Status: 1, Msg: "success", Data: dbInfo}
+		result = ResultDataStruct{Status: 1, Msg: "success", Data: CheckUriResult}
 	}
 	return
 }
@@ -302,10 +279,10 @@ func (c *DBController) GetLastPosition() {
 		BinlogFile            string
 		BinlogPosition        int
 		BinlogTimestamp       uint32
-		Gtid			      string
+		Gtid                  string
 		CurrentBinlogFile     string
 		CurrentBinlogPosition int
-		CurrentGtid			  string
+		CurrentGtid           string
 		NowTimestamp          uint32
 		DelayedTime           uint32
 	}
@@ -324,54 +301,28 @@ func (c *DBController) GetLastPosition() {
 		result.Msg = data.DbName + " no exsit"
 		return
 	}
-	dbInfo := &dbInfoStruct{ NowTimestamp: uint32(time.Now().Unix()) }
+	dbInfo := &dbInfoStruct{NowTimestamp: uint32(time.Now().Unix())}
 	dbInfo.BinlogFile = dbObj.BinlogDumpFileName
 	dbInfo.BinlogPosition = int(dbObj.BinlogDumpPosition)
 	dbInfo.BinlogTimestamp = dbObj.BinlogDumpTimestamp
-	dbInfo.Gtid			  = dbObj.Gtid
-	var f = func() (e error) {
-		e = nil
-		defer func() {
-			if err := recover(); err != nil {
-				log.Println(err)
-				log.Println(string(debug.Stack()))
-				e = fmt.Errorf(fmt.Sprint(err))
-				return
-			}
-		}()
-		dbconn := DBConnect(dbObj.ConnectUri)
-		if dbconn != nil {
-			e = nil
-		} else {
-			e = fmt.Errorf("db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！")
-		}
-		defer dbconn.Close()
-		MasterBinlogInfo := GetBinLogInfo(dbconn)
-		if MasterBinlogInfo.File != "" {
-			dbInfo.CurrentBinlogFile = MasterBinlogInfo.File
-			dbInfo.CurrentBinlogPosition = MasterBinlogInfo.Position
-			dbInfo.CurrentGtid = MasterBinlogInfo.Executed_Gtid_Set
-			if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile &&  dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
-				dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
-			}
-		} else {
-			e = fmt.Errorf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
-		}
-		MasterVersion := GetMySQLVersion(dbconn)
-		if strings.Contains(MasterVersion,"MariaDB") {
-			m := GetVariables(dbconn,"gtid_binlog_pos")
-			if gtidBinlogPos,ok := m["gtid_binlog_pos"];ok{
-				dbInfo.CurrentGtid = gtidBinlogPos
-			}
-		}
-		return
-	}
-	err := f()
+	dbInfo.Gtid = dbObj.Gtid
+
+	CurrentPositionInfo, err := server.GetDB(data.DbName).GetCurrentPosition()
 	if err != nil {
 		result.Msg = err.Error()
-	} else {
-		result = ResultDataStruct{Status: 1, Msg: "success", Data: dbInfo}
+		return
 	}
+	if CurrentPositionInfo == nil {
+		result.Msg = fmt.Sprintf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
+		return
+	}
+	dbInfo.CurrentBinlogFile = CurrentPositionInfo.BinlogFileName
+	dbInfo.CurrentBinlogPosition = int(CurrentPositionInfo.BinlogPostion)
+	dbInfo.CurrentGtid = CurrentPositionInfo.GTID
+	if dbInfo.BinlogTimestamp > 0 && dbInfo.CurrentBinlogFile != dbInfo.BinlogFile && dbInfo.CurrentBinlogPosition != dbInfo.BinlogPosition {
+		dbInfo.DelayedTime = dbInfo.NowTimestamp - dbInfo.BinlogTimestamp
+	}
+	result = ResultDataStruct{Status: 1, Msg: "success", Data: dbInfo}
 	return
 }
 
@@ -388,10 +339,18 @@ func (c *DBController) GetVersion() {
 		result.Msg = DbName + " no exsit"
 		return
 	}
-	dbconn := DBConnect(dbObj.ConnectUri)
-	if dbconn == nil {
-		result.Msg = "db conn ,uknow error;请排查 Bifrost 机器 到 MySQL 机器网络是否正常，防火墙是否开放等！"
-		return
+	inputInfo := inputDriver.InputInfo{
+		DbName:         DbName,
+		IsGTID:         false,
+		ConnectUri:     dbObj.ConnectUri,
+		GTID:           "",
+		BinlogFileName: "",
+		BinlogPostion:  0,
+		ServerId:       0,
+		MaxFileName:    "",
+		MaxPosition:    0,
 	}
-	result = ResultDataStruct{Status: 1, Msg: "success", Data: GetMySQLVersion(dbconn)}
+	o := inputDriver.Open(dbObj.InputType, inputInfo)
+	Version, _ := o.GetVersion()
+	result = ResultDataStruct{Status: 1, Msg: "success", Data: Version}
 }
