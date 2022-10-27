@@ -10,37 +10,37 @@ var MySQLBinlogDump string
 
 type MysqlInput struct {
 	inputDriver.PluginDriverInterface
-	inputInfo inputDriver.InputInfo
-	binlogDump *mysqlDriver.BinlogDump
-	reslut  chan error
-	status inputDriver.StatusFlag
-	err		error
+	inputInfo        inputDriver.InputInfo
+	binlogDump       *mysqlDriver.BinlogDump
+	reslut           chan error
+	status           inputDriver.StatusFlag
+	err              error
 	PluginStatusChan chan *inputDriver.PluginStatus
-	eventID uint64
-	callback inputDriver.Callback
+	eventID          uint64
+	callback         inputDriver.Callback
 }
 
-func NewInputPlugin () inputDriver.Driver  {
+func NewInputPlugin() inputDriver.Driver {
 	return &MysqlInput{}
 }
 
-func (c *MysqlInput) GetUriExample() (string,string) {
+func (c *MysqlInput) GetUriExample() (string, string) {
 	notesHtml := `
 		<p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
 		<p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限(不要勾选 验证是否有足够权限 选项)</span></p>
 		<p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
 		<p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
 	`
-	return "root:root@tcp(127.0.0.1:3306)/test",notesHtml
+	return "root:root@tcp(127.0.0.1:3306)/test", notesHtml
 }
 
-func (c *MysqlInput) SetOption(inputInfo inputDriver.InputInfo,param map[string]interface{})  {
+func (c *MysqlInput) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
 	c.inputInfo = inputInfo
 }
 
 func (c *MysqlInput) Start(ch chan *inputDriver.PluginStatus) error {
 	switch c.status {
-	case inputDriver.STOPPING,inputDriver.STOPPED:
+	case inputDriver.STOPPING, inputDriver.STOPPED:
 		return c.Start1()
 	default:
 		c.PluginStatusChan = ch
@@ -50,7 +50,7 @@ func (c *MysqlInput) Start(ch chan *inputDriver.PluginStatus) error {
 }
 
 func (c *MysqlInput) Start0() error {
-	c.reslut = make(chan error,1)
+	c.reslut = make(chan error, 1)
 	c.binlogDump = mysqlDriver.NewBinlogDump(
 		c.inputInfo.ConnectUri,
 		c.MySQLCallback,
@@ -61,12 +61,12 @@ func (c *MysqlInput) Start0() error {
 			mysqlDriver.WRITE_ROWS_EVENTv1, mysqlDriver.UPDATE_ROWS_EVENTv1, mysqlDriver.DELETE_ROWS_EVENTv1,
 			mysqlDriver.WRITE_ROWS_EVENTv0, mysqlDriver.UPDATE_ROWS_EVENTv0, mysqlDriver.DELETE_ROWS_EVENTv0,
 		},
-		nil,nil)
+		nil, nil)
 	c.binlogDump.SetNextEventID(c.eventID)
-	if c.inputInfo.IsGTID && c.inputInfo.GTID == "" {
+	if !c.inputInfo.IsGTID || c.inputInfo.GTID == "" {
 		go c.binlogDump.StartDumpBinlog(c.inputInfo.BinlogFileName, c.inputInfo.BinlogPostion, c.inputInfo.ServerId, c.reslut, c.inputInfo.MaxFileName, c.inputInfo.MaxPosition)
-	}else{
-		log.Println("c.inputInfo.GTID:",c.inputInfo.GTID," c.inputInfo.ServerId:",c.inputInfo.ServerId)
+	} else {
+		log.Println("c.inputInfo.GTID:", c.inputInfo.GTID, " c.inputInfo.ServerId:", c.inputInfo.ServerId)
 		go c.binlogDump.StartDumpBinlogGtid(c.inputInfo.GTID, c.inputInfo.ServerId, c.reslut)
 	}
 	go c.monitorDump()
@@ -86,7 +86,7 @@ func (c *MysqlInput) monitorDump() (r bool) {
 	}()
 	for {
 		select {
-		case v := <- c.reslut:
+		case v := <-c.reslut:
 			if v == nil {
 				return
 			}
@@ -112,7 +112,7 @@ func (c *MysqlInput) monitorDump() (r bool) {
 			}
 			break
 		}
-		c.PluginStatusChan <- &inputDriver.PluginStatus{Status:c.status , Error: c.err}
+		c.PluginStatusChan <- &inputDriver.PluginStatus{Status: c.status, Error: c.err}
 
 	}
 	return true
@@ -134,16 +134,16 @@ func (c *MysqlInput) Kill() error {
 }
 
 func (c *MysqlInput) GetLastPosition() *inputDriver.PluginPosition {
-	FileName,Position,Timestamp,GTID,LastEventID := c.binlogDump.GetBinlog()
+	FileName, Position, Timestamp, GTID, LastEventID := c.binlogDump.GetBinlog()
 	if FileName == "" {
 		return nil
 	}
 	return &inputDriver.PluginPosition{
-		GTID:GTID,
-		BinlogFileName:FileName,
-		BinlogPostion:Position,
-		Timestamp:Timestamp,
-		EventID:LastEventID,
+		GTID:           GTID,
+		BinlogFileName: FileName,
+		BinlogPostion:  Position,
+		Timestamp:      Timestamp,
+		EventID:        LastEventID,
 	}
 }
 

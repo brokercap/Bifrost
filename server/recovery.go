@@ -543,6 +543,13 @@ func SaveDBInfoToFileData() interface{} {
 	data = make(map[string]dbSaveInfo, 0)
 	for k, db := range DbList {
 		db.Lock()
+		// 假如数据源是mysql,没有开启gtid同步功能，但是又有gtid信息的情况下，但是后端又能获取到gtid信息，启退的时候,还是会获取到gtid进行保留
+		// db.isGtid 是在启动的时候判断是否有gtid
+		// 所以在退出保存配置的时候，也应该判断在启动数据源的时候，是否有真正gtid信息，否则直接为空，防止中间被自动，导致重启后使用不了
+		var gtid string
+		if db.isGtid {
+			gtid = db.gtid
+		}
 		data[k] = dbSaveInfo{
 			Name:                  db.Name,
 			InputType:             db.InputType,
@@ -552,7 +559,7 @@ func SaveDBInfoToFileData() interface{} {
 			BinlogDumpFileName:    db.binlogDumpFileName,
 			BinlogDumpPosition:    db.binlogDumpPosition,
 			IsGtid:                db.isGtid,
-			Gtid:                  db.gtid,
+			Gtid:                  gtid,
 			LastEventID:           db.lastEventID,
 			BinlogDumpTimestamp:   db.binlogDumpTimestamp,
 			MaxBinlogDumpFileName: db.maxBinlogDumpFileName,

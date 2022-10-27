@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package kafka
 
 import (
@@ -29,9 +30,7 @@ func (c *InputKafka) Cleanup(sarama.ConsumerGroupSession) error {
 }
 
 func (c *InputKafka) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	ConsumeClaimCtx, ConsumeClaimCancle := context.WithCancel(c.kafkaGroupCtx)
-	defer ConsumeClaimCancle()
-	go c.ConsumePluginPosition(sess, ConsumeClaimCtx)
+	go c.StartConsumePluginPosition(sess)
 	for {
 		select {
 		case kafkaMsg := <-claim.Messages():
@@ -45,4 +44,21 @@ func (c *InputKafka) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama
 		}
 	}
 	return nil
+}
+
+func (c *InputKafka) StartConsumePluginPosition(sess sarama.ConsumerGroupSession) {
+	c.Lock()
+	if c.consumeClaimCtx != nil {
+		c.Unlock()
+		return
+	}
+	c.consumeClaimCtx, c.consumeClaimCancle = context.WithCancel(c.kafkaGroupCtx)
+	c.Unlock()
+	defer func() {
+		c.consumeClaimCtx = nil
+		c.consumeClaimCancle = nil
+	}()
+	defer c.consumeClaimCancle()
+
+	c.ConsumePluginPosition(sess, c.consumeClaimCtx)
 }

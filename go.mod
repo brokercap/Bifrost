@@ -18,6 +18,7 @@ require (
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
+	github.com/xdg/scram v1.0.5 // indirect
 	golang.org/x/net v0.0.0-20210427231257-85d9c07bbe3a
 	golang.org/x/sys v0.0.0-20210112080510-489259a85091
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22

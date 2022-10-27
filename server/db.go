@@ -453,7 +453,6 @@ func (db *db) Start() (b bool) {
 			db.InitInputDriver()
 		}()
 		go db.inputDriverObj.Start(db.inputStatusChan)
-		log.Println("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 		go db.monitorDump()
 		break
 	case STOPPED:
@@ -480,6 +479,7 @@ func (db *db) InitInputDriver() {
 		GTID:           db.gtid,
 		BinlogFileName: db.binlogDumpFileName,
 		BinlogPostion:  db.binlogDumpPosition,
+		IsGTID:         db.isGtid,
 
 		ServerId:    db.serverId,
 		MaxFileName: db.maxBinlogDumpFileName,
