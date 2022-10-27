@@ -47,6 +47,7 @@ type SaslConfig struct {
 	SaslMechanism string `json:"net.sasl.mechanism"`
 	SaslUser      string `json:"net.sasl.user"`
 	SaslPassword  string `json:"net.sasl.password"`
+	SCRAMAuthzID  string `json:"net.sasl.SCRAMAuthzID"`
 }
 
 type ConnectorParamConfig struct {
@@ -121,9 +122,17 @@ func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config
 	}
 
 	if rawConfig.SaslConfig != nil {
+		cfg.Net.SASL.Enable = true
 		cfg.Net.SASL.User = rawConfig.SaslUser
 		cfg.Net.SASL.Password = rawConfig.SaslPassword
 		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(rawConfig.SaslMechanism)
+		cfg.Net.SASL.SCRAMAuthzID = rawConfig.SCRAMAuthzID
+		switch cfg.Net.SASL.Mechanism {
+		case sarama.SASLTypeSCRAMSHA256:
+			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &SCRAMClient{HashGeneratorFcn: SHA256} }
+		case sarama.SASLTypeSCRAMSHA512:
+			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &SCRAMClient{HashGeneratorFcn: SHA512} }
+		}
 	}
 	if rawConfig.TLSConfig != nil && rawConfig.TLSEnabled {
 		cfg.Net.TLS.Enable = true
