@@ -115,11 +115,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v2.0.1-beta/bifrost_v2.0.1-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.0.2-beta/bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.0.1-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.0.1-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.0.2-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
