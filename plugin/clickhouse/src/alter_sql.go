@@ -13,7 +13,7 @@ import (
   DROP COLUMN `name`,
   CHANGE `number` `number` BIGINT(20) NOT NULL  COMMENT '馆藏数量',
   ADD COLUMN `f1` VARCHAR(200) NULL AFTER `number`,
-  ADD INDEX `sdfsdfsdf` (`number`);
+  ADD INDEX `sdfsdf` (`number`);
 */
 
 type AlterSQL struct {
