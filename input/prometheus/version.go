@@ -14,6 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package prometheus
 
-const VERSION = "v2.0.4-beta"
+import inputDriver "github.com/brokercap/Bifrost/input/driver"
+
+const (
+	VERSION         string = "v2.0.4"
+	BIFROST_VERSION string = "v2.0.3"
+)
+
+const InputName = "prometheus"
+
+func init() {
+	inputDriver.Register(InputName, NewInputPrometheus, VERSION, BIFROST_VERSION)
+}

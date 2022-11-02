@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package prometheus
 
-const VERSION = "v2.0.4-beta"
+const DefaultBinlogFileName = "bifrost.000001"
+
+const DefaultSchemaName = "prometheus"
+
+const EventType = "insert"
