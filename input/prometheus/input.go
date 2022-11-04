@@ -194,13 +194,10 @@ func (c *InputPrometheus) GetLastPosition() *inputDriver.PluginPosition {
 	if c.config.lastSuccessEndTime == 0 {
 		return nil
 	}
-	if c.lastEventData == nil {
-		return nil
-	}
 	return &inputDriver.PluginPosition{
-		GTID:           fmt.Sprint(c.config.lastSuccessEndTime),
+		GTID:           "",
 		BinlogFileName: DefaultBinlogFileName,
-		BinlogPostion:  c.lastEventData.BinlogPosition,
+		BinlogPostion:  uint32(c.config.lastSuccessEndTime),
 		Timestamp:      uint32(time.Now().Unix()),
 		EventID:        c.eventID,
 	}
