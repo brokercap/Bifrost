@@ -5,23 +5,24 @@ package src
 */
 
 import (
-	dbDriver "database/sql/driver"
+	driver2 "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 )
 
-func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int) (errData *pluginDriver.PluginDataType)  {
-	var stmt dbDriver.Stmt
-	LOOP: for i := 0; i < n; i++ {
+func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType) {
+	var stmt driver2.Batch
+LOOP:
+	for i := 0; i < n; i++ {
 		vData := list[i]
-		val := make([]dbDriver.Value, 0)
+		val := make([]interface{}, 0)
 		l := len(vData.Rows)
 		switch vData.EventType {
-		case "insert","delete":
-			for k := 0; k < l ;k++{
+		case "insert", "delete":
+			for k := 0; k < l; k++ {
 				for _, v := range This.p.Field {
 					var toV interface{}
-					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
+					toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData, k, v.MySQL), v.CK, v.CkType, This.p.NullNotTransferDefault)
 					if This.err != nil {
 						if This.CheckDataSkip(vData) {
 							This.err = nil
@@ -35,18 +36,19 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			}
 			break
 		case "update":
-			for k := 0; k < l ;k++{
+			for k := 0; k < l; k++ {
 				// 取奇数下标，则为更新的具体值
 				if k&1 == 1 {
 					for _, v := range This.p.Field {
 						var toV interface{}
-						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData,k,v.MySQL), v.CK, v.CkType,This.p.NullNotTransferDefault)
+						toV, This.err = CkDataTypeTransfer(This.getMySQLData(vData, k, v.MySQL), v.CK, v.CkType, This.p.NullNotTransferDefault)
 						if This.err != nil {
 							if This.CheckDataSkip(vData) {
 								This.err = nil
 								continue LOOP
 							}
 							errData = vData
+							log.Println("CkDataTypeTransfer  error ", v)
 							goto errLoop
 						}
 						val = append(val, toV)
@@ -64,7 +66,7 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 				goto errLoop
 			}
 		}
-		_, This.conn.err = stmt.Exec(val)
+		This.conn.err = stmt.Append(val...)
 		if This.conn.err != nil {
 			if This.CheckDataSkip(vData) {
 				This.conn.err = nil
@@ -72,12 +74,20 @@ func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType,n int)
 			}
 			errData = vData
 			This.err = This.conn.err
+			log.Println("plugin clickhouse log_mod_sync_append exec err:", This.err, " data:", val)
+			stmt.Abort()
+			goto errLoop
 		}
+
+	}
+	if stmt != nil {
+		This.conn.err = stmt.Send()
 		if This.err != nil {
-			log.Println("plugin clickhouse insert exec err:",This.err," data:",val)
+			log.Println("plugin clickhouse log_mod_sync_append stmt.Send err:", This.err)
 			goto errLoop
 		}
 	}
+
 errLoop:
 	return
 }

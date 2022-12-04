@@ -1,159 +1,167 @@
 package src
 
 import (
+	"context"
 	"database/sql/driver"
-	clickhouse "github.com/ClickHouse/clickhouse-go"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"log"
+	"net/url"
+	"time"
 )
 
 type ckFieldStruct struct {
-	Name 				string
-	Type 				string
-	DefaultType 		string
-	DefaultExpression 	string
+	Name              string
+	Type              string
+	DefaultType       string
+	DefaultExpression string
 }
 
 func NewClickHouseDBConn(uri string) *ClickhouseDB {
 	c := &ClickhouseDB{
-		uri:uri,
+		uri: uri,
 	}
 	c.Open()
 	return c
 }
 
 type ClickhouseDB struct {
-	uri 	string
-	conn 	clickhouse.Clickhouse
-	err 	error
+	uri  string
+	conn clickhouse.Conn
+	err  error
 }
 
-func(This *ClickhouseDB) GetConn() clickhouse.Clickhouse{
+func (This *ClickhouseDB) GetConn() clickhouse.Conn {
 	return This.conn
 }
 
-func(This *ClickhouseDB) Open() bool{
-	This.conn, This.err = clickhouse.OpenDirect(This.uri)
+func (This *ClickhouseDB) Open() bool {
+	log.Println("ClickHouse Uri:", This.uri)
+	urlInfo, _ := url.Parse(This.uri)
+	auths := urlInfo.Query()
+	This.conn, This.err = clickhouse.Open(&clickhouse.Options{
+		Addr: []string{urlInfo.Host},
+		Auth: clickhouse.Auth{
+			Database: "default",
+			Username: auths["username"][0],
+			Password: auths["password"][0],
+		},
+		Debug: false,
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		DialTimeout:      time.Duration(10) * time.Second,
+		MaxOpenConns:     20,
+		MaxIdleConns:     5,
+		ConnMaxLifetime:  time.Duration(10) * time.Minute,
+		ConnOpenStrategy: clickhouse.ConnOpenInOrder,
+	})
 	return true
 }
 
-func(This *ClickhouseDB) Close() bool{
+func (This *ClickhouseDB) Close() bool {
 	defer func() {
-		if err := recover();err != nil{
-			log.Println("clickhouseDB close err:",err)
+		if err := recover(); err != nil {
+			log.Println("clickhouseDB close err:", err)
 		}
 	}()
-	if This.conn != nil{
+	if This.conn != nil {
 		This.conn.Close()
 	}
 	return true
 }
 
 func (This *ClickhouseDB) GetSchemaList() (data []string) {
-	This.conn.Begin()
-	stmt, err := This.conn.Prepare("SHOW DATABASES")
-	if err == nil{
-		defer stmt.Close()
-	}
-	rows, err := stmt.Query([]driver.Value{})
+	ctx := context.Background()
+	//This.conn.Begin()
+	rows, err := This.conn.Query(ctx, "SHOW DATABASES")
 	if err != nil {
 		This.err = err
 		return
 	}
-	defer rows.Close()
-	row := make([]driver.Value, 1)
 
-	for rows.Next(row) == nil {
+	defer rows.Close()
+
+	for rows.Next() {
 		//过滤system库
-		if row[0].(string) == "system"{
+		var (
+			name string
+		)
+		if err := rows.Scan(&name); err != nil {
+			log.Println("show data bases error")
+
+		}
+		if name == "system" {
 			continue
 		}
-		data = append(data,row[0].(string))
+		data = append(data, name)
 	}
-	This.conn.Commit()
 	return
 }
-
 
 func (This *ClickhouseDB) GetSchemaTableList(schema string) (data []string) {
-	if schema == ""{
+	if schema == "" {
 		return
 	}
+	ctx := context.Background()
 
-	This.conn.Begin()
-	stmt, err := This.conn.Prepare("select name from system.tables where database = '"+schema+"'")
-	if err == nil{
-		defer stmt.Close()
-	}
-	rows, err := stmt.Query([]driver.Value{})
+	rows, err := This.conn.Query(ctx, "select name from system.tables where database = '"+schema+"'")
+	defer rows.Close()
 	if err != nil {
 		This.err = err
 		return
 	}
-	defer rows.Close()
-	row := make([]driver.Value, 1)
 
-	for rows.Next(row) == nil {
-		data = append(data,row[0].(string))
+	for rows.Next() {
+		var name string
+		rows.Scan(&name)
+		data = append(data, name)
 	}
-	This.conn.Commit()
 	return
 }
 
+func (This *ClickhouseDB) GetTableFields(SchemaName, TableName string) (data []ckFieldStruct) {
+	ctx := context.Background()
 
-func (This *ClickhouseDB) GetTableFields(SchemaName,TableName string) (data []ckFieldStruct) {
-	This.conn.Begin()
-	stmt, err := This.conn.Prepare("SELECT `name`,`type`,`default_kind`,`default_expression` FROM  system.columns where  `database` = '"+SchemaName+"' and `table` = '"+TableName+"'")
-	if err == nil{
-		defer stmt.Close()
-	}
-	rows, err := stmt.Query([]driver.Value{})
+	rows, err := This.conn.Query(ctx, "SELECT `name`,`type`,`default_kind`,`default_expression` FROM  system.columns where  `database` = '"+SchemaName+"' and `table` = '"+TableName+"'")
+
 	if err != nil {
 		This.err = err
-		This.conn.Commit()
 		return
 	}
 
 	defer rows.Close()
-	row := make([]driver.Value, 4)
 
-	for rows.Next(row) == nil {
+	for rows.Next() {
 		var (
-			Name            string
-			Type           	string
-			default_type	string
+			Name               string
+			Type               string
+			default_type       string
 			default_expression string
 		)
-		Name = row[0].(string)
-		Type = row[1].(string)
-		default_type = row[2].(string)
-		default_expression = row[3].(string)
-		data = append(data,ckFieldStruct{Name:Name,Type:Type,DefaultType:default_type,DefaultExpression:default_expression})
+		rows.Scan(&Name, &Type, &default_type, &default_expression)
+		data = append(data, ckFieldStruct{Name: Name, Type: Type, DefaultType: default_type, DefaultExpression: default_expression})
 	}
-	This.err = This.conn.Commit()
 	return
 }
 
-
 func (This *ClickhouseDB) GetVersion() (Version string) {
-	This.conn.Begin()
-	stmt, err := This.conn.Prepare("SELECT version()")
-	if err == nil{
-		defer stmt.Close()
-	}
-	rows, err := stmt.Query([]driver.Value{})
+	ctx := context.Background()
+
+	rows, err := This.conn.Query(ctx, "SELECT version()")
+
 	if err != nil {
 		This.err = err
-		This.conn.Commit()
 		return
 	}
 
 	defer rows.Close()
 	row := make([]driver.Value, 1)
 
-	for rows.Next(row) == nil {
+	for rows.Next() {
 		Version = row[0].(string)
 	}
-	This.err = This.conn.Commit()
 	return
 }
-

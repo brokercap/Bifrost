@@ -580,7 +580,10 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 			data = append(data, Value)
 			break
 		case "date":
-			Value := time.Now().Format("2006-01-02")
+			// Ck Stored in two bytes as the number of days since 1970-01-01 (unsigned)
+			// link  https://clickhouse.com/docs/en/sql-reference/data-types/date/
+			t := time.Now()
+			Value := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 			columnType.Value = Value
 			data = append(data, Value)
 			break

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/shopspring/decimal"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -42,86 +43,44 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 	}()
 	switch toDataType {
-	case "Date", "Nullable(Date)":
+	case "Date", "Nullable(Date)", "DateTime", "Nullable(DateTime)":
 		if data == nil {
-			v = int16(0)
+			v = nil
 			break
 		}
+		loc, _ := time.LoadLocation("Local")
 		switch data.(type) {
+		case time.Time:
+			v = data
+			break
 		case int16:
-			v = data
+			v = time.UnixMicro(int64(data.(int16))).In(loc)
+			break
+		case int64:
+			v = time.UnixMicro(data.(int64)).In(loc)
 			break
 		case string:
-			switch data.(string) {
-			case "0000-00-00", "", " ":
-				v = int16(0)
-				break
-			default:
-				v = data
-				break
-			}
-			break
-		case float32:
-			v = int16(data.(float32))
-		case float64:
-			v = int16(data.(float64))
-		default:
-			i64, err := AllTypeToInt64(data)
-			if err != nil {
-				return 0, err
-			}
-			if i64 <= 32767 && i64 >= -32768 {
-				v = int16(i64)
+			if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
+				// 下面会修正
+				v = nil
 			} else {
-				v = int16(0)
+				v, _ = time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc)
+				v = v.(time.Time)
 			}
 			break
 		}
-		break
-	case "DateTime", "Nullable(DateTime)":
-		if data == nil {
-			v = int32(0)
-			break
-		}
-		switch data.(type) {
-		case int32:
-			v = data
-			break
-		case float32:
-			v = int32(data.(float32))
-		case float64:
-			v = int32(data.(float64))
-		case string:
-			switch data.(string) {
-			case "0000-00-00 00:00:00", "", " ":
-				v = int32(0)
+		// CK Datetime must be between 1970-01-01 00:00:00 and 2105-12-31 23:59:59
+		s := time.Date(1970, 01, 01, 0, 0, 0, 0, time.UTC)
+		e := time.Date(2105, 12, 31, 23, 59, 59, 0, time.UTC)
+		if v == nil || (v.(time.Time).Before(s) || v.(time.Time).After(e)) {
+			switch toDataType {
+			case "Nullable(Date)", "Nullable(DateTime)":
+				v = nil
 				break
-			default:
-				if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
-					v = int64(0)
-				} else {
-					v = data
-				}
+			case "Date", "DateTime":
+				v = s
 				break
-				/*
-					loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
-					theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
-					v = theTime.Unix()
-					break
-				*/
 			}
-			break
-		default:
-			i64, err := AllTypeToInt64(data)
-			if err != nil {
-				return 0, err
-			}
-			if i64 <= 2147483647 && i64 >= -2147483648 {
-				v = int32(i64)
-			} else {
-				v = int32(0)
-			}
-			break
 		}
 		break
 	case "String", "Enum8", "Enum16", "Enum", "UUID", "Nullable(String)", "Nullable(Enum8)", "Nullable(Enum16)", "Nullable(Enum)", "Nullable(UUID)":
@@ -377,13 +336,13 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 
 		switch data.(type) {
 		case float32:
-			v = data
+			v = interfaceToFloat64(data)
 			break
 		case float64:
-			v = float32(data.(float64))
+			v = interfaceToFloat64(data)
 			break
 		default:
-			v = float32(interfaceToFloat64(data))
+			v = interfaceToFloat64(data)
 			break
 		}
 		break
@@ -431,7 +390,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
-			v = interfaceToFloat64(data)
+			v = interfaceToDecimal(data)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
@@ -470,6 +429,24 @@ func interfaceToFloat64(data interface{}) float64 {
 	f1, err := strconv.ParseFloat(t, 64)
 	if err != nil {
 		return float64(0.00)
+	}
+	return f1
+}
+
+func interfaceToDecimal(data interface{}) decimal.Decimal {
+	switch data.(type) {
+	case float32:
+		return decimal.NewFromFloat32(data.(float32))
+	case float64:
+		return decimal.NewFromFloat(data.(float64))
+	default:
+		break
+	}
+	t := strings.Trim(fmt.Sprint(data), " ")
+	t = strings.Trim(t, "　")
+	f1, err := decimal.NewFromString(t)
+	if err != nil {
+		return decimal.NewFromFloat(0.00)
 	}
 	return f1
 }

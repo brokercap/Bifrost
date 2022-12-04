@@ -31,11 +31,11 @@ func TestAllTypeToInt64(t *testing.T) {
 }
 
 func TestFloat(t *testing.T) {
-	v := float64(0.3)
-	v2 := "0.30"
+	v := float64(81.07)
+	v2 := "81.07"
 	floatDest, _ := strconv.ParseFloat(fmt.Sprint(v), 64)
 	floatSource, _ := strconv.ParseFloat(fmt.Sprint(v2), 64)
-	if math.Abs(floatDest-floatSource) < 0.05 {
+	if math.Abs(floatDest-floatSource) != 0.0 {
 		t.Log("test success")
 	} else {
 		t.Error("test failed")
