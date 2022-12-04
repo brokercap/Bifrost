@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -432,6 +433,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
 			v = interfaceToFloat64(data)
+			log.Println("------------------", toDataType, data, v)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
