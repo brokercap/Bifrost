@@ -184,11 +184,17 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType, n int) (errD
 					continue LOOP
 				}
 				errData = &data
-				log.Println("plugin clickhouse insert exec err:", This.err, " data:", val)
+				log.Println("plugin normal_sync.go:187 err:", This.err, " data:", val)
+				stmt.Abort()
 				goto errLoop
 			}
 		}
-		This.err = stmt.Send()
+		if stmt != nil {
+			This.err = stmt.Send()
+			if This.err != nil {
+				log.Println("normal_sync.go:195", This.err)
+			}
+		}
 	}
 
 errLoop:

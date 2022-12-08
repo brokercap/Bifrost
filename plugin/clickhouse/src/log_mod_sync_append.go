@@ -74,13 +74,20 @@ LOOP:
 			}
 			errData = vData
 			This.err = This.conn.err
+			log.Println("plugin clickhouse Append exec err:", This.err, " data:", val)
+			stmt.Abort()
+			goto errLoop
 		}
+
+	}
+	if stmt != nil {
 		This.conn.err = stmt.Send()
 		if This.err != nil {
-			log.Println("plugin clickhouse insert exec err:", This.err, " data:", val)
+			log.Println("plugin clickhouse log_mod_sync_append stmt.Send err:", This.err)
 			goto errLoop
 		}
 	}
+
 errLoop:
 	return
 }

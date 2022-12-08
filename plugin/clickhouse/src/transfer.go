@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"github.com/shopspring/decimal"
 	"log"
 	"reflect"
 	"regexp"
@@ -54,6 +55,9 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 			break
 		case int64:
 			v = time.UnixMicro(int64(data.(int64)))
+			break
+		case string:
+			v, _ = time.Parse("2006-01-02 15:04:05", data.(string))
 			break
 		}
 		break
@@ -310,13 +314,13 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 
 		switch data.(type) {
 		case float32:
-			v = data
+			v = interfaceToFloat64(data)
 			break
 		case float64:
-			v = float32(data.(float64))
+			v = interfaceToFloat64(data)
 			break
 		default:
-			v = float32(interfaceToFloat64(data))
+			v = interfaceToFloat64(data)
 			break
 		}
 		break
@@ -390,20 +394,20 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 	return
 }
 
-func interfaceToFloat64(data interface{}) float64 {
+func interfaceToFloat64(data interface{}) decimal.Decimal {
 	switch data.(type) {
 	case float32:
-		return float64(data.(float32))
+		return decimal.NewFromFloat(float64(data.(float32)))
 	case float64:
-		return data.(float64)
+		return decimal.NewFromFloat(data.(float64))
 	default:
 		break
 	}
 	t := strings.Trim(fmt.Sprint(data), " ")
 	t = strings.Trim(t, "　")
-	f1, err := strconv.ParseFloat(t, 64)
+	f1, err := decimal.NewFromString(t)
 	if err != nil {
-		return float64(0.00)
+		return decimal.NewFromFloat(0.00)
 	}
 	return f1
 }
