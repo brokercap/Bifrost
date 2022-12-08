@@ -57,7 +57,11 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 			v = time.UnixMicro(int64(data.(int64)))
 			break
 		case string:
-			v, _ = time.Parse("2006-01-02 15:04:05", data.(string))
+			if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
+				v = nil
+			} else {
+				v, _ = time.Parse("2006-01-02 15:04:05", data.(string))
+			}
 			break
 		}
 		break
