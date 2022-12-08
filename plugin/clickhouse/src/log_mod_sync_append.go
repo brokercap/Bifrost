@@ -5,17 +5,17 @@ package src
 */
 
 import (
-	dbDriver "database/sql/driver"
+	driver2 "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 )
 
 func (This *Conn) CommitLogMod_Append(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType) {
-	var stmt dbDriver.Stmt
+	var stmt driver2.Batch
 LOOP:
 	for i := 0; i < n; i++ {
 		vData := list[i]
-		val := make([]dbDriver.Value, 0)
+		val := make([]interface{}, 0)
 		l := len(vData.Rows)
 		switch vData.EventType {
 		case "insert", "delete":
@@ -66,7 +66,7 @@ LOOP:
 				goto errLoop
 			}
 		}
-		_, This.conn.err = stmt.Exec(val)
+		This.conn.err = stmt.Append(val...)
 		if This.conn.err != nil {
 			if This.CheckDataSkip(vData) {
 				This.conn.err = nil
@@ -75,6 +75,7 @@ LOOP:
 			errData = vData
 			This.err = This.conn.err
 		}
+		This.conn.err = stmt.Send()
 		if This.err != nil {
 			log.Println("plugin clickhouse insert exec err:", This.err, " data:", val)
 			goto errLoop

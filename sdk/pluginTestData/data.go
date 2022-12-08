@@ -178,39 +178,40 @@ func GetRandomString(l int, cn int) string {
 	return string(result1) + result2
 }
 
-func GetTimeAndNsen(ColumnDataType string) string {
+func GetTimeAndNsen(ColumnDataType string) int64 {
 	ColumnDataType = strings.ToLower(ColumnDataType)
-	var timeFormat string
-	i := strings.Index(ColumnDataType, "(")
-	var columnType string
-	if i < 0 {
-		columnType = ColumnDataType
-	} else {
-		columnType = ColumnDataType[0:i]
-	}
-	switch columnType {
-	case "time":
-		timeFormat = "15:03:04"
-	case "timestamp", "datetime":
-		timeFormat = "2006-01-02 15:03:04"
-	case "year":
-		timeFormat = "2006"
-	default:
-		return ""
-	}
-	var n = 0
-	var err error
-	if i > 0 {
-		n, err = strconv.Atoi(ColumnDataType[i+1 : len(ColumnDataType)-1])
-		if err != nil {
-			panic(err.Error())
-		}
-	}
-	if n > 0 {
-		timeFormat += "." + fmt.Sprintf("%0*d", n, 0)
-	}
-	value := time.Now().Format(timeFormat)
-	return value
+	return time.Now().Truncate(time.Second).In(time.UTC).UnixMicro()
+	//var timeFormat string
+	//i := strings.Index(ColumnDataType, "(")
+	//var columnType string
+	//if i < 0 {
+	//	columnType = ColumnDataType
+	//} else {
+	//	columnType = ColumnDataType[0:i]
+	//}
+	//switch columnType {
+	//case "time":
+	//	timeFormat = "15:03:04"
+	//case "timestamp", "datetime":
+	//	timeFormat = "2006-01-02 15:03:04"
+	//case "year":
+	//	timeFormat = "2006"
+	//default:
+	//	return ""
+	//}
+	//var n = 0
+	//var err error
+	//if i > 0 {
+	//	n, err = strconv.Atoi(ColumnDataType[i+1 : len(ColumnDataType)-1])
+	//	if err != nil {
+	//		panic(err.Error())
+	//	}
+	//}
+	//if n > 0 {
+	//	timeFormat += "." + fmt.Sprintf("%0*d", n, 0)
+	//}
+	//value := time.Now().Format(timeFormat)
+	//return value
 }
 
 type Event struct {
@@ -580,7 +581,7 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 			data = append(data, Value)
 			break
 		case "date":
-			Value := time.Now().Format("2006-01-02")
+			Value := time.Now().UnixMicro()
 			columnType.Value = Value
 			data = append(data, Value)
 			break

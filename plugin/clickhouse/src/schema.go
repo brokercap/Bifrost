@@ -37,7 +37,7 @@ func (This *ClickhouseDB) GetConn() clickhouse.Conn {
 func (This *ClickhouseDB) Open() bool {
 	log.Println("ClickHouse Uri:", This.uri)
 	This.conn, This.err = clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"localhost:8123"},
+		Addr: []string{"localhost:9000"},
 		Auth: clickhouse.Auth{
 			Database: "prod_xbt",
 			Username: "default",
@@ -84,14 +84,20 @@ func (This *ClickhouseDB) GetSchemaList() (data []string) {
 	}
 
 	defer rows.Close()
-	row := make([]driver.Value, 1)
 
 	for rows.Next() {
 		//过滤system库
-		if row[0].(string) == "system" {
+		var (
+			name string
+		)
+		if err := rows.Scan(&name); err != nil {
+			log.Println("show data bases error")
+
+		}
+		if name == "system" {
 			continue
 		}
-		data = append(data, row[0].(string))
+		data = append(data, name)
 	}
 	return
 }
@@ -108,10 +114,11 @@ func (This *ClickhouseDB) GetSchemaTableList(schema string) (data []string) {
 		This.err = err
 		return
 	}
-	row := make([]driver.Value, 1)
 
 	for rows.Next() {
-		data = append(data, row[0].(string))
+		var name string
+		rows.Scan(&name)
+		data = append(data, name)
 	}
 	return
 }
@@ -127,7 +134,6 @@ func (This *ClickhouseDB) GetTableFields(SchemaName, TableName string) (data []c
 	}
 
 	defer rows.Close()
-	row := make([]driver.Value, 4)
 
 	for rows.Next() {
 		var (
@@ -136,10 +142,7 @@ func (This *ClickhouseDB) GetTableFields(SchemaName, TableName string) (data []c
 			default_type       string
 			default_expression string
 		)
-		Name = row[0].(string)
-		Type = row[1].(string)
-		default_type = row[2].(string)
-		default_expression = row[3].(string)
+		rows.Scan(&Name, &Type, &default_type, &default_expression)
 		data = append(data, ckFieldStruct{Name: Name, Type: Type, DefaultType: default_type, DefaultExpression: default_expression})
 	}
 	return

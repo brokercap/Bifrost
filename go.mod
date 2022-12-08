@@ -46,7 +46,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect; indirsect
+	github.com/shopspring/decimal v1.3.1 // indirsect
 	github.com/smartystreets/assertions v1.2.0 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect

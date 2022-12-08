@@ -3,9 +3,9 @@ package src
 import (
 	"context"
 	"database/sql/driver"
-	dbDriver "database/sql/driver"
 	"encoding/json"
 	"fmt"
+	driver2 "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"log"
 	"runtime/debug"
 	"strconv"
@@ -732,8 +732,9 @@ func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.P
 }
 
 // 获取 sql stmt
-func (This *Conn) getStmt(Type string) dbDriver.Stmt {
-	var stmt dbDriver.Stmt
+func (This *Conn) getStmt(Type string) driver2.Batch {
+	var stmt driver2.Batch
+
 	switch Type {
 	case "insert":
 		fields := ""
@@ -749,7 +750,7 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 		}
 		sql := "INSERT INTO " + This.p.ckDatakey + " (" + fields + ") VALUES (" + values + ")"
 		ctx := context.Background()
-		This.conn.err = This.conn.conn.Exec(ctx, sql)
+		stmt, This.conn.err = This.conn.conn.PrepareBatch(ctx, sql)
 		if This.conn.err != nil {
 			log.Println("clickhouse getStmt insert err:", This.conn.err, "sql:", sql)
 		}
@@ -764,7 +765,7 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 			}
 		}
 		ctx := context.Background()
-		This.conn.err = This.conn.conn.Exec(ctx, "ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
+		stmt, This.conn.err = This.conn.conn.PrepareBatch(ctx, "ALTER TABLE "+This.p.ckDatakey+" DELETE WHERE "+where)
 		if This.conn.err != nil {
 			log.Println("clickhouse getStmt delete err:", This.conn.err)
 		}
@@ -772,7 +773,7 @@ func (This *Conn) getStmt(Type string) dbDriver.Stmt {
 	default:
 		//默认是传sql进来
 		ctx := context.Background()
-		This.conn.err = This.conn.conn.Exec(ctx, Type)
+		stmt, This.conn.err = This.conn.conn.PrepareBatch(ctx, Type)
 		if This.conn.err != nil {
 			log.Println("clickhouse getStmt err:", This.conn.err, " sql:", Type)
 		}
@@ -910,7 +911,7 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType, n i
 			break
 		}
 		// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
-		This.conn.err = tx.Commit()
+		//This.conn.err = tx.Commit()
 		if This.err != nil {
 			break
 		}
@@ -941,7 +942,7 @@ func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType, n in
 		This.err = This.conn.err
 		return
 	}
-	This.conn.err = tx.Commit()
+	//This.conn.err = tx.Commit()
 	return
 }
 

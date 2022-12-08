@@ -43,85 +43,17 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 	}()
 	switch toDataType {
-	case "Date", "Nullable(Date)":
+	case "Date", "Nullable(Date)", "DateTime", "Nullable(DateTime)":
 		if data == nil {
-			v = int16(0)
+			v = nil
 			break
 		}
 		switch data.(type) {
 		case int16:
-			v = data
+			v = time.UnixMicro(int64(data.(int16)))
 			break
-		case string:
-			switch data.(string) {
-			case "0000-00-00", "", " ":
-				v = int16(0)
-				break
-			default:
-				v = data
-				break
-			}
-			break
-		case float32:
-			v = int16(data.(float32))
-		case float64:
-			v = int16(data.(float64))
-		default:
-			i64, err := AllTypeToInt64(data)
-			if err != nil {
-				return 0, err
-			}
-			if i64 <= 32767 && i64 >= -32768 {
-				v = int16(i64)
-			} else {
-				v = int16(0)
-			}
-			break
-		}
-		break
-	case "DateTime", "Nullable(DateTime)":
-		if data == nil {
-			v = int32(0)
-			break
-		}
-		switch data.(type) {
-		case int32:
-			v = data
-			break
-		case float32:
-			v = int32(data.(float32))
-		case float64:
-			v = int32(data.(float64))
-		case string:
-			switch data.(string) {
-			case "0000-00-00 00:00:00", "", " ":
-				v = int32(0)
-				break
-			default:
-				if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
-					v = int64(0)
-				} else {
-					v = data
-				}
-				break
-				/*
-					loc, _ := time.LoadLocation("Local")                                          //重要：获取时区
-					theTime, _ := time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc) //使用模板在对应时区转化为time.time类型
-					v = theTime.Unix()
-					break
-				*/
-			}
-			break
-		default:
-			i64, err := AllTypeToInt64(data)
-			if err != nil {
-				return 0, err
-			}
-			if i64 <= 2147483647 && i64 >= -2147483648 {
-				v = int32(i64)
-			} else {
-				v = int32(0)
-			}
+		case int64:
+			v = time.UnixMicro(int64(data.(int64)))
 			break
 		}
 		break
