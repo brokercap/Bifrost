@@ -821,9 +821,7 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key
 	return ""
 }
 
-/**
-  合并数据提交
-*/
+// 合并数据，提交到  ck里
 func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, e error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -901,10 +899,6 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType, n i
 		This.p.Field = p.Field
 		This.p.ckDatakey = p.CkSchemaAndTable
 		var tx driver.Tx
-		//tx, This.conn.err = This.conn.conn.Begin()
-		//if This.conn.err != nil {
-		//	This.err = This.conn.err
-		//}
 		errData = This.CommitLogMod_Append(data, len(data))
 		//假如连接本身有异常的情况下,则执行 rollback
 		if This.conn.err != nil {
@@ -912,8 +906,6 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType, n i
 			This.err = This.conn.err
 			break
 		}
-		// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
-		//This.conn.err = tx.Commit()
 		if This.err != nil {
 			break
 		}
@@ -924,10 +916,7 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType, n i
 // 非自动创建表的提交
 func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType, n int) (errData *pluginDriver.PluginDataType) {
 	var tx driver.Tx
-	//tx, This.conn.err = This.conn.conn.Begin()
-	//if This.conn.err != nil {
-	//	return
-	//}
+
 	switch This.p.SyncType {
 	case SYNCMODE_LOG_APPEND:
 		errData = This.CommitLogMod_Append(list, n)
@@ -944,7 +933,6 @@ func (This *Conn) NotCreateTableCommit(list []*pluginDriver.PluginDataType, n in
 		This.err = This.conn.err
 		return
 	}
-	//This.conn.err = tx.Commit()
 	return
 }
 
