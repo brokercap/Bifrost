@@ -48,21 +48,36 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 			v = nil
 			break
 		}
+		loc, _ := time.LoadLocation("Local")
 		switch data.(type) {
 		case int16:
-			v = time.UnixMicro(int64(data.(int16))).UTC()
+			v = time.UnixMicro(int64(data.(int16))).In(loc)
 			break
 		case int64:
-			v = time.UnixMicro(int64(data.(int64))).UTC()
+			v = time.UnixMicro(data.(int64)).In(loc)
 			break
 		case string:
 			if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
+				// 下面会修正
 				v = nil
 			} else {
-				v, _ = time.Parse("2006-01-02 15:04:05", data.(string))
-				v = v.(time.Time).UTC()
+				v, _ = time.ParseInLocation("2006-01-02 15:04:05", data.(string), loc)
+				v = v.(time.Time)
 			}
 			break
+		}
+		// CK Datetime must be between 1970-01-01 00:00:00 and 2105-12-31 23:59:59
+		s := time.Date(1970, 01, 01, 0, 0, 0, 0, time.UTC)
+		e := time.Date(2105, 12, 31, 23, 59, 59, 0, time.UTC)
+		if v == nil || (v.(time.Time).Before(s) || v.(time.Time).After(e)) {
+			switch toDataType {
+			case "Nullable(Date)", "Nullable(DateTime)":
+				v = nil
+				break
+			case "Date", "DateTime":
+				v = s
+				break
+			}
 		}
 		break
 	case "String", "Enum8", "Enum16", "Enum", "UUID", "Nullable(String)", "Nullable(Enum8)", "Nullable(Enum16)", "Nullable(Enum)", "Nullable(UUID)":
