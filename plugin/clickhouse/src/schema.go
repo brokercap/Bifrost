@@ -3,9 +3,9 @@ package src
 import (
 	"context"
 	"database/sql/driver"
-	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"log"
+	"net/url"
 	"time"
 )
 
@@ -36,17 +36,16 @@ func (This *ClickhouseDB) GetConn() clickhouse.Conn {
 
 func (This *ClickhouseDB) Open() bool {
 	log.Println("ClickHouse Uri:", This.uri)
+	urlInfo, _ := url.Parse(This.uri)
+	auths := urlInfo.Query()
 	This.conn, This.err = clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"localhost:9000"},
+		Addr: []string{urlInfo.Host},
 		Auth: clickhouse.Auth{
-			Database: "prod_xbt",
-			Username: "default",
-			Password: "Xbt123456!",
+			Database: "default",
+			Username: auths["username"][0],
+			Password: auths["password"][0],
 		},
-		Debug: true,
-		Debugf: func(format string, v ...interface{}) {
-			fmt.Printf(format, v)
-		},
+		Debug: false,
 		Settings: clickhouse.Settings{
 			"max_execution_time": 60,
 		},
@@ -54,7 +53,7 @@ func (This *ClickhouseDB) Open() bool {
 			Method: clickhouse.CompressionLZ4,
 		},
 		DialTimeout:      time.Duration(10) * time.Second,
-		MaxOpenConns:     5,
+		MaxOpenConns:     20,
 		MaxIdleConns:     5,
 		ConnMaxLifetime:  time.Duration(10) * time.Minute,
 		ConnOpenStrategy: clickhouse.ConnOpenInOrder,

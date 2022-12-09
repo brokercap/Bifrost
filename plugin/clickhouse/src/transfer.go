@@ -5,7 +5,6 @@ import (
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/shopspring/decimal"
-	"log"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -51,16 +50,17 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		switch data.(type) {
 		case int16:
-			v = time.UnixMicro(int64(data.(int16)))
+			v = time.UnixMicro(int64(data.(int16))).UTC()
 			break
 		case int64:
-			v = time.UnixMicro(int64(data.(int64)))
+			v = time.UnixMicro(int64(data.(int64))).UTC()
 			break
 		case string:
 			if strings.Index(data.(string), "0000-00-00 00:00:00") == 0 {
 				v = nil
 			} else {
 				v, _ = time.Parse("2006-01-02 15:04:05", data.(string))
+				v = v.(time.Time).UTC()
 			}
 			break
 		}
@@ -373,7 +373,6 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
 			v = interfaceToFloat64(data)
-			log.Println("------------------", toDataType, data, v)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:

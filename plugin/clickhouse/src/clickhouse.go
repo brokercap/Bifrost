@@ -16,7 +16,7 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-const VERSION = "v2.0.0"
+const VERSION = "v2.0.1"
 const BIFROST_VERION = "v2.0.0"
 
 var l sync.RWMutex
