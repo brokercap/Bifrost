@@ -13,9 +13,7 @@ func (This *ClickhouseDB) GetTableDataList(schema string, table string, where st
 		return make([]map[string]driver.Value, 0)
 	}
 
-	//This.conn.Begin()
-	//defer This.conn.Commit()
-	sql := "select * from " + schema + "." + table + " where 1=1"
+	sql := "select * from " + schema + "." + table + "  where 1=1"
 	if where != "" {
 		sql += " and " + where
 	}
@@ -35,7 +33,7 @@ func (This *ClickhouseDB) GetTableDataList(schema string, table string, where st
 		pointers := StrutToSliceOfFieldAddress(rows.ColumnTypes())
 		err := rows.Scan(pointers...)
 		if err != nil {
-			log.Println("rows scan error.")
+			log.Println("rows scan error.", err)
 		}
 		values := FieldAddressToValue(rows.ColumnTypes(), pointers)
 		for i := 0; i < n; i++ {
@@ -163,6 +161,8 @@ func StrutToSliceOfFieldAddress(columns []driver2.ColumnType) []interface{} {
 			v := new(float64)
 			pointers = append(pointers, v)
 			break
+		default:
+			log.Println("name:", name, "not supported.")
 		}
 	}
 	return pointers

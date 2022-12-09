@@ -50,6 +50,9 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		loc, _ := time.LoadLocation("Local")
 		switch data.(type) {
+		case time.Time:
+			v = data
+			break
 		case int16:
 			v = time.UnixMicro(int64(data.(int16))).In(loc)
 			break
@@ -387,7 +390,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
-			v = interfaceToFloat64(data)
+			v = interfaceToDecimal(data)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
@@ -412,10 +415,28 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 	return
 }
 
-func interfaceToFloat64(data interface{}) decimal.Decimal {
+func interfaceToFloat64(data interface{}) float64 {
 	switch data.(type) {
 	case float32:
-		return decimal.NewFromFloat(float64(data.(float32)))
+		return float64(data.(float32))
+	case float64:
+		return data.(float64)
+	default:
+		break
+	}
+	t := strings.Trim(fmt.Sprint(data), " ")
+	t = strings.Trim(t, "　")
+	f1, err := strconv.ParseFloat(t, 64)
+	if err != nil {
+		return float64(0.00)
+	}
+	return f1
+}
+
+func interfaceToDecimal(data interface{}) decimal.Decimal {
+	switch data.(type) {
+	case float32:
+		return decimal.NewFromFloat32(data.(float32))
 	case float64:
 		return decimal.NewFromFloat(data.(float64))
 	default:

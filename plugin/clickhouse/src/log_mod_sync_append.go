@@ -48,10 +48,10 @@ LOOP:
 								continue LOOP
 							}
 							errData = vData
+							log.Println("CkDataTypeTransfer  error ", v)
 							goto errLoop
 						}
 						val = append(val, toV)
-						log.Println("CkDataTypeTransfer  <======", val)
 					}
 				}
 			}

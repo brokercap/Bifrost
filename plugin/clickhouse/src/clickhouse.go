@@ -821,7 +821,9 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key
 	return ""
 }
 
-// 合并数据，提交到  ck里
+/**
+  合并数据提交
+*/
 func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, e error) {
 	defer func() {
 		if err := recover(); err != nil {

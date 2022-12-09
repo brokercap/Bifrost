@@ -19,10 +19,10 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-var url string = "tcp://127.0.0.1:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://127.0.0.1:9000?Database=test&username=default&password=Xbt123456!&debug=true&compress=1"
 var engine string = "MergeTree()"
 
-//var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testjson String) ENGINE = MergeTree() ORDER BY (id);"
+//var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Decimal(18,2),testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testjson String) ENGINE = MergeTree() ORDER BY (id);"
 /*
 
 CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,testjson String,test_unsinged_bigint UInt64) ENGINE = MergeTree() ORDER BY (id);
@@ -314,19 +314,19 @@ func TestCommitAndCheckData(t *testing.T) {
 	resultData["error"] = make([]string, 0)
 	checkDataRight(m, dataList[0], resultData)
 
-	//for _, v := range resultData["ok"] {
-	//	t.Log(v)
-	//}
+	for _, v := range resultData["ok"] {
+		t.Log(v)
+	}
 
-	//for _, v := range resultData["error"] {
-	//	t.Error(v)
-	//}
+	for _, v := range resultData["error"] {
+		t.Error(v)
+	}
 
-	//if len(resultData["error"]) == 0 {
-	//	t.Log("test over;", "data is all right")
-	//} else {
-	//	t.Error("test over;", " some data is error")
-	//}
+	if len(resultData["error"]) == 0 {
+		t.Log("test over;", "data is all right")
+	} else {
+		t.Error("test over;", " some data is error")
+	}
 
 }
 
@@ -389,7 +389,7 @@ func checkDataRight(m map[string]interface{}, destMap map[string]driver.Value, r
 				break
 			case time.Time:
 				// 这里用包括关系 ，也是因为 ck 读出来的时候，date和datetime类型都转成了time.Time 类型了
-				descTime := fmt.Sprint(v.(time.Time).UnixMicro())
+				descTime := fmt.Sprint(v.(time.Time).Format("2006-01-02 15:04:05.999999"))
 				// 假如CK 中 DateTime(3)，本来原始值是  2022-09-10 15:03:44.640 ，但是实际解析出来的时候是  2022-09-10 15:03:44.64  ,没有默尾的0，其实这个时候也是对的，所以假如反过来判断 原始值包括了 读出来的时间格式化值 ，也是对的
 				var oldTimeStr = fmt.Sprint(m[columnName])
 				if descTime == oldTimeStr || strings.Index(descTime, oldTimeStr) == 0 || strings.Index(oldTimeStr, descTime) == 0 {
@@ -454,11 +454,15 @@ func TestRandDataAndCheck(t *testing.T) {
 	resultData["ok"] = make([]string, 0)
 	resultData["error"] = make([]string, 0)
 
+	//等待MergeTree合并
+	time.Sleep(time.Duration(10) * time.Second)
+
 	c := MyPlugin.NewClickHouseDBConn(url)
 	dataList := c.GetTableDataList(SchemaName, TableName, "")
 
 	count := uint64(len(dataList))
-	if count != uint64(len(e.GetDataMap())) {
+	dataCount := uint64(len(e.GetDataMap()))
+	if count != dataCount {
 		for k, v := range e.GetDataMap() {
 			t.Log(k, " ", v)
 		}
@@ -476,9 +480,6 @@ func TestRandDataAndCheck(t *testing.T) {
 		checkDataRight(data, destMap[id], resultData)
 	}
 
-	for _, v := range resultData["ok"] {
-		t.Log(v)
-	}
 	if len(resultData["error"]) > 0 {
 		for _, v := range resultData["error"] {
 			t.Error(v)
