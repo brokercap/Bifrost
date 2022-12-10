@@ -198,7 +198,10 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 						parser.delTableId(event.SchemaName, event.TableName)
 					} else {
 						if tableId, err := parser.GetTableId(event.SchemaName, event.TableName); err == nil {
-							parser.GetTableSchema(tableId, event.SchemaName, event.TableName)
+							if err := parser.GetTableSchema(tableId, event.SchemaName, event.TableName); err != nil {
+								parser.saveBinlog(event)
+								continue
+							}
 						}
 					}
 					break

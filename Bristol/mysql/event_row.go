@@ -60,6 +60,10 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	if parser.filterNextRowEvent == true {
 		return
 	}
+	// 如果SchemaMap在查询时有问题，直接跳过
+	if _, ok := parser.tableSchemaMap[event.tableId]; !ok {
+		return
+	}
 	for buf.Len() > 0 {
 		var row map[string]interface{}
 		row, err = parser.parseEventRow(buf, parser.lastMapEvent, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
