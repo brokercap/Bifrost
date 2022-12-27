@@ -99,7 +99,7 @@ func (db *db) AddTableToServer(schemaName string, tableName string, toserver *To
 	db.tableMap[key].ToServerList = append(db.tableMap[key].ToServerList, toserver)
 
 	// 在添加第一个同步的时候，通知 binlog 解析，需要同步这个表
-	if len(db.tableMap[key].ToServerList) == 1 && db.binlogDump != nil {
+	if len(db.tableMap[key].ToServerList) == 1 && db.inputDriverObj != nil {
 		db.AddReplicateDoDb(schemaName, tableName,false)
 	}
 	log.Println("AddTableToServer", db.Name, schemaName, tableName, toserver)
@@ -143,7 +143,7 @@ func (db *db) DelTableToServer(schemaName string, tableName string, ToServerID i
 		}
 	}
 	// 当前这个表都没有同步配置了，则通知 binlog 解析，不再需要解析这个表的数据了
-	if len(db.tableMap[key].ToServerList) == 0 && db.binlogDump != nil {
+	if len(db.tableMap[key].ToServerList) == 0 && db.inputDriverObj != nil {
 		db.DelReplicateDoDb(schemaName, tableName,false)
 	}
 	log.Println("DelTableToServer", db.Name, schemaName, tableName, "toServerInfo:", toServerInfo)

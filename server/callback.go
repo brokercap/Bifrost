@@ -18,24 +18,24 @@ package server
 import (
 	"log"
 	"time"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+
+	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-func (db *db) Callback(data *mysql.EventReslut) {
-	switch data.Header.EventType {
-	case mysql.QUERY_EVENT:
+func (db *db) Callback(data *outputDriver.PluginDataType) {
+	switch data.EventType {
+	case "sql":
 		switch data.Query {
 		case "COMMIT":
 			db.CallbackDoCommit(data)
 			return
 		case "BEGIN":
-			db.lastTransactionTableMap = make(map[string]map[string]bool,0)
+			db.lastTransactionTableMap = make(map[string]map[string]bool, 0)
 			return
 		default:
 			break
 		}
-		break
-	case mysql.XID_EVENT:
+	case "commit":
 		db.CallbackDoCommit(data)
 		return
 	default:
@@ -44,38 +44,42 @@ func (db *db) Callback(data *mysql.EventReslut) {
 	if db.Callback0(data) == false {
 		return
 	}
-	if _,ok := db.lastTransactionTableMap[data.SchemaName];!ok {
-		db.lastTransactionTableMap[data.SchemaName] = make(map[string]bool,0)
+	if _, ok := db.lastTransactionTableMap[data.SchemaName]; !ok {
+		db.lastTransactionTableMap[data.SchemaName] = make(map[string]bool, 0)
 	}
 	db.lastTransactionTableMap[data.SchemaName][data.TableName] = true
 }
 
-func (db *db) CallbackDoCommit(data *mysql.EventReslut) {
-	for SchemaName,TableNameMap := range db.lastTransactionTableMap {
-		for TableName,_ := range TableNameMap {
-			data0 := &mysql.EventReslut{
-				Header:         data.Header,
-				Rows:           data.Rows,
-				Query:          "COMMIT",
-				SchemaName:     SchemaName,
-				TableName:      TableName,
-				BinlogFileName: data.BinlogFileName,
-				BinlogPosition: data.BinlogPosition,
-				Gtid:			data.Gtid,
-				Pri:			data.Pri,
-				ColumnMapping:  data.ColumnMapping,
-				EventID:		data.EventID,
+func (db *db) CallbackDoCommit(data *outputDriver.PluginDataType) {
+	for SchemaName, TableNameMap := range db.lastTransactionTableMap {
+		for TableName, _ := range TableNameMap {
+			data0 := &outputDriver.PluginDataType{
+				Timestamp:       data.Timestamp,
+				EventType:       data.EventType,
+				SchemaName:      SchemaName,
+				TableName:       TableName,
+				AliasSchemaName: data.AliasSchemaName,
+				AliasTableName:  data.AliasTableName,
+				Rows:            data.Rows,
+				BinlogFileNum:   data.BinlogFileNum,
+				BinlogPosition:  data.BinlogPosition,
+				Query:           data.Query,
+				Gtid:            data.Gtid,
+				Pri:             data.Pri,
+				ColumnMapping:   data.ColumnMapping,
+				EventID:         data.EventID,
 			}
 			db.Callback0(data0)
 		}
 	}
+	db.lastTransactionTableMap = make(map[string]map[string]bool, 0)
 }
 
-func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
+func (db *db) Callback0(data *outputDriver.PluginDataType) (b bool) {
 	var ChannelKey int
 	var t *Table
-	var getChannelKey = func(SchemaName,tableName string) bool {
-		t = db.GetTable(SchemaName,tableName)
+	var getChannelKey = func(SchemaName, tableName string) bool {
+		t = db.GetTable(SchemaName, tableName)
 		if t == nil {
 			return false
 		}
@@ -85,17 +89,17 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	//优先判断 全局 *.* 绑定的 channel
 	//再判断 schema.* 绑定的 channel
 	//最后再判断 schema.table 绑定的 channel
-	//这样一样顺序是为了 防止  *.* 绑了的之后,某个表又独立的去绑了其他 channel,防目数据不一致的情况
-	for{
-		b = getChannelKey("*","*")
+	//这样一样顺序是为了 防止  *.* 绑了的之后,某个表又独立的去绑了其他 channel,防止数据不一致的情况
+	for {
+		b = getChannelKey("*", "*")
 		if b {
 			break
 		}
-		b = getChannelKey(data.SchemaName,"*")
+		b = getChannelKey(data.AliasSchemaName, "*")
 		if b {
 			break
 		}
-		b = getChannelKey(data.SchemaName,data.TableName)
+		b = getChannelKey(data.AliasSchemaName, data.AliasTableName)
 		if b {
 			break
 		}
@@ -110,7 +114,7 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 		}
 		c = db.channelMap[ChannelKey]
 		c.RLock()
-		if c.Status == CLOSED{
+		if c.Status == CLOSED {
 			c.RUnlock()
 			return
 		}
@@ -128,9 +132,9 @@ func (db *db) Callback0(data *mysql.EventReslut) (b bool) {
 	}
 	chanName := c.GetChannel()
 	if chanName != nil {
-		chanName <- *data
+		chanName <- data
 	} else {
-		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.SchemaName,data.TableName, ChannelKey, data)
+		log.Printf("SchemaName:%s, TableName:%s , ChannelKey:%T chan is nil , data:%T \r\n , ", data.AliasSchemaName, data.AliasTableName, ChannelKey, data)
 	}
 	return
 }

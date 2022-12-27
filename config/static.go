@@ -49,3 +49,6 @@ var RefuseIpLoginFailedCount int = 10
 
 // 间隔多久解封一次IP,单位秒,默认4小时
 var RefuseIpTimeOut int64 = 14400
+
+// 间隔多久计算一次最小的位点值并且提交给Input插件层,单位ms
+var CronCalcMinPositionTimeout = 3500

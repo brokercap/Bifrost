@@ -1,3 +1,23 @@
+v2.0.3-beta   2022-10-30
+1. 支持整个表json字符串(kafka input) 进行同步
+
+v2.0.2-beta   2022-10-27
+1. 修复mysql input 未设置GTID导致数据源启动不了的BUG
+2. 修复mysql input 数据源开启了gtid功能，但实际没采用gtid方式同步，重启后又自动gtid模式同步的bug
+3. kafka input 支持sasl sha256 sha512 帐号密码连接
+
+v2.0.1-beta   2022-10-22
+1. kafka源支持debezium mysql 数据结构
+2. kafka源支持查看最新位点
+3. 修复其他Kafka源的BUG
+4. 修复库名带 . 不可用的BUG
+5. 修复其他部分BUG
+
+v2.0.0-beta   2022-10-16
+1. 支持多源架构
+2. 新增kafka增量源，支持 kafka中 string,canal json,bifrost json 格式进行同步
+3. kafka目标端支持以canal格式写入
+
 v1.8.8-release   2022-10-16
 1. 修复通过X-Real-IP等伪造IP进行无限爆破密码漏洞
 2. 修复mariaDB环境下位点可能不会被保证的BUG

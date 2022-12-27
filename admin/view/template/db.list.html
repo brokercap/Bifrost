@@ -62,44 +62,38 @@ function formatDate(timestamp) {
                                                 <tr>
                                                     <td>
                                                         <p class="DbName">{{$v.Name}}</p>
+                                                        <p class="DbNameInputType">{{$v.InputType}}</p>
                                                         <p class="Version"><button data-toggle="button" class="btn-sm btn-primary GetVersionBtn" type="button">Version</button></p>
                                                     </td>
-                                                    <td title="{{$v.ConnectUri}}"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
+                                                    <td title="{{$v.ConnectUri}}" style="max-width: 500px; word-break:break-all"><script type="text/javascript">filterIpAndPort("{{$v.ConnectUri}}")</script></td>
                                                     <td>
                                                         <strong class="conn_status">{{$v.ConnStatus}}</strong>
                                                     	{{if eq $v.ConnStatus "closed"}}
-                                                        	{{if ne $v.ConnErr "running"}}
-                                                            	{{if eq $v.ConnErr ""}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
                                                         <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
-                                                        		{{else if eq $v.ConnErr "close"}}
+                                                        {{else if eq $v.ConnStatus "stopped"}}
                                                         <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
-                                                        <button data-toggle="button" class="btn-sm btn-danger delDB" type="button" onClick="DoChangeDbStatus(this,'del')">Del</button>
-                                                        		{{else}}        
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
-                                                        		{{end}}
-                                                        	{{end}}
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "running"}}
                                                         <button data-toggle="button" class="btn-sm btn-warning stopDB" type="button" onClick="DoChangeDbStatus(this,'stop')">Stop</button>
-                                                        {{end}}
-                                                        {{if eq $v.ConnStatus "stopped"}}
-                                                        <button data-toggle="button" class="btn-sm btn-primary startDB" type="button" onClick="DoChangeDbStatus(this,'start')">Start</button>
-                                                        <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         {{end}}
                                                         {{if eq $v.ConnStatus "starting"}}
                                                         <button data-toggle="button" class="btn-sm btn-default closeDB" type="button" onClick="DoChangeDbStatus(this,'close')">Close</button>
                                                         <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
                                                         {{end}}
 
-                                                    {{if eq $v.ConnStatus "closing"}}
-                                                        <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
-                                                    {{end}}
+                                                        {{if eq $v.ConnStatus "closing"}}
+                                                            <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                        {{end}}
+                                                        {{if eq $v.ConnStatus "stopping"}}
+                                                            <a href="/docs"><button data-toggle="button" class="btn-sm btn-default" type="button">Help</button></a>
+                                                        {{end}}
 
                                                     </td>
                                                     <td>
-                                                        <p class="db_last_binlog">{{$v.BinlogDumpFileName}}</p>
-                                                        <p class="db_last_position">{{$v.BinlogDumpPosition}}</p>
+                                                        <p class="db_last_binlog" style="max-width: 400px; word-break:break-all" >{{$v.BinlogDumpFileName}}</p>
+                                                        <p class="db_last_position" style="max-width: 400px; word-break:break-all">{{$v.BinlogDumpPosition}}</p>
                                                         {{if eq $v.IsGtid true}}
                                                         <p class="db_last_gtid">{{$v.Gtid}}</p>
                                                         {{end}}
@@ -107,11 +101,9 @@ function formatDate(timestamp) {
                                                         <p class="db_last_eventId">EventID: {{$v.LastEventID}}</p>
 
                                                     {{if eq $v.ConnStatus "closed"}}
-                                                    {{if  eq $v.ConnErr ""}}
+
                                                         <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
-                                                    {{else if eq $v.ConnErr "close"}}
-                                                        <p><button data-toggle="button" class="btn-sm btn-primary updateDbBtn" type="button">修改</button></p>
-                                                    {{end}}
+
                                                     {{end}}
                                                     </td>
 
@@ -193,6 +185,16 @@ function formatDate(timestamp) {
                     
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Plugin：</label>
+                            <div class="col-sm-9">
+                                <select class="form-control" name="inputType" id="inputType">
+                                    {{range $k, $val := .inputPluginsMap}}
+                                        <option value="{{$k}}" example='{{$val.ExampleConnUri}}' notes='{{$val.Notes}}'> {{$k}} - {{$val.Version}}</option>
+                                    {{end}}
+                                </select><span class="help-block m-b-none"></span>
+                            </div>
+                        </div>
                         <div class="form-group" >
                             <label class="col-sm-3 control-label">ConnUri：</label>
                             <div class="col-sm-9" style=" position: relative">
@@ -206,13 +208,8 @@ function formatDate(timestamp) {
                                 </div>
 
                                 <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri">
-
-
-                                <p><span class="help-block m-b-none">*eg: root:root@tcp(127.0.0.1:3306)/test</span></p>
-                                <p><span class="help-block m-b-none">授权权限例子：GRANT SELECT, SHOW DATABASES, SUPER, REPLICATION SLAVE, EVENT ON *.* TO 'xxtest'@'%'</span></p>
-                                <p><span class="help-block m-b-none">RDS云产品数据库云产品权限,可能不是按 MySQL 开源权限来的,请自行确认是否有足够权限(不要勾选 验证是否有足够权限 选项)</span></p>
-                                <p><span class="help-block m-b-none">自确认权限：kill 当前帐号的连接, SET 命令权限,SHOW EVENT 权限 等</span></p>
-                                <p><span class="help-block m-b-none">需要SQL权限细节,请参考 <a href="/docs" target="_blank">DOC文档</a></span></p>
+                                <p><span class="help-block m-b-none" id="input_plugin_example_conn_uri"></span></p>
+                                <div id="input_plugin_notes"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -305,10 +302,12 @@ function formatDate(timestamp) {
         var url = "/db/check_uri";
         var MyData;
         var checkPrivilege = $("#checkPrivilege").prop("checked");
+        var inputType = $("#inputType").val();
+
         var callback = function (data) {
             MyData = data;
         };
-        Ajax("POST",url,{Uri:uri,CheckPrivilege:checkPrivilege},callback,false);
+        Ajax("POST",url,{InputType:inputType,Uri:uri,CheckPrivilege:checkPrivilege},callback,false);
         return MyData;
     }
 
@@ -344,6 +343,7 @@ function formatDate(timestamp) {
             if($("#serverid").val() == ""){
                 $("#serverid").val(parseInt(Math.random()*((data.data.ServerId+100)-data.data.ServerId+2)+data.data.ServerId+1,10));
             }
+
             var success = true;
             if(data.data.BinlogFormat.toLowerCase() != "row"){
                 success = false;
@@ -402,7 +402,9 @@ $("#addNewDBBtn").click(
 		var filename = $("#filename").val();
 		var position = parseInt($("#position").val());
 		var serverid = parseInt($("#serverid").val());
-		if( uri == "" || filename=="" || position=="" || serverid==""){
+        var inputType = $("#inputType").val();
+
+		if( uri == "" || filename=="" || serverid==""){
 			return
 		}
         var max_filename = $("#max_filename").val();
@@ -444,7 +446,7 @@ $("#addNewDBBtn").click(
                 location.href = "/db/detail?DbName="+dbname;
             }
         };
-		var ajaxParam = { DbName: dbname,Uri:uri,Gtid:gtid,BinlogFileName:filename,BinlogPosition:position,ServerId:serverid,MaxBinlogFileName:max_filename,MaxBinlogPosition:max_position,UpdateToServer:update_toserver};
+		var ajaxParam = { InputType:inputType,DbName: dbname,Uri:uri,Gtid:gtid,BinlogFileName:filename,BinlogPosition:position,ServerId:serverid,MaxBinlogFileName:max_filename,MaxBinlogPosition:max_position,UpdateToServer:update_toserver};
 
         Ajax("POST",url,ajaxParam,callback,true);
 	}
@@ -460,11 +462,14 @@ $(".updateDbBtn").click(
         var MaxBinlogFileName =  trObj.children().eq(5).find("p").eq(0).text();
         var MaxBinlogPosition =  trObj.children().eq(5).find("p").eq(1).text();
         var ServerId =  trObj.children().eq(6).text();
+        var inputType =  trObj.children().eq(0).find(".DbNameInputType").text();
 
         updateOpContairTitle(dbname);
         dbUriChecked = false
         $("#dbname").attr("disabled","disabled");
+        $("#inputType").attr("disabled","disabled");
         $("#dbname").val(dbname);
+        $("#inputType").val(inputType);
         $("#uri").val(ConnUri);
         //$("#filename").val(BinlogFileName);
         //$("#position").val(BinlogPosition);
@@ -536,6 +541,22 @@ function DoChangeDbStatus(obj,status){
     };
     Ajax("POST",url,{DbName: dbname},callback,true);
 }
+
+function DoInputTypeChange() {
+    var Notes = $("#inputType").find("option:selected").attr("notes");
+    var ExampleConnUri = $("#inputType").find("option:selected").attr("example");
+    $("#input_plugin_example_conn_uri").html(ExampleConnUri);
+    $("#input_plugin_notes").html(Notes);
+}
+
+$("#inputType").change(
+    function () {
+        DoInputTypeChange();
+    }
+);
+
+// 初始化
+DoInputTypeChange();
 
 
 </script>
