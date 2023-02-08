@@ -40,4 +40,30 @@ function doGetPluginParam(){
     return result;
 }
 
+function initKafkaSupportedOtherOutputTypeList(){
+    $.get(
+        "/plugin/getSupportedOtherOutputTypeList",
+        function (d, status) {
+            if (status != "success") {
+                return false;
+            }
+            var html = "";
+            var defaultValue = null;
+            for (var i in d) {
+                var typeName = d[i].name;
+                var value = d[i].value;
+                if (defaultValue == null) {
+                    defaultValue = value
+                }
+                html += "<option value=\"" + value + "\">" + typeName + "</option>";
+            }
+            $("#Kafka_OtherObjectType").html(html);
+            if (defaultValue != null) {
+                $("#Kafka_OtherObjectType").val(defaultValue);
+            }
+        }, 'json');
+}
+
+initKafkaSupportedOtherOutputTypeList();
+
 setPluginParamDefault("FilterQuery",false);
