@@ -147,7 +147,7 @@ func TransfeResult(val string, data *PluginDataType, rowIndex int) interface{} {
 	p := reqTagAll.FindAllStringSubmatch(val, -1)
 	// 假如不存在 {$json} 标签，则直接返回nil
 	if len(p) == 0 {
-		return nil
+		return val
 	}
 	var n int
 	if data.Rows == nil {
