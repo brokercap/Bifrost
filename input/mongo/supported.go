@@ -14,6 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package mongo
 
-const VERSION = "v2.0.5-input-mongo-apha"
+import inputDriver "github.com/brokercap/Bifrost/input/driver"
+
+func (c *MongoInput) IsSupported(supportType inputDriver.SupportType) bool {
+	switch supportType {
+	case inputDriver.SupportIncre:
+		return true
+
+		// 需要由上一层server层定时计算最小的位点提交进来
+	case inputDriver.SupportNeedMinPosition:
+		return false
+	}
+	return false
+}
