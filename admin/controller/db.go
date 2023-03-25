@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/brokercap/Bifrost/Bristol/mysql"
@@ -69,6 +70,11 @@ func (c *DBController) getParam() *DbUpdateParam {
 	return &data
 }
 
+// 判断是否为mysql数据源
+func (c *DBController) isMysqlInputType(data *DbUpdateParam) bool {
+	return strings.Contains(strings.ToLower(data.InputType), "mysql")
+}
+
 // 数据源列表，界面显示
 func (c *DBController) Index() {
 	dbList := server.GetListDb()
@@ -98,7 +104,7 @@ func (c *DBController) Add() {
 		result.Msg = " param error!"
 		return
 	}
-	if data.Gtid != "" {
+	if data.Gtid != "" && c.isMysqlInputType(data) {
 		err := mysql.CheckGtid(data.Gtid)
 		if err != nil {
 			result.Msg = err.Error()
@@ -136,7 +142,7 @@ func (c *DBController) Update() {
 		result.Msg = " param error!"
 		return
 	}
-	if data.Gtid != "" {
+	if data.Gtid != "" && c.isMysqlInputType(data) {
 		err := mysql.CheckGtid(data.Gtid)
 		if err != nil {
 			result.Msg = err.Error()
