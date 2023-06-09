@@ -24,11 +24,13 @@ import (
 )
 
 type Config struct {
-	Url                string        `json:"url"`
-	HttpTimeout        time.Duration `json:"input.http.timeout"`
-	TimeInterval       int           `json:"input.time.interval"`
-	Start              int           `json:"start"`
-	End                int           `json:"end"`
+	Url              string `json:"url"`
+	TimeInterval     int    `json:"input.time.interval,string"`
+	Start            int    `json:"start,string"`
+	End              int    `json:"end,string"`
+	HttpTimeoutParam int    `json:"input.http.timeout,string"`
+
+	HttpTimeout        time.Duration `json:"-"`
 	lastSuccessEndTime int
 	lastTmpEndTime     int
 }
@@ -65,8 +67,11 @@ func getConfig(params map[string]string) (*Config, error) {
 	if data.TimeInterval == 0 {
 		data.TimeInterval = 300
 	}
-	if data.HttpTimeout == 0 {
+	if data.HttpTimeoutParam <= 0 {
 		data.HttpTimeout = 30 * time.Second
+	} else {
+		data.HttpTimeout = time.Duration(data.HttpTimeoutParam) * time.Millisecond
 	}
+
 	return &data, err
 }
