@@ -23,7 +23,6 @@ import (
 	"github.com/rwynn/gtm/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -159,7 +158,7 @@ func (c *MongoInput) OpFitler(op *gtm.Op) bool {
 	default:
 		table = op.GetCollection()
 	}
-	log.Println(schemaName, "table:", table)
+	//log.Println(schemaName, "table:", table)
 	if c.CheckReplicateDb(schemaName, table) {
 		return true
 	}
@@ -173,6 +172,9 @@ func (c *MongoInput) ConsumeMongoOpLog(ctx *gtm.OpCtx) {
 	for {
 		select {
 		case c.err = <-ctx.ErrC:
+			if c.err == nil {
+				return
+			}
 			c.PluginStatusChan <- &inputDriver.PluginStatus{
 				Status: c.status,
 				Error:  c.err,
