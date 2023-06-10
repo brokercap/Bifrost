@@ -16,4 +16,4 @@ limitations under the License.
 
 package config
 
-const VERSION = "v2.0.5-input-mongo-apha"
+const VERSION = "v2.0.5-beta"

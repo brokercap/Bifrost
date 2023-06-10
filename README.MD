@@ -39,6 +39,7 @@
 | Kafka   | NO  | YES | canal            | 将canal的格式自动转成biforst格式进行处理                 |
 | kafka   | NO  | YES | bifrost          | Bifrost可以作为源写入到kafka,再由Bifrost消费kafka的数据   |
 | kafka   | NO  | YES | debezium         | debezium将数据写入kafka，Bifrost消费kafka的数据自动转换处理 |
+| Mongo   | NO  | YES | oplog            |                                            |
 
 ---
 
@@ -118,11 +119,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v2.0.4-beta/bifrost_v2.0.4-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.0.5-beta/bifrost_v2.0.5-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.0.4-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.0.5-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.0.4-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.0.5-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
