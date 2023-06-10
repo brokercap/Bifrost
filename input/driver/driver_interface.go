@@ -1,27 +1,27 @@
 package driver
 
 type PluginDriverInterface struct {
-
+	replicateFitler *ReplicateFitler
 }
 
-func NewPluginDriverInterface() Driver{
+func NewPluginDriverInterface() Driver {
 	return &PluginDriverInterface{}
 }
 
 func (c *PluginDriverInterface) IsSupported(supportType SupportType) bool {
 	switch supportType {
-	case SupportFull,SupportIncre:
+	case SupportFull, SupportIncre:
 		return true
 	}
 	return false
 }
 
-func (c *PluginDriverInterface)  SetOption(inputInfo InputInfo,param map[string]interface{}) {
+func (c *PluginDriverInterface) SetOption(inputInfo InputInfo, param map[string]interface{}) {
 
 }
 
-func (c *PluginDriverInterface) GetUriExample() (string,string) {
-	return "",""
+func (c *PluginDriverInterface) GetUriExample() (string, string) {
+	return "", ""
 }
 
 func (c *PluginDriverInterface) Start(ch chan *PluginStatus) error {
@@ -44,8 +44,8 @@ func (c *PluginDriverInterface) GetLastPosition() *PluginPosition {
 	return nil
 }
 
-func (c *PluginDriverInterface) GetCurrentPosition() (*PluginPosition,error) {
-	return nil,nil
+func (c *PluginDriverInterface) GetCurrentPosition() (*PluginPosition, error) {
+	return nil, nil
 }
 
 func (c *PluginDriverInterface) Skip(skipEventCount int) error {
@@ -64,31 +64,46 @@ func (c *PluginDriverInterface) CheckPrivilege() error {
 	return nil
 }
 
-func (c *PluginDriverInterface) CheckUri(CheckPrivilege bool) (CheckUriResult CheckUriResult,err error) {
+func (c *PluginDriverInterface) CheckUri(CheckPrivilege bool) (CheckUriResult CheckUriResult, err error) {
 	return
 }
 
-func (c *PluginDriverInterface) AddReplicateDoDb(SchemaName,TableName string) (err error) {
+func (c *PluginDriverInterface) AddReplicateDoDb(SchemaName, TableName string) (err error) {
+	if c.replicateFitler == nil {
+		c.replicateFitler = NewReplicateFitler()
+	}
+	c.replicateFitler.AddReplicateDoDb(SchemaName, TableName)
 	return nil
 }
 
-func (c *PluginDriverInterface) DelReplicateDoDb(SchemaName,TableName string) (err error) {
+func (c *PluginDriverInterface) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+	if c.replicateFitler == nil {
+		return
+	}
+	c.replicateFitler.DelReplicateDoDb(SchemaName, TableName)
 	return nil
+}
+
+func (c *PluginDriverInterface) CheckReplicateDb(SchemaName, TableName string) bool {
+	if c.replicateFitler == nil {
+		return true
+	}
+	return c.replicateFitler.CheckReplicateDb(SchemaName, TableName)
 }
 
 func (c *PluginDriverInterface) GetVersion() (string, error) {
-	return "",nil
+	return "", nil
 }
 
-func (c *PluginDriverInterface) GetSchemaList() (SchemaList []string,err error) {
+func (c *PluginDriverInterface) GetSchemaList() (SchemaList []string, err error) {
 	return
 }
 
-func (c *PluginDriverInterface) GetSchemaTableList(schema string) (tableList []TableList,err error) {
+func (c *PluginDriverInterface) GetSchemaTableList(schema string) (tableList []TableList, err error) {
 	return
 }
 
-func (c *PluginDriverInterface) GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo,err error) {
+func (c *PluginDriverInterface) GetSchemaTableFieldList(schema string, table string) (FieldList []TableFieldInfo, err error) {
 	return
 }
 func (c *PluginDriverInterface) DoneMinPosition(p *PluginPosition) (err error) {
