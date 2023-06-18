@@ -104,6 +104,7 @@ func (c *MysqlInput) monitorDump() (r bool) {
 			case "close":
 				c.status = inputDriver.CLOSED
 				c.err = nil
+				c.PluginStatusChan <- &inputDriver.PluginStatus{Status: c.status, Error: c.err}
 				return
 			default:
 				c.status = inputDriver.CLOSED
@@ -113,7 +114,6 @@ func (c *MysqlInput) monitorDump() (r bool) {
 			break
 		}
 		c.PluginStatusChan <- &inputDriver.PluginStatus{Status: c.status, Error: c.err}
-
 	}
 	return true
 }

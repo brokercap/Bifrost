@@ -104,6 +104,7 @@ func (This *BinlogDump) StartDumpBinlogGtid(gtid string, ServerId uint32, result
 }
 
 func (This *BinlogDump) StartDumpBinlog0() {
+	This.context.ctx, This.context.cancelFunc = context.WithCancel(context.Background())
 	This.parser.dataSource = &This.DataSource
 	This.parser.connStatus = STATUS_CLOSED
 	This.parser.dumpBinLogStatus = STATUS_RUNNING
@@ -252,7 +253,7 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 	}
 	This.parser.callbackErrChan <- fmt.Errorf(StatusFlagName(STATUS_RUNNING))
 	This.parser.connectionId = connectionId
-	ctx, cancelFun := context.WithCancel(context.TODO())
+	ctx, cancelFun := context.WithCancel(This.context.ctx)
 	go This.checkDumpConnection(ctx, connectionId)
 	//*** get connection id end
 
@@ -365,6 +366,10 @@ func (This *BinlogDump) Close() {
 	This.Lock()
 	defer This.Unlock()
 	This.parser.dumpBinLogStatus = STATUS_CLOSED
+	if This.context.cancelFunc != nil {
+		This.context.cancelFunc()
+		This.context.cancelFunc = nil
+	}
 	This.BinlogConnCLose(false)
 }
 
