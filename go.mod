@@ -1,7 +1,5 @@
 module github.com/brokercap/Bifrost
 
-go 1.16
-
 require (
 	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/Shopify/sarama v1.29.0
@@ -14,14 +12,16 @@ require (
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/testing v0.0.0-20201216035041-2be42bba85f3 // indirect
 	github.com/olivere/elastic/v7 v7.0.24
+	github.com/rwynn/gtm/v2 v2.1.2
 	github.com/satori/go.uuid v1.2.0
-	github.com/smartystreets/goconvey v1.7.2 // indirect
+	github.com/smartystreets/goconvey v1.7.2
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
-	github.com/xdg/scram v1.0.5 // indirect
-	golang.org/x/net v0.0.0-20210427231257-85d9c07bbe3a
+	github.com/xdg/scram v1.0.5
+	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/sys v0.0.0-20210112080510-489259a85091
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
+
 )
 
 replace (

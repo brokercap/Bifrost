@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package prometheus
 
-const VERSION = "v2.0.6-beta"
+func (c *InputPrometheus) AddReplicateDoDb(SchemaName, TableName string) (err error) {
+	return nil
+}
+
+func (c *InputPrometheus) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+	return nil
+}

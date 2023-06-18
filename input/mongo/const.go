@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package mongo
 
-const VERSION = "v2.0.6-beta"
+const DefaultBinlogFileName = "bifrost.000001"
+
+const DefaultBinlogPosition = 0

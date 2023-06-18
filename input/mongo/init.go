@@ -14,6 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package mongo
 
-const VERSION = "v2.0.6-beta"
+import inputDriver "github.com/brokercap/Bifrost/input/driver"
+
+const (
+	VERSION         string = "v2.0.0"
+	BIFROST_VERSION string = "v2.0.4"
+)
+
+func init() {
+	inputDriver.Register("mongo", NewInputPlugin, VERSION, BIFROST_VERSION)
+}

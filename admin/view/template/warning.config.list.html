@@ -83,7 +83,18 @@
                         <select class="form-control" name="warning_type" id="warning_type">
                             <option value="Email" >Email</option>
                             <option value="WechatWork" >微信企业号</option>
+                            <option value="Feishu" >飞书</option>
                         </select><span class="help-block m-b-none"></span>
+                    </div>
+                </div>
+
+                <div id="Feishu_contair" class="warning_param_contair" style="display: none">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Webhook：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="Feishu_WEBHOOK" id="Feishu_WEBHOOK" class="form-control" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxxx-xxxx-xxxx-xxxx-xxxxxx">
+                            <span class="help-block m-b-none">*飞书Webhook</span>
+                        </div>
                     </div>
                 </div>
 
@@ -295,6 +306,24 @@ function GetWarningParamEmail(){
     return result;
 }
 
+function GetWarningParamFeishu(){
+    var result = {data:{},status:false,msg:"error"}
+    var data = {};
+    var FeishuWebhook        = $("#Feishu_WEBHOOK").val();
+
+    if(FeishuWebhook == ""){
+        result.msg = "飞书机器人地址不能为空";
+        return result;
+    }
+
+
+    data["webhook"] = FeishuWebhook;
+
+    result.data = data;
+    result.msg = "success";
+    result.status = true;
+    return result;
+}
 
 function GetWarningParamWechatWork(){
     var result = {data:{},status:false,msg:"error"}
@@ -353,6 +382,9 @@ function GetParam(Type) {
     switch (Type) {
         case "Email":
             data = GetWarningParamEmail();
+            break;
+        case "Feishu":
+            data = GetWarningParamFeishu();
             break;
         case "WechatWork":
             data = GetWarningParamWechatWork();

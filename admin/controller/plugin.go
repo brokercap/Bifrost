@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controller
 
 import (
@@ -34,7 +35,7 @@ func (c *PluginController) Index() {
 	c.SetTitle("Plugin List")
 	c.SetData("PluginAPIVersion", driver.GetApiVersion())
 	c.SetData("Drivers", driversMap)
-	c.AddAdminTemplate("plugin.list.html","header.html","footer.html")
+	c.AddAdminTemplate("plugin.list.html", "header.html", "footer.html")
 }
 
 func (c *PluginController) List() {
@@ -57,4 +58,13 @@ func (c *PluginController) Reload() {
 	} else {
 		result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	}
+}
+
+func (c *PluginController) GetSupportedOtherOutputTypeList() {
+	/*
+		获取output插件支持的格式输出对象类型
+		比如转成canal格式,tableMap格式
+	*/
+	c.SetJsonData(driver.GetSupportedOtherOutputTypeList())
+	c.StopServeJSON()
 }

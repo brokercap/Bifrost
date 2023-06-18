@@ -42,7 +42,7 @@ Your star is the biggest support for Bifrost!!!
 | Kafka   | NO  | YES | canal            | canal json to bifrost data        |
 | kafka   | NO  | YES | bifrost          | bifrost to kafka,kafka to bifrost |
 | kafka   | NO  | YES | debezium         | debezium for mysql data           |
-
+| Mongo   | NO  | YES | oplog            |                                            |
 ---
 
 #### **WIKI** : [https://wiki.xbifrost.com/en](https://wiki.xbifrost.com/en)
@@ -115,11 +115,11 @@ After compiling, the corresponding platform name folder will be created in the t
 ##### Binary
 
 ```
-wget https://github.com/brokercap/Bifrost/releases/download/v2.0.2-beta/bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.0.6-beta/bifrost_v2.0.6-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.0.2-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.0.6-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.0.2-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.0.6-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 ```
 
