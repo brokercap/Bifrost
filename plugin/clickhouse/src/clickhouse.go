@@ -907,6 +907,9 @@ func (This *Conn) AutoCreateTableCommit(list []*pluginDriver.PluginDataType, n i
 		}
 		// tx.Rollback() 会造成连接异常，因为是追加模式 ，所以我们采用 commit ，数据不会有问题
 		This.conn.err = tx.Commit()
+		if This.conn.err != nil {
+			This.err = This.conn.err
+		}
 		if This.err != nil {
 			break
 		}
