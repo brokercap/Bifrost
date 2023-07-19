@@ -30,9 +30,7 @@ func (This *paket) read(size int) []byte {
 		data := This.buydata[0:]
 		This.buydata = make([]byte, 0)
 		tmp := This.buf.Next(l)
-		for _, b := range tmp {
-			data = append(data,b)
-		}
+		data = append(data, tmp...)
 		return data
 	}
 }
@@ -49,9 +47,7 @@ func (This *paket) readByte() byte {
 }
 
 func (This *paket) unread(data []byte) {
-	for _, b := range data {
-		This.buydata = append(This.buydata, b)
-	}
+	This.buydata = append(This.buydata, data...)
 }
 
 
