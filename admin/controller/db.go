@@ -18,7 +18,6 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -319,7 +318,7 @@ func (c *DBController) GetLastPosition() {
 		return
 	}
 	if CurrentPositionInfo == nil {
-		result.Msg = fmt.Sprintf("The binlog maybe not open,or no replication client privilege(s).you can show log more.")
+		result.Msg = "The binlog maybe not open,or no replication client privilege(s).you can show log more."
 		return
 	}
 	dbInfo.CurrentBinlogFile = CurrentPositionInfo.BinlogFileName

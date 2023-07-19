@@ -62,7 +62,7 @@ func (parser *eventParser) parsePrevtiousGTIDSEvent(buf *bytes.Buffer) (event *P
 		previousGTIDSets = append(previousGTIDSets, fmt.Sprintf("%s:%s", uuid, strings.Join(intervalArr, ":")))
 		lastPrevtiousGTIDSMap[uuid] = intervals
 	}
-	event.GTIDSets = fmt.Sprintf("%s", strings.Join(previousGTIDSets, ","))
+	event.GTIDSets = strings.Join(previousGTIDSets, ",")
 	parser.lastPrevtiousGTIDSMap = lastPrevtiousGTIDSMap
 	return
 }
