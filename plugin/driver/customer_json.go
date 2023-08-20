@@ -44,6 +44,7 @@ func NewPluginDataCustomerJson() (*PluginDataCustomerJson, error) {
 func (c *PluginDataCustomerJson) Decoder(content []byte) error {
 	var data map[string]interface{}
 	decocer := json.NewDecoder(bytes.NewBuffer(content))
+	decocer.UseNumber()
 	err := decocer.Decode(&data)
 	c.msgData = data
 	return err
