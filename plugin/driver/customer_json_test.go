@@ -271,6 +271,10 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		m["a4"] = map[string]interface{}{
 			"b4": []string{"b4_val"},
 		}
+		m["schema"] = map[string]interface{}{
+			"database": "databaseName",
+			"table":    "tableName",
+		}
 		content, _ := json.Marshal(m)
 
 		c, _ := NewPluginDataCustomerJson()
@@ -279,10 +283,16 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		c.SetUpdateOldDataPath([]string{"data", "olddata"})
 		c.SetUpdateNewDataPath([]string{"data", "newdata"})
 		c.SetEventTypeValUpdate("update")
+		c.SetDatabasePath([]string{"schema", "database"})
+		c.SetTablePath([]string{"schema", "table"})
+		c.SetEventTypePath([]string{"data", "eventType"})
 		newData := c.ToBifrostOutputPluginData()
+		So(newData, ShouldNotBeNil)
 		So(newData.EventType, ShouldEqual, "update")
 		So(newData.Rows[1]["name"], ShouldEqual, "new_name")
 		So(newData.Rows[0]["name"], ShouldEqual, "old_name")
+		So(newData.SchemaName, ShouldEqual, "databaseName")
+		So(newData.TableName, ShouldEqual, "tableName")
 	})
 
 	Convey("insert", t, func() {
@@ -302,7 +312,9 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		So(err, ShouldBeNil)
 		c.SetInsertDataPath([]string{"data", "newdata"})
 		c.SetEventTypeValUpdate("insert")
+		c.SetEventTypePath([]string{"data", "eventType"})
 		newData := c.ToBifrostOutputPluginData()
+		So(newData, ShouldNotBeNil)
 		So(newData.EventType, ShouldEqual, "insert")
 		So(newData.Rows[0]["name"], ShouldEqual, "new_name")
 	})
@@ -324,7 +336,9 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		So(err, ShouldBeNil)
 		c.SetInsertDataPath([]string{"data", "newdata"})
 		c.SetEventTypeValSelect("select")
+		c.SetEventTypePath([]string{"data", "eventType"})
 		newData := c.ToBifrostOutputPluginData()
+		So(newData, ShouldNotBeNil)
 		So(newData.EventType, ShouldEqual, "insert")
 		So(newData.Rows[0]["name"], ShouldEqual, "new_name")
 	})
@@ -344,9 +358,11 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		c, _ := NewPluginDataCustomerJson()
 		err := c.Decoder(content)
 		So(err, ShouldBeNil)
-		c.SetInsertDataPath([]string{"data", "newdata"})
-		c.SetEventTypeValUpdate("delete")
+		c.SetDeleteDataPath([]string{"data", "olddata"})
+		c.SetEventTypeValDelete("delete")
+		c.SetEventTypePath([]string{"data", "eventType"})
 		newData := c.ToBifrostOutputPluginData()
+		So(newData, ShouldNotBeNil)
 		So(newData.EventType, ShouldEqual, "delete")
 		So(newData.Rows[0]["name"], ShouldEqual, "old_name")
 	})
@@ -364,6 +380,7 @@ func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {
 		err := c.Decoder(content)
 		So(err, ShouldBeNil)
 		c.SetInsertDataPath([]string{"data", "newdata"})
+		c.SetEventTypePath([]string{"data", "eventType"})
 		newData := c.ToBifrostOutputPluginData()
 		So(newData, ShouldBeNil)
 	})

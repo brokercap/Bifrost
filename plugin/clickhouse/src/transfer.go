@@ -612,10 +612,17 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (to
 		case reflect.Float64:
 			toType = "Float64"
 			break
-		case reflect.Map, reflect.Slice, reflect.Interface:
+		case reflect.Map, reflect.Slice, reflect.Interface, reflect.Array:
 			toType = "String"
 			break
 		case reflect.String:
+			switch v.(type) {
+			case json.Number:
+				goto outer
+				break
+			default:
+				break
+			}
 			n := len(v.(string))
 			switch n {
 			case 19:
@@ -661,6 +668,7 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (to
 			break
 		}
 	}
+outer:
 	if nullable {
 		toType = "Nullable(" + toType + ")"
 	}
@@ -762,7 +770,7 @@ func ReplaceBr(str string) string {
 	return str
 }
 
-//去除连续的两个空格
+// 去除连续的两个空格
 func ReplaceTwoReplace(sql string) string {
 	for {
 		if strings.Index(sql, "  ") >= 0 {

@@ -176,12 +176,15 @@ func (c *PluginDataCustomerJson) ToBifrostOutputPluginData() (data *PluginDataTy
 	var rows []map[string]interface{}
 	switch eventType {
 	case c.eventTypeValInsert, c.eventTypeValSelect:
+		eventType = "insert"
 		rows = c.ToBifrostInsertRows()
 		break
 	case c.eventTypeValUpdate:
+		eventType = "update"
 		rows = c.ToBifrostUpdateRows()
 		break
 	case c.eventTypeValDelete:
+		eventType = "delete"
 		rows = c.ToBifrostDeleteRows()
 		break
 	default:
@@ -190,6 +193,8 @@ func (c *PluginDataCustomerJson) ToBifrostOutputPluginData() (data *PluginDataTy
 	data = &PluginDataType{
 		EventType:     eventType,
 		Rows:          rows,
+		SchemaName:    fmt.Sprint(c.GetInterfaceData(c.databasePath)),
+		TableName:     fmt.Sprint(c.GetInterfaceData(c.tablePath)),
 		Pri:           c.GetPksData(),
 		ColumnMapping: nil,
 	}

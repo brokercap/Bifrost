@@ -17,9 +17,11 @@ package kafka
 
 import (
 	"encoding/json"
-	"github.com/Shopify/sarama"
+	"reflect"
 	"testing"
 
+	"github.com/Shopify/sarama"
+	"github.com/agiledragon/gomonkey"
 	. "github.com/smartystreets/goconvey/convey"
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
@@ -177,5 +179,40 @@ func TestCustomerJsonDataInput_CallBack(t *testing.T) {
 		c.callback = f
 		err := c.CallBack(&sarama.ConsumerMessage{Value: []byte("fffffffffff")})
 		So(err, ShouldNotBeNil)
+	})
+
+	Convey("ToBifrostOutputPluginData nil", t, func() {
+		var callbackData = make([]*pluginDriver.PluginDataType, 0)
+		var f = func(data *pluginDriver.PluginDataType) {
+			callbackData = append(callbackData, data)
+			return
+		}
+		c := NewCustomerJsonDataInput0()
+		c.config = &Config{
+			ParamMap: getInitParamMap(),
+		}
+		c.callback = f
+
+		m := make(map[string]interface{}, 0)
+		m["data"] = map[string]interface{}{
+			"eventType": "other",
+			"newdata": map[string]interface{}{
+				"id":   1,
+				"name": "new_name",
+			},
+			"olddata": map[string]interface{}{
+				"id":   1,
+				"name": "old_name",
+			},
+		}
+		content, _ := json.Marshal(m)
+
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c.pluginCustomerDataObj), "ToBifrostOutputPluginData", func() *pluginDriver.PluginDataType {
+			return nil
+		})
+		defer patches.Reset()
+		err := c.CallBack(&sarama.ConsumerMessage{Value: content})
+		So(err, ShouldNotBeNil)
+		So(len(callbackData), ShouldEqual, 0)
 	})
 }

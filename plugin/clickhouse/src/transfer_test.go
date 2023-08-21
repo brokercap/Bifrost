@@ -1,16 +1,18 @@
 package src_test
 
-import "testing"
-
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
-	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
 	"math"
 	"os"
 	"reflect"
 	"strconv"
+	"testing"
 	"time"
+
+	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestAllTypeToInt64(t *testing.T) {
@@ -278,4 +280,167 @@ func TestTransferNotes2Space(t *testing.T) {
   MODIFY COLUMN testint3 int DEFAULT 1 NULL comment 'sdfsdf sdf',`
 	sql = MyPlugin.TransferNotes2Space(sql)
 	t.Log(sql)
+}
+
+func TestTransferToCkTypeByColumnData(t *testing.T) {
+	c := MyPlugin.Conn{}
+	type testCase struct {
+		Source   interface{}
+		Nullable bool
+		Result   string
+	}
+	var testCaseList = []testCase{
+		{
+			Source:   nil,
+			Nullable: true,
+			Result:   "Nullable(String)",
+		},
+		{
+			Source:   nil,
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   int8(100),
+			Nullable: false,
+			Result:   "Int8",
+		},
+		{
+			Source:   uint8(100),
+			Nullable: false,
+			Result:   "UInt8",
+		},
+		{
+			Source:   int16(100),
+			Nullable: false,
+			Result:   "Int16",
+		},
+		{
+			Source:   uint16(100),
+			Nullable: false,
+			Result:   "UInt16",
+		},
+		{
+			Source:   int32(100),
+			Nullable: false,
+			Result:   "Int32",
+		},
+		{
+			Source:   uint32(100),
+			Nullable: false,
+			Result:   "UInt32",
+		},
+		{
+			Source:   int(100),
+			Nullable: false,
+			Result:   "Int64",
+		},
+		{
+			Source:   uint(100),
+			Nullable: false,
+			Result:   "UInt64",
+		},
+		{
+			Source:   int64(100),
+			Nullable: false,
+			Result:   "Int64",
+		},
+		{
+			Source:   uint64(100),
+			Nullable: false,
+			Result:   "UInt64",
+		},
+		{
+			Source:   float32(100.99),
+			Nullable: false,
+			Result:   "Float32",
+		},
+		{
+			Source:   float64(100.99),
+			Nullable: false,
+			Result:   "Float64",
+		},
+		{
+			Source:   []string{"aa"},
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   map[string]interface{}{"a1": "a1_val"},
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   interface{}("aaa"),
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   "aaa",
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   json.Number("1111"),
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   "0000-00-00 00:00:00",
+			Nullable: false,
+			Result:   "DateTime",
+		},
+		{
+			Source:   "2023-08-19 23:00:00",
+			Nullable: false,
+			Result:   "DateTime",
+		},
+		{
+			Source:   "2023-08--9 23:00:00",
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   "0000-00-00",
+			Nullable: false,
+			Result:   "Date",
+		},
+		{
+			Source:   "2023-08-19",
+			Nullable: false,
+			Result:   "Date",
+		},
+		{
+			Source:   "2023-0--19",
+			Nullable: false,
+			Result:   "String",
+		},
+		{
+			Source:   "2023-08-19 23:00:00.123456",
+			Nullable: false,
+			Result:   "DateTime64(6)",
+		},
+		{
+			Source:   "2023-08--9 23:00:00.123456",
+			Nullable: false,
+			Result:   "String",
+		},
+	}
+
+	slice := make([]string, 0)
+	slice = append(slice, "aa")
+	slice = append(slice, "bb")
+	testCaseList = append(testCaseList, testCase{
+		Source:   slice,
+		Nullable: false,
+		Result:   "String",
+	})
+
+	Convey("test case", t, func() {
+		for _, v := range testCaseList {
+			toType := c.TransferToCkTypeByColumnData(v.Source, v.Nullable)
+			SoMsg(fmt.Sprintf("%+v nullable:%+v", v.Source, v.Nullable), toType, ShouldEqual, v.Result)
+		}
+	})
+
 }

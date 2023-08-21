@@ -152,6 +152,10 @@ func (c *CustomerJsonDataInput) CallBack(kafkaMsg *sarama.ConsumerMessage) error
 		return err
 	}
 	data := c.pluginCustomerDataObj.ToBifrostOutputPluginData()
+	if data == nil {
+		log.Printf("[ERROR] input:%s ToBifrostOutputPluginData nil, kafkaMsg:%+v \n", InputCustomerJsonData, string(kafkaMsg.Value))
+		return nil
+	}
 	data.Gtid = c.SetTopicPartitionOffsetAndReturnGTID(kafkaMsg)
 	data.EventSize = uint32(len(kafkaMsg.Value))
 	data.BinlogFileNum = 1
