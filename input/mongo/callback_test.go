@@ -108,7 +108,7 @@ func TestMongoInput_ToInputCallback(t *testing.T) {
 		So(callbackData, ShouldBeNil)
 	})
 
-	Convey("row event,callback not be nil", t, func() {
+	Convey("insert row event", t, func() {
 		c := new(MongoInput)
 		var callbackData *outputDriver.PluginDataType
 		var callback = func(data *outputDriver.PluginDataType) {
@@ -129,7 +129,7 @@ func TestMongoInput_ToInputCallback(t *testing.T) {
 		So(callbackData.TableName, ShouldEqual, "testTableName")
 	})
 
-	Convey("row event,callback not be nil", t, func() {
+	Convey("insert and commit event,callback not be nil", t, func() {
 		c := new(MongoInput)
 		var callbackData *outputDriver.PluginDataType
 		var callback = func(data *outputDriver.PluginDataType) {
@@ -201,13 +201,13 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		So(data.Rows[0]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
 	})
 
-	Convey("op.Operation u", t, func() {
+	Convey("op.Operation u normal", t, func() {
 		c := new(MongoInput)
 		op := &gtm.Op{
 			Operation: "u",
 			Id:        primitive.NewObjectID(),
 			Namespace: "database.table",
-			Data:      make(map[string]interface{}),
+			Data:      map[string]interface{}{"name": "test"},
 		}
 
 		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "OpLogPosition2GTID", func(c *MongoInput, p *primitive.Timestamp) string {
@@ -221,6 +221,30 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		So(data.SchemaName, ShouldEqual, "database")
 		So(data.EventType, ShouldEqual, "update")
 		So(data.Rows[1]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
+		So(data.Rows[1]["name"], ShouldEqual, "test")
+	})
+
+	Convey("op.Operation u Data is nil", t, func() {
+		c := new(MongoInput)
+		op := &gtm.Op{
+			Operation: "u",
+			Id:        primitive.NewObjectID(),
+			Namespace: "database.table",
+			Data:      nil,
+		}
+
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "OpLogPosition2GTID", func(c *MongoInput, p *primitive.Timestamp) string {
+			return ""
+		})
+		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
+			return
+		})
+		data := c.BuildRowEvent(op)
+		So(data, ShouldNotBeNil)
+		So(data.SchemaName, ShouldEqual, "database")
+		So(data.EventType, ShouldEqual, "update")
+		So(data.Rows[1]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
+		So(len(data.Rows[1]), ShouldEqual, 1)
 	})
 
 	Convey("op.Operation d", t, func() {
