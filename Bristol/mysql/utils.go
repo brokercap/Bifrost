@@ -41,6 +41,10 @@ func parseDSN(dsn string) *config {
 	matches := dsnPattern.FindStringSubmatch(dsn)
 	names := dsnPattern.SubexpNames()
 
+	var caCertFile, clientCertFile, clientKeyFile string
+	var insecureSkipVerify = true
+	var TLSServerName string
+
 	for i, match := range matches {
 		switch names[i] {
 		case "user":
@@ -59,7 +63,21 @@ func parseDSN(dsn string) *config {
 				if len(param) != 2 {
 					continue
 				}
-				cfg.params[param[0]] = param[1]
+				switch param[0] {
+				case "ca-cert":
+					caCertFile = param[1]
+				case "client-cert":
+					clientCertFile = param[1]
+				case "client-key":
+					clientKeyFile = param[1]
+				case "insecure-skip-verify":
+					if strings.ToLower(param[1]) != "true" {
+						insecureSkipVerify = false
+					}
+				case "servername":
+					TLSServerName = param[1]
+					cfg.params[param[0]] = param[1]
+				}
 			}
 		}
 	}
@@ -72,6 +90,14 @@ func parseDSN(dsn string) *config {
 	// Set default adress if empty
 	if cfg.addr == "" {
 		cfg.addr = "127.0.0.1:3306"
+	}
+
+	if caCertFile != "" {
+		var err error
+		cfg.tlsConfig, err = NewClientTLSConfigWithFile(caCertFile, clientCertFile, clientKeyFile, insecureSkipVerify, TLSServerName)
+		if err != nil {
+			log.Println("[WARN] mysql tls config init error;", err.Error())
+		}
 	}
 
 	return cfg
@@ -363,8 +389,8 @@ func lengthCodedBinaryToBytes(n uint64) (b []byte) {
 		b = []byte{0xfd, byte(n), byte(n >> 8), byte(n >> 16)}
 
 	default:
-		b = []byte{0xfe, byte(n), byte(n>>8), byte(n>>16), byte(n>>24),
-			byte(n>>32), byte(n>>40), byte(n>>48), byte(n>>56)}
+		b = []byte{0xfe, byte(n), byte(n >> 8), byte(n >> 16), byte(n >> 24),
+			byte(n >> 32), byte(n >> 40), byte(n >> 48), byte(n >> 56)}
 	}
 	return
 }
