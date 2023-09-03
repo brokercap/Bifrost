@@ -70,7 +70,12 @@ func (c *MongoInput) BuildRowEvent(op *gtm.Op) *outputDriver.PluginDataType {
 		break
 	case "u":
 		eventType = "update"
-		op.Data["_id"] = docId.Hex()
+		if op.Data == nil {
+			log.Printf("[WARN] input[%s] BuildRowEvent[update] _id:%s data is nil \n", "mongo", docId.Hex())
+			op.Data = map[string]interface{}{"_id": docId.Hex()}
+		} else {
+			op.Data["_id"] = docId.Hex()
+		}
 		rows = append(rows, op.Data, op.Data)
 		break
 	case "d":
