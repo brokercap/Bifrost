@@ -1,3 +1,8 @@
+v2.1.0-beta   2023-09-03
+1. 支持input kafka 自定义配置数据格式转换成Bifrost格式
+2. output clickhouse 支持json.Number数据类型转换成String
+3. 修复mongo input 在update事件中,但更新的数据字典实际为nil导致异常的bug
+
 v2.0.6-beta   2023-06-18
 1. 修复目标库clickhouse显示同步成功，但实际失败的bug
    https://github.com/brokercap/Bifrost/issues/233
