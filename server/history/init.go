@@ -444,7 +444,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	if len(This.TablePriArr) == 1 {
 		for _,v := range This.Fields{
 			var columnType = strings.ToLower(*v.COLUMN_TYPE)
-			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.Contains(columnType, "int") && strings.Contains(columnType, "unsigned") {
+			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.Contains(columnType, "int") && strings.Contains(columnType, "unsigned") && !strings.Contains(columnType, "tinyint") {
 				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.CurrentTableName,*v.COLUMN_NAME,This.Property.Where)
 				This.TablePriKey = *v.COLUMN_NAME
 				break
