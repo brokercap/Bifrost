@@ -443,7 +443,8 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	//假如只有一个主键并且主键自增的情况，找出这个主键最小值和最大值，只支持 无符号的数字。有符号的不支持
 	if len(This.TablePriArr) > 0{
 		for _,v := range This.Fields{
-			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.ToLower(*v.EXTRA) == "auto_increment"{
+			var columnType = strings.ToLower(*v.COLUMN_TYPE)
+			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.Contains(columnType, "int") && strings.Contains(columnType, "unsigned") {
 				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.CurrentTableName,*v.COLUMN_NAME,This.Property.Where)
 				This.TablePriKey = *v.COLUMN_NAME
 				break
