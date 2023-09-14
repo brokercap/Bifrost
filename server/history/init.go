@@ -442,15 +442,19 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection)  {
 	}
 	//假如只有一个主键并且主键自增的情况，找出这个主键最小值和最大值，只支持 无符号的数字。有符号的不支持
 	if len(This.TablePriArr) == 1 {
-		for _,v := range This.Fields{
+		for _, v := range This.Fields {
 			var columnType = strings.ToLower(*v.COLUMN_TYPE)
 			if strings.ToUpper(*v.COLUMN_KEY) == "PRI" && strings.Contains(columnType, "int") && !strings.Contains(columnType, "tinyint") {
-				This.TablePriKeyMinId,This.TablePriKeyMaxId = GetTablePriKeyMinAndMaxVal(db,This.SchemaName,This.CurrentTableName,*v.COLUMN_NAME,This.Property.Where)
-				This.TablePriKey = *v.COLUMN_NAME
-				break
+				var minId, maxId = GetTablePriKeyMinAndMaxVal(db, This.SchemaName, This.CurrentTableName, *v.COLUMN_NAME, This.Property.Where)
+				if minId >= 0 {
+					This.TablePriKeyMinId, This.TablePriKeyMaxId = minId, maxId
+					This.TablePriKey = *v.COLUMN_NAME
+					break
+				}
 			}
 		}
 	}
+	
 	// 重新赋值在界面配置的 LimitOptimize 初始值
 	This.Property.LimitOptimize = This.Property.FirstLimitOptimize
 	// 没有主键的情况下,不能使用 between 等方式查询
