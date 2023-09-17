@@ -1,3 +1,11 @@
+v2.1.1-beta   2023-09-17
+1. 修复同步配置字段映射显示undefined的bug
+   https://github.com/brokercap/Bifrost/issues/237
+2. output ClickHouse支持选择配置自动创建MergeTree引擎表
+   https://github.com/brokercap/Bifrost/issues/244
+3. 修复mysql源连接断开没被发现的bug
+   https://github.com/brokercap/Bifrost/issues/188
+
 v2.1.0-beta   2023-09-03
 1. 支持input kafka 自定义配置数据格式转换成Bifrost格式
 2. output clickhouse 支持json.Number数据类型转换成String
