@@ -254,15 +254,20 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 	This.parser.callbackErrChan <- fmt.Errorf(StatusFlagName(STATUS_RUNNING))
 	This.parser.connectionId = connectionId
 	ctx, cancelFun := context.WithCancel(This.context.ctx)
-	go This.checkDumpConnection(ctx, connectionId)
+	go This.checkDumpConnection(ctx, cancelFun)
 	//*** get connection id end
 
 	This.checksumEnabled()
-	if This.parser.isGTID == false {
-		This.mysqlConn.DumpBinlog(This.parser, This.CallbackFun)
-	} else {
-		This.mysqlConn.DumpBinlogGtid(This.parser, This.CallbackFun)
-	}
+	go func() {
+		// 这里使用defer 是担心DumBinlog 方法异常了，导致需要重连的情况下，而不是 checkDumpConnection 里发现连接异常了
+		defer cancelFun()
+		if This.parser.isGTID == false {
+			This.mysqlConn.DumpBinlog(This.parser, This.CallbackFun)
+		} else {
+			This.mysqlConn.DumpBinlogGtid(This.parser, This.CallbackFun)
+		}
+	}()
+	<-ctx.Done()
 	This.BinlogConnCLose(true)
 	This.RLock()
 	This.Status = This.parser.dumpBinLogStatus
@@ -279,7 +284,7 @@ func (This *BinlogDump) startConnAndDumpBinlog() {
 	This.parser.KillConnect(connectionId)
 }
 
-func (This *BinlogDump) checkDumpConnection(ctx context.Context, connectionId string) {
+func (This *BinlogDump) checkDumpConnection(ctx context.Context, cancelFunc context.CancelFunc) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("binlog.go checkDumpConnection err:", err)
@@ -328,6 +333,7 @@ func (This *BinlogDump) checkDumpConnection(ctx context.Context, connectionId st
 			if m != nil {
 				if _, ok = m["TIME"]; !ok {
 					log.Println("This.mysqlConn close ,connectionId: ", connectionId)
+					cancelFunc()
 					This.BinlogConnCLose0(true)
 					return
 				}
