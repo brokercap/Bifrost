@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"crypto/tls"
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,18 +24,18 @@ type mysqlConn struct {
 	insertId       uint64
 	lastCmdTime    time.Time
 	keepaliveTimer *time.Timer
-	status		   uint16
+	status         uint16
 }
 
 type config struct {
-	user   string
-	passwd string
-	net    string
-	addr   string
-	dbname string
-	params map[string]string
-	authPluginName	string
-	tlsConfig *tls.Config
+	user           string
+	passwd         string
+	net            string
+	addr           string
+	dbname         string
+	params         map[string]string
+	authPluginName string
+	tlsConfig      *tls.Config
 }
 
 type serverSettings struct {
@@ -181,11 +184,13 @@ func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, error) {
-
 	if len(args) > 0 {
-		return nil, driver.ErrSkip
+		var err error
+		query, err = mc.interpolateParams(query, args)
+		if err != nil {
+			return nil, err
+		}
 	}
-
 	mc.affectedRows = 0
 	mc.insertId = 0
 
@@ -234,6 +239,150 @@ func (mc *mysqlConn) exec(query string) (e error) {
 	}
 
 	return
+}
+
+func (mc *mysqlConn) Query(query string, args []driver.Value) (driver.Rows, error) {
+	if len(args) > 0 {
+		var err error
+		query, err = mc.interpolateParams(query, args)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return mc.query(query)
+}
+
+func (mc *mysqlConn) query(query string) (dataRows driver.Rows, e error) {
+	e = mc.writeCommandPacket(COM_QUERY, query)
+	if e != nil {
+		return
+	}
+
+	// Read Result
+	var resLen int
+	resLen, e = mc.readResultSetHeaderPacket()
+	if e != nil {
+		return
+	}
+	if resLen == 0 {
+		return nil, driver.ErrSkip
+	}
+	rows := mysqlRows{new(rowsContent)}
+	rows.content.columns, e = mc.readColumns(resLen)
+	if e != nil {
+		return
+	}
+	e = mc.readStringRows(rows.content)
+	return rows, e
+}
+
+func (mc *mysqlConn) interpolateParams(query string, args []driver.Value) (string, error) {
+	if strings.Count(query, "?") != len(args) {
+		return "", driver.ErrSkip
+	}
+	buf := make([]byte, 0)
+	argPos := 0
+
+	for i := 0; i < len(query); i++ {
+		q := strings.IndexByte(query[i:], '?')
+		if q == -1 {
+			buf = append(buf, query[i:]...)
+			break
+		}
+		buf = append(buf, query[i:i+q]...)
+		i += q
+
+		arg := args[argPos]
+		argPos++
+
+		if arg == nil {
+			buf = append(buf, "NULL"...)
+			continue
+		}
+
+		switch v := arg.(type) {
+		case int8, int16, int32, int:
+			int64N, _ := strconv.ParseInt(fmt.Sprint(v), 10, 64)
+			buf = strconv.AppendInt(buf, int64N, 10)
+			break
+		case uint8, uint16, uint32, uint:
+			uint64N, _ := strconv.ParseUint(fmt.Sprint(v), 10, 64)
+			buf = strconv.AppendUint(buf, uint64N, 10)
+			break
+		case int64:
+			buf = strconv.AppendInt(buf, v, 10)
+		case uint64:
+			// Handle uint64 explicitly because our custom ConvertValue emits unsigned values
+			buf = strconv.AppendUint(buf, v, 10)
+		case float32:
+			buf = strconv.AppendFloat(buf, float64(v), 'g', -1, 64)
+		case float64:
+			buf = strconv.AppendFloat(buf, v, 'g', -1, 64)
+		case bool:
+			if v {
+				buf = append(buf, '1')
+			} else {
+				buf = append(buf, '0')
+			}
+		case time.Time:
+			if v.IsZero() {
+				buf = append(buf, "'0000-00-00'"...)
+			} else {
+				// 测试下来 在timestamp(0)的情况下,2006-01-02 15:04:05.999999 写,binlog 解析出来和写进去存在 1 秒 误差,暂不知道具体的原因
+				// 建议使用string传进来,而不要使用time.Time类型
+				timeStr := v.Format("2006-01-02 15:04:05.999999")
+				buf = append(buf, '\'')
+				if mc.isSupportedBackslash() {
+					buf = escapeBytesBackslash(buf, []byte(timeStr))
+				} else {
+					buf = escapeBytesQuotes(buf, []byte(timeStr))
+				}
+				buf = append(buf, '\'')
+			}
+		case json.RawMessage:
+			if v == nil {
+				buf = append(buf, "NULL"...)
+				continue
+			}
+			buf = append(buf, '\'')
+			if mc.isSupportedBackslash() {
+				buf = escapeBytesBackslash(buf, v)
+			} else {
+				buf = escapeBytesQuotes(buf, v)
+			}
+			buf = append(buf, '\'')
+		case []byte:
+			if v == nil {
+				buf = append(buf, "NULL"...)
+			} else {
+				buf = append(buf, "_binary'"...)
+				if mc.isSupportedBackslash() {
+					buf = escapeBytesBackslash(buf, v)
+				} else {
+					buf = escapeBytesQuotes(buf, v)
+				}
+				buf = append(buf, '\'')
+			}
+		case string:
+			buf = append(buf, '\'')
+			if mc.isSupportedBackslash() {
+				buf = escapeStringBackslash(buf, v)
+			} else {
+				buf = escapeStringQuotes(buf, v)
+			}
+			buf = append(buf, '\'')
+		default:
+			return "", driver.ErrSkip
+		}
+
+		if len(buf)+4 > MAX_PACKET_SIZE {
+			return "", driver.ErrSkip
+		}
+	}
+	if argPos != len(args) {
+		return "", driver.ErrSkip
+	}
+	return string(buf), nil
 }
 
 // Gets the value of the given MySQL System Variable
@@ -289,7 +438,14 @@ func (mc *mysqlConn) markBadConn(err error) error {
 	return driver.ErrBadConn
 }
 
-func NewConnect(uri string) MysqlConnection{
+func (mc *mysqlConn) isSupportedBackslash() bool {
+	if mc.status&STATUS_NO_BACK_SLASH_ESCAPES == 0 {
+		return true
+	}
+	return false
+}
+
+func NewConnect(uri string) MysqlConnection {
 	dbopen := &mysqlDriver{}
 	conn, err := dbopen.Open(uri)
 	if err != nil {

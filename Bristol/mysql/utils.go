@@ -363,8 +363,8 @@ func lengthCodedBinaryToBytes(n uint64) (b []byte) {
 		b = []byte{0xfd, byte(n), byte(n >> 8), byte(n >> 16)}
 
 	default:
-		b = []byte{0xfe, byte(n), byte(n>>8), byte(n>>16), byte(n>>24),
-			byte(n>>32), byte(n>>40), byte(n>>48), byte(n>>56)}
+		b = []byte{0xfe, byte(n), byte(n >> 8), byte(n >> 16), byte(n >> 24),
+			byte(n >> 32), byte(n >> 40), byte(n >> 48), byte(n >> 56)}
 	}
 	return
 }
@@ -391,4 +391,177 @@ func read_uint64_be_by_bytes(b []byte) (n uint64) {
 		n |= uint64(b[i]) << (uint64(i) * 8)
 	}
 	return n
+}
+
+// reserveBuffer checks cap(buf) and expand buffer to len(buf) + appendSize.
+// If cap(buf) is not enough, reallocate new buffer.
+func reserveBuffer(buf []byte, appendSize int) []byte {
+	newSize := len(buf) + appendSize
+	if cap(buf) < newSize {
+		// Grow buffer exponentially
+		newBuf := make([]byte, len(buf)*2+appendSize)
+		copy(newBuf, buf)
+		buf = newBuf
+	}
+	return buf[:newSize]
+}
+
+// escapeBytesBackslash escapes []byte with backslashes (\)
+// This escapes the contents of a string (provided as []byte) by adding backslashes before special
+// characters, and turning others into specific escape sequences, such as
+// turning newlines into \n and null bytes into \0.
+// https://github.com/mysql/mysql-server/blob/mysql-5.7.5/mysys/charset.c#L823-L932
+func escapeBytesBackslash(buf, v []byte) []byte {
+	pos := len(buf)
+	buf = reserveBuffer(buf, len(v)*2)
+
+	for _, c := range v {
+		switch c {
+		case '\x00':
+			buf[pos+1] = '0'
+			buf[pos] = '\\'
+			pos += 2
+		case '\n':
+			buf[pos+1] = 'n'
+			buf[pos] = '\\'
+			pos += 2
+		case '\r':
+			buf[pos+1] = 'r'
+			buf[pos] = '\\'
+			pos += 2
+		case '\x1a':
+			buf[pos+1] = 'Z'
+			buf[pos] = '\\'
+			pos += 2
+		case '\'':
+			buf[pos+1] = '\''
+			buf[pos] = '\\'
+			pos += 2
+		case '"':
+			buf[pos+1] = '"'
+			buf[pos] = '\\'
+			pos += 2
+		case '\\':
+			buf[pos+1] = '\\'
+			buf[pos] = '\\'
+			pos += 2
+		default:
+			buf[pos] = c
+			pos++
+		}
+	}
+
+	return buf[:pos]
+}
+
+// escapeStringBackslash is similar to escapeBytesBackslash but for string.
+func escapeStringBackslash(buf []byte, v string) []byte {
+	pos := len(buf)
+	buf = reserveBuffer(buf, len(v)*2)
+
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		switch c {
+		case '\x00':
+			buf[pos+1] = '0'
+			buf[pos] = '\\'
+			pos += 2
+		case '\n':
+			buf[pos+1] = 'n'
+			buf[pos] = '\\'
+			pos += 2
+		case '\r':
+			buf[pos+1] = 'r'
+			buf[pos] = '\\'
+			pos += 2
+		case '\x1a':
+			buf[pos+1] = 'Z'
+			buf[pos] = '\\'
+			pos += 2
+		case '\'':
+			buf[pos+1] = '\''
+			buf[pos] = '\\'
+			pos += 2
+		case '"':
+			buf[pos+1] = '"'
+			buf[pos] = '\\'
+			pos += 2
+		case '\\':
+			buf[pos+1] = '\\'
+			buf[pos] = '\\'
+			pos += 2
+		default:
+			buf[pos] = c
+			pos++
+		}
+	}
+
+	return buf[:pos]
+}
+
+// escapeBytesQuotes escapes apostrophes in []byte by doubling them up.
+// This escapes the contents of a string by doubling up any apostrophes that
+// it contains. This is used when the NO_BACKSLASH_ESCAPES SQL_MODE is in
+// effect on the server.
+// https://github.com/mysql/mysql-server/blob/mysql-5.7.5/mysys/charset.c#L963-L1038
+func escapeBytesQuotes(buf, v []byte) []byte {
+	pos := len(buf)
+	buf = reserveBuffer(buf, len(v)*2)
+
+	for _, c := range v {
+		if c == '\'' {
+			buf[pos+1] = '\''
+			buf[pos] = '\''
+			pos += 2
+		} else {
+			buf[pos] = c
+			pos++
+		}
+	}
+
+	return buf[:pos]
+}
+
+// escapeStringQuotes is similar to escapeBytesQuotes but for string.
+func escapeStringQuotes(buf []byte, v string) []byte {
+	pos := len(buf)
+	buf = reserveBuffer(buf, len(v)*2)
+
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if c == '\'' {
+			buf[pos+1] = '\''
+			buf[pos] = '\''
+			pos += 2
+		} else {
+			buf[pos] = c
+			pos++
+		}
+	}
+
+	return buf[:pos]
+}
+
+func bitBytes2Int64(bitData []byte) (int64, error) {
+	var resp string = ""
+	var bit uint
+	var end byte
+	end = 8
+	for k := 0; k < len(bitData); k++ {
+		var current_byte []string
+		var data int
+		data = int(bitData[k])
+		for bit = 0; bit < uint(end); bit++ {
+			tmp := 1 << bit
+			if (data & tmp) > 0 {
+				current_byte = append(current_byte, "1")
+			} else {
+				current_byte = append(current_byte, "0")
+			}
+		}
+		for k := len(current_byte); k > 0; k-- {
+			resp += current_byte[k-1]
+		}
+	}
+	return strconv.ParseInt(resp, 2, 64)
 }
