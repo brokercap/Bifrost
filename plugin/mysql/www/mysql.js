@@ -126,14 +126,13 @@ function GetToTableDesc(schemaName,tableName) {
             });
 
             var html = "";
-            for(i in d){
-
+            for(var i in d){
                 var toField = "";
                 var isPri = false;
                 var tmpKey = d[i].COLUMN_NAME.toLowerCase();
                 if(fieldsMap.hasOwnProperty(tmpKey)){
-                    toField = fieldsMap[tmpKey].COLUMN_NAME;
-                    if(fieldsMap[tmpKey].COLUMN_KEY == "PRI"){
+                    toField = fieldsMap[tmpKey].ColumnName;
+                    if(fieldsMap[tmpKey].ColumnKey == "PRI"){
                         isPri = true;
                     }
                 }
