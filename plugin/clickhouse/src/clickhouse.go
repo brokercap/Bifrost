@@ -15,8 +15,8 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-const VERSION = "v2.0.0"
-const BIFROST_VERION = "v2.0.0"
+const VERSION = "v2.1.1"
+const BIFROST_VERION = "v2.1.0"
 
 var l sync.RWMutex
 
@@ -81,6 +81,7 @@ type PluginParam struct {
 	//ModifDDLMap            map[string]bool //ddl同步程度选择
 	ModifDDLType  *DDLSupportType //ddl同步程度选择
 	CkEngine      int
+	CkTableEngine string
 	CkClusterName string
 	// 以上的数据是 界面配置的参数
 

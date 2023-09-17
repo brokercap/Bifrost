@@ -167,6 +167,11 @@ function doGetPluginParam() {
     } else {
         result.data["NullNotTransferDefault"] = false;
     }
+
+    if (AutoCreateTable) {
+        result.data["CkTableEngine"] = $("#clickohuse_table_engine").val();
+    }
+
     return result;
 }
 
@@ -328,6 +333,8 @@ function GetCkSchameTableList(SchemaName) {
         $("#ddlDiV").show();
         $("#clickohuse_AutoSchemaPrefix").parent().show();
         $("#clickohuse_AutoTablePrefix").parent().show();
+        $("#clickhouse_engine").parent().parent().parent().show();
+        $("#CKTableFieldsDiv").hide();
         return
     }
     $("#clickohuse_AutoSchemaPrefix").parent().hide();

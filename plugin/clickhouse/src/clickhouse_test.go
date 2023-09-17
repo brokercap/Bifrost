@@ -19,7 +19,7 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-var url string = "tcp://192.168.137.128:9000?Database=test&debug=true&compress=1"
+var url string = "tcp://127.0.0.1:9000?Database=test&debug=true&compress=1"
 var engine string = "MergeTree()"
 
 //var createTable = "CREATE TABLE binlog_field_test(id UInt32,testtinyint Int8,testsmallint Int16,testmediumint Int32,testint Int32,testbigint Int64,testvarchar String,testchar String,testenum String,testset String,testtime String,testdate Date,testyear Int16,testtimestamp DateTime,testdatetime DateTime,testfloat Float64,testdouble Float64,testdecimal Float64,testtext String,testblob String,testbit Int64,testbool Int8,testmediumblob String,testlongblob String,testtinyblob String,test_unsinged_tinyint UInt8,test_unsinged_smallint UInt16,test_unsinged_mediumint UInt32,test_unsinged_int UInt32,test_unsinged_bigint UInt64,testjson String) ENGINE = MergeTree() ORDER BY (id);"
@@ -163,12 +163,13 @@ func getParam(args ...bool) map[string]interface{} {
 	return param
 }
 
-func getParamAutoCreateTable() map[string]interface{} {
+func getParamAutoCreateTable(engineName string) map[string]interface{} {
 	param := make(map[string]interface{}, 0)
 	param["CkSchema"] = ""
 	param["CkTable"] = ""
 	param["BatchSize"] = 1000
 	param["AutoCreateTable"] = true
+	param["CkTableEngine"] = engineName
 	return param
 }
 
@@ -182,8 +183,8 @@ func initSyncParam() {
 	log.Println("p:", p)
 }
 
-func initSyncParamAutoCreateTable() {
-	p, err := conn.SetParam(getParamAutoCreateTable())
+func initSyncParamAutoCreateTable(engineName string) {
+	p, err := conn.SetParam(getParamAutoCreateTable(engineName))
 	if err != nil {
 		log.Println("set param fatal err")
 		log.Fatal(err)
@@ -489,7 +490,7 @@ func TestRandDataAndCheck(t *testing.T) {
 	t.Log("test over")
 }
 
-//模拟正式环境刷数据
+// 模拟正式环境刷数据
 func TestSyncLikeProduct(t *testing.T) {
 	initDBTable(true)
 	p := pluginTestData.NewPlugin("clickhouse", url)
@@ -657,11 +658,27 @@ func TestConn_CkDataTypeTransfer(t *testing.T) {
 }
 
 func TestConn_AutoCreateTableCommit(t *testing.T) {
-	TableName = "mytest"
+	TableName = "MergeTree_test"
 	testBefore()
-	initSyncParamAutoCreateTable()
+	initSyncParamAutoCreateTable("MergeTree")
 	event := pluginTestData.NewEvent()
 	eventData := event.GetTestInsertData()
+	eventData.TableName = TableName
+	conn.Insert(eventData, false)
+	_, _, err2 := conn.TimeOutCommit()
+	if err2 != nil {
+		t.Fatal(err2)
+	}
+}
+
+func TestConn_AutoCreateTableCommit_ReplacingMergeTree(t *testing.T) {
+	TableName = "ReplacingMergeTree_test"
+	testBefore()
+	event.SetTable(TableName)
+	initSyncParamAutoCreateTable("ReplacingMergeTree")
+	event := pluginTestData.NewEvent()
+	eventData := event.GetTestInsertData()
+	eventData.TableName = TableName
 	conn.Insert(eventData, false)
 	_, _, err2 := conn.TimeOutCommit()
 	if err2 != nil {
