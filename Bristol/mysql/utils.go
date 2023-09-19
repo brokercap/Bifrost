@@ -76,6 +76,7 @@ func parseDSN(dsn string) *config {
 					}
 				case "servername":
 					TLSServerName = param[1]
+				default:
 					cfg.params[param[0]] = param[1]
 				}
 			}

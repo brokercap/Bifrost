@@ -294,7 +294,7 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 		tlsPacketHeader := make([]byte, 0, tlsPacketHeaderLen+4)
 		tlsPacketHeader = append(tlsPacketHeader, uint24ToBytes(uint32(tlsPacketHeaderLen))...)
 		tlsPacketHeader = append(tlsPacketHeader, mc.sequence)
-		tlsPacketHeader = append(tlsPacketHeader, data[:tlsPacketHeaderLen+4]...)
+		tlsPacketHeader = append(tlsPacketHeader, data[:tlsPacketHeaderLen]...)
 		if err := mc.writePacket(&tlsPacketHeader); err != nil {
 			return err
 		}
