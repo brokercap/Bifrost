@@ -60,6 +60,7 @@ func (t *NormalTable) Start(ctx context.Context, ch chan *pluginDriver.PluginDat
 	timer.Reset(timeDuration)
 	<-timer.C
 
+	t.Callback(event.GetTestDeleteData())
 	t.Callback(event.GetTestInsertData())
 
 }
