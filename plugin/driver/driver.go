@@ -172,6 +172,10 @@ func TransfeResult(val string, data *PluginDataType, rowIndex int) interface{} {
 		case "BinlogTimestamp":
 			val = strings.Replace(val, "{$BinlogTimestamp}", fmt.Sprint(data.Timestamp), -1)
 			break
+		case "BinlogDateTime":
+			t := time.Unix(int64(data.Timestamp), 0)
+			val = t.Format(time.DateTime)
+			break
 		case "BinlogFileNum":
 			val = strings.Replace(val, "{$BinlogFileNum}", fmt.Sprint(data.BinlogFileNum), -1)
 			break
