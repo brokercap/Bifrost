@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const VERSION = "1.8.2"
+const VERSION = "2.1.1"
 
 var errDataList []string
 
@@ -28,7 +28,7 @@ func init() {
 	errDataList = make([]string, 0)
 	rand.Seed(time.Now().UnixNano())
 	if rand.Intn(3) == 1 {
-		defaultValBool = true
+		defaultValBool = false
 	}
 }
 
@@ -594,9 +594,22 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection, schema string, table st
 				data = append(data, Value)
 				break
 			case "datetime", "timestamp":
+				/*
+					假如 time.Time 类型提交到驱动,测试下来,在 8.0.34 的情况下存在 1秒的误差,这里强制使用 string 的方式提交
+					if fsp == 0 {
+						nowTime := time.Now()
+						columnType.Value = nowTime.Format("2006-01-02 15:04:05")
+						data = append(data, nowTime)
+					} else {
+						Value := GetTimeAndNsen(columnType.DataType, columnType.Fsp)
+						columnType.Value = Value
+						data = append(data, Value)
+					}
+				*/
 				Value := GetTimeAndNsen(columnType.DataType, columnType.Fsp)
 				columnType.Value = Value
 				data = append(data, Value)
+
 				break
 			case "bit":
 				var Value int64 = 1
@@ -639,7 +652,6 @@ func GetSchemaTableFieldAndVal(db mysql.MysqlConnection, schema string, table st
 				break
 			case "decimal":
 				Value := strconv.FormatFloat(float64(rand.Float64()), 'f', columnType.NumbericScale, 64)
-				//Value2,_ := strconv.ParseFloat(Value, 64)
 				var n int = 1
 				for i := 0; i < columnType.NumbericPrecision-columnType.NumbericScale; i++ {
 					n *= 10
@@ -828,6 +840,13 @@ func checkData(rowMap map[string]interface{}, logPrefix string) (AutoIncrementFi
 				isTrue = false
 			}
 			break
+		case "tinyint":
+			if fmt.Sprint(v) == fmt.Sprint(columnType.Value) {
+				log.Println(logPrefix, columnName, "==", v)
+			} else {
+				isTrue = false
+			}
+			break
 		default:
 			if fmt.Sprint(v) == fmt.Sprint(columnType.Value) {
 				log.Println(logPrefix, columnName, "==", v)
@@ -838,7 +857,7 @@ func checkData(rowMap map[string]interface{}, logPrefix string) (AutoIncrementFi
 		}
 		if isTrue == false {
 			isAllRight = false
-			logInfo = fmt.Sprintf("%s %s value:%v ( %s ) != %v ( %s )", logPrefix, columnName, fmt.Sprint(rowMap[columnName]), reflect.TypeOf(rowMap[columnName]), ColumnData[columnName].Value, reflect.TypeOf(ColumnData[columnName].Value))
+			logInfo = fmt.Sprintf("dataType:(%s) %s %s value:%v ( %s ) != %v ( %s )", columnType.DataType, logPrefix, columnName, fmt.Sprint(rowMap[columnName]), reflect.TypeOf(rowMap[columnName]), ColumnData[columnName].Value, reflect.TypeOf(ColumnData[columnName].Value))
 			errDataList = append(errDataList, logInfo)
 		}
 	}
@@ -848,26 +867,28 @@ func checkData(rowMap map[string]interface{}, logPrefix string) (AutoIncrementFi
 	return
 }
 
-func GetTableData(db mysql.MysqlConnection, SchemaName, TableName string, AutoIncrementField string, AutoIncrementValue []string) ([]map[string]interface{}, error) {
+func GetTableData(db mysql.MysqlConnection, SchemaName, TableName string, AutoIncrementField string, AutoIncrementValue []string, useStmt bool) ([]map[string]interface{}, error) {
 	var where string
+	var args = make([]driver.Value, 0)
 	if AutoIncrementField != "" && len(AutoIncrementValue) > 0 {
-		where = " AND " + AutoIncrementField + " in ('" + strings.Replace(strings.Trim(fmt.Sprint(AutoIncrementValue), "[]"), " ", "','", -1) + "')"
+		where = " AND " + AutoIncrementField + " in (?)"
+		args = append(args, strings.Replace(strings.Trim(fmt.Sprint(AutoIncrementValue), "[]"), " ", "','", -1))
+		//where = " AND " + AutoIncrementField + " in ('" + strings.Replace(strings.Trim(fmt.Sprint(AutoIncrementValue), "[]"), " ", "','", -1) + "')"
 	} else {
 		where = " LIMIT 1"
 	}
 	sql := "SELECT * FROM `" + SchemaName + "`.`" + TableName + "` WHERE  1=1 " + where
-	stmt, err := db.Prepare(sql)
-	log.Println("sql:", sql)
-	if err != nil {
-		return nil, err
+	var rows driver.Rows
+	var err error
+	if useStmt {
+		rows, err = StmtSelect(db, sql, args)
+	} else {
+		rows, err = ExecQuery(db, sql, args)
 	}
-	defer stmt.Close()
-	p := make([]driver.Value, 0)
-	rows, err := stmt.Query(p)
+
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
-	defer rows.Close()
 	fields := rows.Columns()
 	n := len(fields)
 
@@ -921,12 +942,12 @@ func GetTableData(db mysql.MysqlConnection, SchemaName, TableName string, AutoIn
 	return data, nil
 }
 
-func CheckSelectTableData(db mysql.MysqlConnection, SchemaName, TableName string, AutoIncrementField string, AutoIncrementValue []string) {
-	data, err := GetTableData(db, SchemaName, TableName, AutoIncrementField, AutoIncrementValue)
+func CheckSelectTableData(db mysql.MysqlConnection, SchemaName, TableName string, AutoIncrementField string, AutoIncrementValue []string, useStmt bool) {
+	data, err := GetTableData(db, SchemaName, TableName, AutoIncrementField, AutoIncrementValue, useStmt)
 	if err != nil {
 		log.Fatal("CheckSelectTableData err:", err)
 	}
-	checkData(data[0], "select")
+	checkData(data[0], "select useStmt:"+fmt.Sprint(useStmt))
 	return
 }
 
@@ -1081,7 +1102,6 @@ func main() {
 		"`test_unsinged_mediumint` mediumint(8) unsigned NOT NULL DEFAULT '3'," +
 		"`test_unsinged_int` int(11) unsigned NOT NULL DEFAULT '4'," +
 		"`test_unsinged_bigint` bigint(20) unsigned NOT NULL DEFAULT '5'," +
-
 		"`testtinyint_null` tinyint(4) DEFAULT NULL," +
 		"`testsmallint_null` smallint(6) DEFAULT NULL," +
 		"`testmediumint_null` mediumint(8) DEFAULT NULL," +
@@ -1126,14 +1146,12 @@ func main() {
 			"`testtime2_4` time(4) NOT NULL," +
 			"`testtime2_5` time(5) NOT NULL," +
 			"`testtime2_6` time(6) NOT NULL," +
-
 			"`testtimestamp2_1` timestamp(1) NOT NULL," +
 			"`testtimestamp2_2` timestamp(2) NOT NULL," +
 			"`testtimestamp2_3` timestamp(3) NOT NULL," +
 			"`testtimestamp2_4` timestamp(4) NOT NULL," +
 			"`testtimestamp2_5` timestamp(5) NOT NULL," +
 			"`testtimestamp2_6` timestamp(6) NOT NULL," +
-
 			"`testdatetime2_1` datetime(1) NOT NULL," +
 			"`testdatetime2_2` datetime(2) NOT NULL," +
 			"`testdatetime2_3` datetime(3) NOT NULL," +
@@ -1147,14 +1165,12 @@ func main() {
 			"`testtime2_4_null` time(4) NULL DEFAULT NULL," +
 			"`testtime2_5_null` time(5) NULL DEFAULT NULL," +
 			"`testtime2_6_null` time(6) NULL DEFAULT NULL," +
-
 			"`testtimestamp2_1_null` timestamp(1) NULL DEFAULT NULL," +
 			"`testtimestamp2_2_null` timestamp(2) NULL DEFAULT NULL," +
 			"`testtimestamp2_3_null` timestamp(3) NULL DEFAULT NULL," +
 			"`testtimestamp2_4_null` timestamp(4) NULL DEFAULT NULL," +
 			"`testtimestamp2_5_null` timestamp(5) NULL DEFAULT NULL," +
 			"`testtimestamp2_6_null` timestamp(6) NULL DEFAULT NULL," +
-
 			"`testdatetime2_1_null` datetime(1) NULL DEFAULT NULL," +
 			"`testdatetime2_2_null` datetime(2) NULL DEFAULT NULL," +
 			"`testdatetime2_3_null` datetime(3) NULL DEFAULT NULL," +
@@ -1202,44 +1218,55 @@ func main() {
 	fmt.Println("columnListJson:", string(columnListByte))
 
 	db.Exec("SET NAMES utf8", []driver.Value{})
-	stmt, err := db.Prepare(sqlPre)
-	if err != nil {
-		log.Fatal(err, "sqlPre:", sqlPre)
-	}
+
 	for k, v := range tableInfo {
 		log.Println(k, "==", v.Value, "(", reflect.TypeOf(v.Value), ")")
 	}
+	ColumnData = tableInfo
+	AutoIncrementValueArr := make([]string, 0)
+	var AutoIncrementValue int64
 
-	fmt.Println("")
-
-	/*
-		for k,v:=range sqlValue{
-			log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
-		}
-	*/
-
-	Result, err := stmt.Exec(sqlValue)
+	log.Println("exec insert starting")
+	Result2, err := ExecInsert(db, sqlPre, sqlValue)
 	if err != nil {
-		log.Println(sqlValue)
-		log.Fatal("sql Exec", err)
+		log.Fatal(err)
 	}
-	log.Println("sql exec Result:", Result)
+	// exec inert not supported get last insert id
+	AutoIncrementValue = 1
+	AutoIncrementValueArr = append(AutoIncrementValueArr, fmt.Sprint(AutoIncrementValue))
+	log.Println("exec insert Result:", Result2)
+	log.Println("exec insert end")
+
+	if CheckType <= 1 {
+		CheckSelectTableData(db, database, table, AutoIncrementField, AutoIncrementValueArr, false)
+	}
+	log.Println("exec data select check end")
+
+	AutoIncrementValueArr = make([]string, 0)
+	log.Println("stmt insert starting")
+	Result, err := StmtInsert(db, sqlPre, sqlValue)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("stmt insert Result:", Result)
+	log.Println("stmt insert end")
+	AutoIncrementValue, err = Result.LastInsertId()
+	if err != nil {
+		log.Fatal(err)
+	}
+	AutoIncrementValueArr = append(AutoIncrementValueArr, fmt.Sprint(AutoIncrementValue))
+	if CheckType <= 1 {
+		CheckSelectTableData(db, database, table, AutoIncrementField, AutoIncrementValueArr, true)
+	}
+	log.Println("stmt data select check end")
+
+	if CheckType == 1 {
+		return
+	}
+
 	log.Println("load data over")
 
-	ColumnData = tableInfo
-
-	AutoIncrementValue, err := Result.LastInsertId()
-	AutoIncrementValueArr := make([]string, 0)
-	if err == nil {
-		AutoIncrementValueArr = append(AutoIncrementValueArr, fmt.Sprint(AutoIncrementValue))
-	}
 	defer proccessExit()
-	if CheckType <= 1 {
-		CheckSelectTableData(db, database, table, AutoIncrementField, AutoIncrementValueArr)
-		if CheckType == 1 {
-			return
-		}
-	}
 
 	reslut := make(chan error, 1)
 	BinlogDump := mysql.NewBinlogDump(
@@ -1279,4 +1306,45 @@ func main() {
 	for {
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func StmtInsert(db mysql.MysqlConnection, sqlPre string, sqlValue []driver.Value) (driver.Result, error) {
+	stmt, err := db.Prepare(sqlPre)
+	if err != nil {
+		log.Fatal(err, "sqlPre:", sqlPre)
+	}
+	defer stmt.Close()
+
+	fmt.Println("")
+
+	Result, err := stmt.Exec(sqlValue)
+	if err != nil {
+		log.Println(sqlValue)
+		log.Fatal("sql Exec", err)
+	}
+
+	return Result, err
+}
+
+func StmtSelect(db mysql.MysqlConnection, sql string, args []driver.Value) (driver.Rows, error) {
+	stmt, err := db.Prepare(sql)
+	log.Println("StmtSelect sql:", sql)
+	log.Println("StmtSelect args:", args)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := stmt.Query(args)
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
+}
+
+func ExecInsert(db mysql.MysqlConnection, sqlPre string, sqlValue []driver.Value) (driver.Result, error) {
+	result, err := db.Exec(sqlPre, sqlValue)
+	return result, err
+}
+
+func ExecQuery(db mysql.MysqlConnection, sql string, args []driver.Value) (driver.Rows, error) {
+	return db.Query(sql, args)
 }
