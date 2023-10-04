@@ -25,3 +25,5 @@ const partitionTableNamePrefix = "partition_"
 const DefaultBinlogFileName = "bifrost.000001"
 
 const DefaultBinlogPosition = 0
+
+const DefaultConsumerCount = 1
