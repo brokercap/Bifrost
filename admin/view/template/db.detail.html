@@ -67,7 +67,7 @@
                         &nbsp;
                         <button class="btn-sm btn-primary" id="historyAddBtn" type="button" style="margin-top: -8px" title="点击后可配置读取数据表的数据进行全量数据初始化">刷全量数据</button>
                         &nbsp;
-                        <a href="#" id="tableHistoryListBtn">
+                        <a href="#" id="tableHistoryListBtn" target="_blank">
                         <button class="btn-sm btn-primary" id="" type="button" style="margin-top: -8px">查看全量任务列表</button>
                         </a>
                         </span>
@@ -654,6 +654,8 @@
             var DbName = $("#DbName").val();
             var url = "/db/table/list";
             setSchemaName(SchemaName);
+            $("#tableToServerListContair").attr("DbName",DbName);
+            $("#tableToServerListContair").attr("schema",SchemaName);
             var showTableList = function(data){
                 $("#TableListContair").html("");
                 $.each(data,function(index,v) {
