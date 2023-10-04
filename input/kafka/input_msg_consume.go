@@ -33,10 +33,10 @@ func (c *InputKafka) InitInputCosume(workerCount int) *sync.WaitGroup {
 	for i := 0; i < workerCount; i++ {
 		ch := make(chan *sarama.ConsumerMessage, 5000)
 		c.inputCosumeList = append(c.inputCosumeList, ch)
-		go func() {
+		go func(workerId int) {
 			defer ws.Done()
-			c.InputCosume(c.kafkaGroupCtx, i, ch)
-		}()
+			c.InputCosume(c.kafkaGroupCtx, workerId, ch)
+		}(i)
 	}
 	return ws
 }
