@@ -45,6 +45,7 @@ type Conn struct {
 	p                *PluginParam
 	conn             *mysqlDB
 	err              error
+	serverVersion    string
 	isTiDB           bool
 	isStarRocks      bool
 	starRocksBeCount int
@@ -304,11 +305,11 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 		err := fmt.Errorf("SchemaName:%s, TableName:%s not exsit", SchemaName, data.TableName)
 		return nil, err
 	}
-	fieldList := make([]fieldStruct, len(fields))
+	fieldList := make([]fieldStruct, 0)
 	priKeyList := make([]fieldStruct, 0)
 	var fromPriKey, toPriKey string
 	var ok bool
-	for i, v := range fields {
+	for _, v := range fields {
 		var fromFieldName string
 		if _, ok = data.Rows[0][v.COLUMN_NAME]; !ok {
 			switch v.COLUMN_NAME {
@@ -354,7 +355,15 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 				toPriKey = v.COLUMN_NAME
 			}
 		}
-		fieldList[i] = field
+		// 假如starrocks表字段允许为null
+		// 并且同时是BIGINT类型
+		// 同时源端数据中又不存在,则认为其为自增字段,
+		if v.COLUMN_DEFAULT == nil && strings.Contains(strings.ToUpper(v.DATA_TYPE), "BIGINT") {
+			if _, ok = data.Rows[len(data.Rows)-1][v.COLUMN_NAME]; !ok {
+				continue
+			}
+		}
+		fieldList = append(fieldList, field)
 	}
 	if len(fieldList) == 0 {
 		return nil, fmt.Errorf("not found %s.%s", SchemaName, data.TableName)
@@ -402,8 +411,8 @@ func (This *Conn) initVersion() {
 	if This.conn == nil {
 		return
 	}
-	version := This.conn.SelectVersion()
-	if strings.Contains(version, "TiDB") {
+	This.serverVersion = This.conn.SelectVersion()
+	if strings.Contains(This.serverVersion, "TiDB") {
 		This.isTiDB = true
 	}
 }

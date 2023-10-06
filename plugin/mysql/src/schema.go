@@ -121,6 +121,9 @@ func (This *mysqlDB) GetTableFields(schema, table string) (data []TableStruct) {
 	p = append(p, schema)
 	p = append(p, table)
 	rows, err := This.conn.Query(sql, p)
+	if err != nil {
+		return
+	}
 	defer rows.Close()
 	if err != nil {
 		log.Printf("[ERROR] output[%s] GetTableFields schema:%s table:%s err:%+v \n", OutputName, schema, table, err)
