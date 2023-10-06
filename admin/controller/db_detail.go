@@ -25,8 +25,8 @@ import (
 func (c *DBController) Detail() {
 	DbName := c.Ctx.Request.Form.Get("DbName")
 	dbInfo := server.GetDBObj(DbName)
-	o :=inputDriver.Open(dbInfo.InputType,inputDriver.InputInfo{ConnectUri:dbInfo.ConnectUri})
-	DataBaseList,_ := o.GetSchemaList()
+	o := inputDriver.Open(dbInfo.InputType, inputDriver.InputInfo{ConnectUri: dbInfo.ConnectUri})
+	DataBaseList, _ := o.GetSchemaList()
 	DataBaseList = append(DataBaseList, "AllDataBases")
 
 	c.SetData("DbName", DbName)
@@ -34,7 +34,7 @@ func (c *DBController) Detail() {
 	c.SetData("ToServerList", toserver.GetToServerMap())
 	c.SetData("ChannelList:", dbInfo.ListChannel())
 	c.SetData("Title", DbName+" - Detail")
-	c.AddAdminTemplate("db.detail.html","header.html","db.detail.table.add.html","db.detail.history.add.html","footer.html")
+	c.AddAdminTemplate("db.detail.html", "header.html", "db.detail.table.add.html", "db.detail.history.add.html", "footer.html")
 }
 
 func (c *DBController) GetTableFields() {
@@ -46,8 +46,8 @@ func (c *DBController) GetTableFields() {
 	TableName = tansferTableName(TableName)
 
 	dbInfo := server.GetDBObj(DbName)
-	o :=inputDriver.Open(dbInfo.InputType,inputDriver.InputInfo{ConnectUri:dbInfo.ConnectUri})
-	TableFieldsList,_ := o.GetSchemaTableFieldList(SchemaName, TableName)
+	o := inputDriver.Open(dbInfo.InputType, inputDriver.InputInfo{ConnectUri: dbInfo.ConnectUri})
+	TableFieldsList, _ := o.GetSchemaTableFieldList(SchemaName, TableName)
 	c.SetJsonData(TableFieldsList)
 	c.StopServeJSON()
 }
@@ -56,17 +56,18 @@ func (c *DBController) TableList() {
 	DbName := c.Ctx.Request.Form.Get("DbName")
 	SchemaName := c.Ctx.Request.Form.Get("SchemaName")
 	DBObj := server.GetDBObj(DbName)
-	o :=inputDriver.Open(DBObj.InputType,inputDriver.InputInfo{ConnectUri:DBObj.ConnectUri})
+	o := inputDriver.Open(DBObj.InputType, inputDriver.InputInfo{ConnectUri: DBObj.ConnectUri})
 	type ResultType struct {
 		TableName   string
 		ChannelName string
 		AddStatus   bool
 		TableType   string
 		IgnoreTable string
+		DoTable     string
 	}
 	var data []ResultType
 	data = make([]ResultType, 0)
-	TableList,_ := o.GetSchemaTableList(SchemaName)
+	TableList, _ := o.GetSchemaTableList(SchemaName)
 	TableList = append(TableList, inputDriver.TableList{TableName: "AllTables", TableType: "LIKE"})
 	var schemaName0, tableName0 string
 	schemaName0 = tansferSchemaName(SchemaName)
@@ -83,7 +84,7 @@ func (c *DBController) TableList() {
 			if t2 == nil {
 				data = append(data, ResultType{TableName: tableName, ChannelName: "", AddStatus: false, TableType: tableType})
 			} else {
-				data = append(data, ResultType{TableName: tableName, ChannelName: t2.Name, AddStatus: true, TableType: tableType, IgnoreTable: t.IgnoreTable})
+				data = append(data, ResultType{TableName: tableName, ChannelName: t2.Name, AddStatus: true, TableType: tableType, IgnoreTable: t.IgnoreTable, DoTable: t.DoTable})
 			}
 		}
 	}

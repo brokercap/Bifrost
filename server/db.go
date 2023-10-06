@@ -632,7 +632,7 @@ func (db *db) IgnoreTableToMap(IgnoreTable string) map[string]bool {
 	return m
 }
 
-func (db *db) AddTable(schemaName string, tableName string, IgnoreTable string, ChannelKey int, LastToServerID int) bool {
+func (db *db) AddTable(schemaName string, tableName string, IgnoreTable string, DoTable string, ChannelKey int, LastToServerID int) bool {
 	key := GetSchemaAndTableJoin(schemaName, tableName)
 	db.Lock()
 	defer db.Unlock()
@@ -644,18 +644,20 @@ func (db *db) AddTable(schemaName string, tableName string, IgnoreTable string, 
 			ToServerList:   make([]*ToServer, 0),
 			LastToServerID: LastToServerID,
 			likeTableList:  make([]*Table, 0),
+			DoTable:        DoTable,
+			doTableMap:     db.IgnoreTableToMap(DoTable),
 			IgnoreTable:    IgnoreTable,
 			ignoreTableMap: db.IgnoreTableToMap(IgnoreTable),
 		}
 		db.addLikeTable(db.tableMap[key], schemaName, tableName)
-		log.Println("AddTable", db.Name, schemaName, tableName, db.channelMap[ChannelKey].Name, " IgnoreTable:", IgnoreTable)
+		log.Println("AddTable", db.Name, schemaName, tableName, db.channelMap[ChannelKey].Name, " IgnoreTable:", IgnoreTable, "DoTable:", DoTable)
 		count.SetTable(db.Name, key)
 	}
 	return true
 }
 
 // 修改 模糊匹配的表规则 需要过滤哪些表不进行匹配
-func (db *db) UpdateTable(schemaName string, tableName string, IgnoreTable string) bool {
+func (db *db) UpdateTable(schemaName string, tableName string, IgnoreTable string, DoTable string) bool {
 	key := GetSchemaAndTableJoin(schemaName, tableName)
 	db.Lock()
 	defer db.Unlock()
@@ -663,9 +665,11 @@ func (db *db) UpdateTable(schemaName string, tableName string, IgnoreTable strin
 		log.Println("UpdateTable ", db.Name, schemaName, tableName, " not exsit ")
 		return false
 	}
+	db.tableMap[key].DoTable = DoTable
+	db.tableMap[key].doTableMap = db.IgnoreTableToMap(DoTable)
 	db.tableMap[key].IgnoreTable = IgnoreTable
 	db.tableMap[key].ignoreTableMap = db.IgnoreTableToMap(IgnoreTable)
-	log.Println("UpdateTable", db.Name, schemaName, tableName, "IgnoreTable:", IgnoreTable)
+	log.Println("UpdateTable", db.Name, schemaName, tableName, "IgnoreTable:", IgnoreTable, "DoTable:", DoTable)
 	return true
 }
 

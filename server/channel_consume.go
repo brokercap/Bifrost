@@ -246,6 +246,14 @@ func (This *consume_channel_obj) consumeChannel() {
 
 func (This *consume_channel_obj) checkIgnoreTable(t *Table, TableName string) bool {
 	This.db.RLock()
+	if len(t.doTableMap) > 0 {
+		if _, ok := t.doTableMap[TableName]; ok {
+			This.db.RUnlock()
+			return false
+		}
+		This.db.RUnlock()
+		return true
+	}
 	if _, ok := t.ignoreTableMap[TableName]; ok {
 		This.db.RUnlock()
 		return true
