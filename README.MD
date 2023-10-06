@@ -14,18 +14,21 @@
 
 ##### 目标端支持
 
-| 目标端        | DDL | 备注                               |
-|------------|-----|----------------------------------|
-| Redis      | NO  |                                  |
-| MongoDB    | NO  |                                  |
-| MySQL      | YES |                                  |
-| ClickHouse | YES |                                  |
-| Memcache   | NO  |                                  |
-| RabbitMQ   | YES |                                  |
+| 目标端        | DDL | 备注                     |
+|------------|-----|------------------------|
+| Redis      | NO  |                        |
+| MongoDB    | NO  |                        |
+| MySQL      | YES |                        |
+| ClickHouse | YES |                        |
+| Memcache   | NO  |                        |
+| RabbitMQ   | YES |                        |
 | Kafka      | YES | 支持canal,debezium格式，以及kafka 消息字符串 |
-| ActiveMQ   | YES |                                  |
-| [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |                                  |
-| [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |                                  |
+| ActiveMQ   | YES |                        |
+| [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |                        |
+| [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |                        |
+| StarRocks        | YES | use mysql protocol     |
+| Doris            | YES | use mysql protocol     |
+
 
 
 ##### 源端支持
@@ -121,11 +124,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v2.2.0-beta/bifrost_v2.2.0-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.3.0-beta/bifrost_v2.3.0-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.2.0-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.3.0-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.2.0-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.3.0-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 

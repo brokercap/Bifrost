@@ -1,3 +1,9 @@
+v2.3.0-beta   2023-10-06
+1. 支持MySQL连接协议连接Starrocks,进行数据同步到,支持自动建表,日志追加模式,按月自动建分区
+   https://github.com/brokercap/Bifrost/issues/254
+2. 当添加AllTabls 的时候 ,支持只指定同步某些表
+   https://github.com/brokercap/Bifrost/issues/253
+
 v2.2.0-beta   2023-10-06
 1. input kafka 在多parrtition的情况下支持设置处理数据转换的协程数量 来提升性能,一个partition的数据,只能被一个协程处理,在单partition的情况下,设置多个无效,默认为 单协程
 2. input mongo 支持设置 全量,增量,以及先全量再增量的方式数据同步
