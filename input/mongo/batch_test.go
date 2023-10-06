@@ -51,7 +51,7 @@ func TestMongoInput_BatchStart(t *testing.T) {
 		patches.ApplyFunc(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
 			return &mongo.Client{}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection) error {
+		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection, perBatchLimit int) error {
 			return errors.New("TableBatchStart error")
 		})
 		defer patches.Reset()
@@ -70,7 +70,7 @@ func TestMongoInput_BatchStart(t *testing.T) {
 		patches.ApplyFunc(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
 			return &mongo.Client{}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection) error {
+		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection, perBatchLimit int) error {
 			return nil
 		})
 		defer patches.Reset()
