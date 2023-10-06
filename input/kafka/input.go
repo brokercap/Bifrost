@@ -63,6 +63,8 @@ type InputKafka struct {
 	consumeClaimCtx    context.Context
 	consumeClaimCancle context.CancelFunc
 
+	inputCosumeList []chan *sarama.ConsumerMessage
+
 	topics map[string]map[string]bool
 
 	positionMap map[string]map[int32]int64
@@ -123,6 +125,7 @@ func (c *InputKafka) Start(ch chan *inputDriver.PluginStatus) error {
 
 func (c *InputKafka) Start0() error {
 	c.kafkaGroupCtx, c.kafkaGroupCancel = context.WithCancel(context.Background())
+	c.InitInputCosume(c.config.CosumerCount)
 	timeout := 2 * time.Second
 	var timer *time.Timer
 	for {

@@ -1,3 +1,16 @@
+v2.2.0-beta   2023-10-06
+1. input kafka 在多parrtition的情况下支持设置处理数据转换的协程数量 来提升性能,一个partition的数据,只能被一个协程处理,在单partition的情况下,设置多个无效,默认为 单协程
+2. input mongo 支持设置 全量,增量,以及先全量再增量的方式数据同步
+3. 修复批量添加表数据同步失败的BUG
+   https://github.com/brokercap/Bifrost/issues/249
+4. 修复修改数据源,但是数据源连接案例及描述等信息没有变更的bug
+   https://github.com/brokercap/Bifrost/issues/248
+5. 添加全量任务后,跳转到全量任务列表,采用新窗口跳转
+   https://github.com/brokercap/Bifrost/issues/250
+6. 支持 input mock ,在开发output的时候 可以更方便的进行测试
+7. input 插件开发 支持获取需要同步的库表列表
+8. Bristol mysql驱动 支持 conn.Exec conn.Query 带参数请求访问接口
+
 v2.1.1-beta   2023-09-17
 1. 修复同步配置字段映射显示undefined的bug
    https://github.com/brokercap/Bifrost/issues/237
