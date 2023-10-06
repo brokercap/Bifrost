@@ -22,8 +22,11 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"io/ioutil"
+	"strconv"
 	"strings"
 )
+
+type ParamMap map[string]string
 
 type Config struct {
 	BrokerServerList []string
@@ -31,7 +34,8 @@ type Config struct {
 	Topics           []string
 	ParamConfig      *sarama.Config
 	SkipSerializeErr bool
-	ParamMap         map[string]string
+	ParamMap         ParamMap
+	CosumerCount     int // 处理从kafka连接出来之后的处理数据的协程数量,默认 1
 }
 
 type TLSConfig struct {
@@ -158,7 +162,12 @@ func getKafkaConnectConfig(config map[string]string) (kafkaConnectConfig *Config
 	if _, ok := config["skip.serialize.err"]; ok {
 		kafkaConnectConfig.SkipSerializeErr = true
 	}
+	if _, ok := config["consumer.count"]; ok {
+		kafkaConnectConfig.CosumerCount, _ = strconv.Atoi(config["consumer.count"])
+	}
+	if kafkaConnectConfig.CosumerCount <= 0 {
+		kafkaConnectConfig.CosumerCount = DefaultConsumerCount
+	}
 
 	return kafkaConnectConfig, err
-
 }

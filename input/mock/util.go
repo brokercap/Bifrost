@@ -14,14 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
+import "strings"
 
-const DefaultBinlogPosition = 0
-
-const BatchAndReplicate = "BatchAndReplicate"
-
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+func ParseDSN(dsn string) (params map[string]string) {
+	params = make(map[string]string, 0)
+	if dsn == "" {
+		return
+	}
+	for _, v := range strings.Split(dsn, "&") {
+		param := strings.SplitN(v, "=", 2)
+		if len(param) != 2 {
+			continue
+		}
+		params[param[0]] = param[1]
+	}
+	return params
+}

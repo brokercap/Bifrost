@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
-
-const DefaultBinlogPosition = 0
-
-const BatchAndReplicate = "BatchAndReplicate"
-
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+func (c *InputMock) ConsumeTableData() {
+	for {
+		select {
+		case <-c.inputCtx.Done():
+			return
+		case data := <-c.tableDataChan:
+			c.Callback(data)
+		}
+	}
+}

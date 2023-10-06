@@ -212,6 +212,27 @@ func (This *ReplicateFitler) DelReplicateIgnoreDb(db string, table string) {
 	}
 }
 
+func (This *ReplicateFitler) GetReplicateDoDbList() (databaseMapTableList map[string][]string) {
+	databaseMapTableList = make(map[string][]string, 0)
+	This.Lock()
+	defer This.Unlock()
+	if _, ok := This.ReplicateDoDb["*"]; ok {
+		databaseMapTableList["*"] = []string{"*"}
+		return
+	}
+	for dbName, tableMap := range This.ReplicateDoDb {
+		databaseMapTableList[dbName] = make([]string, 0)
+		if _, ok := tableMap["*"]; ok {
+			databaseMapTableList[dbName] = append(databaseMapTableList[dbName], "*")
+			continue
+		}
+		for tableName, _ := range tableMap {
+			databaseMapTableList[dbName] = append(databaseMapTableList[dbName], tableName)
+		}
+	}
+	return
+}
+
 func (This *ReplicateFitler) CheckReplicateDb(db string, table string) bool {
 	This.Lock()
 	defer This.Unlock()

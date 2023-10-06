@@ -212,7 +212,8 @@
                 var callback = function (data) {
                     if(data.status) {
                         alert("success,请点击开始按钮进行开启 初始化操作")
-                        window.location.href = "/history/index?DbName=" + DbName + "&SchemaName=" + SchemaName + "&TableName=" + TableName;
+                        newWindowsurl = "/history/index?DbName=" + DbName + "&SchemaName=" + SchemaName + "&TableName=" + TableName;
+                        window.open(newWindowsurl);
                     }else{
                         alert(data.msg);
                     }

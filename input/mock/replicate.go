@@ -14,14 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
+func (c *InputMock) AddReplicateDoDb(SchemaName, TableName string) (err error) {
+	err = c.AddReplicateDoDb0(SchemaName, TableName)
+	if err != nil {
+		return err
+	}
+	c.StartTableWithName(SchemaName, TableName)
+	return
+}
 
-const DefaultBinlogPosition = 0
-
-const BatchAndReplicate = "BatchAndReplicate"
-
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+func (c *InputMock) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+	err = c.DelReplicateDoDb0(SchemaName, TableName)
+	if err != nil {
+		return err
+	}
+	return
+}

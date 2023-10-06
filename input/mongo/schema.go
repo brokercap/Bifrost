@@ -144,7 +144,7 @@ func (c *MongoInput) CheckUri(CheckPrivileg bool) (result inputDriver.CheckUriRe
 		BinlogPosition: 0,
 		BinlogFormat:   "row",
 		BinlogRowImage: "full",
-		Gtid:           "latest",
+		Gtid:           BatchAndReplicate,
 		ServerId:       1,
 	}
 	return

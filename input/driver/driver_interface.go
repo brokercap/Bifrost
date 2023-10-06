@@ -69,6 +69,14 @@ func (c *PluginDriverInterface) CheckUri(CheckPrivilege bool) (CheckUriResult Ch
 }
 
 func (c *PluginDriverInterface) AddReplicateDoDb(SchemaName, TableName string) (err error) {
+	return c.AddReplicateDoDb0(SchemaName, TableName)
+}
+
+func (c *PluginDriverInterface) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+	return c.DelReplicateDoDb0(SchemaName, TableName)
+}
+
+func (c *PluginDriverInterface) AddReplicateDoDb0(SchemaName, TableName string) (err error) {
 	if c.replicateFitler == nil {
 		c.replicateFitler = NewReplicateFitler()
 	}
@@ -76,12 +84,20 @@ func (c *PluginDriverInterface) AddReplicateDoDb(SchemaName, TableName string) (
 	return nil
 }
 
-func (c *PluginDriverInterface) DelReplicateDoDb(SchemaName, TableName string) (err error) {
+func (c *PluginDriverInterface) DelReplicateDoDb0(SchemaName, TableName string) (err error) {
 	if c.replicateFitler == nil {
 		return
 	}
 	c.replicateFitler.DelReplicateDoDb(SchemaName, TableName)
 	return nil
+}
+
+func (c *PluginDriverInterface) GetReplicateDoDbList() (databaseMapTableList map[string][]string) {
+	return c.GetReplicateDoDbList0()
+}
+
+func (c *PluginDriverInterface) GetReplicateDoDbList0() (databaseMapTableList map[string][]string) {
+	return c.replicateFitler.GetReplicateDoDbList()
 }
 
 func (c *PluginDriverInterface) CheckReplicateDb(SchemaName, TableName string) bool {

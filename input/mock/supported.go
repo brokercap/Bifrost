@@ -14,14 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
+import inputDriver "github.com/brokercap/Bifrost/input/driver"
 
-const DefaultBinlogPosition = 0
+func (c *InputMock) IsSupported(supportType inputDriver.SupportType) bool {
+	switch supportType {
+	case inputDriver.SupportIncre:
+		return true
 
-const BatchAndReplicate = "BatchAndReplicate"
-
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+		// 需要由上一层server层定时计算最小的位点提交进来
+	case inputDriver.SupportNeedMinPosition:
+		return false
+	}
+	return false
+}

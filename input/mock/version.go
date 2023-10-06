@@ -14,14 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
+import inputDriver "github.com/brokercap/Bifrost/input/driver"
 
-const DefaultBinlogPosition = 0
+const (
+	VERSION         string = "v2.2.0"
+	BIFROST_VERSION string = "v2.2.0"
+)
 
-const BatchAndReplicate = "BatchAndReplicate"
+const InputName = "mock"
 
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+func init() {
+	inputDriver.Register(InputName, NewInputMock, VERSION, BIFROST_VERSION)
+}

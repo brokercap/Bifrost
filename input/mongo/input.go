@@ -23,6 +23,8 @@ import (
 	"github.com/rwynn/gtm/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -56,7 +58,10 @@ func (c *MongoInput) GetUriExample() (string, string) {
 	<p>请使用upsert进行修改数据,则可以正常同步所有字段,例如：</p>
 	<p style="color:#F00;font-weight:bold">db.bifrost_field_test.update({"name":"bifrost"},{$set:{version:"v2.x"}});</p>
     <p>如果使用以下方式更新数据，则获取不到旧数据</p>
-    <p>db.bifrost_field_test.update({"name":"bifrost"},{version:"v2.x"});</p>
+    <p>GTID: ` + OnlyBatch + ` 只做全量</p>
+	<p>GTID: ` + BatchAndReplicate + ` 先做全量再做增量</p>
+	<p>GTID:  latest 为空,从最新的位点开始做增量</p>
+	<p>GTID:  {"T":1696329531,"I":0} 指定定位开始增量</p>
 	`
 	exampleUri := "mongodb://[user:pass@]host1[:port1][,host2[:port2],...][/database][?options]"
 	return exampleUri, notesHtml
@@ -68,7 +73,6 @@ func (c *MongoInput) Init() {
 
 func (c *MongoInput) SetOption(inputInfo inputDriver.InputInfo, param map[string]interface{}) {
 	c.inputInfo = inputInfo
-	c.currentPosition = c.GTID2OpLogPosition(inputInfo.GTID)
 }
 
 func (c *MongoInput) setStatus(status inputDriver.StatusFlag) {
@@ -84,17 +88,63 @@ func (c *MongoInput) setStatus(status inputDriver.StatusFlag) {
 }
 
 func (c *MongoInput) Start(ch chan *inputDriver.PluginStatus) error {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("[ERROR] output[%s] panic err:%+v \n", "mongo", string(debug.Stack()))
+		}
+		c.setStatus(inputDriver.CLOSED)
+	}()
 	c.PluginStatusChan = ch
-	return c.Start0()
+	switch c.inputInfo.GTID {
+	case BatchAndReplicate:
+		return c.StartBatchAndReplicate()
+	case OnlyBatch:
+		return c.StartOnlyBatch()
+	default:
+		return c.StartOnlyReplicate()
+	}
 }
 
-func (c *MongoInput) Start0() error {
+func (c *MongoInput) StartBatchAndReplicate() error {
+	p, err := c.GetCurrentPosition()
+	if err != nil {
+		return err
+	}
+	err = c.BatchStart()
+	if err != nil {
+		return err
+	}
+	c.inputInfo.GTID = p.GTID
+	lastOpTime := c.GTID2OpLogPosition(p.GTID)
+	if lastOpTime != nil {
+		c.lastOp = new(gtm.Op)
+		c.lastOp.Timestamp = *lastOpTime
+	}
+	err = c.StartOnlyReplicate()
+	return err
+}
+
+func (c *MongoInput) StartOnlyBatch() error {
+	c.setStatus(inputDriver.STARTING)
+	c.setStatus(inputDriver.RUNNING)
+	defer func() {
+		c.setStatus(inputDriver.CLOSED)
+	}()
+	err := c.BatchStart()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *MongoInput) StartOnlyReplicate() error {
+	c.currentPosition = c.GTID2OpLogPosition(c.inputInfo.GTID)
 	c.ctx, c.ctxCancleFun = context.WithCancel(context.Background())
 	var timeout = 2 * time.Second
 	var timer = time.NewTimer(timeout)
 	for {
 		c.setStatus(inputDriver.STARTING)
-		c.Start1()
+		c.StartOnlyReplicate0()
 		timer.Reset(timeout)
 		select {
 		case <-c.ctx.Done():
@@ -108,7 +158,7 @@ func (c *MongoInput) Start0() error {
 	return nil
 }
 
-func (c *MongoInput) Start1() error {
+func (c *MongoInput) StartOnlyReplicate0() error {
 	client, err := CreateMongoClient(c.inputInfo.ConnectUri, c.ctx)
 	if err != nil {
 		return err

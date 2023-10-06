@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mongo
+package mock
 
-const DefaultBinlogFileName = "bifrost.000001"
+import (
+	"context"
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+)
 
-const DefaultBinlogPosition = 0
-
-const BatchAndReplicate = "BatchAndReplicate"
-
-const OnlyBatch = "OnlyBatch"
-
-const PerBatchLimit int = 1000
+type Table interface {
+	GetSchemaName() string
+	GetTableName() string
+	Start(ctx context.Context, ch chan *pluginDriver.PluginDataType)
+}

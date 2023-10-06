@@ -37,7 +37,7 @@ func (c *InputKafka) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama
 			if kafkaMsg == nil {
 				return nil
 			}
-			c.ToChildCallback(kafkaMsg)
+			c.SendToInputConsume(kafkaMsg)
 			break
 		case _ = <-c.kafkaGroupCtx.Done():
 			return nil
