@@ -21,6 +21,10 @@ func (c *MongoInput) BatchStart() (err error) {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		client.Disconnect(ctx)
+	}()
 	for schemaName, tableList := range dbTableList {
 		for _, tableName := range tableList {
 			collection := c.GetCollection(client, schemaName, tableName)
