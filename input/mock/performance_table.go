@@ -58,13 +58,17 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 	} else {
 		halfDataCount = t.TableDataCount / 2
 	}
-
-	timer := time.NewTimer(t.InterVal)
 	t.Batch(&count, halfDataCount)
+	timer := time.NewTimer(t.InterVal)
 	for {
+		if t.TableRowsEventCount >= count {
+			return
+		}
 		select {
 		case <-timer.C:
+			timer.Stop()
 			t.Batch(&count, halfDataCount)
+			timer.Reset(t.InterVal)
 		case <-ctx.Done():
 			return
 		}
