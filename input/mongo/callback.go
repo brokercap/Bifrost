@@ -121,6 +121,10 @@ func (c *MongoInput) TransferDataAndColumnMapping(row map[string]interface{}) (c
 			columnMapping[key] = "string"
 			continue
 		}
+		if val == nil {
+			columnMapping[key] = "Nullable(string)"
+			continue
+		}
 		switch reflect.TypeOf(val).Kind() {
 		case reflect.Int8:
 			row[key] = fmt.Sprint(val)
