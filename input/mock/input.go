@@ -95,7 +95,7 @@ func (c *InputMock) Start0() error {
 	c.StartPerformanceTables()
 	if len(c.tableMap) == 0 {
 		c.setStatus(inputDriver.CLOSED)
-		return errors.New("not table setting sync")
+		return errors.New("no table setting sync")
 	}
 	go c.TableTaskWait()
 	return nil
@@ -115,7 +115,6 @@ func (c *InputMock) TableTaskWait() {
 		c.Unlock()
 	}()
 	c.ws.Wait()
-	c.setStatus(inputDriver.STOPPED)
 	c.setStatus(inputDriver.CLOSED)
 }
 
