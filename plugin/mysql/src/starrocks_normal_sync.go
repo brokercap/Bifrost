@@ -55,7 +55,7 @@ LOOP:
 		}
 	}
 	if len(deleteList) > 0 {
-		err = This.StarRocksDelete(list[0].SchemaName, list[0].TableName, list[0].Pri, deleteList)
+		err = This.StarRocksDelete(This.GetSchemaName(list[0]), This.GetTableName(list[0]), list[0].Pri, deleteList)
 		if err != nil {
 			This.err, This.conn.err = err, err
 			log.Printf("[ERROR] output[%s] StarRocksCommitNormal delete:(%+v) SchemaName:%s TableName:%s err:%+v", OutputName, deleteList, list[0].SchemaName, list[0].TableName, err)
