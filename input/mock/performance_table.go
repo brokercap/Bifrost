@@ -49,6 +49,9 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 	t.event = pluginTestData.NewEvent()
 	t.event.SetSchema(t.SchemaName)
 	t.event.SetTable(t.TableName)
+	defer func() {
+		t.event = nil
+	}()
 
 	var count int
 	var halfDataCount int
