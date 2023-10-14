@@ -309,6 +309,10 @@ function formatDate(timestamp) {
     $("#uri").change(
         function(){
             dbUriChecked = false;
+            // 去除前后换行符
+            var uri = $(this).val()
+            uri = uri.replace(/^\n+|\n+$/g, '');
+            $(this).val(uri);
             $("#checkUriBtn").show();
         }
     );

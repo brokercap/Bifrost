@@ -49,6 +49,9 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 	t.event = pluginTestData.NewEvent()
 	t.event.SetSchema(t.SchemaName)
 	t.event.SetTable(t.TableName)
+	defer func() {
+		t.event = nil
+	}()
 
 	var count int
 	var halfDataCount int
@@ -61,7 +64,7 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 	t.Batch(&count, halfDataCount)
 	timer := time.NewTimer(t.InterVal)
 	for {
-		if t.TableRowsEventCount >= count {
+		if count >= t.TableRowsEventCount {
 			return
 		}
 		select {
