@@ -262,6 +262,10 @@
     $("#ConnUri").change(
         function(){
             uriChecked = false;
+            // 去除前后换行符
+            var uri = $(this).val()
+            uri = uri.replace(/^\n+|\n+$/g, '');
+            $(this).val(uri);
             $("#checkUriBtn").show();
         }
     );
@@ -377,6 +381,8 @@
                 var ToServerKey = $("#updateToServerInfoDiv input[name=ToServerKey]").val();
                 var PluginName = $("#updateToServerInfoDiv input[name=PluginName]").val();
                 var ConnUri = $("#updateToServerInfoDiv textarea[name=ConnUri]").val();
+                // 去除前后换行符
+                ConnUri = ConnUri.replace(/^\n+|\n+$/g, '');
                 var Notes = $("#updateToServerInfoDiv textarea[name=Notes]").val();
                 var url = "/toserver/update";
                 if( MinConn == "" || isNaN(MinConn) ){
