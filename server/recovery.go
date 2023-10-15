@@ -349,20 +349,22 @@ func recoveryData(data map[string]dbSaveInfo, isStop bool) {
 						break
 					}
 					toServerObj := &ToServer{
-						ToServerID:        toServer.ToServerID,
-						MustBeSuccess:     toServer.MustBeSuccess,
-						FilterQuery:       toServer.FilterQuery,
-						FilterUpdate:      toServer.FilterUpdate,
-						ToServerKey:       toServer.ToServerKey,
-						PluginName:        toServer.PluginName,
-						FieldList:         toServer.FieldList,
-						BinlogFileNum:     toServerBinlog.BinlogFileNum,
-						BinlogPosition:    toServerBinlog.BinlogPosition,
-						LastSuccessBinlog: toServerBinlog,
-						LastQueueBinlog:   toServerLastQueueBinlog,
-						PluginParam:       toServer.PluginParam,
-						FileQueueStatus:   toServer.FileQueueStatus,
-						Status:            status,
+						ToServerID:         toServer.ToServerID,
+						MustBeSuccess:      toServer.MustBeSuccess,
+						FilterQuery:        toServer.FilterQuery,
+						FilterUpdate:       toServer.FilterUpdate,
+						ToServerKey:        toServer.ToServerKey,
+						PluginName:         toServer.PluginName,
+						FieldList:          toServer.FieldList,
+						BinlogFileNum:      toServerBinlog.BinlogFileNum,
+						BinlogPosition:     toServerBinlog.BinlogPosition,
+						LastSuccessBinlog:  toServerBinlog,
+						LastQueueBinlog:    toServerLastQueueBinlog,
+						PluginParam:        toServer.PluginParam,
+						FileQueueStatus:    toServer.FileQueueStatus,
+						BatchSize:          toServer.BatchSize,
+						BatchCommitTimeOut: toServer.BatchCommitTimeOut,
+						Status:             status,
 					}
 					if toServerObj.FileQueueStatus {
 						var lastDataEvent *pluginDriver.PluginDataType

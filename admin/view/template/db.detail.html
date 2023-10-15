@@ -155,8 +155,28 @@
                                     </select>
                                     <p class="help-block m-b-none">True: update事件，所选字段内容都没有变更情况下，不进行推送，False: 不管字段有没有更新，全部都会推送</p>
                                 </div>
-                                
                             </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">BatchSize：</label>
+                                <div class="col-sm-9">
+                                    <div class="col-sm-5" style="padding-left: 0px; padding-right: 5px">
+                                        <input type="text"  name="BatchSize" id="BatchSize" class="form-control" value="1000">
+                                    </div>
+                                    <div class="col-sm-2" style="padding-left: 0px; padding-right: 5px">
+                                        <input type="text" title="BatchCommitTimeOut" name="BatchCommitTimeOut" id="BatchCommitTimeOut" class="form-control" value="5">
+                                    </div>
+                                    <div class="col-sm-3" style="padding-left: 0px;padding-right: 0px">
+                                        <select class="form-control">
+                                            <option value="">秒</option>
+                                        </select>
+                                    </div>
+                                    <div style="clear: both"></div>
+                                    <p class="help-block m-b-none">条数或者时间,满足其中一个条件,则会触发同步</p>
+
+                                </div>
+                            </div>
+
 
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">&nbsp;</label>
@@ -532,6 +552,7 @@
                     }
                     var others = "";
 
+                    others += "<p>BatchSize: "+v.BatchSize+"</p><p>BatchCommitTimeOut: "+v.BatchCommitTimeOut+"</p>";
                     others += "<p>MustBeSuccess: "+v.MustBeSuccess+"</p><p>FilterQuery: "+v.FilterQuery+"</p><p>FilterUpdate: "+v.FilterUpdate+"</p>";
 
                     others += "<p title=\"最后一个成功处理的位点\">BinlogFileNum: "+v.LastSuccessBinlog.BinlogFileNum+"</p><p>BinlogPosition: "+v.LastSuccessBinlog.BinlogPosition+"</p>";
@@ -765,186 +786,194 @@
             });
 
             $("#addToServerBtn").click(
-                    function(){
-                        if($("#addToServerKey").val()==null){
-                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
-                                window.location.href = "/toserver/list";
-                                return false;
-                            }else{
-                                return false;
-                            }
-                        }
-                        var p = doGetPluginParam(getPluginFunctionParam());;
-                        if (getTableName() == "AllTables"){
-                            if(  p.batchSupport != true){
-                                alert("当前插件配置不支持 批量 设置!")
-                                return false;
-                            }
-                        }
-                        if (p.status == false){
-                            alert(p.msg);
+                function(){
+                    if($("#addToServerKey").val()==null){
+                        if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                            window.location.href = "/toserver/list";
+                            return false;
+                        }else{
                             return false;
                         }
-                        var DbName = $("#tableToServerListContair").attr("DbName");
-                        var SchemaName = $("#tableToServerListContair").attr("schema");
-                        var TableName = $("#tableToServerListContair").attr("TableName");
-                        if (TableName == ""){
-                            alert("selected table please!");
-                            return false;
-                        }
-                        var MustBeSuccess = $("#MustBeSuccess").val();
-                        if (MustBeSuccess == "true"){
-                            MustBeSuccess = true;
-                        }else{
-                            MustBeSuccess = false;
-                        }
-                        var addToServerKey = $("#addToServerKey").val();
-                        var fieldlist = [];
-                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
-                            fieldlist.push($(this).val());
-                        });
-						var FilterQuery = $("#FilterQuery").val();
-                        if (FilterQuery == "true"){
-                            FilterQuery = true;
-                        }else{
-                            FilterQuery = false;
-                        }
-						var FilterUpdate = $("#FilterUpdate").val();
-                        if (FilterUpdate == "true"){
-                            FilterUpdate = true;
-                        }else{
-                            FilterUpdate = false;
-                        }
-                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/toserver/add';
-                        var data = {
-                            DbName:DbName,
-                            SchemaName:SchemaName,
-                            TableName:TableName,
-                            ToServerKey:addToServerKey,
-                            PluginName:pluginName,
-                            MustBeSuccess:MustBeSuccess,
-							FilterQuery:FilterQuery,
-							FilterUpdate:FilterUpdate,
-                            FieldList:fieldlist,
-                            PluginParam:p.data,
-                        };
-                        var callback = function (data) {
-                            if(!data.status){
-                                alert(data.msg);
-                                return false;
-                            }
-                            GetTableToServerList(SchemaName,TableName);
-                            doChangeToServer();
-                        };
-                        Ajax("POST",url, data,callback,false);
                     }
-            );
-
-
-            $("#batchAddToServerBtn").click(
-                    function(){
-                        if($("#addToServerKey").val()==null){
-                            if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
-                                window.location.href = "/toserver/list";
-                                return;
-                            }else{
-                                return;
-                            }
-                        }
-                        var obj = $(this);
-                        if ($(obj).text() == "正在提交"){
-                            return false;
-                        }
-                        var p = doGetPluginParam(getPluginFunctionParam());
+                    var p = doGetPluginParam(getPluginFunctionParam());;
+                    if (getTableName() == "AllTables"){
                         if(  p.batchSupport != true){
                             alert("当前插件配置不支持 批量 设置!")
                             return false;
                         }
-                        if (p.status == false){
-                            alert(p.msg);
-                            return false;
-                        }
-                        var DbName = $("#tableToServerListContair").attr("DbName");
-                        var SchemaName = $("#tableToServerListContair").attr("schema");
-                        var tableArr = [];
-
-                        $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
-                            if($(this).parent().parent().find(".button button").text()=="DEL"){
-                                tableArr.push($(this).val());
-                            }
-                        });
-
-                        if (tableArr.length == 0){
-                            alert("请先选择 需要同步的 表");
-                            return false;
-                        }
-                        var fieldlist = [];
-                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
-                            fieldlist.push($(this).val());
-                        });
-                        if (fieldlist.length > 0){
-                            alert("批量提交不能选择字段");
-                            return false;
-                        }
-                        var MustBeSuccess = $("#MustBeSuccess").val();
-                        if (MustBeSuccess == "true"){
-                            MustBeSuccess = true;
-                        }else{
-                            MustBeSuccess = false;
-                        }
-                        var addToServerKey = $("#addToServerKey").val();
-                        var fieldlist = [];
-                        $.each($("#TableFieldsContair input:checkbox:checked"),function(){
-                            fieldlist.push($(this).val());
-                        });
-                        var FilterQuery = $("#FilterQuery").val();
-                        if (FilterQuery == "true"){
-                            FilterQuery = true;
-                        }else{
-                            FilterQuery = false;
-                        }
-                        var FilterUpdate = $("#FilterUpdate").val();
-                        if (FilterUpdate == "true"){
-                            FilterUpdate = true;
-                        }else{
-                            FilterUpdate = false;
-                        }
-                        var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
-                        var url = '/table/toserver/add';
-                        var data = {
-                            DbName:DbName,
-                            SchemaName:SchemaName,
-                            TableName:TableName,
-                            ToServerKey:addToServerKey,
-                            PluginName:pluginName,
-                            MustBeSuccess:MustBeSuccess,
-                            FilterQuery:FilterQuery,
-                            FilterUpdate:FilterUpdate,
-                            FieldList:fieldlist,
-                            PluginParam:p.data,
-                        }
-                        $(obj).text("正在提交");
-                        $("#batchAddToServerResultDiv").html("");
-                        var resultFun = function (content) {
-                            $("#batchAddToServerResultDiv").append("<p>"+content+"</p>");
-                        }
-                        resultFun("开始提交");
-                        for(var i in tableArr) {
-                            data.TableName = tableArr[i];
-
-                            var callback = function (dataResult) {
-                                if(dataResult.status){
-                                    resultFun(tableArr[i]+" success");
-                                }else{
-                                    resultFun(tableArr[i]+ " "+ dataResult.msg);
-                                }
-                            };
-                            Ajax("POST",url, data,callback,false);
-                        }
-                        resultFun("执行完成");
-                        $(obj).text("批量提交");
                     }
+                    if (p.status == false){
+                        alert(p.msg);
+                        return false;
+                    }
+                    var DbName = $("#tableToServerListContair").attr("DbName");
+                    var SchemaName = $("#tableToServerListContair").attr("schema");
+                    var TableName = $("#tableToServerListContair").attr("TableName");
+                    if (TableName == ""){
+                        alert("selected table please!");
+                        return false;
+                    }
+                    var MustBeSuccess = $("#MustBeSuccess").val();
+                    if (MustBeSuccess == "true"){
+                        MustBeSuccess = true;
+                    }else{
+                        MustBeSuccess = false;
+                    }
+                    var addToServerKey = $("#addToServerKey").val();
+                    var fieldlist = [];
+                    $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                        fieldlist.push($(this).val());
+                    });
+                    var FilterQuery = $("#FilterQuery").val();
+                    if (FilterQuery == "true"){
+                        FilterQuery = true;
+                    }else{
+                        FilterQuery = false;
+                    }
+                    var FilterUpdate = $("#FilterUpdate").val();
+                    if (FilterUpdate == "true"){
+                        FilterUpdate = true;
+                    }else{
+                        FilterUpdate = false;
+                    }
+                    var BatchSize = parseInt($("#BatchSize").val());
+                    var BatchCommitTimeOut = parseInt($("#BatchCommitTimeOut").val());
+                    var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                    var url = '/table/toserver/add';
+                    var data = {
+                        DbName:DbName,
+                        SchemaName:SchemaName,
+                        TableName:TableName,
+                        ToServerKey:addToServerKey,
+                        PluginName:pluginName,
+                        MustBeSuccess:MustBeSuccess,
+                        FilterQuery:FilterQuery,
+                        FilterUpdate:FilterUpdate,
+                        FieldList:fieldlist,
+                        BatchSize:BatchSize,
+                        BatchCommitTimeOut:BatchCommitTimeOut,
+                        PluginParam:p.data,
+                    };
+                    var callback = function (data) {
+                        if(!data.status){
+                            alert(data.msg);
+                            return false;
+                        }
+                        GetTableToServerList(SchemaName,TableName);
+                        doChangeToServer();
+                    };
+                    Ajax("POST",url, data,callback,false);
+                }
+            );
+
+
+            $("#batchAddToServerBtn").click(
+                function(){
+                    if($("#addToServerKey").val()==null){
+                        if(confirm("目标库地址为空，是否跳转到 添加 目标库 ？")){
+                            window.location.href = "/toserver/list";
+                            return;
+                        }else{
+                            return;
+                        }
+                    }
+                    var obj = $(this);
+                    if ($(obj).text() == "正在提交"){
+                        return false;
+                    }
+                    var p = doGetPluginParam(getPluginFunctionParam());
+                    if(  p.batchSupport != true){
+                        alert("当前插件配置不支持 批量 设置!")
+                        return false;
+                    }
+                    if (p.status == false){
+                        alert(p.msg);
+                        return false;
+                    }
+                    var DbName = $("#tableToServerListContair").attr("DbName");
+                    var SchemaName = $("#tableToServerListContair").attr("schema");
+                    var tableArr = [];
+
+                    $("#TableListContair .check_input input[type='checkbox']:checked").each(function (index, item) {
+                        if($(this).parent().parent().find(".button button").text()=="DEL"){
+                            tableArr.push($(this).val());
+                        }
+                    });
+
+                    if (tableArr.length == 0){
+                        alert("请先选择 需要同步的 表");
+                        return false;
+                    }
+                    var fieldlist = [];
+                    $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                        fieldlist.push($(this).val());
+                    });
+                    if (fieldlist.length > 0){
+                        alert("批量提交不能选择字段");
+                        return false;
+                    }
+                    var MustBeSuccess = $("#MustBeSuccess").val();
+                    if (MustBeSuccess == "true"){
+                        MustBeSuccess = true;
+                    }else{
+                        MustBeSuccess = false;
+                    }
+                    var addToServerKey = $("#addToServerKey").val();
+                    var fieldlist = [];
+                    $.each($("#TableFieldsContair input:checkbox:checked"),function(){
+                        fieldlist.push($(this).val());
+                    });
+                    var FilterQuery = $("#FilterQuery").val();
+                    if (FilterQuery == "true"){
+                        FilterQuery = true;
+                    }else{
+                        FilterQuery = false;
+                    }
+                    var FilterUpdate = $("#FilterUpdate").val();
+                    if (FilterUpdate == "true"){
+                        FilterUpdate = true;
+                    }else{
+                        FilterUpdate = false;
+                    }
+                    var BatchSize = parseInt($("#BatchSize").val());
+                    var BatchCommitTimeOut = parseInt($("#BatchCommitTimeOut").val());
+                    var pluginName = $("#addToServerKey").find("option:selected").attr("pluginName");
+                    var url = '/table/toserver/add';
+                    var data = {
+                        DbName:DbName,
+                        SchemaName:SchemaName,
+                        TableName:TableName,
+                        ToServerKey:addToServerKey,
+                        PluginName:pluginName,
+                        MustBeSuccess:MustBeSuccess,
+                        FilterQuery:FilterQuery,
+                        FilterUpdate:FilterUpdate,
+                        FieldList:fieldlist,
+                        BatchSize:BatchSize,
+                        BatchCommitTimeOut:BatchCommitTimeOut,
+                        PluginParam:p.data,
+                    }
+                    $(obj).text("正在提交");
+                    $("#batchAddToServerResultDiv").html("");
+                    var resultFun = function (content) {
+                        $("#batchAddToServerResultDiv").append("<p>"+content+"</p>");
+                    }
+                    resultFun("开始提交");
+                    for(var i in tableArr) {
+                        data.TableName = tableArr[i];
+
+                        var callback = function (dataResult) {
+                            if(dataResult.status){
+                                resultFun(tableArr[i]+" success");
+                            }else{
+                                resultFun(tableArr[i]+ " "+ dataResult.msg);
+                            }
+                        };
+                        Ajax("POST",url, data,callback,false);
+                    }
+                    resultFun("执行完成");
+                    $(obj).text("批量提交");
+                }
             );
 
         });

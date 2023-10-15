@@ -56,6 +56,7 @@ type Driver interface {
 	Close() bool
 	GetUriExample() string
 	CheckUri() error
+	CommitBatch(dataList []*PluginDataType, retry bool) (*PluginDataType, *PluginDataType, error)
 	Insert(data *PluginDataType, retry bool) (*PluginDataType, *PluginDataType, error) //binlog位点，处理了多少条数据,错误信息
 	Update(data *PluginDataType, retry bool) (*PluginDataType, *PluginDataType, error)
 	Del(data *PluginDataType, retry bool) (*PluginDataType, *PluginDataType, error)

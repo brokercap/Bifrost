@@ -24,8 +24,8 @@ import (
 	"time"
 )
 
-const VERSION = "v2.0.5"
-const BIFROST_VERION = "v2.0.5"
+const VERSION = "v2.4.0"
+const BIFROST_VERION = "v2.4.0"
 
 func init() {
 	pluginDriver.Register("kafka", NewConn, VERSION, BIFROST_VERION)
@@ -206,23 +206,23 @@ func (This *Conn) Close() bool {
 }
 
 func (This *Conn) Insert(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(data, retry, false)
+	return This.SendToList(data, retry, false)
 }
 
 func (This *Conn) Update(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(data, retry, false)
+	return This.SendToList(data, retry, false)
 }
 
 func (This *Conn) Del(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(data, retry, false)
+	return This.SendToList(data, retry, false)
 }
 
 func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(data, retry, false)
+	return This.SendToList(data, retry, false)
 }
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(data, retry, true)
+	return This.SendToList(data, retry, true)
 }
 
 func (This *Conn) getMsg(data *pluginDriver.PluginDataType) (*sarama.ProducerMessage, error) {
@@ -242,7 +242,7 @@ func (This *Conn) getMsg(data *pluginDriver.PluginDataType) (*sarama.ProducerMes
 	return msg, nil
 }
 
-func (This *Conn) sendToList(data *pluginDriver.PluginDataType, retry bool, isCommit bool) (LastSuccessCommitData *pluginDriver.PluginDataType, Errdata *pluginDriver.PluginDataType, err error) {
+func (This *Conn) SendToList(data *pluginDriver.PluginDataType, retry bool, isCommit bool) (LastSuccessCommitData *pluginDriver.PluginDataType, Errdata *pluginDriver.PluginDataType, err error) {
 	if data == nil && retry == true {
 		LastSuccessCommitData, err = This.sendToKafkaByBatch()
 		goto endErr
@@ -352,5 +352,5 @@ func (This *Conn) sendToKafkaByBatch() (*pluginDriver.PluginDataType, error) {
 }
 
 func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
-	return This.sendToList(nil, true, false)
+	return This.SendToList(nil, true, false)
 }

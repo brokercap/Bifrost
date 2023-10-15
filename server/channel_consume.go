@@ -100,7 +100,7 @@ func (This *consume_channel_obj) sendToServerResult(ToServerInfo *ToServer, plug
 		ToServerInfo.ToServerChan = &ToServerChan{
 			To: make(chan *pluginDriver.PluginDataType, config.ToServerQueueSize),
 		}
-		go ToServerInfo.consume_to_server(This.db, pluginData.SchemaName, pluginData.TableName)
+		go ToServerInfo.ConsumeToServer(This.db, pluginData.SchemaName, pluginData.TableName)
 	}
 	ToServerInfo.Unlock()
 	if ToServerInfo.LastBinlogKey == nil {

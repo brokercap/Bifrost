@@ -27,18 +27,20 @@ type TableToServerController struct {
 }
 
 type TableToServerParam struct {
-	DbName        string
-	SchemaName    string
-	TableName     string
-	ToServerKey   string
-	PluginName    string
-	FieldList     []string
-	MustBeSuccess bool
-	FilterQuery   bool
-	FilterUpdate  bool
-	PluginParam   map[string]interface{}
-	ToServerId    int
-	Index         int
+	DbName             string
+	SchemaName         string
+	TableName          string
+	ToServerKey        string
+	PluginName         string
+	FieldList          []string
+	MustBeSuccess      bool
+	FilterQuery        bool
+	FilterUpdate       bool
+	BatchSize          int
+	BatchCommitTimeOut int
+	PluginParam        map[string]interface{}
+	ToServerId         int
+	Index              int
 }
 
 func (c *TableToServerController) getParam() *TableToServerParam {
@@ -84,13 +86,15 @@ func (c *TableToServerController) Add() {
 		return
 	}
 	toServer := &server.ToServer{
-		MustBeSuccess:  param.MustBeSuccess,
-		FilterQuery:    param.FilterQuery,
-		FilterUpdate:   param.FilterUpdate,
-		ToServerKey:    param.ToServerKey,
-		PluginName:     param.PluginName,
-		FieldList:      param.FieldList,
-		PluginParam:    param.PluginParam,
+		MustBeSuccess:      param.MustBeSuccess,
+		FilterQuery:        param.FilterQuery,
+		FilterUpdate:       param.FilterUpdate,
+		ToServerKey:        param.ToServerKey,
+		PluginName:         param.PluginName,
+		FieldList:          param.FieldList,
+		BatchSize:          param.BatchSize,
+		BatchCommitTimeOut: param.BatchCommitTimeOut,
+		PluginParam:        param.PluginParam,
 	}
 	SchemaName := tansferSchemaName(param.SchemaName)
 	TableName := tansferTableName(param.TableName)

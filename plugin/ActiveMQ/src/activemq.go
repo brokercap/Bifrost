@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-const VERSION = "v1.6.0"
-const BIFROST_VERION = "v1.6.0"
+const VERSION = "v2.4.0"
+const BIFROST_VERION = "v2.4.0"
 
 func init() {
 	pluginDriver.Register("ActiveMQ", NewConn, VERSION, BIFROST_VERION)
@@ -34,10 +34,10 @@ type Conn struct {
 }
 
 type PluginParam struct {
-	QueueName  string
-	Persistent bool
-	Expir      int
-	BifrostFilterQuery	    bool  // bifrost server 保留,是否过滤sql事件
+	QueueName          string
+	Persistent         bool
+	Expir              int
+	BifrostFilterQuery bool // bifrost server 保留,是否过滤sql事件
 }
 
 func (This *Conn) GetUriExample() string {
@@ -59,7 +59,16 @@ func (This *Conn) CheckUri() (err error) {
 	return nil
 }
 
+func (This *Conn) InitSupportBatchCommit() {
+	This.SetChildInsertFunc(This.Insert)
+	This.SetChildUpdateFunc(This.Update)
+	This.SetChildQueryFunc(This.Del)
+	This.SetChildQueryFunc(This.Query)
+	This.SetChildCommitFunc(This.Commit)
+}
+
 func (This *Conn) Open() error {
+	This.InitSupportBatchCommit()
 	This.Connect()
 	return nil
 }
@@ -181,16 +190,16 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (*pluginD
 
 func (This *Conn) Commit(data *pluginDriver.PluginDataType, retry bool) (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {
 	if This.p.BifrostFilterQuery {
-		return data,nil,nil
+		return data, nil, nil
 	}
-	_,_,err := This.sendToList(data)
+	_, _, err := This.sendToList(data)
 	if err == nil {
 		return data, nil, nil
 	}
-	return nil,nil,err
+	return nil, nil, err
 }
 
-func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType,err error) {
+func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (LastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
 	if This.status != "running" {
 		This.ReConnect()
 		if This.status != "running" {
@@ -217,7 +226,7 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType) (LastSuccessComm
 		This.status = "close"
 		return nil, data, err
 	}
-	return nil,nil,nil
+	return nil, nil, nil
 }
 
 func (This *Conn) TimeOutCommit() (*pluginDriver.PluginDataType, *pluginDriver.PluginDataType, error) {

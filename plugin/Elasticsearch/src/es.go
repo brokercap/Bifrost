@@ -17,8 +17,8 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
-const VERSION = "v1.8.5-beta"
-const BIFROST_VERION = "v1.8.5"
+const VERSION = "v2.4.0"
+const BIFROST_VERION = "v2.4.0"
 
 func init() {
 	pluginDriver.Register("Elasticsearch", NewConn, VERSION, BIFROST_VERION)
@@ -72,7 +72,16 @@ func (This *Conn) SetOption(uri *string, param map[string]interface{}) {
 	return
 }
 
+func (This *Conn) InitSupportBatchCommit() {
+	This.SetChildInsertFunc(This.Insert)
+	This.SetChildUpdateFunc(This.Update)
+	This.SetChildQueryFunc(This.Del)
+	This.SetChildQueryFunc(This.Query)
+	This.SetChildCommitFunc(This.Commit)
+}
+
 func (This *Conn) Open() error {
+	This.InitSupportBatchCommit()
 	This.esServerInfo = This.getUriParam(*This.Uri)
 	This.Connect()
 	return nil

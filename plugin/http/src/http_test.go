@@ -1,4 +1,4 @@
-package src_test
+package src
 
 import (
 	"encoding/json"
@@ -9,7 +9,6 @@ import (
 	"time"
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	MyPlugin "github.com/brokercap/Bifrost/plugin/http/src"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 )
 
@@ -69,7 +68,7 @@ func beforeTest() {
 }
 
 func TestChechUri(t *testing.T) {
-	myConn := MyPlugin.NewConn()
+	myConn := NewConn()
 	myConn.SetOption(&httpUrl, nil)
 	if err := myConn.CheckUri(); err != nil {
 		t.Fatal("TestChechUri err:", err)
@@ -87,7 +86,7 @@ func getParam() map[string]interface{} {
 }
 
 func TestSetParam(t *testing.T) {
-	myConn := MyPlugin.NewConn()
+	myConn := NewConn()
 	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	p, err := myConn.SetParam(getParam())
@@ -109,7 +108,7 @@ func TestSetParam(t *testing.T) {
 }
 
 func TestCommit(t *testing.T) {
-	myConn := MyPlugin.NewConn()
+	myConn := NewConn()
 	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	myConn.SetParam(getParam())
@@ -122,7 +121,7 @@ func TestCommit(t *testing.T) {
 }
 
 func TestAndCheckData(t *testing.T) {
-	myConn := MyPlugin.NewConn()
+	myConn := NewConn()
 	myConn.SetOption(&httpUrl, nil)
 	myConn.Open()
 	myConn.SetParam(getParam())
@@ -219,7 +218,7 @@ func Test_GetUriParam(t *testing.T) {
 	}
 
 	for _, caseInfo := range caseArr {
-		user, pwd, newUrl := MyPlugin.GetUriParam(caseInfo.uri)
+		user, pwd, newUrl := GetUriParam(caseInfo.uri)
 		if user != caseInfo.user {
 			t.Fatalf("userName: %s != %s ", user, caseInfo.user)
 		}

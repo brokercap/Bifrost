@@ -3,18 +3,12 @@ function doGetPluginParam(){
 
 	var Table = $("#to_mysql_table").val();
     var Schema = $("#to_mysql_schema").val();
-    var BatchSize = $("#MySQL_BatchSize").val();
     var NullTransferDefault = $("#MySQL_NullTransferDefault").val();
     var SyncMode = $("#MySQL_SyncMode").val();
 
     if( Table != "" && SyncMode == "NoSyncData" ) {
         result.msg = "不同步数据模式,只支持 自动表结构匹配表 模式!";
         result.batchSupport = true;
-        return result;
-    }
-
-    if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)){
-        result.msg = "BatchSize must be int!"
         return result;
     }
 
@@ -60,7 +54,6 @@ function doGetPluginParam(){
     result.data["PriKey"]   = PriKey;
     result.data["Schema"]   = Schema;
     result.data["Table"]    = Table;
-    result.data["BatchSize"] = parseInt(BatchSize);
     if (NullTransferDefault == "true"){
         result.data["NullTransferDefault"] = true;
     }else{

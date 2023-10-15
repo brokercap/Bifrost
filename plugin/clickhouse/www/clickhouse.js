@@ -14,7 +14,6 @@ function doGetPluginParam() {
 
     var CkTable = $("#clickohuse_table").val();
     var CkSchema = $("#clickhouse_schema").val();
-    var BatchSize = $("#CK_BatchSize").val();
     var SyncType = $("#clickhouse_sync_type").val();
     var NullNotTransferDefault = $("#clickhouse_NullNotTransferDefault").val();
     var LowerCaseTableNames = $("#clickhouse_LowerCaseTableNames").val();
@@ -32,11 +31,6 @@ function doGetPluginParam() {
     }
     if( CkSchema != "" ) {
         AutoSchemaPrefix = ""
-    }
-
-    if (BatchSize != "" && BatchSize != null && isNaN(BatchSize)) {
-        result.msg = "BatchSize must be int!";
-        return result;
     }
 
     var PriKey = [];
@@ -151,7 +145,6 @@ function doGetPluginParam() {
     result.data["PriKey"] = PriKey;
     result.data["CkSchema"] = CkSchema;
     result.data["CkTable"] = CkTable;
-    result.data["BatchSize"] = parseInt(BatchSize);
     result.data["SyncType"] = SyncType;
     result.data["AutoCreateTable"] = AutoCreateTable;
     result.data["LowerCaseTableNames"] = parseInt(LowerCaseTableNames);

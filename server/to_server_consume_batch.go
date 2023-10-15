@@ -10,82 +10,12 @@ import (
 	"log"
 	"runtime"
 	"runtime/debug"
-	"strconv"
 	"time"
 )
 
-// 暂停操作
-func (This *ToServer) Stop() {
-	This.Lock()
-	defer This.Unlock()
-	if This.Status == "" {
-		log.Println("ToServer ", *This.Key, This.ToServerKey, This.ToServerID, " stopped")
-		This.Status = STOPPED
-		return
-	}
-	if This.Status == RUNNING {
-		log.Println("ToServer ", *This.Key, This.ToServerKey, This.ToServerID, " stopping")
-		This.Status = STOPPING
-		return
-	}
-}
-
-// 暂停后,重新启动操作
-func (This *ToServer) Start() {
-	This.Lock()
-	defer This.Unlock()
-	if This.Status == STOPPED {
-		if This.ThreadCount == 0 {
-			This.Status = DEFAULT
-		} else {
-			This.statusChan <- true
-		}
-		log.Println("ToServer ", *This.Key, This.ToServerKey, This.ToServerID, " start")
-	}
-}
-
-func (This *ToServer) ConsumeToServer(db *db, SchemaName string, TableName string) {
-	// 为了兼容旧版本,旧版本采用的是由插件自行实现的BatchSize,新版本开始由Server端来实现
-	This.Lock()
-	if This.BatchSize <= 0 {
-		// 假如原有插件实现了BatchSize ,并且原有插件BatchSize > 0的情况下,则认为需要改新版本的BactchSize的大小
-		// 否则直接认为BactchSize为1,兼容旧版本
-		// 因为有可能原有插件没有实现这个,就还是一件事件提交一次
-		if len(This.PluginParam) > 0 {
-			var BatchSize int
-			if BatchSizeStr, ok := This.PluginParam["BatchSize"]; ok {
-				BatchSize, _ = strconv.Atoi(fmt.Sprint(BatchSizeStr))
-				if BatchSize > 0 {
-					This.BatchSize = BatchSize
-				} else {
-					This.BatchSize = 1
-				}
-			} else {
-				This.BatchSize = 1
-			}
-			This.PluginParam["BatchSize"] = This.BatchSize
-		} else {
-			This.BatchSize = 1
-		}
-	} else {
-		if len(This.PluginParam) > 0 {
-			This.PluginParam["BatchSize"] = This.BatchSize
-		}
-	}
-
-	if This.BatchCommitTimeOut <= 0 {
-		This.BatchCommitTimeOut = config.PluginCommitTimeOut
-	}
-	This.batchCommitTimeOutDuration = time.Duration(This.BatchCommitTimeOut) * time.Second
-	This.Unlock()
-	if config.NotUseBatchScheduler {
-		This.consume_to_server(db, SchemaName, TableName)
-	} else {
-		This.consume_to_server_batch_commit(db, SchemaName, TableName)
-	}
-}
-
-func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName string) {
+func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, TableName string) {
+	This.BatchSize = 1000
+	var batchDataList []*pluginDriver.PluginDataType
 	var MyConsumerId int
 	This.Lock()
 	if This.cosumerPluginParamArr == nil {
@@ -98,8 +28,6 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 	if This.PluginParam != nil {
 		This.PluginParam["BifrostMustBeSuccess"] = This.MustBeSuccess
 		This.PluginParam["BifrostFilterQuery"] = This.FilterQuery
-		// 旧版本是由插件自己实现BatchSize的,新版本开始慢慢转向Sever端来实现
-		This.PluginParam["BatchSize"] = This.BatchSize
 	}
 	This.Unlock()
 	toServerPositionBinlogKey := getToServerBinlogkey(db, This)
@@ -123,7 +51,7 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 		}
 		This.Unlock()
 	}()
-	log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server  start")
+	log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server_batch start")
 	c := This.ToServerChan.To
 	This.Lock()
 	if This.Status == DEFAULT {
@@ -281,11 +209,25 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 		}
 		return false
 	}
-	var forSendData = func(data *pluginDriver.PluginDataType) {
+	var forSendData = func(data0 *pluginDriver.PluginDataType) {
+		if data0 != nil {
+			newData, b := This.filterField(data0)
+			if !b {
+				return
+			}
+			batchDataList = append(batchDataList, newData)
+			if len(batchDataList) < This.BatchSize {
+				return
+			}
+		}
+		if len(batchDataList) == 0 {
+			LastSuccessData, ErrData, errs = nil, nil, nil
+			return
+		}
 		retry = false
 		for {
 			errs = nil
-			LastSuccessData, ErrData, errs = This.sendToServer(data, MyConsumerId, retry)
+			LastSuccessData, ErrData, errs = This.sendToServerWithBatch(batchDataList, MyConsumerId, retry)
 			if This.MustBeSuccess == true {
 				if errs == nil {
 					if lastErrTime > 0 {
@@ -326,6 +268,7 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 				break
 			}
 		}
+		batchDataList = make([]*pluginDriver.PluginDataType, 0)
 	}
 
 	var n1 int = 0
@@ -334,7 +277,6 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 	timer = time.NewTimer(This.batchCommitTimeOutDuration)
 	defer timer.Stop()
 	for {
-		timer.Reset(This.batchCommitTimeOutDuration)
 		CheckStatusFun()
 		if This.FileQueueStatus && This.QueueMsgCount == 0 {
 			//这要问我这里为什么 -1, 因为我不知道 在同一个线程里写满后再消费，会不会进入 chan 死锁的情况
@@ -476,32 +418,15 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 			break
 		case <-timer.C:
 			timer.Stop()
-			LastSuccessData, ErrData, errs = This.timeOutCommit(MyConsumerId)
-			if errs == nil {
-				if lastErrTime > 0 {
-					This.DelWaitError()
-					lastErrTime = 0
-					//自动恢复
-					doWarningFun(warning.WARNINGNORMAL, "Commit Automatically return to normal")
-				}
-			} else {
-				This.AddWaitError(errs, ErrData)
-				if This.MustBeSuccess && lastErrTime == 0 {
-					lastErrTime = time.Now().Unix()
-					checkDoWarning()
-				}
-				if lastErrTime > 0 {
-					checkDealSkipErrData()
-				}
-			}
 			if noData == false {
 				noData = true
 				log.Println("consume_to_server:", This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, This.PluginName, This.ToServerKey, This.ToServerID, " start no data")
 			}
+			forSendData(nil)
 			fileAck()
 			if LastSuccessData == nil && errs == nil {
 				This.Lock()
-				if This.QueueMsgCount == 0 {
+				if This.QueueMsgCount == 0 && len(batchDataList) == 0 {
 					// 在全量任务的时候，有可能是起多个消费者,所以这里要判断一下，是不是只剩下一个消费者，只有一个消费者的时候的时候,再将 chan 关闭
 					if This.ThreadCount == 1 {
 						This.ToServerChan = nil
@@ -524,188 +449,18 @@ func (This *ToServer) consume_to_server(db *db, SchemaName string, TableName str
 	}
 }
 
-func (This *ToServer) filterField(data *pluginDriver.PluginDataType) (newData *pluginDriver.PluginDataType, b bool) {
-	n := len(data.Rows)
-	if n == 0 {
-		return data, true
-	}
-	if len(This.FieldList) == 0 {
-		return data, true
-	}
-
-	if n == 1 {
-		m := make(map[string]interface{})
-		for _, key := range This.FieldList {
-			if _, ok := data.Rows[0][key]; ok {
-				m[key] = data.Rows[0][key]
-			}
-		}
-		newData = &pluginDriver.PluginDataType{
-			Timestamp:      data.Timestamp,
-			EventType:      data.EventType,
-			SchemaName:     data.SchemaName,
-			TableName:      data.TableName,
-			BinlogFileNum:  data.BinlogFileNum,
-			BinlogPosition: data.BinlogPosition,
-			Rows:           make([]map[string]interface{}, 1),
-			Gtid:           data.Gtid,
-			Pri:            data.Pri,
-			ColumnMapping:  data.ColumnMapping,
-			EventID:        data.EventID,
-		}
-		newData.Rows[0] = m
-	} else {
-		newData = &pluginDriver.PluginDataType{
-			Timestamp:      data.Timestamp,
-			EventType:      data.EventType,
-			SchemaName:     data.SchemaName,
-			TableName:      data.TableName,
-			BinlogFileNum:  data.BinlogFileNum,
-			BinlogPosition: data.BinlogPosition,
-			Rows:           make([]map[string]interface{}, 2),
-			Gtid:           data.Gtid,
-			Pri:            data.Pri,
-			ColumnMapping:  data.ColumnMapping,
-			EventID:        data.EventID,
-		}
-		m_before := make(map[string]interface{})
-		m_after := make(map[string]interface{})
-		var isNotUpdate bool = true
-		for _, key := range This.FieldList {
-			if _, ok := data.Rows[0][key]; ok {
-				m_before[key] = data.Rows[0][key]
-				m_after[key] = data.Rows[1][key]
-				if This.FilterUpdate {
-					switch m_after[key].(type) {
-					case []string:
-						m1 := m_before[key].([]string)
-						m2 := m_after[key].([]string)
-						n1 := len(m1)
-						n2 := len(m2)
-						if n1 != n2 {
-							isNotUpdate = false
-							break
-						}
-						for k, v := range m1 {
-							if m2[k] != v {
-								isNotUpdate = false
-								break
-							}
-						}
-						break
-					default:
-						if m_before[key] != m_after[key] {
-							isNotUpdate = false
-						}
-						break
-					}
-				}
-			}
-		}
-		//假如所有字段内容都未变更，并且过滤了这个功能，则直接返回false
-		if isNotUpdate && This.FilterUpdate {
-			return data, false
-		}
-		newData.Rows[0] = m_before
-		newData.Rows[1] = m_after
-	}
-	return newData, true
-}
-
-// 从插件实例池中获取一个插件实例
-func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin.ToServerConn, err error) {
-	PluginConn = plugin.GetPlugin(This.ToServerKey)
-	if PluginConn == nil {
-		return nil, fmt.Errorf("Get Plugin:" + This.PluginName + " ToServerKey:" + This.ToServerKey + " err,return nil")
-	}
-	This.Lock()
-	defer This.Unlock()
-	if This.cosumerPluginParamArr[MyConsumerId] == nil {
-		This.cosumerPluginParamArr[MyConsumerId], err = PluginConn.GetConn().SetParam(This.PluginParam)
-	} else {
-		_, err = PluginConn.GetConn().SetParam(This.cosumerPluginParamArr[MyConsumerId])
-	}
-	return
-}
-
-func (This *ToServer) timeOutCommit(MyConsumerId int) (LastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
+func (This *ToServer) sendToServerWithBatch(dataList []*pluginDriver.PluginDataType, MyConsumerId int, retry bool) (lastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
 	defer func() {
 		if err2 := recover(); err2 != nil {
-			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s", This.ToServerKey, string(debug.Stack()))
-			log.Println(This.ToServerKey, "sendToServer err:", err)
-		}
-	}()
-
-	PluginConn, err := This.getPluginAndSetParam(MyConsumerId)
-	if PluginConn != nil {
-		defer plugin.BackPlugin(PluginConn)
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	LastSuccessCommitData, ErrData, err = PluginConn.GetConn().TimeOutCommit()
-	return
-}
-
-/*跳过位点*/
-func (This *ToServer) SkipBinlog(MyConsumerId int, SkipErrData *pluginDriver.PluginDataType) (err error) {
-	defer func() {
-		if err2 := recover(); err2 != nil {
-			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s", This.ToServerKey, string(debug.Stack()))
-			log.Println(This.ToServerKey, "sendToServer err:", err)
-		}
-	}()
-
-	PluginConn, err := This.getPluginAndSetParam(MyConsumerId)
-	if err != nil {
-		return err
-	}
-	defer plugin.BackPlugin(PluginConn)
-	err = PluginConn.GetConn().Skip(SkipErrData)
-	return
-}
-
-func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType, MyConsumerId int, retry bool) (lastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
-	defer func() {
-		if err2 := recover(); err2 != nil {
-			err = fmt.Errorf("sendToServer:%s Commit Debug Err:%s", This.ToServerKey, string(debug.Stack()))
+			err = fmt.Errorf("sendToServerWithBatch:%s CommitBatch Debug Err:%s", This.ToServerKey, string(debug.Stack()))
 			log.Println(This.ToServerKey, err2, err)
 		}
 	}()
-
-	// 只有所有字段内容都没有更新，并且开启了过滤功能的情况下，才会返回false
-	data, b := This.filterField(paramData)
-	if b == false {
-		return paramData, nil, nil
-	}
 	PluginConn, err := This.getPluginAndSetParam(MyConsumerId)
 	if err != nil {
-		return lastSuccessCommitData, data, err
+		return nil, dataList[0], err
 	}
 	defer plugin.BackPlugin(PluginConn)
-
-	switch data.EventType {
-	case "insert":
-		lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Insert(data, retry)
-		break
-	case "update":
-		lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Update(data, retry)
-		break
-	case "delete":
-		lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Del(data, retry)
-		break
-	case "sql":
-		if data.Query == "COMMIT" {
-			lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Commit(data, retry)
-		} else {
-			lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Query(data, retry)
-		}
-		break
-	case "commit":
-		lastSuccessCommitData, ErrData, err = PluginConn.GetConn().Commit(data, retry)
-		break
-	default:
-		break
-	}
+	lastSuccessCommitData, ErrData, err = PluginConn.GetConn().CommitBatch(dataList, retry)
 	return
 }
