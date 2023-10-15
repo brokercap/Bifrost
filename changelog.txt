@@ -1,3 +1,18 @@
+v2.3.1-beta   2023-10-15
+1. 包含2.2.1版本内容
+2. 修复 output starrocks 在普通模式,指定了库名的情况下,提示未找到原库表名的错误
+
+v2.2.1-beta   2023-10-15
+1. Linux 作为服务器的情况下，通过读取 /proc/[pid]/status 内核文件下的 VmRSS 作为内存使用量
+   其他系统 ，将继续使用Go提供的runtime.MemStats里的统计数据
+2. 修复input mock 全量完后，内存并没释放的BUG
+3. 修复 input mock 在batch模式下，提前退出batch的逻辑bug
+4. 修复input mock batch 结束后只是显示stopped,但没closed的bug
+5. 界面操作优化更新
+   数据源界面新增简易搜索功能
+   数据源及目标库ConnUri输入框入框改为texterea,范围更大
+6. 修复input mongo 在值为nil的情况下,ColumnMapping的时候panic的bug
+
 v2.3.0-beta   2023-10-06
 1. 支持MySQL连接协议连接Starrocks,进行数据同步到,支持自动建表,日志追加模式,按月自动建分区
    https://github.com/brokercap/Bifrost/issues/254
