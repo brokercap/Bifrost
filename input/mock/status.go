@@ -45,6 +45,7 @@ func (c *InputMock) Stop() error {
 }
 
 func (c *InputMock) Close() error {
+	c.tableMap = nil
 	c.Stop()
 	c.setStatus(inputDriver.CLOSED)
 	return nil

@@ -300,6 +300,8 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		row["uint8"] = uint8(8)
 		row["int16"] = int16(-16)
 		row["uint16"] = uint16(16)
+		row["nil"] = nil
+		row["time"] = nowTime
 		row["int32"] = int32(-32)
 		row["uint32"] = uint32(32)
 		row["int64"] = int64(-64)
@@ -316,8 +318,6 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		list = append(list, 1)
 		list = append(list, 2)
 		row["slice"] = list
-
-		row["time"] = nowTime
 
 		type TypeStruct struct {
 			Key  string
@@ -340,7 +340,7 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 				break
 			case "map", "array", "slice":
 				So(data[name], ShouldEqual, "Nullable(json)")
-			case "string", "struct_pointer", "struct":
+			case "string", "struct_pointer", "struct", "nil":
 				So(data[name], ShouldEqual, "Nullable(string)")
 			case "time":
 				So(row[name], ShouldEqual, nowTime.Format("2006-01-02 15:04:05"))
@@ -349,6 +349,9 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 				So(data[name], ShouldEqual, "Nullable("+name+")")
 			}
 		}
+		So(row["nil"], ShouldBeNil)
+		So(row["int8"], ShouldEqual, "-8")
+		So(row["bool"], ShouldEqual, true)
 	})
 }
 

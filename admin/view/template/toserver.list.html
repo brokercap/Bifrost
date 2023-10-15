@@ -111,7 +111,7 @@
                     <div class="form-group">
                         <label class="col-sm-3 control-label">ConnUri：</label>
                         <div class="col-sm-9"  style=" position: relative">
-                            <input type="text" name="ConnUri"  class="form-control" placeholder="ConnUri">
+                            <textarea type="text" name="ConnUri" class="form-control" placeholder="ConnUri"></textarea>
                             <span class="help-block m-b-none">*</span>
 
                         </div>
@@ -171,7 +171,7 @@
     <div class="ibox-content">
         <div class="row row-lg">
 
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="form-group">
                     <label class="col-sm-3 control-label">ToServerKey：</label>
                     <div class="col-sm-9">
@@ -196,7 +196,7 @@
                         <div style="position: absolute; right: -65px; top: 0px;">
                             <button data-toggle="button" class="btn-sm btn-warning " id="checkUriBtn" type="button">Check</button>
                         </div>
-                        <input type="text" name="ConnUri" id="ConnUri" class="form-control" placeholder="ConnUri">
+                        <textarea type="text" name="ConnUri" id="ConnUri" class="form-control" placeholder="ConnUri"></textarea>
                         <span class="help-block m-b-none" id="ConnUri_example">*</span>
 
                     </div>
@@ -262,6 +262,10 @@
     $("#ConnUri").change(
         function(){
             uriChecked = false;
+            // 去除前后换行符
+            var uri = $(this).val()
+            uri = uri.replace(/^\n+|\n+$/g, '');
+            $(this).val(uri);
             $("#checkUriBtn").show();
         }
     );
@@ -365,7 +369,7 @@
             $("#updateToServerInfoDiv input[name=MinConn]").val(MinConn);
             $("#updateToServerInfoDiv input[name=MaxConn]").val(MaxConn);
             $("#updateToServerInfoDiv textarea[name=Notes]").val(Notes);
-            $("#updateToServerInfoDiv input[name=ConnUri]").val(ConnUri);
+            $("#updateToServerInfoDiv textarea[name=ConnUri]").val(ConnUri);
             $("#updateToServerInfoDiv").modal('show');
         }
     );
@@ -376,9 +380,10 @@
                 var MaxConn = $("#updateToServerInfoDiv input[name=MaxConn]").val();
                 var ToServerKey = $("#updateToServerInfoDiv input[name=ToServerKey]").val();
                 var PluginName = $("#updateToServerInfoDiv input[name=PluginName]").val();
-                var ConnUri = $("#updateToServerInfoDiv input[name=ConnUri]").val();
+                var ConnUri = $("#updateToServerInfoDiv textarea[name=ConnUri]").val();
+                // 去除前后换行符
+                ConnUri = ConnUri.replace(/^\n+|\n+$/g, '');
                 var Notes = $("#updateToServerInfoDiv textarea[name=Notes]").val();
-
                 var url = "/toserver/update";
                 if( MinConn == "" || isNaN(MinConn) ){
                     alert("MinConn 不能为空且必须为数字");
@@ -412,6 +417,7 @@
                     $("#ToServer_"+ToServerKey).children().eq(5).find(".MaxConn").text(MaxConn);
                     $("#ToServer_"+ToServerKey).children().eq(8).text(Notes);
                 };
+
                 Ajax("POST",url,{ ToServerKey: ToServerKey,MinConn:parseInt(MinConn),MaxConn:parseInt(MaxConn),PluginName:PluginName,notes:Notes,ConnUri:ConnUri},callback,true);
                 $("#updateToServerInfoDiv").modal('hide');
             }
