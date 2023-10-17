@@ -215,14 +215,24 @@
     </div>
 </div>
 <script type="text/javascript">
-    function ShowLikeTableNames(tableName,ignoreTables) {
+    function ShowLikeTableNames(tableName,ignoreTables,doTables) {
         var tableNames = getTablesByLikeName(tableName);
-        ignoreTables = ignoreTables+",";
+        var newIgnoreTables = ignoreTables+",";
+        var newDoTables = "";
+        if (doTables != "") {
+            newDoTables = doTables + ","
+        }
         $("#showLikeTable_Title").text(tableName);
         var html = "";
         for (var name of tableNames.split(";")) {
-            if( ignoreTables.indexOf(name+",") < 0 ){
-                html += "<p>"+name+"</p>";
+            if (newDoTables != "") {
+                if( newDoTables.indexOf(name+",") >= 0 ){
+                    html += "<p>"+name+"</p>";
+                }
+            }else{
+                if( newIgnoreTables.indexOf(name+",") < 0 ){
+                    html += "<p>"+name+"</p>";
+                }
             }
         }
         $("#showLikeTable_Body").html(html);
@@ -679,11 +689,11 @@
                     if (v.TableType.toUpperCase().indexOf("LIKE") != -1) {
                         if (v.AddStatus == true){
                             html += '<div class="right2">';
-                            html += '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onclick="showUpdateTable(\''+DbName+'\',\''+SchemaName+'\',\''+v.TableName+'\',\''+v.IgnoreTable+'\')">修改</button></div>';
+                            html += '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onclick="showUpdateTable(\''+DbName+'\',\''+SchemaName+'\',\''+v.TableName+'\',\''+v.IgnoreTable+'\',\''+v.DoTable+'\')">修改</button></div>';
                             html += '</div>';
                         }
                         html += '<div class="right1">';
-                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\',\''+v.IgnoreTable+'\')">多表</button></div>';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+v.TableName+'\',\''+v.IgnoreTable+'\',\''+v.DoTable+'\')">多表</button></div>';
                         html += '</div>';
                     }
                     html += '<div class="right">';

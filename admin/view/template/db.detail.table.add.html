@@ -54,6 +54,17 @@
                         </td>
                     </tr>
                     <tr>
+                        <td align="right" height="50" width="20%">DoTables : </td>
+                        <td style="text-indent:10px" >
+                            <textarea type="text" name="TableName" class="form-control" value="" id="AddTableDoTable" disabled></textarea>
+                            <div style="word-wrap: break-word;word-break: normal; width: auto;">
+                                <p>模糊匹配的时候，指定哪些表名进行匹配，多个用 逗号 隔开</p>
+                                <p>只对增量有效,全量任务无效,全量任务,可以自行修改不查询哪些表</p>
+                                <p>同时配置了IgnoreTables和DoTables,DoTables优先</p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
                         <td align="right" height="50">ChannelKey :  </td>
                         <td style="text-indent:10px">
                             <select class="form-control" name="" id="AddTableChannel" >
@@ -115,6 +126,17 @@
                             </div>
                         </td>
                     </tr>
+                    <tr>
+                        <td align="right" height="50" width="20%">DoTables : </td>
+                        <td style="text-indent:10px" >
+                            <textarea type="text" name="TableName" class="form-control" placeholder="DoTables" value="" id="updateTableDoTable"></textarea>
+                            <div style="word-wrap: break-word;word-break: normal; width: auto;">
+                                <p>模糊匹配的时候，指定哪些表名进行匹配，多个用 逗号 隔开</p>
+                                <p>只对增量有效,全量任务无效,全量任务,可以自行修改不查询哪些表</p>
+                                <p>同时配置了IgnoreTables和DoTables,DoTables优先</p>
+                            </div>
+                        </td>
+                    </tr>
                 </table>
 
             </div>
@@ -159,6 +181,7 @@
             $("#AddTableIsFuzzyMatching").attr("disabled","disabled");
             $("#addTableName").attr("disabled","disabled");
             $('#AddTableIgnoreTable').removeAttr("disabled");
+            $('#AddTableDoTable').removeAttr("disabled");
         }else{
             $('#AddTableIsFuzzyMatching').removeAttr("disabled");
         }
@@ -196,6 +219,7 @@
         //var TableNames_old = $("#addTableNameOld").val();
         var SchemaName = $("#addTableSchema").val();
         var IgnoreTable = $("#AddTableIgnoreTable").val();
+        var DoTable = $("#AddTableDoTable").val();
         var channelid = $("#AddTableChannel").val();
         if ( TableNames == "" ){
             return false;
@@ -242,7 +266,7 @@
                         html += '<a class="list-group-item"><div class="tableDiv" title="' + TableName + '" id="' + tableDivId + '">';
                         html += '<h5 class="left" ' + title + ' onClick="GetTableToServerList(\'' + SchemaName + '\',\'' + TableName + '\')">' + TableName + '</h5>';
                         html += '<div class="right1">';
-                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+TableName+'\',\''+IgnoreTable+'\')">多表</button></div>';
+                        html += '<div class="button"><button data-toggle="button" class="btn-sm btn-success" type="button" onclick="ShowLikeTableNames(\''+TableName+'\',\''+IgnoreTable+'\',\''+DoTable+'\')">多表</button></div>';
                         html += '</div>';
                         html += '<div class="right">';
                         html += '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+TableName+'\')">DEL</button></div>';
@@ -263,18 +287,19 @@
                 }
                 batchDelOrAddTableResultFun(TableName +" ADD Result:"+data.msg,1);
             }
-            Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, ChannelId: parseInt(channelid),IgnoreTable:IgnoreTable},callback,false);
+            Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, ChannelId: parseInt(channelid),IgnoreTable:IgnoreTable,DoTable:DoTable},callback,false);
         }
         batchDelOrAddTableResultFun("添加完成",-2);
         $(obj).text("提交");
     }
 
 
-    function showUpdateTable(DbName,SchemaName,TableName,IgnoreTable){
+    function showUpdateTable(DbName,SchemaName,TableName,IgnoreTable,DoTable){
         $("#updateTableDbName").val(DbName);
         $("#updateTableSchema").val(SchemaName);
         $("#updateTableName").val(TableName);
         $("#updateTableIgnoreTable").val(IgnoreTable);
+        $("#updateTableDoTable").val(DoTable);
         $("#updateTableDiv").modal('show');
     }
 
@@ -283,6 +308,7 @@
         var SchemaName = $("#updateTableSchema").val();
         var TableName = $("#updateTableName").val();
         var IgnoreTable = $("#updateTableIgnoreTable").val();
+        var DoTable = $("#updateTableDoTable").val();
         var url = "/table/update";
         var callback = function(data){
             alert(data.msg);
@@ -290,7 +316,7 @@
             showSchemaTableList("Schema-"+SchemaName);
             $("#updateTableDiv").modal('hide');
         }
-        Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, IgnoreTable:IgnoreTable},callback,false);
+        Ajax("POST",url,{DbName: DbName, SchemaName: SchemaName, TableName: TableName, IgnoreTable:IgnoreTable,DoTable:DoTable},callback,false);
     }
 
 </script>
