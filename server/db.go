@@ -851,10 +851,20 @@ func (db *db) GetChannel(channelID int) *Channel {
 */
 
 func (db *db) GetCurrentPosition() (*inputDriver.PluginPosition, error) {
+	inputDriverObj := db.GetInputDriverObj()
+	if inputDriverObj == nil {
+		return nil, nil
+	}
+	// 这里通过 db.GetInputDriverObj 内部去加锁,并返回一个 inputDriverObj 对象
+	// 再对input调用GetCurrentPosition方法,是防止input 内部再加锁的情况下,会被触发锁未被释放,进入死锁的可能
+	return inputDriverObj.GetCurrentPosition()
+}
+
+func (db *db) GetInputDriverObj() inputDriver.Driver {
 	db.Lock()
 	defer db.Unlock()
 	if db.inputDriverObj == nil {
 		db.InitInputDriver()
 	}
-	return db.inputDriverObj.GetCurrentPosition()
+	return db.inputDriverObj
 }
