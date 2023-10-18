@@ -72,17 +72,42 @@ func TestDb_CompareToServerPositionAndReturnLess(t *testing.T) {
 		result = db.CompareToServerPositionAndReturnLess(last, current)
 		So(result, ShouldEqual, last)
 	})
+
+	Convey("current queueCount=0,and not update ", t, func() {
+		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1000}}
+		var current *ToServer = &ToServer{
+			LastSuccessBinlog: &PositionStruct{EventID: 100},
+			LastQueueBinlog:   &PositionStruct{EventID: 100},
+		}
+		var result *ToServer
+		result = db.CompareToServerPositionAndReturnLess(last, current)
+		So(result, ShouldEqual, last)
+	})
 }
 
 func TestDb_CalcMinPosition(t *testing.T) {
 	dbObj := &db{}
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(dbObj), "CompareToServerPositionAndReturnLess", func(dbObj *db, last, current *ToServer) *ToServer {
-		return nil
-	})
-	defer patches.Reset()
-	Convey("计算最小位点", t, func() {
+	Convey("nil", t, func() {
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(dbObj), "CompareToServerPositionAndReturnLess", func(dbObj *db, last, current *ToServer) *ToServer {
+			return nil
+		})
+		defer patches.Reset()
 		result := dbObj.CalcMinPosition()
 		So(result, ShouldEqual, nil)
+	})
+
+	Convey("计算最小位点", t, func() {
+		dbObj.tableMap = make(map[string]*Table, 0)
+		t1 := &Table{ToServerList: make([]*ToServer, 0)}
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 20}, LastQueueBinlog: &PositionStruct{EventID: 100}})
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 10}, LastQueueBinlog: &PositionStruct{EventID: 100}})
+
+		t2 := &Table{ToServerList: make([]*ToServer, 0)}
+		t2.ToServerList = append(t2.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}, LastQueueBinlog: &PositionStruct{EventID: 1}})
+		dbObj.tableMap["t1"] = t1
+		dbObj.tableMap["t2"] = t2
+		result := dbObj.CalcMinPosition()
+		So(result.EventID, ShouldEqual, 10)
 	})
 }
 
