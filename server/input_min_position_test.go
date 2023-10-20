@@ -16,55 +16,6 @@ import (
 
 func TestDb_CompareToServerPositionAndReturnLess(t *testing.T) {
 	db := &db{}
-	Convey("两者都为nil", t, func() {
-		var last *ToServer
-		var current *ToServer
-		var result *ToServer = nil
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, nil)
-	})
-
-	Convey("last不为Nil，但LastSuccessBinlog=nil，current有值", t, func() {
-		var last *ToServer = &ToServer{LastSuccessBinlog: nil}
-		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
-		var result *ToServer
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, current)
-	})
-
-	Convey("last不为Nil，EventID=0，current有值", t, func() {
-		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 0}}
-		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
-		var result *ToServer
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, current)
-	})
-
-	Convey("last不为nil,current=nil", t, func() {
-
-		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
-		var current *ToServer = nil
-		var result *ToServer
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, last)
-	})
-
-	Convey("last不为Nil，current LastSuccessBinlog=nil ", t, func() {
-		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
-		var current *ToServer = &ToServer{}
-		var result *ToServer
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, last)
-	})
-
-	Convey("last不为Nil，current EventID=0 ", t, func() {
-		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
-		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 0}}
-		var result *ToServer
-		result = db.CompareToServerPositionAndReturnLess(last, current)
-		So(result, ShouldEqual, last)
-	})
-
 	Convey("last current均正常值 ", t, func() {
 		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
 		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
@@ -74,15 +25,219 @@ func TestDb_CompareToServerPositionAndReturnLess(t *testing.T) {
 	})
 }
 
+func TestDb_CompareToServerPositionAndReturnGreater(t *testing.T) {
+	db := &db{}
+	Convey("last current均正常值 ", t, func() {
+		var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
+		var result *ToServer
+		result = db.CompareToServerPositionAndReturnGreater(last, current)
+		So(result, ShouldEqual, current)
+	})
+}
+
+func TestDb_CompareToServerPosition(t *testing.T) {
+	db := &db{}
+	Convey("last ,current all is nil ", t, func() {
+		var result *ToServer
+		result, _ = db.CompareToServerPosition(nil, nil, false)
+		So(result, ShouldBeNil)
+	})
+	Convey("current.LastSuccessBinlog is nil or eventId == 0 ", t, func() {
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: nil}
+			var result *ToServer
+			result, _ = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, last)
+		}
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 0}}
+			var result *ToServer
+			result, _ = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, last)
+		}
+	})
+	Convey("current position should not be calc,last is nil ", t, func() {
+		var last *ToServer = nil
+		var current *ToServer = &ToServer{
+			LastSuccessBinlog: &PositionStruct{EventID: 1},
+			LastQueueBinlog:   &PositionStruct{EventID: 1},
+		}
+		var result *ToServer
+		var lastIsNotCalcPosition bool
+		result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, false)
+		So(result, ShouldEqual, current)
+		So(lastIsNotCalcPosition, ShouldEqual, true)
+	})
+	Convey("current last position should not be calc,lastIsNotCalcPosition == true ,return greater  ", t, func() {
+		{
+			var last *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 100},
+				LastQueueBinlog:   &PositionStruct{EventID: 100},
+			}
+			var current *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 1},
+				LastQueueBinlog:   &PositionStruct{EventID: 1},
+			}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, true)
+			So(result, ShouldEqual, last)
+			So(lastIsNotCalcPosition, ShouldEqual, true)
+		}
+
+		{
+			var last2 *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 1},
+				LastQueueBinlog:   &PositionStruct{EventID: 1},
+			}
+			var current2 *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 100},
+				LastQueueBinlog:   &PositionStruct{EventID: 100},
+			}
+			var result2 *ToServer
+			var lastIsNotCalcPosition bool
+			result2, lastIsNotCalcPosition = db.CompareToServerPosition(last2, current2, true)
+			So(result2, ShouldEqual, current2)
+			So(lastIsNotCalcPosition, ShouldEqual, true)
+		}
+	})
+
+	Convey("current position should not be calc, lastIsNotCalcPosition == false ", t, func() {
+		{
+			var last *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 100},
+				LastQueueBinlog:   &PositionStruct{EventID: 100},
+			}
+			var current *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 1},
+				LastQueueBinlog:   &PositionStruct{EventID: 1},
+			}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, last)
+			So(lastIsNotCalcPosition, ShouldEqual, false)
+		}
+		{
+			var last2 *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 1},
+				LastQueueBinlog:   &PositionStruct{EventID: 1},
+			}
+			var current2 *ToServer = &ToServer{
+				LastSuccessBinlog: &PositionStruct{EventID: 100},
+				LastQueueBinlog:   &PositionStruct{EventID: 100},
+			}
+			var result2 *ToServer
+			var lastIsNotCalcPosition bool
+			result2, lastIsNotCalcPosition = db.CompareToServerPosition(last2, current2, false)
+			So(result2, ShouldEqual, last2)
+			So(lastIsNotCalcPosition, ShouldEqual, false)
+		}
+	})
+
+	Convey("last or LastSuccessBinlog is nil or eventId == 0 ,current is not nil and normal", t, func() {
+		var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+		{
+			var result *ToServer
+			result, _ = db.CompareToServerPosition(nil, current, false)
+			So(result, ShouldEqual, current)
+		}
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: nil}
+			var result *ToServer
+			result, _ = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, current)
+		}
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 0}}
+			var result *ToServer
+			result, _ = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, current)
+		}
+	})
+
+	Convey("lastIsNotCalcPosition == true ,current IsNotCalcPosition == false, last is less,return current", t, func() {
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}, LastQueueBinlog: &PositionStruct{EventID: 1}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, true)
+			So(result, ShouldEqual, current)
+			So(lastIsNotCalcPosition, ShouldEqual, false)
+		}
+	})
+
+	Convey("lastIsNotCalcPosition == true ,current IsNotCalcPosition == false, last is greater,return last", t, func() {
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}, LastQueueBinlog: &PositionStruct{EventID: 100}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, true)
+			So(result, ShouldEqual, last)
+			So(lastIsNotCalcPosition, ShouldEqual, true)
+		}
+	})
+
+	Convey("lastIsNotCalcPosition == false ,last ,current normal,return less", t, func() {
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, current)
+			So(lastIsNotCalcPosition, ShouldEqual, false)
+		}
+
+		{
+			var last *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}}
+			var current *ToServer = &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1000}}
+			var result *ToServer
+			var lastIsNotCalcPosition bool
+			result, lastIsNotCalcPosition = db.CompareToServerPosition(last, current, false)
+			So(result, ShouldEqual, last)
+			So(lastIsNotCalcPosition, ShouldEqual, false)
+		}
+	})
+}
+
 func TestDb_CalcMinPosition(t *testing.T) {
 	dbObj := &db{}
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(dbObj), "CompareToServerPositionAndReturnLess", func(dbObj *db, last, current *ToServer) *ToServer {
-		return nil
-	})
-	defer patches.Reset()
-	Convey("计算最小位点", t, func() {
+	Convey("nil", t, func() {
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(dbObj), "CompareToServerPositionAndReturnLess", func(dbObj *db, last, current *ToServer) *ToServer {
+			return nil
+		})
+		defer patches.Reset()
 		result := dbObj.CalcMinPosition()
 		So(result, ShouldEqual, nil)
+	})
+
+	Convey("计算最小位点", t, func() {
+		dbObj.tableMap = make(map[string]*Table, 0)
+		t1 := &Table{ToServerList: make([]*ToServer, 0)}
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 5}, LastQueueBinlog: &PositionStruct{EventID: 5}})
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}, LastQueueBinlog: &PositionStruct{EventID: 1}})
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 6}, LastQueueBinlog: &PositionStruct{EventID: 6}})
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 20}, LastQueueBinlog: &PositionStruct{EventID: 100}})
+		t1.ToServerList = append(t1.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 10}, LastQueueBinlog: &PositionStruct{EventID: 100}})
+
+		t2 := &Table{ToServerList: make([]*ToServer, 0)}
+		t2.ToServerList = append(t2.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 1}, LastQueueBinlog: &PositionStruct{EventID: 1}})
+		t2.ToServerList = append(t2.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 100}, LastQueueBinlog: &PositionStruct{EventID: 1000}})
+		t2.ToServerList = append(t2.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 20}, LastQueueBinlog: &PositionStruct{EventID: 20}})
+
+		t3 := &Table{ToServerList: make([]*ToServer, 0)}
+		t3.ToServerList = append(t3.ToServerList, &ToServer{LastSuccessBinlog: &PositionStruct{EventID: 200}, LastQueueBinlog: &PositionStruct{EventID: 200}})
+
+		dbObj.tableMap["t1"] = t1
+		dbObj.tableMap["t2"] = t2
+		result := dbObj.CalcMinPosition()
+		So(result.EventID, ShouldEqual, 10)
 	})
 }
 
