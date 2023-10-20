@@ -26,16 +26,19 @@ import (
 
 func (c *InputMock) GetNormalTableObjlist() (tableList []*NormalTable) {
 	normalTable := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "normal",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "normal",
+		LongStringLen: c.config.LongStringLen,
 	}
 	normalTableNoMapping := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "no_mapping",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "no_mapping",
+		LongStringLen: c.config.LongStringLen,
 	}
 	normalTableNoPks := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "no_pks",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "no_pks",
+		LongStringLen: c.config.LongStringLen,
 	}
 	tableList = append(tableList, normalTable)
 	tableList = append(tableList, normalTableNoMapping)
@@ -144,13 +147,6 @@ func (c *InputMock) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.Ch
 		BinlogRowImage: "full",
 	}
 	return result, nil
-}
-
-// 获取队列最新的位点
-
-func (c *InputMock) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
-	err = fmt.Errorf("not supported")
-	return
 }
 
 func (c *InputMock) GetVersion() (Version string, err error) {
