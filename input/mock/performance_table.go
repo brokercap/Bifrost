@@ -27,6 +27,8 @@ import (
 type PerformanceTable struct {
 	SchemaName          string
 	TableName           string
+	LongStringLen       int
+	IsAllInsertSameData bool
 	TableDataCount      int
 	InterVal            time.Duration
 	TableRowsEventCount int
@@ -49,6 +51,7 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 	t.event = pluginTestData.NewEvent()
 	t.event.SetSchema(t.SchemaName)
 	t.event.SetTable(t.TableName)
+	t.event.SetLongStringLen(t.LongStringLen)
 	defer func() {
 		t.event = nil
 	}()
@@ -80,6 +83,14 @@ func (t *PerformanceTable) Start(ctx context.Context, ch chan *pluginDriver.Plug
 }
 
 func (t *PerformanceTable) Batch(count *int, halfDataCount int) {
+	if t.IsAllInsertSameData {
+		t.OnlyOneInsertBatch(count)
+	} else {
+		t.NormalBatch(count, halfDataCount)
+	}
+}
+
+func (t *PerformanceTable) NormalBatch(count *int, halfDataCount int) {
 	for i := 0; i < t.BatchSize; i++ {
 		if *count < halfDataCount {
 			t.Callback(t.event.GetTestInsertData())
@@ -100,6 +111,31 @@ func (t *PerformanceTable) Batch(count *int, halfDataCount int) {
 			continue
 		}
 		t.Callback(t.event.GetTestInsertData())
+		*count++
+	}
+}
+
+func (t *PerformanceTable) OnlyOneInsertBatch(count *int) {
+	insertDataEvent := t.event.GetTestInsertData()
+	for i := 0; i < t.BatchSize; i++ {
+		data := &pluginDriver.PluginDataType{
+			Timestamp:       insertDataEvent.Timestamp,
+			EventSize:       insertDataEvent.EventSize,
+			EventType:       insertDataEvent.EventType,
+			Rows:            insertDataEvent.Rows,
+			Query:           insertDataEvent.Query,
+			SchemaName:      insertDataEvent.SchemaName,
+			TableName:       insertDataEvent.TableName,
+			AliasSchemaName: insertDataEvent.AliasSchemaName,
+			AliasTableName:  insertDataEvent.AliasTableName,
+			BinlogFileNum:   insertDataEvent.BinlogFileNum,
+			BinlogPosition:  insertDataEvent.BinlogPosition,
+			Gtid:            insertDataEvent.Gtid,
+			Pri:             insertDataEvent.Pri,
+			EventID:         0,
+			ColumnMapping:   insertDataEvent.ColumnMapping,
+		}
+		t.Callback(data)
 		*count++
 	}
 }

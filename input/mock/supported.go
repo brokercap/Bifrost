@@ -25,7 +25,7 @@ func (c *InputMock) IsSupported(supportType inputDriver.SupportType) bool {
 
 		// 需要由上一层server层定时计算最小的位点提交进来
 	case inputDriver.SupportNeedMinPosition:
-		return false
+		return true
 	}
 	return false
 }

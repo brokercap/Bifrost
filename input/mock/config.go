@@ -28,6 +28,8 @@ type Config struct {
 	PerformanceTableDeleteEventRatio       int    `json:"PerformanceTableDeleteEventRatio,string"`
 	PerformanceTableRowsEventBatchSize     int    `json:"PerformanceTableRowsEventBatchSize,string"`
 	PerformanceTableRowsEventBatchInterval int    `json:"PerformanceTableRowsEventBatchInterval,string"`
+	LongStringLen                          int    `json:"LongStringLen,string"`
+	IsAllInsertSameData                    bool   `json:"IsAllInsertSameData,string"`
 }
 
 func NewConfig(configMap map[string]string) *Config {
