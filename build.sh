@@ -342,6 +342,9 @@ build()
     echo "copy ./etc ==> " ./$tagDir/etc
     cp -r ./etc ./$tagDir/
 
+    echo "copy ./免责声明.txt ==> " ./$tagDir/
+    cp -rf ./免责声明.txt ./$tagDir/免责声明.txt
+
     #拷贝./plugin/import_toserver.go 中加载了的默认插件到编译之后的tags目录下
     import_toserver_content=`cat ./plugin/load/import_toserver.go`
     #echo $import_toserver_content
