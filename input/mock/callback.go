@@ -27,9 +27,8 @@ func (c *InputMock) SetCallback(callback inputDriver.Callback) {
 }
 
 func (c *InputMock) Callback(data *outputDriver.PluginDataType) {
-	nowTime := time.Now()
-	c.lastSuccessEndTime = uint32(nowTime.Unix())
-	data.Timestamp = c.lastSuccessEndTime
+	c.lastEventEndTime = uint32(time.Now().Unix())
+	data.Timestamp = c.lastEventEndTime
 	data.EventID = c.getNextEventID()
 	data.AliasSchemaName, data.AliasTableName = data.SchemaName, data.TableName
 	c.callback(data)
@@ -51,7 +50,7 @@ func (c *InputMock) BuildCommitEventAndCallback(data *outputDriver.PluginDataTyp
 		AliasSchemaName: data.AliasSchemaName,
 		AliasTableName:  data.AliasTableName,
 		BinlogFileNum:   data.BinlogFileNum,
-		BinlogPosition:  c.lastSuccessEndTime,
+		BinlogPosition:  c.lastEventEndTime,
 		Pri:             nil,
 		EventID:         c.getNextEventID(),
 		ColumnMapping:   nil,

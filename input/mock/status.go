@@ -20,7 +20,6 @@ import (
 	"fmt"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	"sync/atomic"
-	"time"
 )
 
 func (c *InputMock) setStatus(status inputDriver.StatusFlag) {
@@ -36,33 +35,22 @@ func (c *InputMock) setStatus(status inputDriver.StatusFlag) {
 }
 
 func (c *InputMock) Stop() error {
-	c.setStatus(inputDriver.STOPPING)
-	if c.inputCancelFun != nil {
-		c.inputCancelFun()
-		c.inputCancelFun = nil
-	}
+	c.setStatus(inputDriver.STOPPED)
 	return nil
 }
 
 func (c *InputMock) Close() error {
+	if c.inputCancelFun != nil {
+		c.inputCancelFun()
+		c.inputCancelFun = nil
+	}
 	c.tableMap = nil
-	c.Stop()
 	c.setStatus(inputDriver.CLOSED)
 	return nil
 }
 
 func (c *InputMock) Kill() error {
 	return c.Close()
-}
-
-func (c *InputMock) GetLastPosition() *inputDriver.PluginPosition {
-	return &inputDriver.PluginPosition{
-		GTID:           "",
-		BinlogFileName: DefaultBinlogFileName,
-		BinlogPostion:  uint32(c.lastSuccessEndTime),
-		Timestamp:      uint32(time.Now().Unix()),
-		EventID:        c.eventID,
-	}
 }
 
 func (c *InputMock) SetEventID(eventId uint64) error {

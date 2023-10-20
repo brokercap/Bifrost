@@ -24,11 +24,12 @@ import (
 )
 
 type NormalTable struct {
-	SchemaName string
-	TableName  string
-	NoMapping  bool
-	NoPks      bool
-	ch         chan *pluginDriver.PluginDataType
+	SchemaName    string
+	TableName     string
+	LongStringLen int
+	NoMapping     bool
+	NoPks         bool
+	ch            chan *pluginDriver.PluginDataType
 }
 
 func (t *NormalTable) GetSchemaName() string {
@@ -44,6 +45,7 @@ func (t *NormalTable) Start(ctx context.Context, ch chan *pluginDriver.PluginDat
 	event := pluginTestData.NewEvent()
 	event.SetSchema(t.SchemaName)
 	event.SetTable(t.TableName)
+	event.SetLongStringLen(t.LongStringLen)
 	t.Callback(event.GetTestInsertData())
 	t.Callback(event.GetTestUpdateData(true))
 	t.Callback(event.GetTestDeleteData())
