@@ -38,6 +38,7 @@ func (c *InputMock) GetNormalTableObjlist() (tableList []*NormalTable) {
 	normalTableNoPks := &NormalTable{
 		SchemaName:    DefaultNormalSchemaName,
 		TableName:     "no_pks",
+		NoPks:         true,
 		LongStringLen: c.config.LongStringLen,
 	}
 	tableList = append(tableList, normalTable)
