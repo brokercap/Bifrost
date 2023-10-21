@@ -272,11 +272,16 @@ func (This *Conn) CreateTableAndGetTableFieldsType(data *pluginDriver.PluginData
 	// 这里无视是否创建成功,如果失败了,后面的建表逻辑,也肯定报错
 
 	_ = This.conn.CreateDatabase(This.GetSchemaName(data))
-	createTableSql := This.TransferToCreateTableSql(data)
+	createTableSql, isContinue := This.TransferToCreateTableSql(data)
 	if createTableSql == "" {
-		log.Printf("[ERROR] output[%s] get create table sql is empty,data:%+v \n", OutputName, data)
-		return nil, errors.New("get create table sql is empty")
+		if isContinue {
+			return nil, nil
+		} else {
+			log.Printf("[ERROR] output[%s] get create table sql is empty,data:%+v \n", OutputName, data)
+			return nil, errors.New("get create table sql is empty")
+		}
 	}
+
 	err = This.conn.Exec(createTableSql)
 	if err != nil {
 		return nil, err
@@ -698,6 +703,9 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 		p, err := This.CreateTableAndGetTableFieldsType(data[0])
 		if err != nil {
 			return data[0], err
+		}
+		if p == nil {
+			continue
 		}
 		This.p.Field = p.Field
 		This.p.fieldCount = len(p.Field)
