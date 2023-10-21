@@ -60,6 +60,8 @@ LOOP:
 			This.err, This.conn.err = err, err
 			log.Printf("[ERROR] output[%s] StarRocksCommitNormal delete:(%+v) SchemaName:%s TableName:%s err:%+v", OutputName, deleteList, list[0].SchemaName, list[0].TableName, err)
 			return nil
+		} else {
+			This.err = nil
 		}
 	}
 	if len(insertList) > 0 {
@@ -68,6 +70,8 @@ LOOP:
 			This.err, This.conn.err = err, err
 			log.Printf("[ERROR] output[%s] StarRocksCommitNormal insert SchemaName:%s TableName:%s err:%+v", OutputName, list[0].SchemaName, list[0].TableName, err)
 			return errData
+		} else {
+			This.err = nil
 		}
 	}
 	return nil

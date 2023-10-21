@@ -16,6 +16,8 @@ func (This *Conn) StarRocksCommit_Append(list []*pluginDriver.PluginDataType) (e
 	errData, err = This.StarRocksInsert(list)
 	if err != nil {
 		This.err, This.conn.err = err, err
+	} else {
+		This.err = nil
 	}
 	return errData
 }
