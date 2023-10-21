@@ -595,9 +595,9 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 				n = This.longStringLen
 			} else {
 				n = rand.Intn(255)
-				if n < 0 {
-					n = 2
-				}
+			}
+			if n <= 1 {
+				n = 2
 			}
 			cnSize = rand.Intn(n / 2)
 			enSize = n - cnSize*4
