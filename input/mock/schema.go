@@ -98,6 +98,7 @@ func (c *InputMock) GetSchemaTableFieldList(schema string, table string) (FieldL
 	}
 	// 如果table 不在所有table范围内,有可能传进来的table 是 .* 这样的别名,这个时候应该返回空
 	if !ok {
+		FieldList = make([]inputDriver.TableFieldInfo, 0)
 		return
 	}
 	event := pluginTestData.NewEvent()
