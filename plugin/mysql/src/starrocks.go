@@ -143,5 +143,8 @@ LOOP:
 		return nil, nil
 	}
 	_, err = This.conn.conn.Exec(sql, valList)
-	return list[0], err
+	if err != nil {
+		return list[0], err
+	}
+	return
 }
