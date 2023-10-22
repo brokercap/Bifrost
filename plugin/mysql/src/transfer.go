@@ -282,7 +282,7 @@ func (This *Conn) TransferDataType(columnType, dataType, destDataType string, de
 	if dataTypeLen == 0 {
 		return destDataType
 	}
-	return fmt.Sprintf("%s(%d)", dataTypeLen)
+	return fmt.Sprintf("%s(%d)", destDataType, dataTypeLen)
 }
 
 func (This *Conn) GetDataTypeLength(columnType, dataType string) int {
