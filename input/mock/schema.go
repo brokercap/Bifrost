@@ -26,16 +26,20 @@ import (
 
 func (c *InputMock) GetNormalTableObjlist() (tableList []*NormalTable) {
 	normalTable := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "normal",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "normal",
+		LongStringLen: c.config.LongStringLen,
 	}
 	normalTableNoMapping := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "no_mapping",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "no_mapping",
+		LongStringLen: c.config.LongStringLen,
 	}
 	normalTableNoPks := &NormalTable{
-		SchemaName: DefaultNormalSchemaName,
-		TableName:  "no_pks",
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "no_pks",
+		NoPks:         true,
+		LongStringLen: c.config.LongStringLen,
 	}
 	tableList = append(tableList, normalTable)
 	tableList = append(tableList, normalTableNoMapping)
@@ -94,6 +98,7 @@ func (c *InputMock) GetSchemaTableFieldList(schema string, table string) (FieldL
 	}
 	// 如果table 不在所有table范围内,有可能传进来的table 是 .* 这样的别名,这个时候应该返回空
 	if !ok {
+		FieldList = make([]inputDriver.TableFieldInfo, 0)
 		return
 	}
 	event := pluginTestData.NewEvent()
@@ -144,13 +149,6 @@ func (c *InputMock) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.Ch
 		BinlogRowImage: "full",
 	}
 	return result, nil
-}
-
-// 获取队列最新的位点
-
-func (c *InputMock) GetCurrentPosition() (p *inputDriver.PluginPosition, err error) {
-	err = fmt.Errorf("not supported")
-	return
 }
 
 func (c *InputMock) GetVersion() (Version string, err error) {

@@ -21,17 +21,17 @@ func (This *Conn) GetToDestDataType(data *pluginDriver.PluginDataType, fieldName
 	return This.TransferToCkTypeByColumnData(data.Rows[len(data.Rows)-1][fieldName], nullable)
 }
 
-func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string) {
+func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (sql string, isContinue bool) {
 	if !This.IsStarRocks() {
 		log.Printf("[ERROR] output[%s] only starrocks server support auto create table \n", OutputName)
-		return ""
+		return "", false
 	}
 	if data.Rows == nil || len(data.Rows) == 0 {
-		return ""
+		return "", true
 	}
 	if len(data.Pri) == 0 && This.p.SyncMode != SYNCMODE_LOG_APPEND {
 		log.Printf("[ERROR] output[%s] only SyncMode:%s support no pri,bug current SyncMode:%s SchemaName:%s TableName:%s \n", OutputName, SYNCMODE_LOG_APPEND, This.p.SyncMode, data.SchemaName, data.TableName)
-		return ""
+		return "", true
 	}
 	var fieldsStr string
 	var isFirst = true
@@ -72,7 +72,7 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 	engineSQL, err := This.GetCreateTableEngine(data)
 	if err != nil {
 		log.Printf("[ERROR] output[%s] TransferToCreateTableSql err:%+v \n", OutputName, err)
-		return ""
+		return "", false
 	}
 	sql = fmt.Sprintf("CREATE TABLE IF NOT EXISTS `%s`.`%s` (%s) %s", This.GetSchemaName(data), This.GetTableName(data), fieldsStr, engineSQL)
 	return
@@ -101,7 +101,7 @@ func (This *Conn) GetCreateTableEngineByStarRocks(data *pluginDriver.PluginDataT
 		ids = strings.Replace(strings.Trim(fmt.Sprint(data.Pri), "[]"), " ", "','", -1)
 	}
 	if This.p.SyncMode == SYNCMODE_LOG_APPEND {
-		if ids == "" {
+		if ids != "" {
 			ids = "binlog_datetime,binlog_event_type," + ids
 		} else {
 			ids = "binlog_datetime,binlog_event_type"
@@ -140,61 +140,108 @@ func (This *Conn) TransferToTypeByColumnType_Starrocks(columnType string, nullab
 	toType = "STRING"
 	// starrocks 测试下来当前是不支持 无符号数字,所以需要给相对应的无符号数字加大一个等级的空间
 	// uint64 则需要使用STRING
-	switch columnType {
-	case "uint64", "Nullable(uint64)":
-		toType = "STRING"
-	case "int64", "Nullable(int64)":
+	toLowerColumnType := strings.ToLower(columnType)
+	if strings.Index(toLowerColumnType, "nullable(") == 0 {
+		toLowerColumnType = toLowerColumnType[9 : len(toLowerColumnType)-1]
+	}
+	switch toLowerColumnType {
+	case "uint64":
+		toType = "VARCHAR(20)"
+	case "int64":
 		toType = "BIGINT(20)"
-	case "uint32", "Nullable(uint32)", "uint24", "Nullable(uint24)":
+	case "uint32", "uint24":
 		toType = "BIGINT(20)"
-	case "int32", "Nullable(int32)", "int24", "Nullable(int24)":
+	case "int32", "int24":
 		toType = "INT(11)"
-	case "uint16", "Nullable(uint16)":
+	case "uint16":
 		toType = "INT(11)"
-	case "int16", "Nullable(int16)", "year(4)", "Nullable(year(4))", "year(2)", "Nullable(year(2))":
+	case "int16", "year(4)", "year(2)", "year":
 		toType = "SMALLINT(6)"
-	case "uint8", "Nullable(uint8)":
+	case "uint8", "SMALLINT(uint8)":
 		toType = "SMALLINT(6)"
-	case "int8", "Nullable(int8)", "bool", "Nullable(bool)":
+	case "int8", "bool":
 		toType = "TINYINT(4)"
-	case "float", "Nullable(float)":
+	case "float":
 		toType = "FLOAT"
-	case "double", "Nullable(double)":
+	case "double", "real":
 		toType = "DOUBLE"
-	case "decimal", "Nullable(decimal)":
+	case "decimal", "numeric":
 		toType = "DECIMAL"
-	case "date", "Nullable(date)":
+	case "date", "nullable(date)":
 		toType = "DATE"
 	case "json":
 		toType = "JSON"
+	case "time":
+		toType = "VARCHAR(10)"
+	case "enum":
+		toType = "VARCHAR(255)"
+	case "set":
+		toType = "VARCHAR(2048)"
+	case "string", "longblob", "longtext":
+		toType = "VARCHAR(163841)"
 	default:
-		if strings.Index(columnType, "double") >= 0 {
+		if strings.Index(toLowerColumnType, "double") >= 0 {
 			toType = "DOUBLE"
 			break
 		}
-		if strings.Index(columnType, "float") >= 0 {
+		if strings.Index(toLowerColumnType, "real") >= 0 {
+			toType = "DOUBLE"
+			break
+		}
+		if strings.Index(toLowerColumnType, "float") >= 0 {
 			toType = "FLOAT"
 			break
 		}
-		if strings.Index(columnType, "bit") >= 0 {
+		if strings.Index(toLowerColumnType, "bit") >= 0 {
 			toType = "BIGINT(20)"
 			break
 		}
-		if strings.Index(columnType, "timestamp") >= 0 {
+		if strings.Index(toLowerColumnType, "timestamp") >= 0 {
 			toType = "DATETIME"
 			break
 		}
-		if strings.Index(columnType, "datetime") >= 0 {
+		if strings.Index(toLowerColumnType, "datetime") >= 0 {
 			toType = "DATETIME"
 			break
 		}
-		if strings.Index(columnType, "decimal") >= 0 {
-			i := strings.Index(columnType, "decimal(")
+		if strings.Index(toLowerColumnType, "time(") >= 0 {
+			toType = "VARCHAR(16)"
+			break
+		}
+		if strings.Index(toLowerColumnType, "enum(") >= 0 {
+			toType = "VARCHAR(255)"
+			break
+		}
+		if strings.Index(toLowerColumnType, "set(") >= 0 {
+			toType = "VARCHAR(2048)"
+			break
+		}
+		if strings.Index(toLowerColumnType, "char") >= 0 {
+			i := strings.Index(toLowerColumnType, "char(")
+			if i < 0 {
+				toType = "VARCHAR(255)"
+				break
+			}
+			lenStr := strings.Split(toLowerColumnType[i+5:], ")")[0]
+			lenStr = strings.Trim(lenStr, " ")
+			if lenStr == "" {
+				toType = "VARCHAR(255)"
+			} else {
+				toType = fmt.Sprintf("CHAR(%s)", lenStr)
+			}
+			break
+		}
+		if strings.Index(toLowerColumnType, "varchar") >= 0 {
+			toType = This.TransferDataType(toLowerColumnType, "varchar", "VARCHAR", 255)
+			break
+		}
+		if strings.Index(toLowerColumnType, "decimal") >= 0 {
+			i := strings.Index(toLowerColumnType, "decimal(")
 			if i < 0 {
 				toType = "Decimal(18,2)"
 				break
 			}
-			dataTypeParam := strings.Split(columnType[i+8:], ")")[0]
+			dataTypeParam := strings.Split(toLowerColumnType[i+8:], ")")[0]
 			dataTypeParam = strings.Trim(dataTypeParam, " ")
 			if dataTypeParam == "" {
 				toType = "Decimal(18,2)"
@@ -206,12 +253,16 @@ func (This *Conn) TransferToTypeByColumnType_Starrocks(columnType string, nullab
 			if len(p) == 2 {
 				D, _ = strconv.Atoi(strings.Trim(p[1], " "))
 			}
-			// M,D.   M > 18 就属于 Decimal128 , M > 39 就属于 Decimal256  ，但是当前你 go ck 驱动只支持 Decimal64
-			if M > 18 {
-				toType = "STRING"
-			} else {
+			if M <= 38 {
 				toType = fmt.Sprintf("Decimal(%d,%d)", M, D)
+				break
 			}
+			// M,D.   19 <= M <= 38 就属于 Decimal128 , 39 <= M <=76 就属于 Decimal256
+			if M <= 76 {
+				toType = "VARCHAR(78)"
+				break
+			}
+			toType = "VARCHAR(255)"
 			break
 		}
 	}
@@ -221,6 +272,29 @@ func (This *Conn) TransferToTypeByColumnType_Starrocks(columnType string, nullab
 		}
 	}
 	return
+}
+
+func (This *Conn) TransferDataType(columnType, dataType, destDataType string, defaultLen int) string {
+	dataTypeLen := This.GetDataTypeLength(columnType, dataType)
+	if dataTypeLen == 0 {
+		dataTypeLen = defaultLen
+	}
+	if dataTypeLen == 0 {
+		return destDataType
+	}
+	return fmt.Sprintf("%s(%d)", destDataType, dataTypeLen)
+}
+
+func (This *Conn) GetDataTypeLength(columnType, dataType string) int {
+	columnTypePrefix := fmt.Sprintf("%s(", dataType)
+	i := strings.Index(columnType, columnTypePrefix)
+	if i < 0 {
+		return 0
+	}
+	lenStr := strings.Split(columnType[i+len(columnTypePrefix):], ")")[0]
+	lenStr = strings.Trim(lenStr, " ")
+	lenInt, _ := strconv.Atoi(lenStr)
+	return lenInt
 }
 
 func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (toType string) {
@@ -250,7 +324,7 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (to
 			toType = "BIGINT(20)"
 			break
 		case reflect.Uint, reflect.Uint64:
-			toType = "STRING"
+			toType = "VARCHAR(20)"
 			break
 		case reflect.Float32:
 			toType = "FLOAT"

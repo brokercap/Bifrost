@@ -513,6 +513,7 @@
                 return  false;
             }
             setTableName(TableName);
+            UpdateWebUri(SchemaName,TableName);
             $("#TableListContair a").removeClass("active");
             $("#"+key).parent("a").addClass("active");
             ChangeTableFlowBtnHref(SchemaName,TableName);
@@ -678,7 +679,7 @@
             $("#TableFieldsContair").html(html);
         }
 
-        function showSchemaTableList(id){
+        function showSchemaTableList(id,initTableName){
             $("#DatabaseListContair a").removeClass("active");
             $("#"+id).addClass("active");
             var SchemaName = $("#"+id).find("h3").text();
@@ -687,8 +688,9 @@
             setSchemaName(SchemaName);
             $("#tableToServerListContair").attr("DbName",DbName);
             $("#tableToServerListContair").attr("schema",SchemaName);
-            var showTableList = function(data){
+            var showTableList = function(data,initTableName){
                 $("#TableListContair").html("");
+                var initTableNameCanGetTableToServerList = false
                 $.each(data,function(index,v) {
                     var html = "";
                     var title = "";
@@ -721,6 +723,9 @@
                     if (v.AddStatus == false){
                         html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-warning" type="button" onClick="showAddTable(\''+v.TableName+'\')">ADD</button></div>';
                     }else{
+                        if( initTableName == v.TableName ) {
+                            initTableNameCanGetTableToServerList = true
+                        }
                         html+= '<div class="button"><button data-toggle="button" class="btn-sm btn-danger" type="button" onClick="DelTable(\''+v.TableName+'\')">DEL</button></div>';
                     }
                     html += "<div class='check_input'> <input type='checkbox' name='table_check_name' value='"+v.TableName+"' style='width: 20px; height: 20px;' /></div>";
@@ -728,17 +733,20 @@
                     html +=	'</div></a>';
                     $("#TableListContair").append(html);
                 });
+                if(initTableNameCanGetTableToServerList && initTableName !="" && initTableName != null && initTableName != undefined) {
+                    GetTableToServerList(SchemaName,initTableName);
+                }
             }
             if (!DataBaseMap.has(SchemaName) || DataBaseMap.get(SchemaName) == undefined){
 
                 var callback = function (data) {
                     DataBaseMap.set(SchemaName,data);
-                    showTableList(data);
+                    showTableList(data,initTableName);
                 };
                 var ajaxParam = {DbName:DbName,SchemaName:SchemaName};
                 Ajax("GET",url, ajaxParam,callback,true);
             }else{
-                showTableList(DataBaseMap.get(SchemaName));
+                showTableList(DataBaseMap.get(SchemaName),initTableName);
             }
             showBatchDelOrAddBtn();
         }
@@ -1051,6 +1059,37 @@
             }
         });
 
+        function InitSchemaAndTableSelect() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var schema= urlParams.get("schema");
+            var table= urlParams.get("TableName");
+            if(schema == "" || schema ==null || schema == undefined){
+                // 全量任务和表同步列表提交过来的url这个字段不一样,这里只在这里修改,后续再统一
+                schema=urlParams.get("SchemaName");
+            }
+            if(schema == "" || schema ==null || schema == undefined){
+                return
+            }
+            if(schema=="*"){
+                schema = "AllDataBases";
+            }
+            if(table=="*"){
+                table = "AllTables";
+            }
+            $("#DatabaseListContair h3:contains('"+schema+"')").each(function(){
+                showSchemaTableList($(this).closest("a").attr("id"),table)
+            });
+        }
+        function UpdateWebUri(SchemaName,TableName) {
+            if(SchemaName=="AllDataBases"){
+                SchemaName = "%2a";
+            }
+            if(TableName=="AllTables"){
+                TableName = "%2a";
+            }
+            window.history.replaceState(null, null, '?DbName='+getDbName()+"&SchemaName="+SchemaName+"&TableName="+TableName);
+        }
+        InitSchemaAndTableSelect();
     </script>
 
 {{template "db.detail.table.add" .}}

@@ -75,7 +75,7 @@ function formatDate(timestamp) {
                                             </thead>
                                             <tbody id="dbListContair">
                                             	{{range $i, $v := .DBList}}
-                                                <tr class="DbListTr" id="{{$v.Name}}">
+                                                <tr class="DbListTr" DbName="{{$v.Name}}">
                                                     <td>
                                                         <p class="DbName">{{$v.Name}}</p>
                                                         <p class="DbNameInputType">{{$v.InputType}}</p>
@@ -579,8 +579,15 @@ function SearchDbName(DbName) {
     if(DbName == "" || DbName == null){
         $(".DbListTr").show();
     }else{
-        $(".DbListTr").hide();
-        $("#"+DbName+"").show();
+        // 这里不能使用 $("#"+id).show() 的方法,是因为 DbName 中可能带 . 会导致失败
+        // 所以这里采用遍历的方法进行逐个对比
+        $(".DbListTr").each(function() {
+            if( $(this).attr("DbName") == DbName ){
+                $(this).show();
+            }else{
+                $(this).hide();
+            }
+        });
     }
 }
 
@@ -640,7 +647,7 @@ function InitDbSearchSelect() {
         return
     }
     $("#DbStatusSelect").val(status);
-    SearchStatus(Status);
+    SearchStatus(status);
 }
 // 初始化
 DbSelectSearchSort();
