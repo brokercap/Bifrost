@@ -3,6 +3,7 @@ package src
 import (
 	dbDriver "database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
@@ -13,36 +14,14 @@ import (
 	"time"
 )
 
-const VERSION = "v2.0.7"
-const BIFROST_VERION = "v2.0.7"
-
 type TableDataStruct struct {
 	Data       []*pluginDriver.PluginDataType
 	CommitData []*pluginDriver.PluginDataType // commit 提交的数据列表，Data 每 BatchSize 数据量划分为一个最后提交的commit
 }
 
 func init() {
-	pluginDriver.Register("mysql", NewConn, VERSION, BIFROST_VERION)
+	pluginDriver.Register(OutputName, NewConn, VERSION, BIFROST_VERION)
 }
-
-type EventType int8
-
-const (
-	INSERT         EventType = 0
-	UPDATE         EventType = 1
-	DELETE         EventType = 2
-	REPLACE_INSERT EventType = 3
-	SQLTYPE        EventType = 4
-)
-
-type SyncMode string
-
-const (
-	SYNCMODE_NORMAL       SyncMode = "Normal"
-	SYNCMODE_LOG_UPDATE   SyncMode = "LogUpdate"
-	SYNCMODE_LOG_APPEND   SyncMode = "LogAppend"
-	SYNCMODE_NO_SYNC_DATA SyncMode = "NoSyncData"
-)
 
 type fieldStruct struct {
 	ToField        string
@@ -61,12 +40,15 @@ func NewTableData() *TableDataStruct {
 }
 
 type Conn struct {
-	uri    *string
-	status string
-	p      *PluginParam
-	conn   *mysqlDB
-	err    error
-	isTiDB bool
+	uri              *string
+	status           string
+	p                *PluginParam
+	conn             *mysqlDB
+	err              error
+	serverVersion    string
+	isTiDB           bool
+	isStarRocks      bool
+	starRocksBeCount int
 }
 
 type PluginParam struct {
@@ -183,6 +165,10 @@ func (This *Conn) GetParam(p interface{}) (*PluginParam, error) {
 	This.p = &param
 	This.initTableInfo()
 	This.initVersion()
+	if !This.isTiDB {
+		// 假如是TiDB,则说明肯定不是starrocks
+		This.initIsStarrock()
+	}
 	return This.p, nil
 }
 
@@ -247,6 +233,63 @@ func (This *Conn) initToMysqlTableFieldType() {
 	This.p.fieldCount = len(list)
 }
 
+func (This *Conn) GetSchemaName(data *pluginDriver.PluginDataType) (SchemaName string) {
+	if This.p.Schema == "" {
+		SchemaName = data.SchemaName
+	} else {
+		SchemaName = This.p.Schema
+	}
+	return
+}
+
+func (This *Conn) GetTableName(data *pluginDriver.PluginDataType) (TableName string) {
+	if This.p.Table == "" {
+		TableName = data.TableName
+	} else {
+		TableName = This.p.Table
+	}
+	return
+}
+
+func (This *Conn) GetSchemaAndTable(data *pluginDriver.PluginDataType) (SchemaName, TableName, SchemaAndTable string) {
+	SchemaName = This.GetSchemaName(data)
+	TableName = This.GetTableName(data)
+	SchemaAndTable = fmt.Sprintf("`%s`.`%s`", SchemaName, TableName)
+	return
+}
+
+func (This *Conn) CreateTableAndGetTableFieldsType(data *pluginDriver.PluginDataType) (tableFields *PluginParam0, err error) {
+	tableFields, _ = This.getAutoTableFieldType(data)
+	// 这里无视 是否返回 error, 因为有可能会返回 查不到表的 错误,这里直接跳过这个错误,后面遇到错误会进进行再处理
+	/*
+		if err != nil {
+			return nil, err
+		}
+	*/
+	if tableFields != nil {
+		return tableFields, nil
+	}
+	// 这里无视是否创建成功,如果失败了,后面的建表逻辑,也肯定报错
+
+	_ = This.conn.CreateDatabase(This.GetSchemaName(data))
+	createTableSql, isContinue := This.TransferToCreateTableSql(data)
+	if createTableSql == "" {
+		if isContinue {
+			return nil, nil
+		} else {
+			log.Printf("[ERROR] output[%s] get create table sql is empty,data:%+v \n", OutputName, data)
+			return nil, errors.New("get create table sql is empty")
+		}
+	}
+
+	err = This.conn.Exec(createTableSql)
+	if err != nil {
+		return nil, err
+	}
+	tableFields, err = This.getAutoTableFieldType(data)
+	return
+}
+
 func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*PluginParam0, error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -254,30 +297,24 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 			This.conn.err = fmt.Errorf(string(debug.Stack()))
 		}
 	}()
-	var SchemaName string
-	if This.p.Schema == "" {
-		SchemaName = data.SchemaName
-	} else {
-		SchemaName = This.p.Schema
-	}
-	key := "`" + SchemaName + "`.`" + data.TableName + "`"
+	var SchemaName, TableName, key = This.GetSchemaAndTable(data)
 	if _, ok := This.p.tableMap[key]; ok {
 		return This.p.tableMap[key], nil
 	}
-	fields := This.conn.GetTableFields(SchemaName, data.TableName)
+	fields := This.conn.GetTableFields(SchemaName, TableName)
 	if This.conn.err != nil {
 		This.err = This.conn.err
 		return nil, This.err
 	}
 	if len(fields) == 0 {
-		This.err = fmt.Errorf("SchemaName:%s, TableName:%s not exsit", SchemaName, data.TableName)
-		return nil, This.err
+		err := fmt.Errorf("SchemaName:%s, TableName:%s not exsit", SchemaName, data.TableName)
+		return nil, err
 	}
-	fieldList := make([]fieldStruct, len(fields))
+	fieldList := make([]fieldStruct, 0)
 	priKeyList := make([]fieldStruct, 0)
 	var fromPriKey, toPriKey string
 	var ok bool
-	for i, v := range fields {
+	for _, v := range fields {
 		var fromFieldName string
 		if _, ok = data.Rows[0][v.COLUMN_NAME]; !ok {
 			switch v.COLUMN_NAME {
@@ -292,6 +329,9 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 				break
 			case "binlogposition", "binlog_position":
 				fromFieldName = "{$BinlogPosition}"
+				break
+			case "binlog_datetime", "binlogdatetime":
+				fromFieldName = "{$BinlogDateTime}"
 				break
 			default:
 				fromFieldName = v.COLUMN_NAME
@@ -320,8 +360,24 @@ func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*Plu
 				toPriKey = v.COLUMN_NAME
 			}
 		}
-		fieldList[i] = field
+		// 假如starrocks表字段允许为null
+		// 并且同时是BIGINT类型
+		// 同时源端数据中又不存在,则认为其为自增字段,
+		if v.COLUMN_DEFAULT == nil && strings.Contains(strings.ToUpper(v.DATA_TYPE), "BIGINT") {
+			if _, ok = data.Rows[len(data.Rows)-1][v.COLUMN_NAME]; !ok {
+				continue
+			}
+		}
+		fieldList = append(fieldList, field)
 	}
+	if len(fieldList) == 0 {
+		return nil, fmt.Errorf("not found %s.%s", SchemaName, data.TableName)
+	}
+	if fromPriKey == "" && len(data.Pri) > 0 {
+		fromPriKey = data.Pri[0]
+		toPriKey = data.Pri[0]
+	}
+
 	p := &PluginParam0{
 		Field:          fieldList,
 		PriKey:         priKeyList,
@@ -360,8 +416,8 @@ func (This *Conn) initVersion() {
 	if This.conn == nil {
 		return
 	}
-	version := This.conn.SelectVersion()
-	if strings.Contains(version, "TiDB") {
+	This.serverVersion = This.conn.SelectVersion()
+	if strings.Contains(This.serverVersion, "TiDB") {
 		This.isTiDB = true
 	}
 }
@@ -612,20 +668,8 @@ func (This *Conn) NotAutoTableCommit(list []*pluginDriver.PluginDataType) (ErrDa
 	if This.conn.err != nil {
 		return nil, This.conn.err
 	}
-	switch This.p.SyncMode {
-	case SYNCMODE_NORMAL:
-		ErrData = This.CommitNormal(list)
-		break
-	case SYNCMODE_LOG_UPDATE:
-		ErrData = This.CommitLogMod_Update(list)
-		break
-	case SYNCMODE_LOG_APPEND:
-		ErrData = This.CommitLogMod_Append(list)
-		break
-	default:
-		This.err = fmt.Errorf("同步模式ERROR:%s", This.p.SyncMode)
-		break
-	}
+	ErrData = This.commitData(list)
+
 	if This.conn.err != nil {
 		This.err = This.conn.err
 		//log.Println("plugin mysql conn.err",This.err)
@@ -656,9 +700,12 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 		dataMap[key] = append(dataMap[key], PluginData)
 	}
 	for _, data := range dataMap {
-		p, err := This.getAutoTableFieldType(data[0])
+		p, err := This.CreateTableAndGetTableFieldsType(data[0])
 		if err != nil {
-			return data[0], e
+			return data[0], err
+		}
+		if p == nil {
+			continue
 		}
 		This.p.Field = p.Field
 		This.p.fieldCount = len(p.Field)
@@ -671,26 +718,14 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 			This.err = This.conn.err
 			break
 		}
-		switch This.p.SyncMode {
-		case SYNCMODE_NORMAL:
-			ErrData = This.CommitNormal(data)
-			break
-		case SYNCMODE_LOG_UPDATE:
-			ErrData = This.CommitLogMod_Update(data)
-			break
-		case SYNCMODE_LOG_APPEND:
-			ErrData = This.CommitLogMod_Append(data)
-			break
-		default:
-			This.err = fmt.Errorf("同步模式ERROR:%s", This.p.SyncMode)
-			break
-		}
+
+		ErrData = This.commitData(data)
 		if This.conn.err != nil {
 			This.err = This.conn.err
 		}
 		if This.err != nil {
 			This.conn.err = This.conn.Rollback()
-			log.Println("plugin mysql err", This.err)
+			log.Printf("[ERROR] output[%s] AutoTableCommit commitData err:%+v \n", OutputName, This.err)
 			return ErrData, This.err
 		}
 		This.conn.err = This.conn.Commit()
@@ -702,11 +737,40 @@ func (This *Conn) AutoTableCommit(list []*pluginDriver.PluginDataType) (ErrData 
 	return
 }
 
+func (This *Conn) commitData(list []*pluginDriver.PluginDataType) (ErrData *pluginDriver.PluginDataType) {
+	switch This.p.SyncMode {
+	case SYNCMODE_NORMAL:
+		if This.IsStarRocks() {
+			ErrData = This.StarRocksCommitNormal(list)
+		} else {
+			ErrData = This.CommitNormal(list)
+		}
+		break
+	case SYNCMODE_LOG_UPDATE:
+		if This.IsStarRocks() {
+			ErrData = This.StarRocksCommit_Append(list)
+		} else {
+			ErrData = This.CommitLogMod_Update(list)
+		}
+		break
+	case SYNCMODE_LOG_APPEND:
+		if This.IsStarRocks() {
+			ErrData = This.StarRocksCommit_Append(list)
+		} else {
+			ErrData = This.CommitLogMod_Append(list)
+		}
+		break
+	default:
+		This.err = fmt.Errorf("同步模式ERROR:%s", This.p.SyncMode)
+		break
+	}
+	return
+}
+
 func (This *Conn) dataTypeTransfer(data interface{}, fieldName string, toDataType string, defaultVal *string) (v dbDriver.Value, e error) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("plugin mysql dataTypeTransfer:", fmt.Sprint(err))
-			log.Println(string(debug.Stack()))
+			log.Printf("[ERROR] output[%s] dataTypeTransfer pacnic:%+v stack:%+v \n", OutputName, err, string(debug.Stack()))
 			e = fmt.Errorf(fieldName + " " + fmt.Sprint(err))
 		}
 	}()
