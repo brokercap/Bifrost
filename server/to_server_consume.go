@@ -44,40 +44,32 @@ func (This *ToServer) Start() {
 	}
 }
 
-func (This *ToServer) ConsumeToServer(db *db, SchemaName string, TableName string) {
+func (This *ToServer) ToServerConfigUpdate() {
 	// 为了兼容旧版本,旧版本采用的是由插件自行实现的BatchSize,新版本开始由Server端来实现
 	This.Lock()
-	if This.BatchSize <= 0 {
+	defer This.Unlock()
+	if This.PluginParam != nil {
 		// 假如原有插件实现了BatchSize ,并且原有插件BatchSize > 0的情况下,则认为需要改新版本的BactchSize的大小
 		// 否则直接认为BactchSize为1,兼容旧版本
 		// 因为有可能原有插件没有实现这个,就还是一件事件提交一次
-		if len(This.PluginParam) > 0 {
-			var BatchSize int
+		if This.BatchSize <= 0 {
 			if BatchSizeStr, ok := This.PluginParam["BatchSize"]; ok {
-				BatchSize, _ = strconv.Atoi(fmt.Sprint(BatchSizeStr))
-				if BatchSize > 0 {
-					This.BatchSize = BatchSize
-				} else {
-					This.BatchSize = 1
-				}
-			} else {
-				This.BatchSize = 1
+				This.BatchSize, _ = strconv.Atoi(fmt.Sprint(BatchSizeStr))
 			}
-			This.PluginParam["BatchSize"] = This.BatchSize
-		} else {
+		}
+		if This.BatchSize <= 0 {
 			This.BatchSize = 1
 		}
-	} else {
-		if len(This.PluginParam) > 0 {
-			This.PluginParam["BatchSize"] = This.BatchSize
-		}
+		This.PluginParam["BatchSize"] = This.BatchSize
 	}
-
 	if This.BatchCommitTimeOut <= 0 {
 		This.BatchCommitTimeOut = config.PluginCommitTimeOut
 	}
 	This.batchCommitTimeOutDuration = time.Duration(This.BatchCommitTimeOut) * time.Second
-	This.Unlock()
+}
+
+func (This *ToServer) ConsumeToServer(db *db, SchemaName string, TableName string) {
+	This.ToServerConfigUpdate()
 	if config.NotUseBatchScheduler {
 		This.consume_to_server(db, SchemaName, TableName)
 	} else {
