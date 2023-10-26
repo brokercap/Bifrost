@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/plugin"
@@ -14,8 +15,7 @@ import (
 )
 
 func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, TableName string) {
-	This.BatchSize = 1000
-	var batchDataList []*pluginDriver.PluginDataType
+	var batchDataList = make([]*pluginDriver.PluginDataType, 0, This.BatchSize)
 	var MyConsumerId int
 	This.Lock()
 	if This.cosumerPluginParamArr == nil {
@@ -33,12 +33,14 @@ func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, 
 	toServerPositionBinlogKey := getToServerBinlogkey(db, This)
 	// 因为有多个地方对 ThreadCount - 1 操作，记录是否已经扣减过
 	var ThreadCountDecrDone bool = false
+	ToServerCtx, ToServerCancleFunc := context.WithCancel(context.Background())
 	defer func() {
+		ToServerCancleFunc()
 		if err := recover(); err != nil {
-			log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server over;err:", err, "debug", string(debug.Stack()))
+			log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server_batch over;err:", err, "debug", string(debug.Stack()))
 			return
 		} else {
-			log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server over")
+			log.Println(db.Name, This.Notes, "toServerKey:", *This.Key, "MyConsumerId:", MyConsumerId, "SchemaName:", SchemaName, "TableName:", TableName, This.PluginName, This.ToServerKey, "ToServer consume_to_server_batch over")
 		}
 		This.Lock()
 		if ThreadCountDecrDone == false {
@@ -192,7 +194,6 @@ func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, 
 			doWarningFun(warning.WARNINGERROR, "PluginName:"+This.PluginName+";ToServerKey:"+This.ToServerKey+" err:"+errs.Error())
 		}
 	}
-	var retry = false
 	var checkDealSkipErrData = func() bool {
 		// 假如不是第一次循环,尝试 获取 错误信息,是否要被过滤掉,如果要被过滤掉,则退出循环
 		dealStatus := This.GetWaitErrorDeal()
@@ -209,25 +210,33 @@ func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, 
 		}
 		return false
 	}
-	var forSendData = func(data0 *pluginDriver.PluginDataType) {
-		if data0 != nil {
-			newData, b := This.filterField(data0)
-			if !b {
-				return
-			}
-			batchDataList = append(batchDataList, newData)
-			if len(batchDataList) < This.BatchSize {
-				return
-			}
-		}
-		if len(batchDataList) == 0 {
-			LastSuccessData, ErrData, errs = nil, nil, nil
+
+	type BacthResult struct {
+		lastSuccessCommitData *pluginDriver.PluginDataType
+		ErrData               *pluginDriver.PluginDataType
+		err                   error
+	}
+	var bacthCh = make(chan []*pluginDriver.PluginDataType, 3)
+	var bacthResultCh = make(chan *BacthResult, 3)
+
+	bacthResultCh <- &BacthResult{}
+	var forSendData0 = func(batchDataList []*pluginDriver.PluginDataType) (lastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
+		var lastRacthResult *BacthResult
+		select {
+		case lastRacthResult = <-bacthResultCh:
+			break
+		case <-ToServerCtx.Done():
 			return
 		}
-		retry = false
+		bacthCh <- batchDataList
+		return lastRacthResult.lastSuccessCommitData, lastRacthResult.ErrData, lastRacthResult.err
+	}
+
+	var forSendData1 = func(batchDataList []*pluginDriver.PluginDataType) (lastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, errs error) {
+		retry := false
 		for {
 			errs = nil
-			LastSuccessData, ErrData, errs = This.sendToServerWithBatch(batchDataList, MyConsumerId, retry)
+			lastSuccessCommitData, ErrData, errs = This.sendToServerWithBatch(batchDataList, MyConsumerId, retry)
 			if This.MustBeSuccess == true {
 				if errs == nil {
 					if lastErrTime > 0 {
@@ -263,13 +272,47 @@ func (This *ToServer) consume_to_server_batch_commit(db *db, SchemaName string, 
 				}
 				retry = true
 			} else {
-				LastSuccessData = nil
 				fileAck()
 				break
 			}
 		}
-		batchDataList = make([]*pluginDriver.PluginDataType, 0)
+		return
 	}
+
+	var forSendData = func(data0 *pluginDriver.PluginDataType) {
+		if data0 != nil {
+			newData, b := This.filterField(data0)
+			if !b {
+				return
+			}
+			batchDataList = append(batchDataList, newData)
+			if len(batchDataList) < This.BatchSize {
+				return
+			}
+		}
+		if len(batchDataList) == 0 {
+			LastSuccessData, ErrData, errs = nil, nil, nil
+			return
+		}
+		forSendData0(batchDataList)
+		batchDataList = make([]*pluginDriver.PluginDataType, 0, This.BatchSize)
+	}
+
+	go func(bacthCh chan []*pluginDriver.PluginDataType) {
+		for {
+			select {
+			case batchDataList := <-bacthCh:
+				LastSuccessData, ErrData, errs = forSendData1(batchDataList)
+				bacthResultCh <- &BacthResult{
+					lastSuccessCommitData: LastSuccessData,
+					ErrData:               ErrData,
+					err:                   errs,
+				}
+			case <-ToServerCtx.Done():
+				return
+			}
+		}
+	}(bacthCh)
 
 	var n1 int = 0
 	var n0 int = 0
