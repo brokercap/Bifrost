@@ -1,3 +1,6 @@
+v2.3.3-beta   2023-11-05
+1. 修复2.2.2 ,2.3.2 mysql,clickhouse之外的其他插件input没有配置tag标签导致数据转换失败的bug
+
 v2.3.2-beta   2023-10-22
 1. 包含2.2.2版本内容
 2. 优化 output mysql starrocks/doris 自动建表字段类型映射关系,根据实际情况选择最接近源端类型的数据类型
