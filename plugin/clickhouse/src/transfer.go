@@ -431,7 +431,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
-			v = interfaceToFloat64(data)
+			v = InterfaceToDecimalData(data, toDataType)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
