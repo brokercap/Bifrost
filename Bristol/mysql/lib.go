@@ -6,6 +6,8 @@ import (
 )
 
 type tableStruct struct {
+	SchemaName           string
+	TableName            string
 	Pri                  []string
 	ColumnSchemaTypeList []*ColumnInfo
 	needReload           bool

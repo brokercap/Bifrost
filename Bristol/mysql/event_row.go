@@ -36,10 +36,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		tableIdSize = 6
 	}
 
-	_, err = readFixedLengthInteger(buf, tableIdSize)
-	// 这里采用 lastMapEvent.tableId ，则不采用 readFixedLengthInteger 解析出来的 tableId
-	// 实际在运行中，发现存在 readFixedLengthInteger 解析出来的tableId 并不能在 parser.tableSchemaMap 找到的情况，row event 紧随 map event 之后，所以这里采用 parser.lastMapEventTableId 应该不会有问题
-	event.tableId = parser.lastMapEvent.tableId
+	event.tableId, err = readFixedLengthInteger(buf, tableIdSize)
 	err = binary.Read(buf, binary.LittleEndian, &event.flags)
 	switch event.header.EventType {
 	case UPDATE_ROWS_EVENTv2, WRITE_ROWS_EVENTv2, DELETE_ROWS_EVENTv2:
@@ -62,7 +59,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	}
 	for buf.Len() > 0 {
 		var row map[string]interface{}
-		row, err = parser.parseEventRow(buf, parser.lastMapEvent, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
+		row, err = parser.parseEventRow(buf, parser.tableMap[event.tableId], parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
 		if err != nil {
 			log.Println("event row parser err:", err)
 			return
