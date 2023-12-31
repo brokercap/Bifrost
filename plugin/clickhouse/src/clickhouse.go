@@ -811,7 +811,7 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key
 		return This.p.nowBifrostDataVersion
 		break
 	default:
-		return pluginDriver.TransfeResult(key, data, index)
+		return pluginDriver.TransfeResult(key, data, index, true)
 		break
 	}
 	return ""

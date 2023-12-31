@@ -544,7 +544,7 @@ func (This *Conn) getMySQLData(data *pluginDriver.PluginDataType, index int, key
 		return data.BinlogPosition
 		break
 	default:
-		return pluginDriver.TransfeResult(key, data, index)
+		return pluginDriver.TransfeResult(key, data, index, true)
 		break
 	}
 	return ""
