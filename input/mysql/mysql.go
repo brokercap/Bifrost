@@ -4,11 +4,13 @@ import (
 	mysqlDriver "github.com/brokercap/Bifrost/Bristol/mysql"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	"log"
+	"sync"
 )
 
 var MySQLBinlogDump string
 
 type MysqlInput struct {
+	sync.RWMutex
 	inputDriver.PluginDriverInterface
 	inputInfo        inputDriver.InputInfo
 	binlogDump       *mysqlDriver.BinlogDump
@@ -18,6 +20,8 @@ type MysqlInput struct {
 	PluginStatusChan chan *inputDriver.PluginStatus
 	eventID          uint64
 	callback         inputDriver.Callback
+
+	replicateDoDb map[string]map[string]bool
 }
 
 func NewInputPlugin() inputDriver.Driver {
@@ -63,6 +67,7 @@ func (c *MysqlInput) Start0() error {
 		},
 		nil, nil)
 	c.binlogDump.SetNextEventID(c.eventID)
+	c.InitBinlogDumpReplicateDoDb()
 	if !c.inputInfo.IsGTID || c.inputInfo.GTID == "" {
 		go c.binlogDump.StartDumpBinlog(c.inputInfo.BinlogFileName, c.inputInfo.BinlogPostion, c.inputInfo.ServerId, c.reslut, c.inputInfo.MaxFileName, c.inputInfo.MaxPosition)
 	} else {
