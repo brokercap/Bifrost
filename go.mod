@@ -18,6 +18,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/xdg/scram v1.0.5
+	github.com/xhd2015/xgo/runtime v1.0.18
 	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/sys v0.0.0-20210112080510-489259a85091
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
