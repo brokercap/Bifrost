@@ -149,15 +149,15 @@ func (This *Conn) TransferToTypeByColumnType_Starrocks(columnType string, nullab
 		toType = "VARCHAR(20)"
 	case "int64":
 		toType = "BIGINT(20)"
-	case "uint32", "uint24":
+	case "uint32":
 		toType = "BIGINT(20)"
-	case "int32", "int24":
+	case "int32", "int24", "uint24":
 		toType = "INT(11)"
 	case "uint16":
 		toType = "INT(11)"
 	case "int16", "year(4)", "year(2)", "year":
 		toType = "SMALLINT(6)"
-	case "uint8", "SMALLINT(uint8)":
+	case "uint8":
 		toType = "SMALLINT(6)"
 	case "int8", "bool":
 		toType = "TINYINT(4)"
@@ -227,7 +227,11 @@ func (This *Conn) TransferToTypeByColumnType_Starrocks(columnType string, nullab
 			if lenStr == "" {
 				toType = "VARCHAR(255)"
 			} else {
-				toType = fmt.Sprintf("CHAR(%s)", lenStr)
+				if i == 0 {
+					toType = fmt.Sprintf("CHAR(%s)", lenStr)
+				} else {
+					toType = fmt.Sprintf("VARCHAR(%s)", lenStr)
+				}
 			}
 			break
 		}
