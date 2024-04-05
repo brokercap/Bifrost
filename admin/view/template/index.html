@@ -355,7 +355,7 @@
             $("#GoVersion").text(d.GoVersion);
             $("#OSVersion").text(d.GOOS +" / "+d.GOARCH);
         };
-        Ajax("GET","/overview",{},callback,true);
+        Ajax("GET","/overview",{},callback,false);
     }
     getOverView();
 
@@ -380,9 +380,11 @@
 
     function loadNews() {
         var version = "{{.Version}}";
+        var ServerStartTime = "{{.ServerStartTime}}";
         $.ajax({
-            url: "https://www.xbifrost.com/check_news/?version="+version,
+            url: "https://www.xbifrost.com/check_news/?version="+version+"&start="+ServerStartTime,
             type: "GET",
+            timeout: 5000,
             dataType: "jsonp", //指定服务器返回的数据类型
             jsonpCallback:"jsonp",
             success: function (data) {
@@ -422,6 +424,9 @@
                     html += "</tr>";
                 }
                 $("#BifrostNewsTable").html(html);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                showDonate();
             }
         });
     }

@@ -93,7 +93,7 @@ func (c *MongoInput) TableBatchStart(collection *mongo.Collection, perBatchLimit
 		if len(batchResult) < perBatchLimit {
 			break
 		}
-		nextMinId = batchResult[len(batchResult)-1]
+		nextMinId = batchResult[len(batchResult)-1]["_id"]
 	}
 	return nil
 }
