@@ -1,9 +1,9 @@
 package server
 
 import (
-	"testing"
-	"os"
 	"encoding/json"
+	"os"
+	"testing"
 )
 
 func TestRecoveryJSON(t *testing.T) {
@@ -11,21 +11,36 @@ func TestRecoveryJSON(t *testing.T) {
 	var data map[string]dbSaveInfo
 
 	var recoveryData recovery
-	errors := json.Unmarshal([]byte(str),&recoveryData)
-	if errors != nil{
-		t.Fatal("recovery error:",errors.Error())
+	errors := json.Unmarshal([]byte(str), &recoveryData)
+	if errors != nil {
+		t.Fatal("recovery error:", errors.Error())
 		return
 	}
-	errors = json.Unmarshal(*recoveryData.DbInfo,&data)
-	if errors != nil{
-		t.Fatal( "recorery db content errors;",errors)
+	errors = json.Unmarshal(*recoveryData.DbInfo, &data)
+	if errors != nil {
+		t.Fatal("recorery db content errors;", errors)
 		os.Exit(1)
 		return
 	}
 	if len(data["bk26"].TableMap) == 0 {
 		t.Fatal("TableMap is empty")
 	}
-
+	if !recoveryData.StartTime.IsZero() {
+		t.Fatal("StartTime is not zero")
+	}
 	t.Log(data)
+}
 
+func TestRecoveryJSON_StartTime(t *testing.T) {
+	var str string = `{"Version":"v1.4.2-release","StartTime":"2024-04-03T15:04:05Z"}`
+	var recoveryData recovery
+	errors := json.Unmarshal([]byte(str), &recoveryData)
+	if errors != nil {
+		t.Fatal("recovery error:", errors.Error())
+		return
+	}
+	if recoveryData.StartTime.Format("2006-01-02") != "2024-04-03" {
+		t.Fatal("recovery StartTime != 2024-04-03")
+		return
+	}
 }

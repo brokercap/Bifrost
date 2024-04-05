@@ -43,6 +43,7 @@ type IndexController struct {
 // 首页
 func (c *IndexController) Index() {
 	c.SetTitle("Index")
+	c.SetData("ServerStartTime", server.GetServerStartTime().Format("2006-01-02"))
 	c.AddAdminTemplate("index.html", "header.html", "footer.html")
 }
 
