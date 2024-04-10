@@ -96,7 +96,7 @@ func TestTransferToTypeByColumnType_Starrocks(t *testing.T) {
 		{
 			columnTypeList: []string{"enum"},
 			nullable:       false,
-			destColumnType: "VARCHAR(255)",
+			destColumnType: "VARCHAR(765)",
 		},
 		{
 			columnTypeList: []string{"set"},
@@ -136,7 +136,7 @@ func TestTransferToTypeByColumnType_Starrocks(t *testing.T) {
 		{
 			columnTypeList: []string{"enum('a','b')"},
 			nullable:       false,
-			destColumnType: "VARCHAR(255)",
+			destColumnType: "VARCHAR(765)",
 		},
 		{
 			columnTypeList: []string{"set('a','b')"},
@@ -156,13 +156,13 @@ func TestTransferToTypeByColumnType_Starrocks(t *testing.T) {
 		{
 			columnTypeList: []string{"varchar(500)"},
 			nullable:       false,
-			destColumnType: "VARCHAR(500)",
+			destColumnType: "VARCHAR(1500)",
 		},
 
 		{
 			columnTypeList: []string{"Nullable(varchar(500))"},
 			nullable:       false,
-			destColumnType: "VARCHAR(500)",
+			destColumnType: "VARCHAR(1500)",
 		},
 		{
 			columnTypeList: []string{"Nullable(int64)"},
