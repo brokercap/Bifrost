@@ -14,7 +14,7 @@ type FormatDescriptionEvent struct {
 	eventTypeHeaderLengths []uint8
 }
 
-func  (parser *eventParser)  parseFormatDescriptionEvent(buf *bytes.Buffer) (event *FormatDescriptionEvent, err error) {
+func (parser *eventParser) parseFormatDescriptionEvent(buf *bytes.Buffer) (event *FormatDescriptionEvent, err error) {
 	event = new(FormatDescriptionEvent)
 	err = binary.Read(buf, binary.LittleEndian, &event.header)
 	err = binary.Read(buf, binary.LittleEndian, &event.binlogVersion)

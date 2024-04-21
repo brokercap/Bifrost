@@ -10,9 +10,9 @@ import (
 
 func callback(data *mysql.EventReslut) {
 	log.Println(data)
-	if data.Query == ""{
-		for k,v := range data.Rows[len(data.Rows)-1]{
-			log.Println(k,"==",v,"(",reflect.TypeOf(v),")")
+	if data.Query == "" {
+		for k, v := range data.Rows[len(data.Rows)-1] {
+			log.Println(k, "==", v, "(", reflect.TypeOf(v), ")")
 		}
 	}
 }
@@ -23,7 +23,7 @@ func main() {
 	Gtid2()
 }
 
-func Position()  {
+func Position() {
 	filename := "mysql-bin.000071"
 
 	var position uint32 = 203785789
@@ -36,19 +36,19 @@ func Position()  {
 	reslut := make(chan error, 1)
 
 	BinlogDump := &mysql.BinlogDump{
-		DataSource:    DBsource,
-		CallbackFun:   callback,
-		OnlyEvent:     []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
+		DataSource:  DBsource,
+		CallbackFun: callback,
+		OnlyEvent:   []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
 	}
-	BinlogDump.AddReplicateDoDb("bifrost_test","*")
-	BinlogDump.AddReplicateDoDb("test","*")
-	go BinlogDump.StartDumpBinlog(filename, position, 633,reslut,"",0)
+	BinlogDump.AddReplicateDoDb("bifrost_test", "*")
+	BinlogDump.AddReplicateDoDb("test", "*")
+	go BinlogDump.StartDumpBinlog(filename, position, 633, reslut, "", 0)
 	go func() {
 		for {
 			v := <-reslut
 			log.Printf("monitor reslut:%s \r\n", v)
 			switch v.Error() {
-			case "running","starting":
+			case "running", "starting":
 				continue
 			default:
 				os.Exit(1)
@@ -61,7 +61,7 @@ func Position()  {
 	}
 }
 
-func Gtid()  {
+func Gtid() {
 
 	var DBsource = ""
 	var gtid = ""
@@ -72,13 +72,13 @@ func Gtid()  {
 
 	reslut := make(chan error, 1)
 	BinlogDump := &mysql.BinlogDump{
-		DataSource:    DBsource,
-		CallbackFun:   callback,
-		OnlyEvent:     []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
+		DataSource:  DBsource,
+		CallbackFun: callback,
+		OnlyEvent:   []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
 	}
-	BinlogDump.AddReplicateDoDb("bifrost_test","*")
-	BinlogDump.AddReplicateDoDb("test","*")
-	go BinlogDump.StartDumpBinlogGtid(gtid,633,reslut)
+	BinlogDump.AddReplicateDoDb("bifrost_test", "*")
+	BinlogDump.AddReplicateDoDb("test", "*")
+	go BinlogDump.StartDumpBinlogGtid(gtid, 633, reslut)
 	go func() {
 		for {
 			v := <-reslut
@@ -86,14 +86,12 @@ func Gtid()  {
 		}
 	}()
 
-
 	time.Sleep(20 * time.Second)
 	return
 
 }
 
-
-func Gtid2()  {
+func Gtid2() {
 
 	var DBsource = ""
 	var gtid = ""
@@ -104,20 +102,19 @@ func Gtid2()  {
 
 	reslut := make(chan error, 1)
 	BinlogDump := &mysql.BinlogDump{
-		DataSource:    DBsource,
-		CallbackFun:   callback,
-		OnlyEvent:     []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1,mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
+		DataSource:  DBsource,
+		CallbackFun: callback,
+		OnlyEvent:   []mysql.EventType{mysql.QUERY_EVENT, mysql.WRITE_ROWS_EVENTv1, mysql.UPDATE_ROWS_EVENTv1, mysql.DELETE_ROWS_EVENTv1, mysql.WRITE_ROWS_EVENTv2, mysql.UPDATE_ROWS_EVENTv2, mysql.DELETE_ROWS_EVENTv2},
 	}
-	BinlogDump.AddReplicateDoDb("bifrost_test","*")
-	BinlogDump.AddReplicateDoDb("test","*")
-	go BinlogDump.StartDumpBinlogGtid(gtid,633,reslut)
+	BinlogDump.AddReplicateDoDb("bifrost_test", "*")
+	BinlogDump.AddReplicateDoDb("test", "*")
+	go BinlogDump.StartDumpBinlogGtid(gtid, 633, reslut)
 	go func() {
 		for {
 			v := <-reslut
 			log.Printf("monitor reslut:%s \r\n", v)
 		}
 	}()
-
 
 	time.Sleep(20 * time.Second)
 	return

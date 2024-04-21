@@ -1,9 +1,9 @@
 /*
-	普通模式同步
-	update 转成 insert on update
-	insert 转成 replace into
-	delete 转成 delete
-	只要是同一条数据，只要有遍历过，后面遍历出来的数据，则不再进行操作
+普通模式同步
+update 转成 insert on update
+insert 转成 replace into
+delete 转成 delete
+只要是同一条数据，只要有遍历过，后面遍历出来的数据，则不再进行操作
 */
 package src
 
@@ -13,7 +13,7 @@ import (
 	"log"
 )
 
-func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pluginDriver.PluginDataType)  {
+func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pluginDriver.PluginDataType) {
 
 	//因为数据是有序写到list里的，里有 update,delete,insert，所以这里我们反向遍历
 
@@ -22,16 +22,17 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 
 	//从最后一条数据开始遍历
 	var stmt dbDriver.Stmt
-	n  := len(list)
-	LOOP: for i := n - 1; i >= 0; i-- {
+	n := len(list)
+LOOP:
+	for i := n - 1; i >= 0; i-- {
 		data := list[i]
 		switch data.EventType {
 		case "update":
-			val := make([]dbDriver.Value,This.p.fieldCount*2)
-			for i,v:=range This.p.Field{
+			val := make([]dbDriver.Value, This.p.fieldCount*2)
+			for i, v := range This.p.Field {
 				var toV dbDriver.Value
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,1,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				if This.err != nil{
+				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 1, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault)
+				if This.err != nil {
 					if !This.p.BifrostMustBeSuccess {
 						This.err = nil
 						continue LOOP
@@ -47,29 +48,29 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 				val[i+This.p.fieldCount] = toV
 			}
 
-			if checkOpMap(opMap,data.Rows[1][This.p.fromPriKey], "update") == true {
+			if checkOpMap(opMap, data.Rows[1][This.p.fromPriKey], "update") == true {
 				continue
 			}
 			stmt = This.getStmt(UPDATE)
 			if stmt == nil {
 				return data
 			}
-			_,This.conn.err = stmt.Exec(val)
-			if This.conn.err != nil{
-				log.Println("plugin mysql update exec err:",This.conn.err," data:",val)
+			_, This.conn.err = stmt.Exec(val)
+			if This.conn.err != nil {
+				log.Println("plugin mysql update exec err:", This.conn.err, " data:", val)
 				if This.CheckDataSkip(data) {
 					This.conn.err = nil
 					continue LOOP
 				}
 				return data
 			}
-			setOpMapVal(opMap,data.Rows[1][This.p.fromPriKey],nil,"update")
+			setOpMapVal(opMap, data.Rows[1][This.p.fromPriKey], nil, "update")
 			break
 		case "delete":
-			where := make([]dbDriver.Value,0)
-			for _,v := range This.p.PriKey{
+			where := make([]dbDriver.Value, 0)
+			for _, v := range This.p.PriKey {
 				var toV dbDriver.Value
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
+				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault)
 				if This.err != nil {
 					if !This.p.BifrostMustBeSuccess {
 						This.err = nil
@@ -81,32 +82,32 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 					}
 					return data
 				}
-				where = append(where,toV)
+				where = append(where, toV)
 			}
-			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "delete") == false {
+			if checkOpMap(opMap, data.Rows[0][This.p.fromPriKey], "delete") == false {
 				stmt = This.getStmt(DELETE)
-				if stmt == nil{
+				if stmt == nil {
 					return data
 				}
-				_,This.conn.err = stmt.Exec(where)
-				if This.conn.err != nil{
-					log.Println("plugin mysql delete exec err:",This.conn.err," where:",where)
+				_, This.conn.err = stmt.Exec(where)
+				if This.conn.err != nil {
+					log.Println("plugin mysql delete exec err:", This.conn.err, " where:", where)
 					if This.CheckDataSkip(data) {
 						This.conn.err = nil
 						continue LOOP
 					}
 					return data
 				}
-				setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],nil,"delete")
+				setOpMapVal(opMap, data.Rows[0][This.p.fromPriKey], nil, "delete")
 			}
 			break
 		case "insert":
-			val := make([]dbDriver.Value,0)
-			i:=0
-			for _,v:=range This.p.Field{
+			val := make([]dbDriver.Value, 0)
+			i := 0
+			for _, v := range This.p.Field {
 				var toV dbDriver.Value
-				toV,This.err = This.dataTypeTransfer(This.getMySQLData(data,0,v.FromMysqlField), v.ToField,v.ToFieldType,v.ToFieldDefault)
-				if This.err != nil{
+				toV, This.err = This.dataTypeTransfer(This.getMySQLData(data, 0, v.FromMysqlField), v.ToField, v.ToFieldType, v.ToFieldDefault)
+				if This.err != nil {
 					if !This.p.BifrostMustBeSuccess {
 						This.err = nil
 						continue LOOP
@@ -117,27 +118,27 @@ func (This *Conn) CommitNormal(list []*pluginDriver.PluginDataType) (errData *pl
 					}
 					return data
 				}
-				val = append(val,toV)
+				val = append(val, toV)
 				i++
 			}
 
-			if checkOpMap(opMap,data.Rows[0][This.p.fromPriKey], "insert") == true {
+			if checkOpMap(opMap, data.Rows[0][This.p.fromPriKey], "insert") == true {
 				continue
 			}
 			stmt = This.getStmt(REPLACE_INSERT)
-			if stmt == nil{
+			if stmt == nil {
 				return data
 			}
-			_,This.conn.err = stmt.Exec(val)
-			if This.conn.err != nil{
-				log.Println("plugin mysql insert exec err:",This.conn.err," data:",val)
+			_, This.conn.err = stmt.Exec(val)
+			if This.conn.err != nil {
+				log.Println("plugin mysql insert exec err:", This.conn.err, " data:", val)
 				if This.CheckDataSkip(data) {
 					This.conn.err = nil
 					continue LOOP
 				}
 				return data
 			}
-			setOpMapVal(opMap,data.Rows[0][This.p.fromPriKey],&val,"insert")
+			setOpMapVal(opMap, data.Rows[0][This.p.fromPriKey], &val, "insert")
 			break
 		}
 	}

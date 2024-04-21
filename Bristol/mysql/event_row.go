@@ -638,7 +638,6 @@ DATETIME
 6 bits second         (0-59)
 ---------------------------
 40 bits = 5 bytes
-
 */
 func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 	defer func() {
@@ -679,7 +678,6 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 }
 
 /*
-
 Fractional-part encoding depends on the fractional seconds precision (FSP).
 // https://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
 FSP	Storage

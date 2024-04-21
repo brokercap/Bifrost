@@ -36,7 +36,7 @@ func (c *FlowController) Index() {
 	c.SetData("SchemaName", SchemaName)
 	c.SetData("TableName", TableName)
 	c.SetData("ChannelId", ChannelId)
-	c.AddAdminTemplate("flow.html","header.html","footer.html")
+	c.AddAdminTemplate("flow.html", "header.html", "footer.html")
 }
 
 func (c *FlowController) GetFlow() {

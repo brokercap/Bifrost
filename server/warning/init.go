@@ -1,13 +1,13 @@
 package warning
 
 import (
-	"time"
-	"sync"
 	"encoding/json"
-	"net"
-	"log"
-	"runtime/debug"
 	"fmt"
+	"log"
+	"net"
+	"runtime/debug"
+	"sync"
+	"time"
 )
 
 var l sync.RWMutex
@@ -17,35 +17,35 @@ var IP string = ""
 type WarningType string
 
 const (
-	WARNINGERROR WarningType = "ERROR"
+	WARNINGERROR  WarningType = "ERROR"
 	WARNINGNORMAL WarningType = "NORMAL"
 )
 
 type WarningContent struct {
-	Type 		WarningType
-	DbName 		string
-	SchemaName  string
-	TableName   string
-	Channel		string
-	Body 		interface{}
-	DateTime 	string
-	IP   		string
+	Type       WarningType
+	DbName     string
+	SchemaName string
+	TableName  string
+	Channel    string
+	Body       interface{}
+	DateTime   string
+	IP         string
 }
 
 var WarningChan chan WarningContent
 
-func init()  {
-	WarningChan = make(chan WarningContent,500)
+func init() {
+	WarningChan = make(chan WarningContent, 500)
 	IP = getIP()
 	go consumeWarning()
 }
 
-//新增报警内容
-func AppendWarning(data WarningContent){
+// 新增报警内容
+func AppendWarning(data WarningContent) {
 	//这里为什么 要有一个写入超时，是为了防止 chan 满了情况下阻塞，然后影响了正常数据同步
 	timer := time.NewTimer(2 * time.Second)
 	select {
-		case WarningChan <- data:
+	case WarningChan <- data:
 		break
 	case <-timer.C:
 		break
@@ -53,10 +53,10 @@ func AppendWarning(data WarningContent){
 	timer.Stop()
 }
 
-func getIP() string{
+func getIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		log.Println("getIP err:",err)
+		log.Println("getIP err:", err)
 		return ""
 	}
 
@@ -71,23 +71,23 @@ func getIP() string{
 	return ""
 }
 
-func getWarningBody(data WarningContent) string{
-	if data.DateTime == ""{
+func getWarningBody(data WarningContent) string {
+	if data.DateTime == "" {
 		data.DateTime = time.Now().Format("2006-01-02 15:04:05")
 	}
 	data.IP = IP
-	b,_ := json.Marshal(data)
+	b, _ := json.Marshal(data)
 	return string(b)
 }
 
-func consumeWarning(){
-	timer := time.NewTimer( 30 * time.Minute)
+func consumeWarning() {
+	timer := time.NewTimer(30 * time.Minute)
 	defer timer.Stop()
-	for{
+	for {
 		select {
-		case data := <- WarningChan:
+		case data := <-WarningChan:
 			InitWarningConfigCache()
-			timer.Reset( 30 * time.Minute)
+			timer.Reset(30 * time.Minute)
 			body := getWarningBody(data)
 			var title string
 			switch data.Type {
@@ -102,52 +102,50 @@ func consumeWarning(){
 				break
 			}
 			l.RLock()
-			for _,config := range allWaringConfigCacheMap{
-				sendToWaring(config,title,body,5)
+			for _, config := range allWaringConfigCacheMap {
+				sendToWaring(config, title, body, 5)
 			}
 			l.RUnlock()
 			break
 		case <-timer.C:
-			timer.Reset( 30 * time.Minute)
+			timer.Reset(30 * time.Minute)
 			break
 		}
 	}
 }
 
-
-func sendToWaring(config WaringConfig,title,c string,n int){
+func sendToWaring(config WaringConfig, title, c string, n int) {
 	defer func() {
-		if err:=recover();err!=nil{
+		if err := recover(); err != nil {
 			log.Println(string(debug.Stack()))
 		}
 	}()
-	if _,ok := dirverMap[config.Type];!ok{
+	if _, ok := dirverMap[config.Type]; !ok {
 		return
 	}
 	var err error
-	for i:=0; i< n; i++{
-		err = dirverMap[config.Type].SendWarning(config.Param,title,c)
-		if err == nil{
+	for i := 0; i < n; i++ {
+		err = dirverMap[config.Type].SendWarning(config.Param, title, c)
+		if err == nil {
 			return
 		}
 		time.Sleep(5 * time.Second)
 	}
-	if err != nil{
-		log.Println("sendToWaring err:",err,"title:",title,"body:",c)
+	if err != nil {
+		log.Println("sendToWaring err:", err, "title:", title, "body:", c)
 	}
 }
 
-
-func CheckWarngConfigBySendTest(config WaringConfig,c string) error{
+func CheckWarngConfigBySendTest(config WaringConfig, c string) error {
 	defer func() {
-		if err:=recover();err!=nil{
+		if err := recover(); err != nil {
 			log.Println(string(debug.Stack()))
 		}
 	}()
-	if _,ok := dirverMap[config.Type];!ok{
-		return fmt.Errorf("Type:"+config.Type + "not exsit")
+	if _, ok := dirverMap[config.Type]; !ok {
+		return fmt.Errorf("Type:" + config.Type + "not exsit")
 	}
 	title := "Bifrost warning test"
-	err := dirverMap[config.Type].SendWarning(config.Param,title,c)
+	err := dirverMap[config.Type].SendWarning(config.Param, title, c)
 	return err
 }

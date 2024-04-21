@@ -70,9 +70,9 @@ func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct {
 		File = dest[0].(string)
 		Binlog_Do_DB = dest[2].(string)
 		Binlog_Ignore_DB = dest[3].(string)
-		if  dest[4] == nil {
+		if dest[4] == nil {
 			Executed_Gtid_Set = ""
-		}else{
+		} else {
 			Executed_Gtid_Set = dest[4].(string)
 		}
 		PositonString := fmt.Sprint(dest[1])
@@ -127,7 +127,7 @@ func GetVariables(db mysql.MysqlConnection, variablesValue string) (data map[str
 	return
 }
 
-//获取当前用户授权语句
+// 获取当前用户授权语句
 func GetGrantsFor(db mysql.MysqlConnection) (grantSQL string, err error) {
 	sql := "SHOW GRANTS FOR CURRENT_USER()"
 	stmt, err := db.Prepare(sql)

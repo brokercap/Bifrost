@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package src
 
 import (
@@ -326,7 +329,7 @@ func TestRandDataAndCheck(t *testing.T) {
 	t.Log("test over")
 }
 
-//模拟正式环境刷数据
+// 模拟正式环境刷数据
 func TestSyncLikeProduct(t *testing.T) {
 	p := pluginTestData.NewPlugin("Elasticsearch", Url)
 
@@ -346,7 +349,7 @@ func TestSyncLikeProduct(t *testing.T) {
 	}
 }
 
-//TestCommitAndCheckData2 这个通不过， 不支持修改字段类型
+// TestCommitAndCheckData2 这个通不过， 不支持修改字段类型
 func TestCommitAndCheckData2(t *testing.T) {
 	testBefore()
 	initSyncParam()

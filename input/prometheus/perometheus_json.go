@@ -18,7 +18,7 @@ package prometheus
 
 import (
 	"encoding/json"
-	
+
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 

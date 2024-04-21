@@ -30,7 +30,7 @@ type UserParam struct {
 	UserName string
 	Password string
 	Group    string
-	Host	 string
+	Host     string
 }
 
 func (c *UserController) getParam() *UserParam {
@@ -59,7 +59,7 @@ func (c *UserController) Index() {
 	}
 	c.SetData("UserList", UserList)
 	c.SetTitle("UserList")
-	c.AddAdminTemplate("user.list.html","header.html","footer.html")
+	c.AddAdminTemplate("user.list.html", "header.html", "footer.html")
 }
 
 func (c *UserController) List() {
@@ -83,13 +83,13 @@ func (c *UserController) Update() {
 		result.Msg = " user_name and password not empty!"
 		return
 	}
-	for _,Host := range strings.Split(param.Host,",") {
-		if strings.Count(Host,".") > 3 {
+	for _, Host := range strings.Split(param.Host, ",") {
+		if strings.Count(Host, ".") > 3 {
 			result.Msg = " Host error!"
 			return
 		}
 	}
-	err := user.UpdateUser(param.UserName, param.Password, param.Group,param.Host)
+	err := user.UpdateUser(param.UserName, param.Password, param.Group, param.Host)
 	if err != nil {
 		result.Msg = err.Error()
 	} else {
@@ -124,10 +124,10 @@ func (c *UserController) LastLoginLog() {
 		c.SetJsonData(result)
 		c.StopServeJSON()
 	}()
-	logInfo,err := user.GetLastLoginLog()
+	logInfo, err := user.GetLastLoginLog()
 	if err != nil {
 		result.Data = err.Error()
-	}else{
+	} else {
 		result.Data = logInfo
 	}
 }
