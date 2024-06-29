@@ -18,6 +18,7 @@ package mock
 
 import (
 	"context"
+	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/brokercap/Bifrost/sdk/pluginTestData"
 	"time"
@@ -29,6 +30,7 @@ type NormalTable struct {
 	LongStringLen int
 	NoMapping     bool
 	NoPks         bool
+	TwoPks        bool
 	ch            chan *pluginDriver.PluginDataType
 }
 
@@ -76,6 +78,17 @@ func (t *NormalTable) Callback(data *pluginDriver.PluginDataType) {
 	}
 	if t.NoPks {
 		data.Pri = make([]string, 0)
+	}
+	if t.TwoPks {
+		secondPk := fmt.Sprintf("%s_mock_pk_2", data.Pri[0])
+		data.Pri = append(data.Pri, secondPk)
+		if !t.NoMapping {
+			data.ColumnMapping[secondPk] = data.ColumnMapping[data.Pri[0]]
+		}
+		for k, _ := range data.Rows {
+			i := k
+			data.Rows[i][secondPk] = data.Rows[i][data.Pri[0]]
+		}
 	}
 	t.ch <- data
 }
