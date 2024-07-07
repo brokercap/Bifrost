@@ -1,3 +1,6 @@
+v2.3.6-beta   2024-04-21
+1. input varchar(255) to output starrocks varchar(765)
+
 v2.3.5-beta   2024-04-05
 1. fixed output starrocks varchar(255) tansfer error bug https://github.com/brokercap/Bifrost/issues/266
 2. 修复mongo数据源全量功能无效的bug https://github.com/brokercap/Bifrost/issues/272
