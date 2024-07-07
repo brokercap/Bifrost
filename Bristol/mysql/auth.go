@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -287,6 +288,23 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 
 	// Filler
 	data = append(data, make([]byte, 23)...)
+
+	if mc.cfg.tlsConfig != nil {
+		tlsPacketHeaderLen := 4 + 4 + 1 + 23
+		tlsPacketHeader := make([]byte, 0, tlsPacketHeaderLen+4)
+		tlsPacketHeader = append(tlsPacketHeader, uint24ToBytes(uint32(tlsPacketHeaderLen))...)
+		tlsPacketHeader = append(tlsPacketHeader, mc.sequence)
+		tlsPacketHeader = append(tlsPacketHeader, data[:tlsPacketHeaderLen]...)
+		if err := mc.writePacket(&tlsPacketHeader); err != nil {
+			return err
+		}
+		// Switch to TLS
+		tlsConn := tls.Client(mc.netConn, mc.cfg.tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			return err
+		}
+		mc.initConn(tlsConn)
+	}
 
 	// User
 	if len(mc.cfg.user) > 0 {
