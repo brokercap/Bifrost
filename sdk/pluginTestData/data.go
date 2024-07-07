@@ -160,6 +160,8 @@ const (
 	OTHERTYPE EventType = 5
 )
 
+const DefaultHistoryCount int = 100
+
 func GetRandomString(l int, cn int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ^&*'\";\\/%$#@90-_|<>?{}[]+.!~`,=0"
 	str2Arr := []string{"测", "试", "数", "据"}
@@ -221,9 +223,10 @@ type Event struct {
 	position         uint32                            //位点
 	dataMap          map[uint64]map[string]interface{} //随机生成的数据最终记录值,id为key
 	idVal            uint64                            //随机生成数据的时候，指定的id值。随机生成一次数据后自动清0
-	saveHistory      bool                              //是否保存历史生成的随机数据。假如一个id 有insert ,update 则只保存update之后的数据，假如后面又有delete了，则会被清除掉这个id数据
 	ColumnMapping    map[string]string                 // 字段类型
 	NoUint64         bool                              // NoUint64 不支持Uint64， 默认false
+	historyCount     int                               // 保存历史生成的随机数据的条数。假如一个id 有insert ,update 则只保存update之后的数据，假如后面又有delete了，则会被清除掉这个id数据
+	longStringLen    int
 }
 
 func NewEvent() *Event {
@@ -237,7 +240,7 @@ func NewEvent() *Event {
 		position:         0,
 		dataMap:          make(map[uint64]map[string]interface{}, 0),
 		idVal:            0,
-		saveHistory:      true,
+		historyCount:     DefaultHistoryCount,
 	}
 	event.initTableColumnMapping()
 	return event
@@ -250,6 +253,17 @@ func (This *Event) SetSchema(name string) *Event {
 
 func (This *Event) SetTable(name string) *Event {
 	This.Talbe = name
+	return This
+}
+
+func (This *Event) SetLongStringLen(n int) *Event {
+	if n < 0 {
+		n = 0
+	}
+	if n > 163841 {
+		n = 163841
+	}
+	This.longStringLen = n
 	return This
 }
 
@@ -269,7 +283,7 @@ func (This *Event) SetNoUint64(yes bool) *Event {
 	return This
 }
 
-//设置随机生成数据的id值
+// 设置随机生成数据的id值
 func (This *Event) SetIdVal(val interface{}) *Event {
 	int64Val, err := strconv.ParseUint(fmt.Sprint(val), 10, 64)
 	if err == nil {
@@ -278,36 +292,59 @@ func (This *Event) SetIdVal(val interface{}) *Event {
 	return This
 }
 
-//设置是否要保存历史数据
-func (This *Event) SetSaveHistory(b bool) *Event {
-	This.saveHistory = b
+// 设置是否要保存历史数据
+func (This *Event) SetHistoryCount(n int) *Event {
+	if n < 0 {
+		n = 0
+	}
+	This.historyCount = n
 	return This
 }
 
-//设置是否生成null值的数据
-//旧版本设置了这个值,将会所有非自增字段，设置为nil
-//1.8.2版本之后所有字段类型均有not null 和 null 字段,这个方法将无效，为了兼容，继续保留
+// 设置是否要保存历史数据
+// 保留这个方法,是为了兼容旧版本
+func (This *Event) SetSaveHistory(b bool) *Event {
+	if !b {
+		This.historyCount = 0
+	} else {
+		if This.historyCount <= 0 {
+			This.historyCount = DefaultHistoryCount
+		}
+	}
+	return This
+}
+
+// 设置是否生成null值的数据
+// 旧版本设置了这个值,将会所有非自增字段，设置为nil
+// 1.8.2版本之后所有字段类型均有not null 和 null 字段,这个方法将无效，为了兼容，继续保留
 func (This *Event) SetIsNull(b bool) *Event {
 	return This
 }
 
-//保存随机生成的数据
+// 保存随机生成的数据
 func (This *Event) setDataToMap(data map[string]interface{}) {
-	if This.saveHistory == false {
+	if This.historyCount == 0 {
 		return
 	}
 	int64Val, err := strconv.ParseUint(fmt.Sprint(data["id"]), 10, 64)
 	if err == nil {
 		This.dataMap[int64Val] = data
 	}
+	if len(This.dataMap) > This.historyCount {
+		var key uint64
+		for key = range This.dataMap {
+			break
+		}
+		delete(This.dataMap, key)
+	}
 }
 
-//获取所有生成的数据结果
+// 获取所有生成的数据结果
 func (This *Event) GetDataMap() map[uint64]map[string]interface{} {
 	return This.dataMap
 }
 
-//删除数据
+// 删除数据
 func (This *Event) delDataFromMap(data map[string]interface{}) {
 	int64Val, err := strconv.ParseUint(fmt.Sprint(data["id"]), 10, 64)
 	if err == nil {
@@ -315,7 +352,7 @@ func (This *Event) delDataFromMap(data map[string]interface{}) {
 	}
 }
 
-//随机或者指定id获取一条已经生成的数据
+// 随机或者指定id获取一条已经生成的数据
 func (This *Event) getRandDataFromMap(id uint64) map[string]interface{} {
 	if id == 0 {
 		for _, v := range This.dataMap {
@@ -389,7 +426,7 @@ func (This *Event) initTableColumnMapping() {
 	This.ColumnMapping = ColumnMapping
 }
 
-//随机生成数据
+// 随机生成数据
 func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType EventType) ([]interface{}, map[string]interface{}) {
 	data := make([]interface{}, 0)
 	columnData := make(map[string]interface{}, 0)
@@ -553,18 +590,20 @@ func (This *Event) getSchemaTableFieldAndVal(columnList []*Column, eventType Eve
 		case "tinytext", "tinyblob", "text", "mediumtext", "smalltext", "blob", "mediumblob", "smallblob", "longblob":
 			var enSize, cnSize int = 0, 0
 			rand.Seed(time.Now().UnixNano())
-
 			var n int
-
-			n = rand.Intn(255 / 4)
-
-			if n == 0 {
-				n = 1
+			if This.longStringLen > 0 && columnType.DataType == "longblob" {
+				n = This.longStringLen
+			} else {
+				n = rand.Intn(255)
 			}
-			if strings.Contains(columnType.CharacterSetName, "utf") {
-				cnSize = rand.Intn(n)
+			if n <= 1 {
+				n = 2
 			}
-			enSize = n - cnSize
+			cnSize = rand.Intn(n / 2)
+			enSize = n - cnSize*4
+			if enSize <= 0 {
+				enSize = 1
+			}
 			Value := GetRandomString(enSize, cnSize)
 			columnType.Value = Value
 			data = append(data, Value)
@@ -753,16 +792,18 @@ func (This *Event) GetTestInsertData() *pluginDriver.PluginDataType {
 
 	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp:      uint32(time.Now().Unix()),
-		EventType:      "insert",
-		Rows:           Rows,
-		Query:          "",
-		SchemaName:     This.Schema,
-		TableName:      This.Talbe,
-		BinlogFileNum:  10,
-		BinlogPosition: This.position,
-		Pri:            This.GetPri(),
-		ColumnMapping:  This.GetTableColumnMapping(),
+		Timestamp:       uint32(time.Now().Unix()),
+		EventType:       "insert",
+		Rows:            Rows,
+		Query:           "",
+		SchemaName:      This.Schema,
+		TableName:       This.Talbe,
+		AliasSchemaName: This.Schema,
+		AliasTableName:  This.Talbe,
+		BinlogFileNum:   10,
+		BinlogPosition:  This.position,
+		Pri:             This.GetPri(),
+		ColumnMapping:   This.GetTableColumnMapping(),
 	}
 }
 
@@ -800,16 +841,18 @@ func (This *Event) GetTestUpdateData(newData ...bool) *pluginDriver.PluginDataTy
 
 	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp:      uint32(time.Now().Unix()),
-		EventType:      "update",
-		Rows:           Rows,
-		Query:          "",
-		SchemaName:     This.Schema,
-		TableName:      This.Talbe,
-		BinlogFileNum:  10,
-		BinlogPosition: This.position,
-		Pri:            This.GetPri(),
-		ColumnMapping:  This.GetTableColumnMapping(),
+		Timestamp:       uint32(time.Now().Unix()),
+		EventType:       "update",
+		Rows:            Rows,
+		Query:           "",
+		SchemaName:      This.Schema,
+		TableName:       This.Talbe,
+		AliasSchemaName: This.Schema,
+		AliasTableName:  This.Talbe,
+		BinlogFileNum:   10,
+		BinlogPosition:  This.position,
+		Pri:             This.GetPri(),
+		ColumnMapping:   This.GetTableColumnMapping(),
 	}
 }
 
@@ -837,16 +880,18 @@ func (This *Event) GetTestDeleteData(newData ...bool) *pluginDriver.PluginDataTy
 
 	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp:      uint32(time.Now().Unix()),
-		EventType:      "delete",
-		Rows:           Rows,
-		Query:          "",
-		SchemaName:     This.Schema,
-		TableName:      This.Talbe,
-		BinlogFileNum:  10,
-		BinlogPosition: This.position,
-		Pri:            This.GetPri(),
-		ColumnMapping:  This.GetTableColumnMapping(),
+		Timestamp:       uint32(time.Now().Unix()),
+		EventType:       "delete",
+		Rows:            Rows,
+		Query:           "",
+		SchemaName:      This.Schema,
+		TableName:       This.Talbe,
+		AliasSchemaName: This.Schema,
+		AliasTableName:  This.Talbe,
+		BinlogFileNum:   10,
+		BinlogPosition:  This.position,
+		Pri:             This.GetPri(),
+		ColumnMapping:   This.GetTableColumnMapping(),
 	}
 }
 
@@ -856,14 +901,16 @@ func (This *Event) GetTestQueryData() *pluginDriver.PluginDataType {
 
 	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp:      uint32(time.Now().Unix()),
-		EventType:      "sql",
-		Rows:           Rows,
-		Query:          "ALTER TABLE `" + This.Schema + "`.`" + This.Talbe + "` CHANGE COLUMN `testvarchar` `testvarchar` varchar(255) NOT NULL",
-		SchemaName:     This.Schema,
-		TableName:      This.Talbe,
-		BinlogFileNum:  10,
-		BinlogPosition: This.position,
+		Timestamp:       uint32(time.Now().Unix()),
+		EventType:       "sql",
+		Rows:            Rows,
+		Query:           "ALTER TABLE `" + This.Schema + "`.`" + This.Talbe + "` CHANGE COLUMN `testvarchar` `testvarchar` varchar(255) NOT NULL",
+		SchemaName:      This.Schema,
+		TableName:       This.Talbe,
+		AliasSchemaName: This.Schema,
+		AliasTableName:  This.Talbe,
+		BinlogFileNum:   10,
+		BinlogPosition:  This.position,
 	}
 }
 
@@ -873,13 +920,15 @@ func (This *Event) GetTestCommitData() *pluginDriver.PluginDataType {
 
 	This.position += 100
 	return &pluginDriver.PluginDataType{
-		Timestamp:      uint32(time.Now().Unix()),
-		EventType:      "commit",
-		Rows:           Rows,
-		Query:          "COMMIT",
-		SchemaName:     This.Schema,
-		TableName:      This.Talbe,
-		BinlogFileNum:  10,
-		BinlogPosition: This.position,
+		Timestamp:       uint32(time.Now().Unix()),
+		EventType:       "commit",
+		Rows:            Rows,
+		Query:           "COMMIT",
+		SchemaName:      This.Schema,
+		TableName:       This.Talbe,
+		AliasSchemaName: This.Schema,
+		AliasTableName:  This.Talbe,
+		BinlogFileNum:   10,
+		BinlogPosition:  This.position,
 	}
 }

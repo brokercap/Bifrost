@@ -30,6 +30,7 @@ type TableParam struct {
 	SchemaName  string
 	TableName   string
 	IgnoreTable string
+	DoTable     string
 	ChannelId   int
 	Id          int
 }
@@ -61,7 +62,7 @@ func (c *TableController) Add() {
 	}()
 	SchemaName := tansferSchemaName(param.SchemaName)
 	TableName := tansferTableName(param.TableName)
-	err := server.AddTable(param.DbName, SchemaName, TableName, param.IgnoreTable, param.ChannelId)
+	err := server.AddTable(param.DbName, SchemaName, TableName, param.IgnoreTable, param.DoTable, param.ChannelId)
 	if err != nil {
 		result.Msg = err.Error()
 		return
@@ -78,7 +79,7 @@ func (c *TableController) Update() {
 	}()
 	SchemaName := tansferSchemaName(param.SchemaName)
 	TableName := tansferTableName(param.TableName)
-	err := server.UpdateTable(param.DbName, SchemaName, TableName, param.IgnoreTable)
+	err := server.UpdateTable(param.DbName, SchemaName, TableName, param.IgnoreTable, param.DoTable)
 	if err != nil {
 		result.Msg = err.Error()
 		return

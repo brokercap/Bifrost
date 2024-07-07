@@ -2,10 +2,10 @@ package filequeue
 
 import "os"
 
-func Delete(path string){
+func Delete(path string) {
 	l.Lock()
 	defer l.Unlock()
-	if _,ok := QueueMap[path];ok {
+	if _, ok := QueueMap[path]; ok {
 		if QueueMap[path].writeInfo != nil {
 			QueueMap[path].writeInfo.fd.Close()
 		}

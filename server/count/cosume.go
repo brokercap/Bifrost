@@ -1,23 +1,23 @@
 package count
 
 import (
-	"time"
 	"log"
 	"runtime"
 	"runtime/debug"
+	"time"
 )
 
-func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCount){
+func channel_flowcount_sonsume(db string, channelId string, flowchan chan *FlowCount) {
 	defer func() {
-		if err:=recover();err!=nil{
-			delChannelChan(db+"-"+channelId)
-			log.Println(db,channelId," channel_flowcount_sonsume recover: ",err, string(debug.Stack()))
+		if err := recover(); err != nil {
+			delChannelChan(db + "-" + channelId)
+			log.Println(db, channelId, " channel_flowcount_sonsume recover: ", err, string(debug.Stack()))
 		}
 	}()
 
-	log.Println(db,channelId,"channel count start")
+	log.Println(db, channelId, "channel count start")
 	defer func() {
-		log.Println(db,channelId,"channel count over")
+		log.Println(db, channelId, "channel count over")
 	}()
 	var DoMinuteSlice bool = false
 	var DoTenMinuteSlice bool = false
@@ -28,7 +28,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 	var fori uint = 0
 	var seliceTime int64
 	nowTime := time.Now().Unix()
-	seliceTime = nowTime - (nowTime%5)
+	seliceTime = nowTime - (nowTime % 5)
 	var doDbSlice bool = true
 	timer := time.NewTimer(5 * time.Second)
 	var dbCountInfo = dbCountChanMap[db]
@@ -38,7 +38,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 	defer timer.Stop()
 	for {
 		select {
-		case data := <- flowchan:
+		case data := <-flowchan:
 			if data == nil {
 				runtime.Goexit()
 				break
@@ -52,7 +52,7 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 				}
 				if data.Count == -3 {
 					//count DoInit 里的协程定时，每5秒往这个chan里发送一条信息
-					seliceTime = data.Time - (data.Time%5)
+					seliceTime = data.Time - (data.Time % 5)
 					dbCountInfo.Lock()
 					if dbCountInfo.doSliceTime == seliceTime {
 						doDbSlice = false
@@ -164,7 +164,6 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 			//每30秒一条数据
 			if DoHourSlice == true {
 				DoHourSlice = false
-
 
 				dbCountTableInfo.Hour = append(
 					dbCountTableInfo.Hour,
@@ -283,12 +282,12 @@ func channel_flowcount_sonsume(db string,channelId string,flowchan chan *FlowCou
 			break
 		case <-timer.C:
 			timer.Reset(5 * time.Second)
-			for tableId ,_ := range dbCountInfo.TableMap{
+			for tableId, _ := range dbCountInfo.TableMap {
 				flowchan <- &FlowCount{
 					//Time:"",
-					Count:0,
-					TableId:tableId,
-					ByteSize:0,
+					Count:    0,
+					TableId:  tableId,
+					ByteSize: 0,
 				}
 			}
 			break

@@ -17,10 +17,10 @@ package controller
 
 import (
 	"encoding/json"
-	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
-	"io/ioutil"
 	"github.com/brokercap/Bifrost/admin/xgo"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
+	"io/ioutil"
 )
 
 type TableToServerController struct {
@@ -61,7 +61,7 @@ func (c *TableToServerController) getParam() *TableToServerParam {
 }
 
 func (c *TableToServerController) List() {
-	t := make([]*pluginStorage.ToServer,0)
+	t := make([]*pluginStorage.ToServer, 0)
 	c.SetJsonData(t)
 	c.StopServeJSON()
 }
@@ -74,21 +74,19 @@ func (c *TableToServerController) Add() {
 		c.StopServeJSON()
 	}()
 	toServerInfo := pluginStorage.GetToServerInfo(param.ToServerKey)
-	if toServerInfo == nil{
-		result.Msg = param.ToServerKey+" not exsit"
+	if toServerInfo == nil {
+		result.Msg = param.ToServerKey + " not exsit"
 		return
 	}
-	t := pluginDriver.Open(param.PluginName,&toServerInfo.ConnUri)
-	if t == nil{
+	t := pluginDriver.Open(param.PluginName, &toServerInfo.ConnUri)
+	if t == nil {
 		result.Msg = "plugin new error"
 		return
 	}
-	_,err := t.SetParam(param.PluginParam)
-	if err != nil{
+	_, err := t.SetParam(param.PluginParam)
+	if err != nil {
 		result.Msg = err.Error()
 		return
 	}
 	result = ResultDataStruct{Status: 1, Msg: "test success", Data: 1}
 }
-
-

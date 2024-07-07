@@ -431,7 +431,7 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 		}
 		//Decimal
 		if strings.Contains(toDataType, "Decimal") {
-			v = interfaceToFloat64(data)
+			v = InterfaceToDecimalData(data, toDataType)
 		} else {
 			switch reflect.TypeOf(data).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
@@ -612,10 +612,17 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (to
 		case reflect.Float64:
 			toType = "Float64"
 			break
-		case reflect.Map, reflect.Slice, reflect.Interface:
+		case reflect.Map, reflect.Slice, reflect.Interface, reflect.Array:
 			toType = "String"
 			break
 		case reflect.String:
+			switch v.(type) {
+			case json.Number:
+				goto outer
+				break
+			default:
+				break
+			}
 			n := len(v.(string))
 			switch n {
 			case 19:
@@ -661,6 +668,7 @@ func (This *Conn) TransferToCkTypeByColumnData(v interface{}, nullable bool) (to
 			break
 		}
 	}
+outer:
 	if nullable {
 		toType = "Nullable(" + toType + ")"
 	}
@@ -729,15 +737,50 @@ func (This *Conn) TransferToCreateTableSql(data *pluginDriver.PluginDataType) (s
 		toCkType = getToCkType(fileName, true)
 		addCkField(fileName0, fileName, toCkType)
 	}
-	addCkField("bifrost_data_version", "{$BifrostDataVersion}", "Nullable(Int64)")
-	addCkField("binlog_event_type", "{$EventType}", "Nullable(String)")
+	addCkField("binlog_timestamp", "{$BinlogTimestamp}", "Int64")
+	addCkField("bifrost_data_version", "{$BifrostDataVersion}", "Int64")
+	addCkField("binlog_event_type", "{$EventType}", "String")
 
 	switch This.p.CkEngine {
 	case 1: //单机
-		sql += val + ") ENGINE = ReplacingMergeTree ORDER BY (" + strings.Join(priArr, ",") + ")"
+		engingName, partitionBy, orderBy := This.GetEngineAndOrderBy(priArr)
+		if partitionBy != "" {
+			partitionBy = fmt.Sprintf("PARTITION BY (%s)", partitionBy)
+		}
+		sql += val + fmt.Sprintf(") ENGINE = %s %s ORDER BY (%s)", engingName, partitionBy, orderBy)
 	case 2: //集群
-		sql += val + ") ENGINE = ReplicatedReplacingMergeTree('/bifrost/clickhouse/" + This.p.CkClusterName + "/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetTableName(data.TableName) + "_local" + "/{shard}', '{replica}') ORDER BY (" + strings.Join(priArr, ",") + ")"
-		distributeSql += val + ") ENGINE = Distributed(" + This.p.CkClusterName + ", " + This.GetSchemaName(data.SchemaName) + ", " + This.GetTableName(data.TableName) + "_local" + ",sipHash64(" + strings.Join(priArr, ",") + "))"
+		engingName, partitionBy, orderBy := This.GetClusterEngineAndOrderBy(priArr)
+		if partitionBy != "" {
+			partitionBy = fmt.Sprintf("PARTITION BY (%s)", partitionBy)
+		}
+		sql += val + ") ENGINE = " + engingName + "('/bifrost/clickhouse/" + This.p.CkClusterName + "/tables/" + This.GetSchemaName(data.SchemaName) + "." + This.GetTableName(data.TableName) + "_local" + "/{shard}', '{replica}') " + partitionBy + " ORDER BY (" + orderBy + ")"
+		distributeSql += val + ") ENGINE = Distributed(" + This.p.CkClusterName + ", " + This.GetSchemaName(data.SchemaName) + ", " + This.GetTableName(data.TableName) + "_local" + ",sipHash64(" + orderBy + "))"
+	}
+	return
+}
+
+func (This *Conn) GetEngineAndOrderBy(priArr []string) (engingName string, partitionBy string, orderBy string) {
+	switch This.p.CkTableEngine {
+	case "MergeTree":
+		engingName = "MergeTree"
+		partitionBy = "toYYYYMM(toDateTime(binlog_timestamp))"
+		orderBy = "binlog_timestamp,binlog_event_type," + strings.Join(priArr, ",")
+	default:
+		engingName = "ReplacingMergeTree(bifrost_data_version)"
+		orderBy = strings.Join(priArr, ",")
+	}
+	return
+}
+
+func (This *Conn) GetClusterEngineAndOrderBy(priArr []string) (engingName string, partitionBy string, orderBy string) {
+	switch This.p.CkTableEngine {
+	case "MergeTree":
+		engingName = "ReplicatedMergeTree"
+		partitionBy = "toYYYYMM(toDateTime(binlog_timestamp))"
+		orderBy = "binlog_timestamp,binlog_event_type," + strings.Join(priArr, ",")
+	default:
+		engingName = "ReplicatedReplacingMergeTree"
+		orderBy = strings.Join(priArr, ",")
 	}
 	return
 }
@@ -762,7 +805,7 @@ func ReplaceBr(str string) string {
 	return str
 }
 
-//去除连续的两个空格
+// 去除连续的两个空格
 func ReplaceTwoReplace(sql string) string {
 	for {
 		if strings.Index(sql, "  ") >= 0 {

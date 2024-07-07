@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	xgo.AddRoute("/test", &manager.TestController{}, "*:Post")
+	xgo.Router("/test", &manager.TestController{}, "*:Post")
 }
 
 func main() {

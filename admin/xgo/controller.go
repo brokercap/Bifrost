@@ -16,14 +16,14 @@ limitations under the License.
 package xgo
 
 import (
-	"html/template"
 	"encoding/json"
 	"errors"
-	"strings"
+	"html/template"
 	"log"
+	"strings"
 )
 
-func init()  {
+func init() {
 
 }
 
@@ -34,20 +34,20 @@ var (
 type OutputFormat int8
 
 const (
-	JSON_TYPE 	OutputFormat = 1
-	JSONP_TYPE  OutputFormat = 2
-	HTML_TYPE	OutputFormat = 0
-	OTHER_TYPE  OutputFormat = -1
+	JSON_TYPE  OutputFormat = 1
+	JSONP_TYPE OutputFormat = 2
+	HTML_TYPE  OutputFormat = 0
+	OTHER_TYPE OutputFormat = -1
 )
 
 type Controller struct {
-	Ctx			*Context
+	Ctx            *Context
 	ControllerName string
-	ActionName string
-	Data 		map[string]interface{}
-	Format 		OutputFormat
-	Template	*template.Template
-	tplArr		[]string		// 模板路径
+	ActionName     string
+	Data           map[string]interface{}
+	Format         OutputFormat
+	Template       *template.Template
+	tplArr         []string // 模板路径
 }
 
 // ControllerInterface is an interface to uniform all controller handler.
@@ -61,68 +61,67 @@ type ControllerInterface interface {
 	NormalStop()
 	IsHtmlOutput() bool
 	SetOutputByUser()
-	AddTemplate(tpl...string)
-	SetTemplate(t *template.Template,err error)
+	AddTemplate(tpl ...string)
+	SetTemplate(t *template.Template, err error)
 }
 
-func (c *Controller) Init(ctx *Context, controllerName, actionName string)  {
+func (c *Controller) Init(ctx *Context, controllerName, actionName string) {
 	ctx.Request.ParseForm()
 	c.Ctx = ctx
-	c.Data = make(map[string]interface{},0)
+	c.Data = make(map[string]interface{}, 0)
 	c.ControllerName = controllerName
 	c.ActionName = actionName
 }
 
-func (c *Controller) Prepare()  {
+func (c *Controller) Prepare() {
 
 }
 
-func (c *Controller) Finish()  {
+func (c *Controller) Finish() {
 
 }
 
-func (c *Controller) SetOutputByUser()()  {
+func (c *Controller) SetOutputByUser() {
 	c.Format = OTHER_TYPE
 }
 
-func (c *Controller) AddTemplate(tpl...string)()  {
-	c.tplArr = append(c.tplArr,tpl...)
+func (c *Controller) AddTemplate(tpl ...string) {
+	c.tplArr = append(c.tplArr, tpl...)
 }
 
-func (c *Controller) SetTemplate(t *template.Template,err error)()  {
+func (c *Controller) SetTemplate(t *template.Template, err error) {
 	if err != nil {
 		panic(err.Error())
 	}
 	c.Template = t
 }
 
-
-func (c *Controller) SetData(key string,data interface{})  {
+func (c *Controller) SetData(key string, data interface{}) {
 	c.Data[key] = data
 }
 
-func (c *Controller) SetJsonData(data interface{})  {
+func (c *Controller) SetJsonData(data interface{}) {
 	c.Data["json"] = data
 }
 
-func (c *Controller) StopServeJSON()  {
+func (c *Controller) StopServeJSON() {
 	c.Format = JSON_TYPE
 	c.StopRun()
 	panic(ErrAbort)
 }
 
-func (c *Controller) StopServeJSONP(jsonp ...string)  {
+func (c *Controller) StopServeJSONP(jsonp ...string) {
 	c.Format = JSONP_TYPE
 	c.StopRun()
 	panic(ErrAbort)
 }
 
-func (c *Controller) StopRun()  {
+func (c *Controller) StopRun() {
 	c.NormalStop()
 	panic(ErrAbort)
 }
 
-func (c *Controller) NormalStop()  {
+func (c *Controller) NormalStop() {
 	c.Finish()
 	if c.Format == HTML_TYPE {
 		switch strings.ToLower(c.Ctx.Request.Form.Get("format")) {
@@ -147,19 +146,19 @@ func (c *Controller) NormalStop()  {
 	switch c.Format {
 	case JSON_TYPE:
 		var body []byte
-		if _,ok := c.Data["json"];ok {
-			body ,_ = json.Marshal(c.Data["json"])
-		}else{
-			body ,_ = json.Marshal(c.Data)
+		if _, ok := c.Data["json"]; ok {
+			body, _ = json.Marshal(c.Data["json"])
+		} else {
+			body, _ = json.Marshal(c.Data)
 		}
 		c.Ctx.ResponseWriter.Write(body)
 		break
 	case JSONP_TYPE:
 		var body []byte
-		if _,ok := c.Data["json"];ok {
-			body ,_ = json.Marshal(c.Data["json"])
-		}else{
-			body ,_ = json.Marshal(c.Data)
+		if _, ok := c.Data["json"]; ok {
+			body, _ = json.Marshal(c.Data["json"])
+		} else {
+			body, _ = json.Marshal(c.Data)
 		}
 		c.Ctx.ResponseWriter.Write([]byte(body))
 		break
@@ -170,7 +169,7 @@ func (c *Controller) NormalStop()  {
 			var err error
 			c.Template, err = template.ParseFiles(c.tplArr...)
 			if err != nil {
-				log.Println("err:",err)
+				log.Println("err:", err)
 				panic(err.Error())
 			}
 		}
@@ -182,7 +181,7 @@ func (c *Controller) NormalStop()  {
 	}
 }
 
-func (c *Controller) IsHtmlOutput() bool{
+func (c *Controller) IsHtmlOutput() bool {
 	if c.Format == HTML_TYPE {
 		switch strings.ToLower(c.Ctx.Request.Form.Get("format")) {
 		case "json":

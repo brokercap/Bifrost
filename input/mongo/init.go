@@ -23,6 +23,8 @@ const (
 	BIFROST_VERSION string = "v2.0.4"
 )
 
+const OutPutName = "mongo"
+
 func init() {
 	inputDriver.Register("mongo", NewInputPlugin, VERSION, BIFROST_VERSION)
 }

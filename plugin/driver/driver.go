@@ -140,13 +140,31 @@ func CheckUri(name string, uri *string) error {
 	return err
 }
 
-func TransfeResult(val string, data *PluginDataType, rowIndex int) interface{} {
+func TransfeResult(val string, data *PluginDataType, rowIndex int, noTagsReturnNil ...bool) interface{} {
 	if data == nil {
 		return nil
 	}
 	p := reqTagAll.FindAllStringSubmatch(val, -1)
 	// 假如不存在 {$json} 标签，则直接返回nil
+	// 这个改动,在极端情况下,可能会导致以下版本升级至此合并之后的版本在下面场景使用情况下,出现不一致的结果
+	// 2.0.6-2.2.1,2.3.0,2.3.1
+	// 特殊场景:
+	// 目标端为mysql,clickhouse等目标端,并且界面上强制绑定字段映射关系的情况下
+	// 比如目标端绑定了一个在源端不存在的字段 xxx, 在以上列出来的版本中,则直接返回 xxx
+	// 但升级到此提交后的版本,则直接返回nil,
+	// 如果要达到不存在,则直接xxx,而不返回nil的情况,则需要在目标端插件代码中修改
+	// 或者 将字段绑定关系中配置成 xxx{$BifrostNull} ,增加一个{$BifrostNull}标签,也可达到一样的效果,{$BifrostNull} 会被替换成空字符串
+	// 此提交版本后使用案例
+	// 案例: data 中有字段及值 x1:"v1",x2:"v2",x3:"v3"
+	// 情况1:  val = "x4" , 返回 nil or x4 ,取决于 noTagsReturnNil 是否为 true,
+	// 这里是为了兼容多个插件,比如kafka插件topic,用户填写的是没使用{$} tag的值,但是Mysql,ck等插件字段绑定又使用不存在的字段绑定
+	// 情况2:  val = "x4{BifrostNull}" ,返回 x4
+	// 情况3:  val = "x1" , 返回 x1对应的的值v1
+	// 情况4:  val = {BifrostNull} , 返回 nil
 	if len(p) == 0 {
+		if len(noTagsReturnNil) > 0 && noTagsReturnNil[0] {
+			return nil
+		}
 		return val
 	}
 	var n int
@@ -171,6 +189,10 @@ func TransfeResult(val string, data *PluginDataType, rowIndex int) interface{} {
 			break
 		case "BinlogTimestamp":
 			val = strings.Replace(val, "{$BinlogTimestamp}", fmt.Sprint(data.Timestamp), -1)
+			break
+		case "BinlogDateTime":
+			t := time.Unix(int64(data.Timestamp), 0)
+			val = t.Format("2006-01-02 15:04:05")
 			break
 		case "BinlogFileNum":
 			val = strings.Replace(val, "{$BinlogFileNum}", fmt.Sprint(data.BinlogFileNum), -1)

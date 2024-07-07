@@ -35,7 +35,9 @@
                 <option value="" selected="selected">请选择表</option>
             </select>
             <p>如果目标库还没建表,<a href="javasripts:return false;" onclick="showMySQLCreateSQL();"> 点击获取 参考建表 SQL</a></p>
-            <p style="color: #F00">假如不选择表的情况下,请确保目标库里有和源库保持一模一样表名及结构的表</p>
+            <p style="color: #F00">假如不选择表的情况下</p>
+            <p style="color: #F00">目标端为 MySQL,不会自动建表,请确保目标库里有和源库保持一模一样表名及结构的表</p>
+            <p style="color: #F00">目标端为 StarRocks/Doris 则会自动建表</p>
 
         </div>
     </div>
@@ -77,6 +79,7 @@
             <span class="help-block m-b-none">
                 <p>True : NULL会强制转成对应类型的默认值 </p>
                 <p>False: 不进行转换</p>
+                <p>在追加模式中,如果主键是自增id ,则不支持此配置,运行过程中会报错</p>
             </span>
         </div>
     </div>

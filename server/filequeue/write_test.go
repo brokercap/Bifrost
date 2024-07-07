@@ -1,25 +1,27 @@
+//go:build integration
+// +build integration
+
 package filequeue
 
 import (
-	"testing"
 	"os"
+	"testing"
 )
 
-func TestWrite(t *testing.T)  {
+func TestWrite(t *testing.T) {
 	path := "E:/filequeueTest"
 	q := NewQueue(path)
 	c := ""
-	for i:=0;i< 50000;i++{
-		c+="c"
+	for i := 0; i < 50000; i++ {
+		c += "c"
 	}
 	q.Append(c)
 }
 
-
-func TestWrite2(t *testing.T)  {
+func TestWrite2(t *testing.T) {
 	path := "./filequeueTest/test.log"
-	fd,err := os.OpenFile(path,os.O_RDWR|os.O_CREATE|os.O_APPEND,0700)
-	if err != nil{
+	fd, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0700)
+	if err != nil {
 		t.Fatal(err)
 	}
 	fd.Write([]byte("myname is test!"))

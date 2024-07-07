@@ -36,10 +36,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 		tableIdSize = 6
 	}
 
-	_, err = readFixedLengthInteger(buf, tableIdSize)
-	// 这里采用 lastMapEvent.tableId ，则不采用 readFixedLengthInteger 解析出来的 tableId
-	// 实际在运行中，发现存在 readFixedLengthInteger 解析出来的tableId 并不能在 parser.tableSchemaMap 找到的情况，row event 紧随 map event 之后，所以这里采用 parser.lastMapEventTableId 应该不会有问题
-	event.tableId = parser.lastMapEvent.tableId
+	event.tableId, err = readFixedLengthInteger(buf, tableIdSize)
 	err = binary.Read(buf, binary.LittleEndian, &event.flags)
 	switch event.header.EventType {
 	case UPDATE_ROWS_EVENTv2, WRITE_ROWS_EVENTv2, DELETE_ROWS_EVENTv2:
@@ -62,7 +59,7 @@ func (parser *eventParser) parseRowsEvent(buf *bytes.Buffer) (event *RowsEvent, 
 	}
 	for buf.Len() > 0 {
 		var row map[string]interface{}
-		row, err = parser.parseEventRow(buf, parser.lastMapEvent, parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
+		row, err = parser.parseEventRow(buf, parser.tableMap[event.tableId], parser.tableSchemaMap[event.tableId].ColumnSchemaTypeList)
 		if err != nil {
 			log.Println("event row parser err:", err)
 			return
@@ -425,7 +422,7 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			break
 
 		case FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-			FIELD_TYPE_LONG_BLOB, FIELD_TYPE_VAR_STRING:
+			FIELD_TYPE_LONG_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_GEOMETRY:
 			var length uint64
 			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
 			row[column_name] = string(buf.Next(int(length)))
@@ -468,11 +465,6 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			bitInt, _ := strconv.ParseInt(resp, 2, 10)
 			row[column_name] = bitInt
 			break
-
-		case
-			FIELD_TYPE_GEOMETRY:
-			return nil, fmt.Errorf("parseEventRow unimplemented for field type %s", fieldTypeName(tableMap.columnTypes[i]))
-
 		case FIELD_TYPE_DATE, FIELD_TYPE_NEWDATE:
 			var data []byte
 			data = buf.Next(3)
@@ -641,7 +633,6 @@ DATETIME
 6 bits second         (0-59)
 ---------------------------
 40 bits = 5 bytes
-
 */
 func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 	defer func() {
@@ -682,7 +673,6 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 }
 
 /*
-
 Fractional-part encoding depends on the fractional seconds precision (FSP).
 // https://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
 FSP	Storage

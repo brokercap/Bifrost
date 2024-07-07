@@ -2,8 +2,9 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/rwynn/gtm/v2"
@@ -107,40 +108,156 @@ func TestMongoInput_setStatus(t *testing.T) {
 }
 
 func TestMongoInput_Start(t *testing.T) {
-	c := new(MongoInput)
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "Start0", func(c *MongoInput) error {
-		return nil
-	})
-	defer patches.Reset()
-	Convey("start", t, func() {
+	Convey("BatchAndReplicate", t, func() {
+		c := new(MongoInput)
+		c.inputInfo.GTID = BatchAndReplicate
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "StartBatchAndReplicate", func(c *MongoInput) error {
+			return errors.New(BatchAndReplicate)
+		})
+		defer patches.Reset()
 		err := c.Start(make(chan *inputDriver.PluginStatus, 2))
+		So(err.Error(), ShouldEqual, BatchAndReplicate)
+	})
+
+	Convey("OnlyBatch", t, func() {
+		c := new(MongoInput)
+		c.inputInfo.GTID = OnlyBatch
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "StartOnlyBatch", func(c *MongoInput) error {
+			return errors.New(OnlyBatch)
+		})
+		defer patches.Reset()
+		err := c.Start(make(chan *inputDriver.PluginStatus, 2))
+		So(err.Error(), ShouldEqual, OnlyBatch)
+	})
+
+	Convey("OnlyReplicate", t, func() {
+		c := new(MongoInput)
+		c.inputInfo.GTID = ""
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "StartOnlyReplicate", func(c *MongoInput) error {
+			return errors.New("OnlyReplicate")
+		})
+		defer patches.Reset()
+		err := c.Start(make(chan *inputDriver.PluginStatus, 2))
+		So(err.Error(), ShouldEqual, "OnlyReplicate")
+	})
+}
+
+/*
+func TestMongoInput_Start_with_panic(t *testing.T) {
+	Convey("panic", t, func() {
+		c := new(MongoInput)
+		c.PluginStatusChan = make(chan *inputDriver.PluginStatus, 10)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "StartOnlyReplicate", func(c *MongoInput) error {
+			panic("panic test")
+		})
+		defer patches.Reset()
+		err := c.Start(make(chan *inputDriver.PluginStatus, 2))
+		select {
+		case status := <-c.PluginStatusChan:
+			So(status.Status, ShouldEqual, inputDriver.CLOSED)
+			So(err, ShouldBeNil)
+			break
+		case <-time.After(10 * time.Second):
+			t.Fatal("test time out")
+		}
+	})
+}
+*/
+
+func TestMongoInput_StartBatchAndReplicate(t *testing.T) {
+	Convey("get current position error", t, func() {
+		c := new(MongoInput)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCurrentPosition", func(c *MongoInput) (p *inputDriver.PluginPosition, err error) {
+			return nil, errors.New("error")
+		})
+		defer patches.Reset()
+		err := c.StartBatchAndReplicate()
+		So(err, ShouldNotBeNil)
+	})
+
+	Convey("batch error", t, func() {
+		c := new(MongoInput)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCurrentPosition", func(c *MongoInput) (p *inputDriver.PluginPosition, err error) {
+			p = &inputDriver.PluginPosition{
+				GTID: "{\"T\":1696329531,\"I\":0}",
+			}
+			return
+		})
+		patches.ApplyMethod(reflect.TypeOf(c), "BatchStart", func(c *MongoInput) (err error) {
+			return errors.New("error")
+		})
+		defer patches.Reset()
+		err := c.StartBatchAndReplicate()
+		So(err, ShouldNotBeNil)
+	})
+
+	Convey("StartOnlyReplicate error", t, func() {
+		c := new(MongoInput)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCurrentPosition", func(c *MongoInput) (p *inputDriver.PluginPosition, err error) {
+			p = &inputDriver.PluginPosition{
+				GTID: "{\"T\":1696329531,\"I\":0}",
+			}
+			return
+		})
+		patches.ApplyMethod(reflect.TypeOf(c), "BatchStart", func(c *MongoInput) (err error) {
+			return nil
+		})
+		patches.ApplyMethod(reflect.TypeOf(c), "StartOnlyReplicate", func(c *MongoInput) (err error) {
+			return errors.New("error")
+		})
+		defer patches.Reset()
+		err := c.StartBatchAndReplicate()
+		So(err, ShouldNotBeNil)
+		So(c.GetLastPosition(), ShouldNotBeNil)
+		So(c.GetLastPosition().Timestamp, ShouldEqual, 1696329531)
+	})
+}
+
+func TestMongoInput_StartOnlyBatch(t *testing.T) {
+	Convey("error", t, func() {
+		c := new(MongoInput)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "BatchStart", func(c *MongoInput) error {
+			return errors.New("error")
+		})
+		defer patches.Reset()
+		err := c.StartOnlyBatch()
+		So(err, ShouldNotBeNil)
+	})
+
+	Convey("nil", t, func() {
+		c := new(MongoInput)
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "BatchStart", func(c *MongoInput) error {
+			return nil
+		})
+		defer patches.Reset()
+		err := c.StartOnlyBatch()
 		So(err, ShouldBeNil)
 	})
 }
 
-func TestMongoInput_Start0(t *testing.T) {
+func TestMongoInput_StartOnlyReplicate(t *testing.T) {
 	c := new(MongoInput)
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "Start1", func(c *MongoInput) error {
+	patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "StartOnlyReplicate0", func(c *MongoInput) error {
 		return nil
 	})
 	defer patches.Reset()
 	Convey("time out", t, func() {
 		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
 		go func() {
-			_ = c.Start0()
+			_ = c.StartOnlyReplicate()
 			ctx.Done()
 		}()
 		select {
 		case _ = <-ctx.Done():
 			t.Log("success")
 		case _ = <-time.After(8 * time.Second):
-			t.Error("c.Start0 time out")
+			t.Error("c.StartOnlyReplicate time out")
 		}
 	})
 
 	Convey("by stop", t, func() {
 		go func() {
-			_ = c.Start0()
+			_ = c.StartOnlyReplicate()
 		}()
 		// 这里睡眠1秒，是为了防止协程里修改了c.ctx值，但是在主线程中没被更新，而导致异常
 		time.Sleep(1 * time.Second)
@@ -149,13 +266,13 @@ func TestMongoInput_Start0(t *testing.T) {
 		case _ = <-c.ctx.Done():
 			t.Log("success")
 		case _ = <-time.After(8 * time.Second):
-			t.Error("c.Start0 time out")
+			t.Error("c.StartOnlyReplicate time out")
 		}
 	})
 
 }
 
-func TestMongoInput_Start1(t *testing.T) {
+func TestMongoInput_StartOnlyReplicate0(t *testing.T) {
 	c := new(MongoInput)
 
 	Convey("CreateMongoClient error", t, func() {
@@ -163,7 +280,7 @@ func TestMongoInput_Start1(t *testing.T) {
 			return &mongo.Client{}, fmt.Errorf("mock error")
 		})
 		defer patches.Reset()
-		err := c.Start1()
+		err := c.StartOnlyReplicate0()
 		So(err, ShouldNotBeNil)
 	})
 
@@ -178,7 +295,7 @@ func TestMongoInput_Start1(t *testing.T) {
 			return &mongo.Client{}, nil
 		})
 		defer patches.Reset()
-		err := c.Start1()
+		err := c.StartOnlyReplicate0()
 		So(err, ShouldBeNil)
 	})
 }

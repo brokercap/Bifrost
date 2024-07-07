@@ -6,29 +6,31 @@ import (
 )
 
 type tableStruct struct {
-	Pri 					[]string
-	ColumnSchemaTypeList 	[]*ColumnInfo
-	needReload				bool
-	ColumnMapping			map[string]string
+	SchemaName           string
+	TableName            string
+	Pri                  []string
+	ColumnSchemaTypeList []*ColumnInfo
+	needReload           bool
+	ColumnMapping        map[string]string
 }
 
 type ColumnInfo struct {
-	COLUMN_NAME        string
-	COLLATION_NAME     string
-	CHARACTER_SET_NAME string
-	COLUMN_COMMENT     string
-	COLUMN_KEY         string
-	COLUMN_TYPE        string
-	NUMERIC_SCALE      string  //浮点数精确多少数
-	EnumValues         []string
-	SetValues          []string
-	IsBool             bool
-	IsPrimary          bool
-	Unsigned 		   bool
-	AutoIncrement      bool
-	COLUMN_DEFAULT	   string
-	DATA_TYPE		   string
-	CHARACTER_OCTET_LENGTH	uint64
+	COLUMN_NAME            string
+	COLLATION_NAME         string
+	CHARACTER_SET_NAME     string
+	COLUMN_COMMENT         string
+	COLUMN_KEY             string
+	COLUMN_TYPE            string
+	NUMERIC_SCALE          string //浮点数精确多少数
+	EnumValues             []string
+	SetValues              []string
+	IsBool                 bool
+	IsPrimary              bool
+	Unsigned               bool
+	AutoIncrement          bool
+	COLUMN_DEFAULT         string
+	DATA_TYPE              string
+	CHARACTER_OCTET_LENGTH uint64
 }
 
 type MysqlConnection interface {
@@ -37,7 +39,8 @@ type MysqlConnection interface {
 	Close() error
 	Ping() error
 	Prepare(query string) (driver.Stmt, error)
-	Exec(query string,args []driver.Value)  (driver.Result, error)
+	Exec(query string, args []driver.Value) (driver.Result, error)
+	Query(query string, args []driver.Value) (driver.Rows, error)
 }
 
 type EventReslut struct {
@@ -48,10 +51,10 @@ type EventReslut struct {
 	TableName      string
 	BinlogFileName string
 	BinlogPosition uint32
-	Gtid	   	   string
-	Pri			   []string
+	Gtid           string
+	Pri            []string
 	ColumnMapping  map[string]string
-	EventID		   uint64				// 事件ID
+	EventID        uint64 // 事件ID
 }
 
 type callback func(data *EventReslut)
@@ -116,7 +119,6 @@ func fieldTypeName(t FieldType) string {
 	return fmt.Sprintf("%d", t)
 }
 
-
 func StatusFlagName(t StatusFlag) (r string) {
 	switch t {
 	case STATUS_KILLED:
@@ -132,7 +134,7 @@ func StatusFlagName(t StatusFlag) (r string) {
 		r = "stoping"
 		break
 	case STATUS_STOPED:
-		r ="stop"
+		r = "stop"
 		break
 	case STATUS_STARTING:
 		r = "starting"
@@ -141,7 +143,7 @@ func StatusFlagName(t StatusFlag) (r string) {
 		r = "running"
 		break
 	default:
-		r =""
+		r = ""
 		break
 	}
 	return

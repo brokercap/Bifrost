@@ -1,5 +1,5 @@
 // documentation:
-//https://dev.mysql.com/doc/internals/en/rows-query-event.html
+// https://dev.mysql.com/doc/internals/en/rows-query-event.html
 package mysql
 
 import (

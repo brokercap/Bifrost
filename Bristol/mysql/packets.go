@@ -145,7 +145,9 @@ func (mc *mysqlConn) writePacket(data *[]byte) error {
 *                             Command Packets                                 *
 ******************************************************************************/
 
-/* Command Packet
+/*
+	Command Packet
+
 Bytes                        Name
 -----                        ----
 1                            command
@@ -259,7 +261,9 @@ func (mc *mysqlConn) readResultOK() (e error) {
 	return
 }
 
-/* Error Packet
+/*
+	Error Packet
+
 Bytes                       Name
 -----                       ----
 1                           field_count, always = 0xff
@@ -291,7 +295,9 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) (e error) {
 	return
 }
 
-/* Ok Packet
+/*
+	Ok Packet
+
 Bytes                       Name
 -----                       ----
 1   (Length Coded Binary)   field_count, always = 0
@@ -331,18 +337,20 @@ func (mc *mysqlConn) handleOkPacket(data []byte) (e error) {
 	return
 }
 
-/* Result Set Header Packet
- Bytes                        Name
- -----                        ----
- 1-9   (Length-Coded-Binary)  field_count
- 1-9   (Length-Coded-Binary)  extra
+/*
+	Result Set Header Packet
+	Bytes                        Name
+	-----                        ----
+	1-9   (Length-Coded-Binary)  field_count
+	1-9   (Length-Coded-Binary)  extra
 
 The order of packets for a result set is:
-  (Result Set Header Packet)  the number of columns
-  (Field Packets)             column descriptors
-  (EOF Packet)                marker: end of Field Packets
-  (Row Data Packets)          row contents
-  (EOF Packet)                marker: end of Data Packets
+
+	(Result Set Header Packet)  the number of columns
+	(Field Packets)             column descriptors
+	(EOF Packet)                marker: end of Field Packets
+	(Row Data Packets)          row contents
+	(EOF Packet)                marker: end of Data Packets
 */
 func (mc *mysqlConn) readResultSetHeaderPacket() (fieldCount int, e error) {
 	data, e := mc.readPacket()
@@ -538,33 +546,34 @@ func (mc *mysqlConn) readUntilEOF() (count uint64, e error) {
 *                           Prepared Statements                               *
 ******************************************************************************/
 
-/* Prepare Result Packets
- Type Of Result Packet       Hexadecimal Value Of First Byte (field_count)
- ---------------------       ---------------------------------------------
+/*
+	Prepare Result Packets
+	Type Of Result Packet       Hexadecimal Value Of First Byte (field_count)
+	---------------------       ---------------------------------------------
 
- Prepare OK Packet           00
- Error Packet                ff
+	Prepare OK Packet           00
+	Error Packet                ff
 
 Prepare OK Packet
- Bytes              Name
- -----              ----
- 1                  0 - marker for OK packet
- 4                  statement_handler_id
- 2                  number of columns in result set
- 2                  number of parameters in query
- 1                  filler (always 0)
- 2                  warning count
 
- It is made up of:
+	Bytes              Name
+	-----              ----
+	1                  0 - marker for OK packet
+	4                  statement_handler_id
+	2                  number of columns in result set
+	2                  number of parameters in query
+	1                  filler (always 0)
+	2                  warning count
 
-    a PREPARE_OK packet
-    if "number of parameters" > 0
-        (field packets) as in a Result Set Header Packet
-        (EOF packet)
-    if "number of columns" > 0
-        (field packets) as in a Result Set Header Packet
-        (EOF packet)
+	It is made up of:
 
+	   a PREPARE_OK packet
+	   if "number of parameters" > 0
+	       (field packets) as in a Result Set Header Packet
+	       (EOF packet)
+	   if "number of columns" > 0
+	       (field packets) as in a Result Set Header Packet
+	       (EOF packet)
 */
 func (stmt mysqlStmt) readPrepareResultPacket() (columnCount uint16, e error) {
 	data, e := stmt.mc.readPacket()
@@ -598,17 +607,23 @@ func (stmt mysqlStmt) readPrepareResultPacket() (columnCount uint16, e error) {
 	return
 }
 
-/* Command Packet
+/*
+	Command Packet
+
 Bytes                Name
 -----                ----
 1                    code
 4                    statement_id
 1                    flags
 4                    iteration_count
-  if param_count > 0:
+
+	if param_count > 0:
+
 (param_count+7)/8    null_bit_map
 1                    new_parameter_bound_flag
-  if new_params_bound == 1:
+
+	if new_params_bound == 1:
+
 n*2                  type of parameters
 n                    values for the parameters
 */
@@ -893,27 +908,7 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 					row[i] = nil
 					break
 				}
-				var resp string = ""
-				var bit uint
-				var end byte
-				end = 8
-				for k := 0; k < len(bb); k++ {
-					var current_byte []string
-					var data int
-					data = int(bb[k])
-					for bit = 0; bit < uint(end); bit++ {
-						tmp := 1 << bit
-						if (data & tmp) > 0 {
-							current_byte = append(current_byte, "1")
-						} else {
-							current_byte = append(current_byte, "0")
-						}
-					}
-					for k := len(current_byte); k > 0; k-- {
-						resp += current_byte[k-1]
-					}
-				}
-				row[i], _ = strconv.ParseInt(resp, 2, 64)
+				row[i], _ = bitBytes2Int64(bb)
 				pos += n
 				break
 
@@ -1007,6 +1002,107 @@ func (mc *mysqlConn) readBinaryRows(rc *rowsContent) (e error) {
 			// Please report if this happens!
 			default:
 				return fmt.Errorf("Unknown FieldType %d", rc.columns[i].fieldType)
+			}
+		}
+		rc.rows = append(rc.rows, row)
+	}
+
+	mc.affectedRows = uint64(len(rc.rows))
+	return
+}
+
+func (mc *mysqlConn) readStringRows(rc *rowsContent) (e error) {
+	var data []byte
+	var i, pos, n int
+	var unsigned, isNull bool
+	columnsCount := len(rc.columns)
+	rc.rows = make([][]driver.Value, 0)
+	for {
+		data, e = mc.readPacket()
+		if e != nil {
+			return
+		}
+		pos = 0
+		// EOF Packet
+		if data[pos] == 254 && len(data) == 5 {
+			return
+		}
+		row := make([]driver.Value, columnsCount)
+		for i = 0; i < columnsCount; i++ {
+			var b []byte
+			b, n, isNull, e = readLengthCodedBinary(data[pos:])
+			pos += n
+			if isNull && rc.columns[i].flags&FLAG_NOT_NULL == 0 {
+				row[i] = nil
+				continue
+			}
+			dataStr := string(b)
+			// Convert to byte-coded string
+			switch rc.columns[i].fieldType {
+			case FIELD_TYPE_NULL:
+				row[i] = nil
+				break
+
+			// Numeric Typs
+			case FIELD_TYPE_TINY:
+				intN, _ := strconv.Atoi(dataStr)
+				unsigned = rc.columns[i].flags&FLAG_UNSIGNED != 0
+				if unsigned {
+					row[i] = uint8(intN)
+				} else {
+					if rc.columns[i].length == 1 {
+						switch intN {
+						case 1:
+							row[i] = true
+						case 0:
+							row[i] = false
+						default:
+							row[i] = int8(intN)
+						}
+					} else {
+						row[i] = int8(intN)
+					}
+				}
+				break
+			case FIELD_TYPE_SHORT:
+				intN, _ := strconv.Atoi(dataStr)
+				unsigned = rc.columns[i].flags&FLAG_UNSIGNED != 0
+				if unsigned {
+					row[i] = uint16(intN)
+				} else {
+					row[i] = int16(intN)
+				}
+				break
+			case FIELD_TYPE_INT24, FIELD_TYPE_LONG:
+				intN, _ := strconv.Atoi(dataStr)
+				unsigned = rc.columns[i].flags&FLAG_UNSIGNED != 0
+				if unsigned {
+					row[i] = uint32(intN)
+				} else {
+					row[i] = int32(intN)
+				}
+				break
+			case FIELD_TYPE_LONGLONG:
+				unsigned = rc.columns[i].flags&FLAG_UNSIGNED != 0
+				if unsigned {
+					row[i], _ = strconv.ParseUint(dataStr, 10, 64)
+				} else {
+					row[i], _ = strconv.ParseInt(dataStr, 10, 64)
+				}
+				break
+			case FIELD_TYPE_FLOAT:
+				floatN, _ := strconv.ParseFloat(dataStr, 32)
+				row[i] = float32(floatN)
+				break
+			case FIELD_TYPE_DOUBLE:
+				row[i], _ = strconv.ParseFloat(dataStr, 64)
+				break
+			case FIELD_TYPE_BIT:
+				row[i], _ = bitBytes2Int64([]byte(dataStr))
+				break
+			default:
+				row[i] = string(b)
+				break
 			}
 		}
 		rc.rows = append(rc.rows, row)

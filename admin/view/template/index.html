@@ -91,7 +91,7 @@
 
                             <div class="col-md-12" id="bifrost_memory_used">
                                 <h1 class="no-margins"><span class="number">0</span>
-                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" id="freeOSMemory">释放</button>
+                                    <button data-toggle="button" class="btn-sm btn-primary" type="button" id="freeOSMemory">GC</button>
                                 </h1>
                                 <div class="font-bold text-navy"><span class="proportion"></span> <i class="fa fa-level-up"></i> <small class="notes">Bifrost Used</small>
                                 </div>
@@ -336,7 +336,7 @@
         $("#freeOSMemory").click(
             function() {
                 var callback = function (data) {
-                    alert("释放成功！");
+                    alert("提交成功！");
                     return true;
                 };
                 Ajax("GET","/freeOSMemory",{},callback,true);
@@ -355,13 +355,18 @@
             $("#GoVersion").text(d.GoVersion);
             $("#OSVersion").text(d.GOOS +" / "+d.GOARCH);
         };
-        Ajax("GET","/overview",{},callback,true);
+        Ajax("GET","/overview",{},callback,false);
     }
     getOverView();
 
     function getServerInfo() {
         var callback = function (d) {
-            var size = d.Sys/1024/1024;
+            var size = 0
+            if(d.ResUsed > 0 ){
+                size = d.ResUsed/1024/1024;
+            }else{
+                size = d.Runtime.Sys/1024/1024;
+            }
             var sizeString = "";
             if (size>1024){
                 sizeString = (size / 1024).toFixed(2) + " G";
@@ -375,9 +380,11 @@
 
     function loadNews() {
         var version = "{{.Version}}";
+        var ServerStartTime = "{{.ServerStartTime}}";
         $.ajax({
-            url: "https://www.xbifrost.com/check_news/?version="+version,
+            url: "https://www.xbifrost.com/check_news/?version="+version+"&start="+ServerStartTime,
             type: "GET",
+            timeout: 5000,
             dataType: "jsonp", //指定服务器返回的数据类型
             jsonpCallback:"jsonp",
             success: function (data) {
@@ -417,6 +424,9 @@
                     html += "</tr>";
                 }
                 $("#BifrostNewsTable").html(html);
+            },
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                showDonate();
             }
         });
     }

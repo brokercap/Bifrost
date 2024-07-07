@@ -16,13 +16,18 @@ limitations under the License.
 package controller
 
 import (
+	"fmt"
 	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/plugin/driver"
 	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/server"
+	"io"
+	"os"
 	"runtime"
-	"time"
 	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var StartTime = ""
@@ -38,7 +43,8 @@ type IndexController struct {
 // 首页
 func (c *IndexController) Index() {
 	c.SetTitle("Index")
-	c.AddAdminTemplate("index.html","header.html","footer.html")
+	c.SetData("ServerStartTime", server.GetServerStartTime().Format("2006-01-02"))
+	c.AddAdminTemplate("index.html", "header.html", "footer.html")
 }
 
 // Bifrostd 基本信息
@@ -70,10 +76,54 @@ func (c *IndexController) Overview() {
 
 // 获取 golang 运行的基本信息
 func (c *IndexController) ServerMonitor() {
-	memStat := new(runtime.MemStats)
-	runtime.ReadMemStats(memStat)
+	type MemStat struct {
+		ResUsed uint64
+		Runtime *runtime.MemStats
+	}
+	memStat := MemStat{
+		Runtime: new(runtime.MemStats),
+	}
+	runtime.ReadMemStats(memStat.Runtime)
+	memStat.ResUsed = c.getMemResUsed()
 	c.SetJsonData(memStat)
 	c.StopServeJSON()
+}
+
+// 获取当前进程相对应Top命令出来的结果值中相对应的RES列的值
+// RES对应的值，对于真正内存使用理，相对更为准确合理
+// runtime.MemStats 中是由Go自行统计的，可能存在误差
+func (c *IndexController) getMemResUsed() uint64 {
+	if runtime.GOOS != "linux" {
+		return 0
+	}
+
+	statusFilePath := fmt.Sprintf("/proc/%d/status", os.Getpid())
+
+	f, err := os.Open(statusFilePath)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	content, err := io.ReadAll(f)
+	if err != nil {
+		return 0
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "VmRSS:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				// 解析VmRSS值为uint64
+				vmRSSValue, parseErr := strconv.ParseUint(fields[1], 10, 64)
+				if parseErr != nil {
+					return 0
+				}
+				return vmRSSValue * 1024
+			}
+		}
+	}
+	return 0
 }
 
 // 强制运行 golang gc

@@ -26,10 +26,10 @@ func (c *DocsController) Index() {
 	c.SetData("PluginKey", PluginKey)
 	c.SetData("Drivers", driver.Drivers())
 	c.SetData("Title", "docs")
-	c.AddAdminTemplate("docs.html","header.html","footer.html")
+	c.AddAdminTemplate("docs.html", "header.html", "footer.html")
 }
 
 func (c *DocsController) ApiDocIndex() {
 	c.SetData("Title", "api_docs")
-	c.AddAdminTemplate("api.doc.html","header.html","footer.html")
+	c.AddAdminTemplate("api.doc.html", "header.html", "footer.html")
 }

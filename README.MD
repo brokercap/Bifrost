@@ -14,18 +14,21 @@
 
 ##### 目标端支持
 
-| 目标端        | DDL | 备注                               |
-|------------|-----|----------------------------------|
-| Redis      | NO  |                                  |
-| MongoDB    | NO  |                                  |
-| MySQL      | YES |                                  |
-| ClickHouse | YES |                                  |
-| Memcache   | NO  |                                  |
-| RabbitMQ   | YES |                                  |
+| 目标端        | DDL | 备注                     |
+|------------|-----|------------------------|
+| Redis      | NO  |                        |
+| MongoDB    | NO  |                        |
+| MySQL      | YES |                        |
+| ClickHouse | YES |                        |
+| Memcache   | NO  |                        |
+| RabbitMQ   | YES |                        |
 | Kafka      | YES | 支持canal,debezium格式，以及kafka 消息字符串 |
-| ActiveMQ   | YES |                                  |
-| [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |                                  |
-| [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |                                  |
+| ActiveMQ   | YES |                        |
+| [Http 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/plugin/http/example/http_server/http_server.go)| YES  |                        |
+| [Hprose RPC 自定义服务](https://github.com/brokercap/Bifrost/blob/v1.8.x/hprose_server/tcp_server.go)| YES  |                        |
+| StarRocks        | YES | use mysql protocol     |
+| Doris            | YES | use mysql protocol     |
+
 
 
 ##### 源端支持
@@ -40,6 +43,8 @@
 | kafka   | NO  | YES | bifrost          | Bifrost可以作为源写入到kafka,再由Bifrost消费kafka的数据   |
 | kafka   | NO  | YES | debezium         | debezium将数据写入kafka，Bifrost消费kafka的数据自动转换处理 |
 | Mongo   | NO  | YES | oplog            |                                            |
+| kafka   | NO  | YES | customer json    | 支持自定义JSON格式数据转换Bifrost格式的功能                |
+| Mock    | NO  | YES | MySQL Binlog     | 对于OutPut插件开发的时候 ,不再需要部署MySQL等源端进行开发阶段的测试了  |
 
 ---
 
@@ -119,11 +124,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v2.0.6-beta/bifrost_v2.0.6-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.3.6-beta/bifrost_v2.3.6-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.0.6-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.3.6-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.0.6-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.3.6-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 
@@ -212,7 +217,7 @@ tls_key_file=./etc/server.key
 tls_crt_file=./etc/server.crt
 
 #是否开启文件队列功能 true|false
-file_queue_usable=true
+file_queue_usable=false
 
 #统计是否启文件队列的时间，单位毫秒
 file_queue_usable_count_time_diff=5000
@@ -230,7 +235,7 @@ meta_storage_path=127.0.0.1:6379
 cluster_name=bifrostTestClusterName
 
 #是否开启文件队列功能 true|false
-file_queue_usable=true
+file_queue_usable=false
 
 #统计是否启文件队列的时间，单位毫秒
 file_queue_usable_count_time_diff=5000

@@ -53,21 +53,21 @@ package model
 //
 
 import (
-"bufio"
-"bytes"
-"fmt"
-"html/template"
-"io"
-"log"
-"net/http"
-"os"
-"runtime"
-"runtime/pprof"
-"runtime/trace"
-"sort"
-"strconv"
-"strings"
-"time"
+	"bufio"
+	"bytes"
+	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // Cmdline responds with the running program's

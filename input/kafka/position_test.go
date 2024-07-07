@@ -7,6 +7,6 @@ func TestInputKafka_SetTopicPartitionOffsetAndReturnGTID(t *testing.T) {
 	gtid := c.SetTopicPartitionOffsetAndReturnGTID(nil)
 
 	if gtid != "" {
-		t.Fatalf("gtid(%s) not != ''",gtid)
+		t.Fatalf("gtid(%s) not != ''", gtid)
 	}
 }

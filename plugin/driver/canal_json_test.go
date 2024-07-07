@@ -23,14 +23,14 @@ func TestNewPluginDataCanal2(t *testing.T) {
 	})
 
 	Convey("偶数", t, func() {
-		i := 1
+		i := 2
 		So(i&1, ShouldEqual, 0)
 	})
 
 	Convey("偶数", t, func() {
 		dataType := "Nullable(int(11))"
 		dataType = dataType[9 : len(dataType)-1]
-		So(dataType, ShouldEqual, "int")
+		So(dataType, ShouldEqual, "int(11)")
 	})
 
 	Convey("update event", t, func() {
@@ -44,6 +44,6 @@ func TestNewPluginDataCanal2(t *testing.T) {
 		So(bifrostEventData.SchemaName, ShouldNotEqual, "")
 		So(bifrostEventData.TableName, ShouldNotEqual, "")
 		So(bifrostEventData.SchemaName, ShouldEqual, c.Database)
-		So(bifrostEventData.TableName, ShouldNotEqual, c.Table)
+		So(bifrostEventData.TableName, ShouldEqual, c.Table)
 	})
 }

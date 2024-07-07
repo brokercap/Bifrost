@@ -35,7 +35,7 @@ type SessionMgr struct {
 	mSessions map[string]*Session //保存session的指针[sessionID] = session
 }
 
-//创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
+// 创建会话管理器(cookieName:在浏览器中cookie的名字;maxLifeTime:最长生命周期)
 func NewSessionMgr(cookieName string, maxLifeTime int64) *SessionMgr {
 	mgr := &SessionMgr{mCookieName: cookieName, mMaxLifeTime: maxLifeTime, mSessions: make(map[string]*Session)}
 
@@ -45,7 +45,7 @@ func NewSessionMgr(cookieName string, maxLifeTime int64) *SessionMgr {
 	return mgr
 }
 
-//在开始页面登陆页面，开始Session
+// 在开始页面登陆页面，开始Session
 func (mgr *SessionMgr) StartSession(w http.ResponseWriter, r *http.Request) string {
 	mgr.mLock.Lock()
 	defer mgr.mLock.Unlock()
@@ -63,7 +63,7 @@ func (mgr *SessionMgr) StartSession(w http.ResponseWriter, r *http.Request) stri
 	return newSessionID
 }
 
-//结束Session
+// 结束Session
 func (mgr *SessionMgr) EndSession(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(mgr.mCookieName)
 	if err != nil || cookie.Value == "" {
@@ -81,7 +81,7 @@ func (mgr *SessionMgr) EndSession(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//结束session
+// 结束session
 func (mgr *SessionMgr) EndSessionBy(sessionID string) {
 	mgr.mLock.Lock()
 	defer mgr.mLock.Unlock()
@@ -89,7 +89,7 @@ func (mgr *SessionMgr) EndSessionBy(sessionID string) {
 	delete(mgr.mSessions, sessionID)
 }
 
-//设置session里面的值
+// 设置session里面的值
 func (mgr *SessionMgr) SetSessionVal(sessionID string, key interface{}, value interface{}) {
 	mgr.mLock.Lock()
 	defer mgr.mLock.Unlock()
@@ -99,7 +99,7 @@ func (mgr *SessionMgr) SetSessionVal(sessionID string, key interface{}, value in
 	}
 }
 
-//得到session里面的值
+// 得到session里面的值
 func (mgr *SessionMgr) GetSessionVal(sessionID string, key interface{}) (interface{}, bool) {
 	mgr.mLock.RLock()
 	defer mgr.mLock.RUnlock()
@@ -113,7 +113,7 @@ func (mgr *SessionMgr) GetSessionVal(sessionID string, key interface{}) (interfa
 	return nil, false
 }
 
-//得到sessionID列表
+// 得到sessionID列表
 func (mgr *SessionMgr) GetSessionIDList() []string {
 	mgr.mLock.RLock()
 	defer mgr.mLock.RUnlock()
@@ -127,7 +127,7 @@ func (mgr *SessionMgr) GetSessionIDList() []string {
 	return sessionIDList[0:len(sessionIDList)]
 }
 
-//判断Cookie的合法性（每进入一个页面都需要判断合法性）
+// 判断Cookie的合法性（每进入一个页面都需要判断合法性）
 func (mgr *SessionMgr) CheckCookieValid(w http.ResponseWriter, r *http.Request) string {
 	var cookie, err = r.Cookie(mgr.mCookieName)
 
@@ -149,7 +149,7 @@ func (mgr *SessionMgr) CheckCookieValid(w http.ResponseWriter, r *http.Request) 
 	return ""
 }
 
-//更新最后访问时间
+// 更新最后访问时间
 func (mgr *SessionMgr) GetLastAccessTime(sessionID string) time.Time {
 	mgr.mLock.RLock()
 	defer mgr.mLock.RUnlock()
@@ -161,7 +161,7 @@ func (mgr *SessionMgr) GetLastAccessTime(sessionID string) time.Time {
 	return time.Now()
 }
 
-//GC回收
+// GC回收
 func (mgr *SessionMgr) GC() {
 	mgr.mLock.Lock()
 	defer mgr.mLock.Unlock()
@@ -177,7 +177,7 @@ func (mgr *SessionMgr) GC() {
 	time.AfterFunc(time.Duration(mgr.mMaxLifeTime)*time.Second, func() { mgr.GC() })
 }
 
-//创建唯一ID
+// 创建唯一ID
 func (mgr *SessionMgr) NewSessionID() string {
 	b := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {

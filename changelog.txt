@@ -1,3 +1,97 @@
+v2.3.6-beta   2024-04-21
+1. input varchar(255) to output starrocks varchar(765)
+
+v2.3.5-beta   2024-04-05
+1. fixed output starrocks varchar(255) tansfer error bug https://github.com/brokercap/Bifrost/issues/266
+2. 修复mongo数据源全量功能无效的bug https://github.com/brokercap/Bifrost/issues/272
+
+v2.3.4-beta   2023-12-31
+1. 修复MySQL源,指定同步表配置后,但可能没生效的BUG BUG复现过程: a. 配置了一个T1表同步 b. 重启进程,并且T1表数据不再做任何更新 c. 配置T2表同步 d. 更新T1表的数据
+2. 修复mysql 带有触发器的时候binlog解析失败的bug https://github.com/brokercap/Bifrost/issues/263
+3. 修复plugin clickhouse decimal 精度丢失的bug https://github.com/brokercap/Bifrost/issues/204
+
+v2.2.3-beta   2023-12-31
+1. 修复MySQL源,指定同步表配置后,但可能没生效的BUG BUG复现过程: a. 配置了一个T1表同步 b. 重启进程,并且T1表数据不再做任何更新 c. 配置T2表同步 d. 更新T1表的数据
+2. 修复mysql 带有触发器的时候binlog解析失败的bug https://github.com/brokercap/Bifrost/issues/263
+3. 修复plugin clickhouse decimal 精度丢失的bug https://github.com/brokercap/Bifrost/issues/204
+4. 修复2.2.2 mysql,clickhouse之外的其他插件input没有配置tag标签导致数据转换失败的bug
+
+v2.3.3-beta   2023-11-05
+1. 修复2.2.2 ,2.3.2 mysql,clickhouse之外的其他插件input没有配置tag标签导致数据转换失败的bug
+
+v2.3.2-beta   2023-10-22
+1. 包含2.2.2版本内容
+2. 优化 output mysql starrocks/doris 自动建表字段类型映射关系,根据实际情况选择最接近源端类型的数据类型
+3. output mysql 对starrocks/doris的支持 自动建表时 类型转换的优化 非追加模式下,无主键的表,目标库中表不存在的情况下,会自动弃丢,不会自动建表及同步	ade2ac4	jc3wish <>	2023年10月21日 16:32
+4. 修复其他部分已知bug以及doc更新
+
+v2.2.2-beta   2023-10-22
+1. 在数据转换的过程中,比如字段在源端的字段列表中不存在 ,则直接返回nil
+   案例: data 中有字段及值 x1:"v1",x2:"v2",x3:"v3"
+   情况1:  val = "x4" , 返回 nil
+   情况2:  val = "x4{BifrostNull}" ,返回 x4
+   情况3:  val = "x1" , 返回 x1对应的的值v1
+   情况4:  val = {BifrostNull} , 返回 nil
+   如果在此版本之前在字段绑定中使用了 源端不存在的字段名,需要进行修改为 情况2 那种情况 ,才会返回 x4那样的值,否则为 nil,请视使用情况是否需要修改
+2. 在kafka等自行控制位点的数据源,在一个数据表开始同步后,就再也没有数据同步后,导致位点计算错误的BUG
+   https://github.com/brokercap/Bifrost/issues/257
+3. 修复input kafka 在同步过程中去获取最新位点,导致死锁的bug
+   https://github.com/brokercap/Bifrost/issues/256
+4. 修复数据源指定带点数据源名称 搜索失败的bug
+5. 当添加AllTabls 的时候 ,支持只指定同步某些表
+   https://github.com/brokercap/Bifrost/issues/253
+6. 修复input mock 在随机生成no_pks无主键表,生成的数据,还存在主键的bug
+7. mock input更新,支持设置开启长字符串生成, 支持设置是否生成的数据,均为同一个事件内容,用于提升生成数据性能
+8. web体验优化 全量任务,表同步列表可支持跳转到表同步配置详情页,并自动选中库表
+
+v2.3.1-beta   2023-10-15
+1. 包含2.2.1版本内容
+2. 修复 output starrocks 在普通模式,指定了库名的情况下,提示未找到原库表名的错误
+
+v2.2.1-beta   2023-10-15
+1. Linux 作为服务器的情况下，通过读取 /proc/[pid]/status 内核文件下的 VmRSS 作为内存使用量
+   其他系统 ，将继续使用Go提供的runtime.MemStats里的统计数据
+2. 修复input mock 全量完后，内存并没释放的BUG
+3. 修复 input mock 在batch模式下，提前退出batch的逻辑bugoutput mysql starrocks 在写入成功的情况下,设置当前连接错误为nil,防止上一次成功,这一次成功,需要清空错误信息	836676b	jc3wish <>	2023年10月21日 22:19
+
+4. 修复input mock batch 结束后只是显示stopped,但没closed的bug
+5. 界面操作优化更新
+   数据源界面新增简易搜索功能
+   数据源及目标库ConnUri输入框入框改为texterea,范围更大
+6. 修复input mongo 在值为nil的情况下,ColumnMapping的时候panic的bug
+
+v2.3.0-beta   2023-10-06
+1. 支持MySQL连接协议连接Starrocks,进行数据同步到,支持自动建表,日志追加模式,按月自动建分区
+   https://github.com/brokercap/Bifrost/issues/254
+2. 当添加AllTabls 的时候 ,支持只指定同步某些表
+   https://github.com/brokercap/Bifrost/issues/253
+
+v2.2.0-beta   2023-10-06
+1. input kafka 在多parrtition的情况下支持设置处理数据转换的协程数量 来提升性能,一个partition的数据,只能被一个协程处理,在单partition的情况下,设置多个无效,默认为 单协程
+2. input mongo 支持设置 全量,增量,以及先全量再增量的方式数据同步
+3. 修复批量添加表数据同步失败的BUG
+   https://github.com/brokercap/Bifrost/issues/249
+4. 修复修改数据源,但是数据源连接案例及描述等信息没有变更的bug
+   https://github.com/brokercap/Bifrost/issues/248
+5. 添加全量任务后,跳转到全量任务列表,采用新窗口跳转
+   https://github.com/brokercap/Bifrost/issues/250
+6. 支持 input mock ,在开发output的时候 可以更方便的进行测试
+7. input 插件开发 支持获取需要同步的库表列表
+8. Bristol mysql驱动 支持 conn.Exec conn.Query 带参数请求访问接口
+
+v2.1.1-beta   2023-09-17
+1. 修复同步配置字段映射显示undefined的bug
+   https://github.com/brokercap/Bifrost/issues/237
+2. output ClickHouse支持选择配置自动创建MergeTree引擎表
+   https://github.com/brokercap/Bifrost/issues/244
+3. 修复mysql源连接断开没被发现的bug
+   https://github.com/brokercap/Bifrost/issues/188
+
+v2.1.0-beta   2023-09-03
+1. 支持input kafka 自定义配置数据格式转换成Bifrost格式
+2. output clickhouse 支持json.Number数据类型转换成String
+3. 修复mongo input 在update事件中,但更新的数据字典实际为nil导致异常的bug
+
 v2.0.6-beta   2023-06-18
 1. 修复目标库clickhouse显示同步成功，但实际失败的bug
    https://github.com/brokercap/Bifrost/issues/233

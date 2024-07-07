@@ -70,7 +70,12 @@ func (c *MongoInput) BuildRowEvent(op *gtm.Op) *outputDriver.PluginDataType {
 		break
 	case "u":
 		eventType = "update"
-		op.Data["_id"] = docId.Hex()
+		if op.Data == nil {
+			log.Printf("[WARN] input[%s] BuildRowEvent[update] _id:%s data is nil \n", "mongo", docId.Hex())
+			op.Data = map[string]interface{}{"_id": docId.Hex()}
+		} else {
+			op.Data["_id"] = docId.Hex()
+		}
 		rows = append(rows, op.Data, op.Data)
 		break
 	case "d":
@@ -114,6 +119,10 @@ func (c *MongoInput) TransferDataAndColumnMapping(row map[string]interface{}) (c
 		if key == "_id" {
 			// _id 是主键，所以不能为 Nullable
 			columnMapping[key] = "string"
+			continue
+		}
+		if val == nil {
+			columnMapping[key] = "Nullable(string)"
 			continue
 		}
 		switch reflect.TypeOf(val).Kind() {

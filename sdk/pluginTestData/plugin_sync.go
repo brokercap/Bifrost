@@ -154,7 +154,7 @@ func (This *Plugin) DoTestStart(n uint) error {
 	return nil
 }
 
-//用于性能测试。必须指定eventType,不支持debug
+// 用于性能测试。必须指定eventType,不支持debug
 func (This *Plugin) DoTestStartForSpeed(n uint) error {
 	if This.param == nil {
 		return fmt.Errorf("SetParam please!")

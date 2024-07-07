@@ -37,6 +37,22 @@ function formatDate(timestamp) {
                                             <i class="fa fa-times"></i>
                                         </a>
                                     </div>
+                                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                                        <select class="form-control" name="DbNameSelect" id="DbNameSelect">
+                                            <option value="" > 全部 </option>
+                                            {{range $i, $v := .DBList}}
+                                            <option value="{{$v.Name}}">{{$v.InputType}} -> {{$v.Name}} </option>
+                                            {{end}}
+                                        </select>
+                                    </div>
+
+                                    <div style="float: left; margin-top: -10px; margin-left: 10px">
+                                        <select class="form-control" name="DbStatusSelect" id="DbStatusSelect">
+                                            <option value="" > 状态 </option>
+                                            <option value="running" > running </option>
+                                            <option value="stop" > stop </option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="ibox-content">
                                     <div class="table-responsive">
@@ -59,7 +75,7 @@ function formatDate(timestamp) {
                                             </thead>
                                             <tbody id="dbListContair">
                                             	{{range $i, $v := .DBList}}
-                                                <tr>
+                                                <tr class="DbListTr" DbName="{{$v.Name}}">
                                                     <td>
                                                         <p class="DbName">{{$v.Name}}</p>
                                                         <p class="DbNameInputType">{{$v.InputType}}</p>
@@ -206,8 +222,7 @@ function formatDate(timestamp) {
 
                                     <button data-toggle="button" class="btn-sm btn-warning" id="checkUriBtn" type="button">Check</button>
                                 </div>
-
-                                <input type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri">
+                                <textarea type="text" name="uri" id="uri" class="form-control" placeholder="ConnUri"></textarea> <span class="help-block m-b-none">*</span>
                                 <p><span class="help-block m-b-none" id="input_plugin_example_conn_uri"></span></p>
                                 <div id="input_plugin_notes"></div>
                             </div>
@@ -265,7 +280,7 @@ function formatDate(timestamp) {
                             <div class="col-sm-9">
                                 <select class="form-control" name="update_toserver" id="update_toserver">
                                     <option value="0">False</option>
-                                    <option value="1">True</option>
+                                    <option value="1" selected>True</option>
                                 </select>
                                 <span class="help-block m-b-none">
                                     True：将所有表同步的位点强制更新,请查阅相关文档
@@ -294,6 +309,10 @@ function formatDate(timestamp) {
     $("#uri").change(
         function(){
             dbUriChecked = false;
+            // 去除前后换行符
+            var uri = $(this).val()
+            uri = uri.replace(/^\n+|\n+$/g, '');
+            $(this).val(uri);
             $("#checkUriBtn").show();
         }
     );
@@ -393,7 +412,7 @@ $("#addNewDBBtn").click(
 	        return
         }
 		var dbname = $("#dbname").val();
-		if(dbname=="" || dbname.length > 30){
+		if(dbname=="" || dbname.length > 90){
 			 $("#dbname").focus();
 			 return false;
 		}
@@ -484,6 +503,7 @@ $(".updateDbBtn").click(
         isNewDB = false;
         location.hash = "#newOrUpdateDB";
         $("#update_toserver_contair").show();
+        DoInputTypeChange();
     }
 );
 
@@ -555,7 +575,83 @@ $("#inputType").change(
     }
 );
 
+function SearchDbName(DbName) {
+    if(DbName == "" || DbName == null){
+        $(".DbListTr").show();
+    }else{
+        // 这里不能使用 $("#"+id).show() 的方法,是因为 DbName 中可能带 . 会导致失败
+        // 所以这里采用遍历的方法进行逐个对比
+        $(".DbListTr").each(function() {
+            if( $(this).attr("DbName") == DbName ){
+                $(this).show();
+            }else{
+                $(this).hide();
+            }
+        });
+    }
+}
+
+function SearchStatus(status) {
+    if(status == "" || status == null){
+        $(".DbListTr").show();
+        return
+    }
+    var runningElements = $(".DbListTr .conn_status:contains('running')");
+    $(".DbListTr").hide();
+    if (status == "running") {
+        runningElements.closest(".DbListTr").show();
+    }else{
+        $(".DbListTr").not(runningElements.closest(".DbListTr")).show();
+    }
+}
+
+$("#DbNameSelect").change(
+    function () {
+        var DbName = $(this).val();
+        $("#DbStatusSelect").val("");
+        SearchDbName(DbName);
+        window.history.replaceState(null,null, '?dbname='+DbName);
+    }
+);
+
+$("#DbStatusSelect").change(
+    function () {
+        var Status = $(this).val()
+        $("#DbNameSelect").val("");
+        SearchStatus(Status);
+        window.history.replaceState(null, null, '?status='+Status);
+    }
+);
+
+function DbSelectSearchSort(){
+    var select = $("#DbNameSelect");
+    var options = select.find('option');
+    options.sort(function(a, b) {
+        var aValue = a.value || '\0'; // Use '\0' for empty value
+        var bValue = b.value || '\0';
+        return a.text.localeCompare(b.text) || aValue.localeCompare(bValue);
+    });
+
+    // 清空原有选项并将排序后的选项重新添加
+    select.empty().append(options);
+}
+
+function InitDbSearchSelect() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var dbname = urlParams.get("dbname");
+    var status = urlParams.get("status");
+    // 假如dbname和status同时存在 ,只有dbname优先
+    if (dbname != "" && dbname != null) {
+        $("#DbNameSelect").val(dbname);
+        SearchDbName(dbname);
+        return
+    }
+    $("#DbStatusSelect").val(status);
+    SearchStatus(status);
+}
 // 初始化
+DbSelectSearchSort();
+InitDbSearchSelect();
 DoInputTypeChange();
 
 

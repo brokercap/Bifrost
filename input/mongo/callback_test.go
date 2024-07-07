@@ -2,7 +2,7 @@ package mongo
 
 import (
 	"fmt"
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/rwynn/gtm/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -108,7 +108,7 @@ func TestMongoInput_ToInputCallback(t *testing.T) {
 		So(callbackData, ShouldBeNil)
 	})
 
-	Convey("row event,callback not be nil", t, func() {
+	Convey("insert row event", t, func() {
 		c := new(MongoInput)
 		var callbackData *outputDriver.PluginDataType
 		var callback = func(data *outputDriver.PluginDataType) {
@@ -129,7 +129,7 @@ func TestMongoInput_ToInputCallback(t *testing.T) {
 		So(callbackData.TableName, ShouldEqual, "testTableName")
 	})
 
-	Convey("row event,callback not be nil", t, func() {
+	Convey("insert and commit event,callback not be nil", t, func() {
 		c := new(MongoInput)
 		var callbackData *outputDriver.PluginDataType
 		var callback = func(data *outputDriver.PluginDataType) {
@@ -194,6 +194,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -201,13 +202,13 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		So(data.Rows[0]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
 	})
 
-	Convey("op.Operation u", t, func() {
+	Convey("op.Operation u normal", t, func() {
 		c := new(MongoInput)
 		op := &gtm.Op{
 			Operation: "u",
 			Id:        primitive.NewObjectID(),
 			Namespace: "database.table",
-			Data:      make(map[string]interface{}),
+			Data:      map[string]interface{}{"name": "test"},
 		}
 
 		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "OpLogPosition2GTID", func(c *MongoInput, p *primitive.Timestamp) string {
@@ -216,11 +217,37 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
 		So(data.EventType, ShouldEqual, "update")
 		So(data.Rows[1]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
+		So(data.Rows[1]["name"], ShouldEqual, "test")
+	})
+
+	Convey("op.Operation u Data is nil", t, func() {
+		c := new(MongoInput)
+		op := &gtm.Op{
+			Operation: "u",
+			Id:        primitive.NewObjectID(),
+			Namespace: "database.table",
+			Data:      nil,
+		}
+
+		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "OpLogPosition2GTID", func(c *MongoInput, p *primitive.Timestamp) string {
+			return ""
+		})
+		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
+			return
+		})
+		defer patches.Reset()
+		data := c.BuildRowEvent(op)
+		So(data, ShouldNotBeNil)
+		So(data.SchemaName, ShouldEqual, "database")
+		So(data.EventType, ShouldEqual, "update")
+		So(data.Rows[1]["_id"], ShouldEqual, op.Id.(primitive.ObjectID).Hex())
+		So(len(data.Rows[1]), ShouldEqual, 1)
 	})
 
 	Convey("op.Operation d", t, func() {
@@ -238,6 +265,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -258,7 +286,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 	})
 }
 
-func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
+func TestMongoInput_TransferDataAndColumnMapping(t *testing.T) {
 	Convey("row is nil", t, func() {
 		c := new(MongoInput)
 		data := c.TransferDataAndColumnMapping(nil)
@@ -276,6 +304,8 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		row["uint8"] = uint8(8)
 		row["int16"] = int16(-16)
 		row["uint16"] = uint16(16)
+		row["nil"] = nil
+		row["time"] = nowTime
 		row["int32"] = int32(-32)
 		row["uint32"] = uint32(32)
 		row["int64"] = int64(-64)
@@ -293,8 +323,6 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		list = append(list, 2)
 		row["slice"] = list
 
-		row["time"] = nowTime
-
 		type TypeStruct struct {
 			Key  string
 			Val  string
@@ -306,7 +334,6 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		row["struct_pointer"] = &TypeStruct{Key: "22", Val: "20000"}
 
 		data := c.TransferDataAndColumnMapping(row)
-		So(data, ShouldNotBeNil)
 
 		So(len(data), ShouldEqual, len(row))
 		for name, _ := range row {
@@ -316,7 +343,7 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 				break
 			case "map", "array", "slice":
 				So(data[name], ShouldEqual, "Nullable(json)")
-			case "string", "struct_pointer", "struct":
+			case "string", "struct_pointer", "struct", "nil":
 				So(data[name], ShouldEqual, "Nullable(string)")
 			case "time":
 				So(row[name], ShouldEqual, nowTime.Format("2006-01-02 15:04:05"))
@@ -325,6 +352,9 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 				So(data[name], ShouldEqual, "Nullable("+name+")")
 			}
 		}
+		So(row["nil"], ShouldBeNil)
+		So(row["int8"], ShouldEqual, "-8")
+		So(row["bool"], ShouldEqual, true)
 	})
 }
 
