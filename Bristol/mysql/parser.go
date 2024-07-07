@@ -485,6 +485,11 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 				CHARACTER_OCTET_LENGTH = uint64(dest[9].(uint32))
 			case uint64:
 				CHARACTER_OCTET_LENGTH = dest[9].(uint64)
+			case int64:
+				CHARACTER_OCTET_LENGTH = uint64(dest[9].(int64))
+			case int32:
+				CHARACTER_OCTET_LENGTH = uint64(dest[9].(int32))
+
 			default:
 				CHARACTER_OCTET_LENGTH = 0
 			}
