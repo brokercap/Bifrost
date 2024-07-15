@@ -4,76 +4,72 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/agiledragon/gomonkey"
+	"testing"
+
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/xhd2015/xgo/runtime/mock"
 	"go.mongodb.org/mongo-driver/mongo"
-	"reflect"
-	"testing"
 )
 
 func TestMongoInput_BatchStart(t *testing.T) {
 	Convey("GetBatchTableList error", t, func() {
 		c := new(MongoInput)
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetBatchTableList", func(c *MongoInput) (dbTableList map[string][]string, err error) {
+		mock.Patch(c.GetBatchTableList, func() (dbTableList map[string][]string, err error) {
 			return nil, errors.New("GetBatchTableList error")
 		})
-		defer patches.Reset()
 		err := c.BatchStart()
 		So(err.Error(), ShouldEqual, "GetBatchTableList error")
 	})
 
 	Convey("CreateMongoClient error", t, func() {
 		c := new(MongoInput)
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetBatchTableList", func(c *MongoInput) (dbTableList map[string][]string, err error) {
+		mock.Patch(c.GetBatchTableList, func() (dbTableList map[string][]string, err error) {
 			dbTableList = make(map[string][]string, 0)
 			dbTableList["mytest"] = make([]string, 0)
 			dbTableList["mytest"] = append(dbTableList["mytest"], "tb_1")
 			return
 		})
-		patches.ApplyFunc(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
+		mock.Patch(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
 			return &mongo.Client{}, fmt.Errorf("mock error")
 		})
-		defer patches.Reset()
 		err := c.BatchStart()
 		So(err.Error(), ShouldEqual, "mock error")
 	})
 
 	Convey("TableBatchStart error", t, func() {
 		c := new(MongoInput)
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetBatchTableList", func(c *MongoInput) (dbTableList map[string][]string, err error) {
+		mock.Patch(c.GetBatchTableList, func() (dbTableList map[string][]string, err error) {
 			dbTableList = make(map[string][]string, 0)
 			dbTableList["mytest"] = make([]string, 0)
 			dbTableList["mytest"] = append(dbTableList["mytest"], "tb_1")
 			return
 		})
-		patches.ApplyFunc(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
+		mock.Patch(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
 			return &mongo.Client{}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection, perBatchLimit int) error {
+		mock.Patch(c.TableBatchStart, func(collection *mongo.Collection, perBatchLimit int) error {
 			return errors.New("TableBatchStart error")
 		})
-		defer patches.Reset()
 		err := c.BatchStart()
 		So(err.Error(), ShouldEqual, "TableBatchStart error")
 	})
 
 	Convey("normal", t, func() {
 		c := new(MongoInput)
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetBatchTableList", func(c *MongoInput) (dbTableList map[string][]string, err error) {
+		mock.Patch(c.GetBatchTableList, func() (dbTableList map[string][]string, err error) {
 			dbTableList = make(map[string][]string, 0)
 			dbTableList["mytest"] = make([]string, 0)
 			dbTableList["mytest"] = append(dbTableList["mytest"], "tb_1")
 			return
 		})
-		patches.ApplyFunc(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
+		mock.Patch(CreateMongoClient, func(uri string, ctx context.Context) (*mongo.Client, error) {
 			return &mongo.Client{}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "TableBatchStart", func(c *MongoInput, collection *mongo.Collection, perBatchLimit int) error {
+		mock.Patch(c.TableBatchStart, func(collection *mongo.Collection, perBatchLimit int) error {
 			return nil
 		})
-		defer patches.Reset()
 		err := c.BatchStart()
 		So(err, ShouldBeNil)
 	})
@@ -83,11 +79,10 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 	Convey("* table,get GetSchemaList error", t, func() {
 		c := new(MongoInput)
 		c.AddReplicateDoDb0("*", "*")
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetSchemaList", func(c *MongoInput) (data []string, err error) {
+		mock.Patch(c.GetSchemaList, func() (data []string, err error) {
 			err = errors.New("GetSchemaList error")
 			return
 		})
-		defer patches.Reset()
 		_, err := c.GetBatchTableList()
 		So(err.Error(), ShouldEqual, "GetSchemaList error")
 	})
@@ -95,14 +90,13 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 	Convey("* table,get GetSchemaTableList error", t, func() {
 		c := new(MongoInput)
 		c.AddReplicateDoDb0("*", "*")
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetSchemaList", func(c *MongoInput) (data []string, err error) {
+		mock.Patch(c.GetSchemaList, func() (data []string, err error) {
 			return []string{"mytest"}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "GetSchemaTableList", func(c *MongoInput, schema string) (tableList []inputDriver.TableList, err error) {
+		mock.Patch(c.GetSchemaTableList, func(schema string) (tableList []inputDriver.TableList, err error) {
 			err = errors.New("GetSchemaTableList error")
 			return
 		})
-		defer patches.Reset()
 		_, err := c.GetBatchTableList()
 		So(err.Error(), ShouldEqual, "GetSchemaTableList error")
 	})
@@ -110,10 +104,10 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 	Convey("* table,normal", t, func() {
 		c := new(MongoInput)
 		c.AddReplicateDoDb0("*", "*")
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetSchemaList", func(c *MongoInput) (data []string, err error) {
+		mock.Patch(c.GetSchemaList, func() (data []string, err error) {
 			return []string{"mytest"}, nil
 		})
-		patches.ApplyMethod(reflect.TypeOf(c), "GetSchemaTableList", func(c *MongoInput, schema string) (tableList []inputDriver.TableList, err error) {
+		mock.Patch(c.GetSchemaTableList, func(schema string) (tableList []inputDriver.TableList, err error) {
 			tableList = append(tableList, inputDriver.TableList{
 				TableName: "tb_1",
 			})
@@ -125,7 +119,6 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 			})
 			return
 		})
-		defer patches.Reset()
 		dbTableList, err := c.GetBatchTableList()
 		So(err, ShouldBeNil)
 		So(len(dbTableList), ShouldEqual, 1)
@@ -137,7 +130,7 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 		c.AddReplicateDoDb0("mytest", "tb_1")
 		c.AddReplicateDoDb0("mytest", "tb_2")
 		c.AddReplicateDoDb0("mytest_2", "tb_1")
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetSchemaTableList", func(c *MongoInput, schema string) (tableList []inputDriver.TableList, err error) {
+		mock.Patch(c.GetSchemaTableList, func(schema string) (tableList []inputDriver.TableList, err error) {
 			tableList = append(tableList, inputDriver.TableList{
 				TableName: "tb_1",
 			})
@@ -149,7 +142,6 @@ func TestMongoInput_GetBatchTableList(t *testing.T) {
 			})
 			return
 		})
-		defer patches.Reset()
 		dbTableList, err := c.GetBatchTableList()
 		So(err, ShouldBeNil)
 		So(len(dbTableList), ShouldEqual, 2)
@@ -162,11 +154,10 @@ func TestMongoInput_TableBatchStart(t *testing.T) {
 	Convey("GetCollectionDataList err", t, func() {
 		c := new(MongoInput)
 		client := &mongo.Client{}
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCollectionDataList", func(c *MongoInput, ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
+		mock.Patch(c.GetCollectionDataList, func(ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
 			err = errors.New("GetCollectionDataList error")
 			return
 		})
-		defer patches.Reset()
 		collection := c.GetCollection(client, "mytest", "tb_1")
 		err := c.TableBatchStart(collection, 1000)
 		So(err, ShouldNotBeNil)
@@ -178,7 +169,7 @@ func TestMongoInput_TableBatchStart(t *testing.T) {
 		c := new(MongoInput)
 		client := &mongo.Client{}
 		var GetCollectionDataListMockI = 0
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCollectionDataList", func(c *MongoInput, ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
+		mock.Patch(c.GetCollectionDataList, func(ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
 			switch GetCollectionDataListMockI {
 			case 0:
 				for i := 0; i < perBatchLimit; i++ {
@@ -204,7 +195,6 @@ func TestMongoInput_TableBatchStart(t *testing.T) {
 			GetCollectionDataListMockI++
 			return
 		})
-		defer patches.Reset()
 
 		var callbackDataList []*outputDriver.PluginDataType
 		var callbackFun = func(data *outputDriver.PluginDataType) {
@@ -222,7 +212,7 @@ func TestMongoInput_TableBatchStart(t *testing.T) {
 		c := new(MongoInput)
 		client := &mongo.Client{}
 		var GetCollectionDataListMockI = 0
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(c), "GetCollectionDataList", func(c *MongoInput, ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
+		mock.Patch(c.GetCollectionDataList, func(ctx context.Context, collection *mongo.Collection, minId interface{}, perBatchLimit int) (batchResult []map[string]interface{}, err error) {
 			switch GetCollectionDataListMockI {
 			case 0:
 				for i := 0; i < perBatchLimit; i++ {
@@ -241,7 +231,6 @@ func TestMongoInput_TableBatchStart(t *testing.T) {
 			GetCollectionDataListMockI++
 			return
 		})
-		defer patches.Reset()
 
 		var callbackDataList []*outputDriver.PluginDataType
 		var callbackFun = func(data *outputDriver.PluginDataType) {
