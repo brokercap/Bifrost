@@ -17,7 +17,7 @@ func (c *PluginDataType) ToCanalJsonObject() (canal *PluginDataCanal, err error)
 		Sql:       c.Query,
 		MysqlType: nil,
 		SqlType:   nil,
-		Type:      "",
+		Type:      strings.ToUpper(c.EventType),
 		PkNames:   c.Pri,
 	}
 	switch c.EventType {
