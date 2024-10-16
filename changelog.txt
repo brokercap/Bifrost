@@ -1,3 +1,7 @@
+v2.3.7-beta   2024-10-16
+1. output kakfa tableMap add binlog_timestamp field
+2. CHARACTER_OCTET_LENGTH add support for int64 and int32 in mysql parser
+
 v2.3.6-beta   2024-04-21
 1. input varchar(255) to output starrocks varchar(765)
 
