@@ -330,6 +330,8 @@ func (parser *eventParser) ParserConnClose(lock bool) {
 		func() {
 			func() {
 				if err := recover(); err != nil {
+					log.Println(err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()
@@ -363,6 +365,8 @@ func (parser *eventParser) GetTableSchemaByName(tableId uint64, database string,
 		if err := recover(); err != nil {
 			parser.ParserConnClose(false)
 			errs = fmt.Errorf(string(debug.Stack()))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if parser.connStatus == STATUS_CLOSED {
@@ -587,6 +591,7 @@ func (parser *eventParser) GetConnectionInfo(connectionId string) (m map[string]
 		if err := recover(); err != nil {
 			parser.ParserConnClose(false)
 			log.Println("binlog.go GetConnectionInfo err:", err)
+			log.Println(string(debug.Stack()))
 			m = nil
 		}
 		parser.binlogDump.Unlock()
@@ -632,6 +637,8 @@ func (parser *eventParser) KillConnect(connectionId string) (b bool) {
 		if err := recover(); err != nil {
 			parser.ParserConnClose(false)
 			b = false
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 		parser.binlogDump.Unlock()
 	}()

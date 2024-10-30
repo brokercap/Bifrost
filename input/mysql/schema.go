@@ -6,6 +6,7 @@ import (
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
 	"log"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -18,7 +19,8 @@ func (c *MysqlInput) GetConn() mysql.MysqlConnection {
 func (c *MysqlInput) GetSchemaList() ([]string, error) {
 	defer func() {
 		if err := recover(); err != nil {
-
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	db := c.GetConn()
@@ -54,7 +56,8 @@ func (c *MysqlInput) GetSchemaList() ([]string, error) {
 func (c *MysqlInput) GetSchemaTableList(schema string) (tableList []inputDriver.TableList, err error) {
 	defer func() {
 		if err := recover(); err != nil {
-
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	db := c.GetConn()
@@ -93,7 +96,8 @@ func (c *MysqlInput) GetSchemaTableList(schema string) (tableList []inputDriver.
 func (c *MysqlInput) GetSchemaTableFieldList(schema string, table string) (FieldList []inputDriver.TableFieldInfo, err error) {
 	defer func() {
 		if err := recover(); err != nil {
-
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	db := c.GetConn()
@@ -205,6 +209,8 @@ func (c *MysqlInput) CheckPrivilege() (err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
 			err = fmt.Errorf("%s", err0)
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	db := c.GetConn()
@@ -216,6 +222,8 @@ func (c *MysqlInput) CheckUri(CheckPrivilege bool) (CheckUriResult inputDriver.C
 	defer func() {
 		if err0 := recover(); err0 != nil {
 			err = fmt.Errorf("%s", err0)
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	dbconn := c.GetConn()
@@ -277,6 +285,8 @@ func (c *MysqlInput) GetCurrentPosition() (p *inputDriver.PluginPosition, err er
 	defer func() {
 		if err0 := recover(); err0 != nil {
 			err = fmt.Errorf("%s", err0)
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	dbconn := c.GetConn()
@@ -307,6 +317,8 @@ func (c *MysqlInput) GetVersion() (Version string, err error) {
 	defer func() {
 		if err0 := recover(); err0 != nil {
 			err = fmt.Errorf("%s", err0)
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	db := c.GetConn()

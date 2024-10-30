@@ -209,6 +209,8 @@ func (This *Conn) Connect() bool {
 func (This *Conn) ReConnect() bool {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println("This.Close or This.Connect err: ", err)
+			log.Println(string(debug.Stack()))
 			This.err = fmt.Errorf(fmt.Sprint(err))
 		}
 	}()
@@ -221,6 +223,8 @@ func (This *Conn) Close() bool {
 	func() {
 		defer func() {
 			if err := recover(); err != nil {
+				log.Println(err)
+				log.Println(string(debug.Stack()))
 				return
 			}
 		}()
@@ -301,6 +305,8 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 			e = fmt.Errorf(string(debug.Stack()))
 			This.err = e
 			// log.Println(" This.conn.Err:", This.conn.Err)
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.err != nil {

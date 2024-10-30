@@ -188,6 +188,7 @@ func (This *Conn) SetParam(p interface{}) (interface{}, error) {
 func (This *Conn) initToMysqlTableFieldType() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			This.conn.err = fmt.Errorf(string(debug.Stack()))
 		}
@@ -293,6 +294,7 @@ func (This *Conn) CreateTableAndGetTableFieldsType(data *pluginDriver.PluginData
 func (This *Conn) getAutoTableFieldType(data *pluginDriver.PluginDataType) (*PluginParam0, error) {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			This.conn.err = fmt.Errorf(string(debug.Stack()))
 		}
@@ -396,6 +398,8 @@ func (This *Conn) initToDatabaseMap() {
 	This.p.toDatabaseMap = make(map[string]bool, 0)
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
@@ -435,6 +439,8 @@ func (This *Conn) ReConnect() bool {
 		if err := recover(); err != nil {
 			This.conn.err = fmt.Errorf(fmt.Sprint(err) + " debug:" + string(debug.Stack()))
 			This.err = This.conn.err
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn != nil {
@@ -455,6 +461,8 @@ func (This *Conn) StmtClose() {
 				defer func() {
 					if err := recover(); err != nil {
 						This.conn.err = fmt.Errorf("StmtClose err:%s", fmt.Sprint(err))
+						log.Println(err)
+						log.Println(string(debug.Stack()))
 						return
 					}
 				}()
@@ -470,6 +478,8 @@ func (This *Conn) Close() bool {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println(err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()
@@ -616,6 +626,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	defer func() {
 		if err := recover(); err != nil {
 			e = fmt.Errorf(string(debug.Stack()))
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			This.conn.err = e
 			This.err = e

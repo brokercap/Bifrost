@@ -39,6 +39,8 @@ func (This *History) threadStart(i int,wg *sync.WaitGroup)  {
 	defer func() {
 		defer func() {
 			if err:=recover();err!=nil{
+				log.Println(err)
+				log.Println(string(debug.Stack()))
 				return
 			}
 		}()

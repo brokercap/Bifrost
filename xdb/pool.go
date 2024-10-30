@@ -81,6 +81,7 @@ func GetClient(name string) (c *Client,err error) {
 func BackCient(name string,c *Client) bool {
 	defer func() {
 		if err := recover();err !=nil{
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			return
 		}
@@ -95,6 +96,7 @@ func BackCient(name string,c *Client) bool {
 		func(){
 			defer func() {
 				if err := recover();err != nil{
+					log.Println(err)
 					log.Println(string(debug.Stack()))
 					return
 				}

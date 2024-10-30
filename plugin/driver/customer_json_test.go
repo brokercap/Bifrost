@@ -2,7 +2,9 @@ package driver
 
 import (
 	"encoding/json"
+	"log"
 	"reflect"
+	"runtime/debug"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -90,6 +92,8 @@ func TestPluginDataCustomerJson_GetMapData(t *testing.T) {
 		defer func() {
 			var result bool = false
 			if err := recover(); err != nil {
+				log.Println(err)
+				log.Println(string(debug.Stack()))
 				result = true
 			}
 			So(result, ShouldEqual, true)

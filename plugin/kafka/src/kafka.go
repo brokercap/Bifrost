@@ -19,9 +19,13 @@ package src
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
+	"runtime/debug"
 	"time"
+
+	"github.com/Shopify/sarama"
+
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 const VERSION = "v2.0.5"
@@ -174,6 +178,8 @@ func (This *Conn) ReConnect() bool {
 	func() {
 		defer func() {
 			if err := recover(); err != nil {
+				log.Println(err)
+				log.Println(string(debug.Stack()))
 				return
 			}
 		}()
@@ -194,6 +200,8 @@ func (This *Conn) Close() bool {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println(err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()

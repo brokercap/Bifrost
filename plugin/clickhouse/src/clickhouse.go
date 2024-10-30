@@ -126,6 +126,8 @@ func (This *Conn) Connect() bool {
 func (This *Conn) InitVersion() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
@@ -213,6 +215,8 @@ func (This *Conn) Close() bool {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println("This.conn.Close err: ", err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()
@@ -499,6 +503,8 @@ func (This *Conn) initAutoCreateCkTableFieldType(data *pluginDriver.PluginDataTy
 	defer func() {
 		if err0 := recover(); err0 != nil {
 			This.conn.err = fmt.Errorf(fmt.Sprint(err0))
+			log.Println(err0)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	var err error
@@ -555,6 +561,8 @@ func (This *Conn) initCkDatabaseMap() {
 	This.p.ckDatabaseMap = make(map[string]bool, 0)
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
@@ -657,6 +665,8 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 				defer func() {
 					if err := recover(); err != nil {
 						This.conn.err = fmt.Errorf("ddl exec err:%s", fmt.Sprint(err))
+						log.Println(err)
+						log.Println(string(debug.Stack()))
 					}
 				}()
 			}()
@@ -823,6 +833,8 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 		if err := recover(); err != nil {
 			e = fmt.Errorf(string(debug.Stack()))
 			This.conn.err = e
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn == nil || This.conn.err != nil {
@@ -834,6 +846,7 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	}
 	if This.err != nil {
 		log.Println("This.err:", This.err)
+		log.Println(string(debug.Stack()))
 	}
 	n := len(This.p.Data.Data)
 	if n == 0 {

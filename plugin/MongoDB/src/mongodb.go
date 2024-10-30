@@ -117,6 +117,8 @@ func (This *Conn) ReConnect() bool {
 	defer func() {
 		if err := recover();err !=nil{
 			This.err = fmt.Errorf(fmt.Sprint(err))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	This.Close()
@@ -128,6 +130,8 @@ func (This *Conn) Close() bool {
 	func() {
 		defer func() {
 			if err :=recover(); err != nil{
+				log.Println(err)
+				log.Println(string(debug.Stack()))
 				return
 			}
 		}()
@@ -192,6 +196,7 @@ func (This *Conn) Insert(data *pluginDriver.PluginDataType,retry bool) (LastSucc
 			LastSuccessCommitData = nil
 			e = fmt.Errorf(string(debug.Stack()))
 			This.err = e
+			log.Println(err)
 			log.Println(e)
 			return
 		}
@@ -233,6 +238,7 @@ func (This *Conn) Del(data *pluginDriver.PluginDataType,retry bool) (LastSuccess
 			LastSuccessCommitData = nil
 			e = fmt.Errorf(string(debug.Stack()))
 			This.err = e
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			return
 		}

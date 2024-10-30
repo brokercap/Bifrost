@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	clickhouse "github.com/ClickHouse/clickhouse-go"
 	"log"
+	"runtime/debug"
 )
 
 type ckFieldStruct struct {
@@ -40,6 +41,7 @@ func(This *ClickhouseDB) Close() bool{
 	defer func() {
 		if err := recover();err != nil{
 			log.Println("clickhouseDB close err:",err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn != nil{

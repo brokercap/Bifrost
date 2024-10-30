@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
+	"log"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +41,8 @@ func CkDataTypeTransfer(data interface{}, fieldName string, toDataType string, N
 	defer func() {
 		if err := recover(); err != nil {
 			e = fmt.Errorf(fieldName + " " + fmt.Sprint(err))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	switch toDataType {

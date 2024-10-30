@@ -1,12 +1,15 @@
 package src
 
 import (
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/streadway/amqp"
-	"strconv"
 	"encoding/json"
 	"fmt"
 	"log"
+	"runtime/debug"
+	"strconv"
+
+	"github.com/streadway/amqp"
+
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 const VERSION  = "v1.6.0"
@@ -143,6 +146,7 @@ func (This *Conn) Close() bool {
 		defer func(){
 			if err := recover();err != nil{
 				log.Println("ReConnect recory:",err)
+				log.Println(string(debug.Stack()))
 				return
 			}
 		}()

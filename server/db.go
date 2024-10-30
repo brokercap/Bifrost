@@ -572,7 +572,7 @@ func (db *db) monitorDump() (r bool) {
 				warning.AppendWarning(warning.WarningContent{
 					Type:   warning.WARNINGERROR,
 					DbName: db.Name,
-					Body:   fmt.Sprintf("err:%s; last status:%s", inputStatusInfo.Error, lastStatus),
+					Body:   fmt.Sprintf("err:%v; last status:%s", inputStatusInfo.Error, lastStatus),
 				})
 			}
 

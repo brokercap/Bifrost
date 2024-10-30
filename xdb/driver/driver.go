@@ -1,10 +1,11 @@
 package driver
 
 import (
-	"log"
-	"sync"
 	"encoding/json"
 	"fmt"
+	"log"
+	"runtime/debug"
+	"sync"
 )
 
 var (
@@ -39,6 +40,7 @@ func Register(name string, driver Driver,version string) {
 	defer func() {
 		if err := recover();err!=nil{
 			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	driversMu.Lock()
