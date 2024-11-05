@@ -19,6 +19,7 @@ func (c *PluginDataType) ToTableMapObject() (data map[string]interface{}, err er
 	} else {
 		data["bifrost_query"] = c.Query
 	}
+	data["binlog_timestamp"] = fmt.Sprint(c.Timestamp)
 	data["binlog_event_type"] = c.EventType
 	data["bifrost_pri"] = strings.Join(c.Pri, ",")
 	data["bifrost_database"] = c.SchemaName
