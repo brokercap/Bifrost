@@ -1,3 +1,13 @@
+v2.3.8-beta   2024-11-05
+1. fix mysql select tinyint(1) , value > 1 , transfer to bool ,result false bug
+
+v2.3.7-beta   2024-10-16
+1. output kakfa tableMap add binlog_timestamp field
+2. CHARACTER_OCTET_LENGTH add support for int64 and int32 in mysql parser
+
+v2.3.6-beta   2024-04-21
+1. input varchar(255) to output starrocks varchar(765)
+
 v2.3.5-beta   2024-04-05
 1. fixed output starrocks varchar(255) tansfer error bug https://github.com/brokercap/Bifrost/issues/266
 2. 修复mongo数据源全量功能无效的bug https://github.com/brokercap/Bifrost/issues/272
