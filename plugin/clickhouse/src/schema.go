@@ -53,9 +53,12 @@ func(This *ClickhouseDB) Close() bool{
 func (This *ClickhouseDB) GetSchemaList() (data []string) {
 	This.conn.Begin()
 	stmt, err := This.conn.Prepare("SHOW DATABASES")
-	if err == nil{
-		defer stmt.Close()
+	if err != nil {
+		This.err = err
+		return
 	}
+
+	defer stmt.Close()
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err
