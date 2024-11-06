@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	dbDriver "database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"runtime/debug"
@@ -845,8 +846,12 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 		return nil, nil, This.conn.err
 	}
 	if This.err != nil {
-		log.Println("This.err:", This.err)
-		log.Println(string(debug.Stack()))
+		if errors.Is(This.err, driver.ErrBadConn) {
+			log.Println(This.err)
+		} else {
+			log.Println("This.err:", This.err)
+			log.Println(string(debug.Stack()))
+		}
 	}
 	n := len(This.p.Data.Data)
 	if n == 0 {
