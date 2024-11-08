@@ -132,7 +132,7 @@ func (This *Conn) InitVersion() {
 			return
 		}
 	}()
-	if This.conn == nil {
+	if This.conn == nil || This.conn.conn == nil{
 		return
 	}
 	versionStr := This.conn.GetVersion()
