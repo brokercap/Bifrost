@@ -41,7 +41,8 @@ func(This *ClickhouseDB) Close() bool{
 	defer func() {
 		if err := recover();err != nil{
 			log.Println("clickhouseDB close err:",err)
-			log.Printf("This: %v+\n", This)
+			log.Printf("This: %+v\n", This)
+			log.Printf("This.conn: %+v\n", This.conn)
 			log.Println(string(debug.Stack()))
 		}
 	}()
