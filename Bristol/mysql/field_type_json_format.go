@@ -189,6 +189,10 @@ func read_binary_json_object(buf *bytes.Buffer,length int64,large bool) (interfa
 		size = int64(sizeSmall)
 	}
 
+	if size == 0 {
+		return nil, nil
+	}
+
 	if size > length {
 		err := fmt.Errorf("Json length: %d is larger than packet length %d",size,length)
 		return nil,err
