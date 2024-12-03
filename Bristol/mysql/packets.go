@@ -97,6 +97,10 @@ func (mc *mysqlConn) readLeftPacket(data []byte, pktLen uint64, haveRead uint64)
 
 // Read n bytes long number num
 func (mc *mysqlConn) readNumber(nr uint8) (uint64, error) {
+	if mc.bufReader == nil {
+		return 0, errors.New("Can't read number without reader")
+	}
+
 	// Read bytes into array
 	buf := make([]byte, nr)
 	var n, add int
