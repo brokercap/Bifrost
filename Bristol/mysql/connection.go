@@ -139,6 +139,10 @@ func (mc *mysqlConn) Begin() (driver.Tx, error) {
 }
 
 func (mc *mysqlConn) Close() (e error) {
+	if mc.netConn == nil {
+		return
+	}
+
 	if mc.server.keepalive > 0 {
 		mc.keepaliveTimer.Stop()
 	}
