@@ -90,6 +90,7 @@ func (c *MongoInput) setStatus(status inputDriver.StatusFlag) {
 func (c *MongoInput) Start(ch chan *inputDriver.PluginStatus) error {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Printf("[ERROR] output[%s] panic err:%+v \n", "mongo", string(debug.Stack()))
 		}
 		c.setStatus(inputDriver.CLOSED)

@@ -1,10 +1,14 @@
 package src
 
 import (
-	"github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/bradfitz/gomemcache/memcache"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"log"
+	"runtime/debug"
+
+	"github.com/bradfitz/gomemcache/memcache"
+
+	"github.com/brokercap/Bifrost/plugin/driver"
 )
 
 const VERSION  = "v1.6.0"
@@ -105,6 +109,8 @@ func (This *Conn) ReConnect() bool {
 	defer func() {
 		if err := recover();err !=nil{
 			This.err = fmt.Errorf(fmt.Sprint(err))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	This.Connect()

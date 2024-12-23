@@ -19,6 +19,7 @@ func (This *Conn) GetStarRocksBeCount() int {
 func (This *Conn) initIsStarrock() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Printf("[ERROR] output[%s] initIsStarrock recover:%+v \n", OutputName, string(debug.Stack()))
 			return
 		}

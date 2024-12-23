@@ -180,6 +180,8 @@ func (This *BinlogDump) BinlogConnCLose(lock bool) {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println("This.mysqlConn.Close err: ", err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()
@@ -197,6 +199,8 @@ func (This *BinlogDump) BinlogConnCLose0(lock bool) {
 	}
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println("This.mysqlConn.Close err: ", err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
@@ -288,6 +292,7 @@ func (This *BinlogDump) checkDumpConnection(ctx context.Context, cancelFunc cont
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("binlog.go checkDumpConnection err:", err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	This.Lock()
@@ -366,6 +371,8 @@ func (This *BinlogDump) Start() {
 func (This *BinlogDump) Close() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()

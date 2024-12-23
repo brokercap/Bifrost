@@ -27,6 +27,7 @@ import (
 func Start() {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			debug.PrintStack()
 		}
 	}()

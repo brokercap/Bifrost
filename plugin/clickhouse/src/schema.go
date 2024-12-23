@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	clickhouse "github.com/ClickHouse/clickhouse-go"
 	"log"
+	"runtime/debug"
 )
 
 type ckFieldStruct struct {
@@ -40,6 +41,9 @@ func(This *ClickhouseDB) Close() bool{
 	defer func() {
 		if err := recover();err != nil{
 			log.Println("clickhouseDB close err:",err)
+			log.Printf("This: %+v\n", This)
+			log.Printf("This.conn: %+v\n", This.conn)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn != nil{
@@ -51,9 +55,12 @@ func(This *ClickhouseDB) Close() bool{
 func (This *ClickhouseDB) GetSchemaList() (data []string) {
 	This.conn.Begin()
 	stmt, err := This.conn.Prepare("SHOW DATABASES")
-	if err == nil{
-		defer stmt.Close()
+	if err != nil {
+		This.err = err
+		return
 	}
+
+	defer stmt.Close()
 	rows, err := stmt.Query([]driver.Value{})
 	if err != nil {
 		This.err = err

@@ -3,13 +3,16 @@ package src
 import (
 	"encoding/json"
 	"fmt"
-	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
-	"github.com/gmallard/stompngo"
 	"log"
 	"net"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gmallard/stompngo"
+
+	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 )
 
 const VERSION = "v1.6.0"
@@ -154,6 +157,8 @@ func (This *Conn) Close() bool {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println("This.conn.Disconnect err: ", err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()

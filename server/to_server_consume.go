@@ -590,6 +590,7 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 func (This *ToServer) timeOutCommit(MyConsumerId int) ( LastSuccessCommitData *pluginDriver.PluginDataType,ErrData *pluginDriver.PluginDataType, err error) {
 	defer func() {
 		if err2 := recover();err2 != nil {
+			log.Println(err2)
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
 		}
@@ -610,6 +611,7 @@ func (This *ToServer) timeOutCommit(MyConsumerId int) ( LastSuccessCommitData *p
 func (This *ToServer) SkipBinlog(MyConsumerId int,SkipErrData *pluginDriver.PluginDataType) (err error){
 	defer func() {
 		if err2 := recover();err2 != nil {
+			log.Println(err2)
 			err = fmt.Errorf("ToServer:%s Commit Debug Err:%s",This.ToServerKey,string(debug.Stack()))
 			log.Println(This.ToServerKey,"sendToServer err:",err)
 		}

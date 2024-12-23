@@ -48,7 +48,7 @@ func get_field_json_data0(buf *bytes.Buffer,t uint8,length int64) (interface{},e
 		return read_binary_json_object(buf,length-1,large)
 	case JSONB_TYPE_SMALL_ARRAY, JSONB_TYPE_LARGE_ARRAY:
 		var large bool
-		if t == JSONB_TYPE_LARGE_OBJECT{
+		if t == JSONB_TYPE_LARGE_ARRAY {
 			large = true
 		}
 		return read_binary_json_array(buf,length - 1, large)
@@ -189,6 +189,10 @@ func read_binary_json_object(buf *bytes.Buffer,length int64,large bool) (interfa
 		size = int64(sizeSmall)
 	}
 
+	if size == 0 {
+		return nil, nil
+	}
+
 	if size > length {
 		err := fmt.Errorf("Json length: %d is larger than packet length %d",size,length)
 		return nil,err
@@ -258,19 +262,16 @@ func read_offset_or_inline(buf *bytes.Buffer,large bool) (data json_object_inlin
 
 	if large && (data.x == JSONB_TYPE_INT32 || data.x == JSONB_TYPE_UINT32 ) {
 		data.y = nil
-		z := read_binary_json_type_inlined(buf,data.x, large)
-		if z == nil{
-			data.z = nil
-		}else{
-			z0 := z.(int64)
-			data.z = &z0
-		}
+		data.z = read_binary_json_type_inlined(buf,data.x, large)
 		return
 	}
 	data.z = nil
 	if large {
-		binary.Read(buf, binary.LittleEndian, data.y)
-	}else{
+		var y uint32
+		binary.Read(buf, binary.LittleEndian, &y)
+		y0 := int64(y)
+		data.y = &y0
+	} else {
 		var y uint16
 		binary.Read(buf, binary.LittleEndian, &y)
 		y0 := int64(y)

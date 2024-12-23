@@ -526,6 +526,8 @@ func StopAllChannel() {
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
+					log.Println(err)
+					log.Println(string(debug.Stack()))
 					return
 				}
 			}()

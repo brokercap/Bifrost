@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"log"
+	"runtime/debug"
 	"strconv"
 )
 
@@ -26,6 +27,7 @@ func (This *mysqlDB) Open() (b bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("[ERROR] output[%s] mysqlDB Open err:%+v \n", OutputName, err)
+			log.Println(string(debug.Stack()))
 			This.err = fmt.Errorf(fmt.Sprint(err))
 			b = false
 		}
@@ -38,6 +40,7 @@ func (This *mysqlDB) Close() bool {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("[ERROR] output[%s] mysqlDB Close err:%+v \n", OutputName, err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn != nil {

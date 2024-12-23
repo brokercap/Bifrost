@@ -1,16 +1,20 @@
 package src
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brokercap/Bifrost/plugin/driver"
-	"context"
-	//"github.com/go-redis/redis"
-	"github.com/go-redis/redis/v8"
+	"log"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/brokercap/Bifrost/plugin/driver"
+
+	//"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 const VERSION  = "v1.7.4"
@@ -167,6 +171,8 @@ func (This *Conn) ReConnect() bool {
 	defer func() {
 		if err := recover();err !=nil{
 			This.err = fmt.Errorf(fmt.Sprint(err))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	if This.conn != nil {

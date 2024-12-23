@@ -1,10 +1,13 @@
 package mysql
 
 import (
+	"fmt"
+	"log"
+	"runtime/debug"
+	"sync"
+
 	mysqlDriver "github.com/brokercap/Bifrost/Bristol/mysql"
 	inputDriver "github.com/brokercap/Bifrost/input/driver"
-	"log"
-	"sync"
 )
 
 var MySQLBinlogDump string
@@ -87,6 +90,12 @@ func (c *MysqlInput) monitorDump() (r bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			// 上一层 PluginStatusChan 在进程退出之前会被关闭，这里需要无视异常情况
+			if fmt.Sprintf("%s", err) ==  "send on closed channel"{
+				return
+			}
+
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	for {

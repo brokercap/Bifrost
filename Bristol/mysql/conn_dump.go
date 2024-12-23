@@ -13,6 +13,7 @@ import (
 func (mc *mysqlConn) DumpBinlog(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			log.Println(parser.dataSource, " binlogFileName:", parser.binlogFileName, " binlogPosition:", parser.binlogPosition)
 			parser.callbackErrChan <- fmt.Errorf(fmt.Sprint(err))
@@ -32,6 +33,7 @@ func (mc *mysqlConn) DumpBinlog(parser *eventParser, callbackFun callback) (driv
 func (mc *mysqlConn) DumpBinlogGtid(parser *eventParser, callbackFun callback) (driver.Rows, error) {
 	defer func() {
 		if err := recover(); err != nil {
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 			log.Println(parser.dataSource, " binlogFileName:", parser.binlogFileName, " binlogPosition:", parser.binlogPosition)
 			parser.callbackErrChan <- fmt.Errorf(fmt.Sprint(err))
@@ -129,6 +131,7 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				defer func() {
 					if err := recover(); err != nil {
 						e = fmt.Errorf("parseEvent err recover err:%s ;lastMapEvent:%T ;binlogFileName:%s ;binlogPosition:%d", fmt.Sprint(err), parser.lastMapEvent, parser.binlogFileName, parser.binlogPosition)
+						log.Println(e)
 						log.Println(string(debug.Stack()))
 					}
 				}()

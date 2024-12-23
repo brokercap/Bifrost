@@ -118,6 +118,7 @@ func consumeWarning(){
 func sendToWaring(config WaringConfig,title,c string,n int){
 	defer func() {
 		if err:=recover();err!=nil{
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 		}
 	}()
@@ -141,6 +142,7 @@ func sendToWaring(config WaringConfig,title,c string,n int){
 func CheckWarngConfigBySendTest(config WaringConfig,c string) error{
 	defer func() {
 		if err:=recover();err!=nil{
+			log.Println(err)
 			log.Println(string(debug.Stack()))
 		}
 	}()

@@ -2,14 +2,16 @@ package server
 
 import (
 	"encoding/json"
+	"log"
+	"runtime/debug"
+	"sync"
+	"time"
+
 	"github.com/brokercap/Bifrost/config"
 	"github.com/brokercap/Bifrost/plugin"
 	"github.com/brokercap/Bifrost/server/storage"
 	"github.com/brokercap/Bifrost/server/user"
 	"github.com/brokercap/Bifrost/server/warning"
-	"log"
-	"sync"
-	"time"
 )
 
 var l sync.RWMutex
@@ -73,6 +75,7 @@ func GetSnapshotData() ([]byte, error) {
 		l.Unlock()
 		if err := recover(); err != nil {
 			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	data := recoveryDataSturct{
@@ -93,6 +96,7 @@ func GetSnapshotData2() ([]byte, error) {
 		l.Unlock()
 		if err := recover(); err != nil {
 			log.Println(err)
+			log.Println(string(debug.Stack()))
 		}
 	}()
 	data := recoveryDataSturct{

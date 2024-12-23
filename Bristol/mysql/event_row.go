@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -644,6 +645,8 @@ func read_datetime2(buf *bytes.Buffer, fsp uint8) (data string, err error) {
 	defer func() {
 		if errs := recover(); errs != nil {
 			err = fmt.Errorf(fmt.Sprint(errs))
+			log.Println(err)
+			log.Println(string(debug.Stack()))
 			return
 		}
 	}()
