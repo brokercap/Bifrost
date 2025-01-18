@@ -6,6 +6,7 @@ import (
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"log"
 	"runtime/debug"
+	"strings"
 )
 
 func (This *Conn) IsStarRocks() bool {
@@ -17,6 +18,11 @@ func (This *Conn) GetStarRocksBeCount() int {
 }
 
 func (This *Conn) initIsStarrock() {
+	tmpUri := strings.ToLower(*This.uri)
+	if strings.Contains(tmpUri, "starrocks") || strings.Contains(tmpUri, "doris") {
+		This.isStarRocks = true
+		This.starRocksBeCount = 1
+	}
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("[ERROR] output[%s] initIsStarrock recover:%+v \n", OutputName, string(debug.Stack()))
@@ -26,16 +32,27 @@ func (This *Conn) initIsStarrock() {
 	if This.conn == nil {
 		return
 	}
-	backendsList, _ := This.conn.ShowBackends()
-	if len(backendsList) == 0 {
-		return
+	if !This.isStarRocks {
+		versionComment, err := This.conn.ShowVersionComment()
+		if err != nil {
+			return
+		}
+		if !strings.Contains(strings.ToLower(versionComment), "mysql") {
+			This.isStarRocks = true
+			This.starRocksBeCount = 1
+		}
 	}
-	// starrocks show backends 列表中,存在 BePort 这个字段,代表 Be 节点的端口
-	if _, ok := backendsList[0]["BePort"]; !ok {
-		return
+	if This.isStarRocks {
+		backendsList, _ := This.conn.ShowBackends()
+		if len(backendsList) == 0 {
+			return
+		}
+		// starrocks show backends 列表中,存在 BePort 这个字段,代表 Be 节点的端口
+		if _, ok := backendsList[0]["BePort"]; ok {
+			return
+		}
+		This.starRocksBeCount = len(backendsList)
 	}
-	This.isStarRocks = true
-	This.starRocksBeCount = len(backendsList)
 }
 
 func (This *Conn) StarRocksDelete(SchemaName, TableName string, pks []string, pksWhereList [][]string) error {
