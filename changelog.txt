@@ -1,3 +1,9 @@
+v2.3.9-beta   2025-01-18
+1. fix mongo batch _id contains ' " ' bug
+   修改mongo源全量同步到目标库的时候，_id 字段包含双引号的bug
+2. Update the logic for determining whether it is Starrocks, supporting specifying it as Starrocks in the URI and forcing it to be set as Starrocks
+   支持uri连配配置中设置starrocks字样，会被识别为starrocks数据库
+
 v2.3.8-beta   2024-11-05
 1. fix mysql select tinyint(1) , value > 1 , transfer to bool ,result false bug
 
