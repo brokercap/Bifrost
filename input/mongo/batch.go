@@ -4,6 +4,7 @@ import (
 	"context"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
@@ -116,6 +117,9 @@ func (c *MongoInput) GetCollectionDataList(ctx context.Context, collection *mong
 		result := make(map[string]interface{})
 		if err = cursor.Decode(&result); err != nil {
 			return
+		}
+		if docId, ok := result["_id"].(primitive.ObjectID); ok {
+			result["_id"] = docId.Hex()
 		}
 		batchResult = append(batchResult, result)
 	}
