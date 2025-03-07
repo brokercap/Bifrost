@@ -552,6 +552,8 @@ func (This *ToServer) filterField(data *pluginDriver.PluginDataType) (newData *p
 							}
 						}
 						break
+					case map[string]interface{}, map[interface{}]interface{}, map[int]interface{}, []int, []interface{}, []map[string]interface{}, []map[interface{}]interface{}:
+						isNotUpdate = false
 					default:
 						if m_before[key] != m_after[key] {
 							isNotUpdate = false
