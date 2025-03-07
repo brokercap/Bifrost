@@ -57,7 +57,6 @@ type PluginParam struct {
 
 	dataList         []*sarama.ProducerMessage
 	commitBinlogList []*pluginDriver.PluginDataType
-	dataCurrentCount int
 }
 
 func NewConn() pluginDriver.Driver {
@@ -151,7 +150,6 @@ func (This *Conn) GetParam(p interface{}) (interface{}, error) {
 	if len(param.dataList) == 0 {
 		param.dataList = make([]*sarama.ProducerMessage, 0)
 		param.commitBinlogList = make([]*pluginDriver.PluginDataType, 0)
-		param.dataCurrentCount = 0
 	}
 	This.p = param
 	return param, nil
@@ -267,9 +265,8 @@ func (This *Conn) sendToList(data *pluginDriver.PluginDataType, retry bool, isCo
 					This.p.commitBinlogList[n0] = data
 				}
 			}
-			This.p.dataCurrentCount++
 		}
-		if This.p.dataCurrentCount >= This.p.BatchSize {
+		if len(This.p.dataList) >= This.p.BatchSize {
 			LastSuccessCommitData, err = This.sendToKafkaByBatch()
 		}
 	} else {
@@ -314,17 +311,16 @@ func (This *Conn) sendToKafkaByBatch() (*pluginDriver.PluginDataType, error) {
 			return nil, This.err
 		}
 	}
-	if This.p.dataCurrentCount == 0 {
+	if len(This.p.dataList) == 0 {
 		return nil, nil
 	}
 	var err error
 	var binlogEvent *pluginDriver.PluginDataType
-	if This.p.dataCurrentCount > This.p.BatchSize {
+	if len(This.p.dataList) > This.p.BatchSize {
 		list := This.p.dataList[:This.p.BatchSize]
 		err = This.producer.SendMessages(list)
 		if err == nil {
 			This.p.dataList = This.p.dataList[This.p.BatchSize:]
-			This.p.dataCurrentCount -= This.p.BatchSize
 			if len(This.p.commitBinlogList) > 0 {
 				binlogEvent = This.p.commitBinlogList[0]
 				This.p.commitBinlogList = This.p.commitBinlogList[1:]
@@ -334,7 +330,6 @@ func (This *Conn) sendToKafkaByBatch() (*pluginDriver.PluginDataType, error) {
 		err = This.producer.SendMessages(This.p.dataList)
 		if err == nil {
 			This.p.dataList = make([]*sarama.ProducerMessage, 0)
-			This.p.dataCurrentCount = 0
 			if len(This.p.commitBinlogList) > 0 {
 				binlogEvent = This.p.commitBinlogList[0]
 				This.p.commitBinlogList = This.p.commitBinlogList[1:]
