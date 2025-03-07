@@ -1,3 +1,8 @@
+v2.3.11-beta   2025-03-07
+1. plugin mysql 修复获取表元数据的时候连接异常导致的连接错误没被识别的bug
+2. kafka plugin 消息统计不再使用计数器，而是直接使用切片的长度
+3. 修复开启了FilterUpdate，但是源表中存在复杂的json类型字段匹配错误，导致的异常退出bug
+
 v2.3.10-beta   2025-01-19
 1. fix mongo batch _id contains ' " ' bug
    修改mongo源全量同步到目标库的时候，_id 字段包含双引号的bug
