@@ -289,3 +289,23 @@ func (This *mysqlDB) ShowBackends() (backendsList []map[string]driver.Value, err
 	}
 	return backendsList, nil
 }
+
+func (This *mysqlDB) ShowVersionComment() (versionComment string, err error) {
+	sql := "SHOW VARIABLES LIKE 'version_comment'"
+	p := make([]driver.Value, 0)
+	rows, err := This.conn.Query(sql, p)
+	if err != nil {
+		log.Printf("[WARN] output[%s] ShowVersionComment err:%+v \n", OutputName, err)
+		return "", err
+	}
+	defer rows.Close()
+	for {
+		dest := make([]driver.Value, len(rows.Columns()), len(rows.Columns()))
+		err := rows.Next(dest)
+		if err != nil {
+			break
+		}
+		versionComment = fmt.Sprint(dest[1])
+	}
+	return
+}
