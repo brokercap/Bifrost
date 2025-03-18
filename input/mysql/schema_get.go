@@ -43,14 +43,8 @@ type MasterBinlogInfoStruct struct {
 
 func GetBinLogInfo(db mysql.MysqlConnection) MasterBinlogInfoStruct {
 	sql := "SHOW MASTER STATUS"
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err)
-		return MasterBinlogInfoStruct{}
-	}
-	defer stmt.Close()
 	p := make([]driver.Value, 0)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return MasterBinlogInfoStruct{}
@@ -101,14 +95,8 @@ func GetServerId(db mysql.MysqlConnection) int {
 func GetVariables(db mysql.MysqlConnection, variablesValue string) (data map[string]string) {
 	data = make(map[string]string, 0)
 	sql := "show variables like '" + variablesValue + "'"
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer stmt.Close()
 	p := make([]driver.Value, 0)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -130,14 +118,8 @@ func GetVariables(db mysql.MysqlConnection, variablesValue string) (data map[str
 // 获取当前用户授权语句
 func GetGrantsFor(db mysql.MysqlConnection) (grantSQL string, err error) {
 	sql := "SHOW GRANTS FOR CURRENT_USER()"
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer stmt.Close()
 	p := make([]driver.Value, 0)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return
@@ -195,14 +177,8 @@ func CheckUserSlavePrivilege(db mysql.MysqlConnection) (err error) {
 
 func GetMySQLVersion(db mysql.MysqlConnection) string {
 	sql := "SELECT version()"
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-	defer stmt.Close()
 	p := make([]driver.Value, 0)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		log.Printf("sql:%s, err:%v\n", sql, err)
 		return ""

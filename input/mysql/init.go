@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	VERSION         string = "v2.0.0"
-	BIFROST_VERSION string = "v2.0.0"
+	VERSION         string = "v2.3.12"
+	BIFROST_VERSION string = "v2.3.12"
 )
 
 func init() {
