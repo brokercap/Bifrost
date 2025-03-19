@@ -34,28 +34,41 @@ type TableStruct struct {
 	Fsp               int // time,timestamp,datetime 毫秒保存的精度
 }
 
-func GetSchemaTableFieldList(db mysql.MysqlConnection, schema string, table string) []TableStruct {
-
-	FieldList := make([]TableStruct, 0)
-	sql := "SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_KEY`,`EXTRA`,`COLUMN_COMMENT`,`DATA_TYPE`,`NUMERIC_PRECISION`,`NUMERIC_SCALE` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY `ORDINAL_POSITION` ASC"
-	stmt, err := db.Prepare(sql)
+func IsClickHouse(db mysql.MysqlConnection) (bool, error) {
+	sysTableFieldList, err := GetSchemaTableFieldList(db, "system", "tables", true)
 	if err != nil {
-		log.Println(err)
-		return FieldList
+		return false, err
 	}
-	defer stmt.Close()
+	if len(sysTableFieldList) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func GetSchemaTableFieldList(db mysql.MysqlConnection, schema string, table string, isCK bool) ([]TableStruct, error) {
+	FieldList := make([]TableStruct, 0)
+	var sql string
+	var valueLen int
+	if isCK {
+		// ck 不支持 `COLUMN_KEY`,`EXTRA`
+		valueLen = 8
+		sql = "SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_COMMENT`,`DATA_TYPE`,`NUMERIC_PRECISION`,`NUMERIC_SCALE` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY `ORDINAL_POSITION` ASC"
+	} else {
+		valueLen = 10
+		sql = "SELECT `COLUMN_NAME`,`COLUMN_DEFAULT`,`IS_NULLABLE`,`COLUMN_TYPE`,`COLUMN_COMMENT`,`DATA_TYPE`,`NUMERIC_PRECISION`,`NUMERIC_SCALE`,`COLUMN_KEY`,`EXTRA` FROM `information_schema`.`columns` WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY `ORDINAL_POSITION` ASC"
+	}
 	p := make([]driver.Value, 0)
 	p = append(p, schema)
 	p = append(p, table)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		log.Printf("%v\n", err)
-		return FieldList
+		return FieldList, err
 	}
 	defer rows.Close()
 
 	for {
-		dest := make([]driver.Value, 10, 10)
+		dest := make([]driver.Value, valueLen, valueLen)
 		err := rows.Next(dest)
 		if err != nil {
 			break
@@ -81,39 +94,45 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection, schema string, table stri
 
 		IS_NULLABLE = dest[2].(string)
 		COLUMN_TYPE = dest[3].(string)
-		COLUMN_KEY = dest[4].(string)
-		EXTRA = dest[5].(string)
-		COLUMN_COMMENT = dest[6].(string)
-		DATA_TYPE = dest[7].(string)
+		COLUMN_COMMENT = dest[4].(string)
+		DATA_TYPE = dest[5].(string)
 
-		if dest[8] == nil {
+		if dest[6] == nil {
 			NUMERIC_PRECISION = nil
 		} else {
-			switch dest[8].(type) {
+			switch dest[6].(type) {
 			case uint32:
-				t := uint64(dest[8].(uint32))
+				t := uint64(dest[6].(uint32))
 				NUMERIC_PRECISION = &t
 			case uint64:
-				t := dest[8].(uint64)
+				t := dest[6].(uint64)
 				NUMERIC_PRECISION = &t
 			}
 		}
-		if dest[9] == nil {
+		if dest[7] == nil {
 			NUMERIC_SCALE = nil
 		} else {
-			switch dest[9].(type) {
+			switch dest[7].(type) {
 			case uint32:
-				t := uint64(dest[9].(uint32))
+				t := uint64(dest[7].(uint32))
 				NUMERIC_PRECISION = &t
 			case uint64:
-				t := dest[9].(uint64)
+				t := dest[7].(uint64)
 				NUMERIC_PRECISION = &t
 			}
+		}
+		if valueLen > 8 {
+			COLUMN_KEY = dest[8].(string)
+			EXTRA = dest[9].(string)
 		}
 
 		var fsp int
+		if strings.Index(DATA_TYPE, "Nullable(") == 0 {
+			DATA_TYPE = strings.TrimLeft(DATA_TYPE, "Nullable(")
+			DATA_TYPE = strings.TrimRight(DATA_TYPE, ")")
+		}
 		switch strings.ToLower(DATA_TYPE) {
-		case "timestamp", "datetime", "time":
+		case "timestamp", "datetime", "time", "datetime64":
 			columnDataType := strings.ToLower(COLUMN_TYPE)
 			i := strings.Index(columnDataType, "(")
 			if i <= 0 {
@@ -124,7 +143,13 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection, schema string, table stri
 		default:
 			break
 		}
-
+		if isCK {
+			if IS_NULLABLE != "1" {
+				IS_NULLABLE = "NO"
+			} else {
+				IS_NULLABLE = "YES"
+			}
+		}
 		FieldList = append(FieldList, TableStruct{
 			COLUMN_NAME:       &COLUMN_NAME,
 			COLUMN_DEFAULT:    COLUMN_DEFAULT,
@@ -139,7 +164,7 @@ func GetSchemaTableFieldList(db mysql.MysqlConnection, schema string, table stri
 			Fsp:               fsp,
 		})
 	}
-	return FieldList
+	return FieldList, nil
 }
 
 func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection, schema, table, PriKey, where string) (minId uint64, maxId uint64) {
@@ -147,13 +172,7 @@ func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection, schema, table, PriKey,
 	if where != "" {
 		sql += " WHERE " + where
 	}
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err, " sql:", sql)
-		return
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query([]driver.Value{})
+	rows, err := db.Query(sql, []driver.Value{})
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
@@ -174,16 +193,10 @@ func GetTablePriKeyMinAndMaxVal(db mysql.MysqlConnection, schema, table, PriKey,
 
 func GetSchemaTableInfo(db mysql.MysqlConnection, schema string, table string) (tableInfo TableInfoStruct) {
 	sql := "SELECT `TABLE_TYPE`,`ENGINE`,`TABLE_ROWS` FROM information_schema.tables WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
-	stmt, err := db.Prepare(sql)
-	if err != nil {
-		log.Println(err)
-		return tableInfo
-	}
-	defer stmt.Close()
 	p := make([]driver.Value, 0)
 	p = append(p, schema)
 	p = append(p, table)
-	rows, err := stmt.Query(p)
+	rows, err := db.Query(sql, p)
 	if err != nil {
 		return
 	}
@@ -217,7 +230,15 @@ func GetSchemaTableInfo(db mysql.MysqlConnection, schema string, table string) (
 		if dest[2] == nil {
 			TABLE_ROWS = 0
 		} else {
-			TABLE_ROWS = dest[2].(uint64)
+			switch dest[2].(type) {
+			// starrocks或者其他一些数据库等返回的是int64
+			case int64:
+				TABLE_ROWS = uint64(dest[2].(int64))
+			case uint64:
+				TABLE_ROWS = dest[2].(uint64)
+			default:
+				TABLE_ROWS = 1
+			}
 		}
 		tableInfo = TableInfoStruct{
 			TABLE_TYPE: TABLE_TYPE,

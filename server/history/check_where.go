@@ -20,16 +20,13 @@ func CheckWhere(dbName, SchemaName, TableName, Where string) error {
 
 func CheckWhere0(Uri string, SchemaName string, TableName string, Where string) error {
 	db := DBConnect(Uri)
-	defer db.Close()
+	if db != nil {
+		defer db.Close()
+	}
 	sql := "SELECT * FROM `" + SchemaName + "`.`" + TableName + "` WHERE " + Where + " LIMIT 1"
-	stmt, err := db.Prepare(sql)
+	rows, err := db.Query(sql, []driver.Value{})
 	if err != nil {
 		log.Println("CheckWhere:", err, "sql:", sql)
-		return err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query([]driver.Value{})
-	if err != nil {
 		return err
 	}
 	rows.Close()

@@ -85,16 +85,11 @@ func (This *History) threadStart(i int, wg *sync.WaitGroup) {
 		if sql == "" {
 			break
 		}
-		stmt, err := db.Prepare(sql)
-		if err != nil {
-			This.ThreadPool[i].Error = err
-			log.Println("history select threadStart err:", err, "sql:", sql, This.DbName, This.SchemaName, This.TableName, This.CurrentTableName)
-			return
-		}
 		This.ThreadPool[i].NowStartI = start
 		p := make([]driver.Value, 0)
-		rows, err := stmt.Query(p)
+		rows, err := db.Query(sql, p)
 		if err != nil {
+			log.Println("history select threadStart err:", err, "sql:", sql, This.DbName, This.SchemaName, This.TableName, This.CurrentTableName)
 			This.ThreadPool[i].Error = err
 			runtime.Goexit()
 			return
@@ -203,7 +198,6 @@ func (This *History) threadStart(i int, wg *sync.WaitGroup) {
 			}
 		}
 		rows.Close()
-		stmt.Close()
 
 		if (This.Property.LimitOptimize == 0 || This.TablePriKeyMaxId == 0) && rowCount < This.Property.ThreadCountPer {
 			runtime.Goexit()
