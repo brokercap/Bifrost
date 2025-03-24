@@ -72,6 +72,7 @@ func (c *InputMock) GetUriExample() (example string, notesHtml string) {
 				<p>PerformanceTableDeleteEventRatio: 每个性能测试表 删除事件产生的概率,PerformanceTableRowsEventCount > PerformanceTableDataCount 的时候生效,默认 0</p>
 				<p>LongStringLen: 长字符串的字符个数,大于0的时候,则为开启长字符串生成,默认为0,</p>
 				<p>IsAllInsertSameData: 每个批次只生成相同的Insert事件数据,自增ID等均不变,主要用于测试无视数据变更的测试场景</p>
+				<p>NoUint64: 默认为false，假如为true的情况下，则不会生成UInt64类型的值，主要是为了兼容一些数据库json等类型不支持此数值</p>
 				<p>&nbsp;</p>
 				<p>normal: 有一个主键,包括绝大部分类型的字段</p>
 				<p>no_mapping: 数据中,没有 ColumnMapping</p>
@@ -150,6 +151,7 @@ func (c *InputMock) NewPerformanceTableObj(schemaName, tableName string) *Perfor
 		TableName:           tableName,
 		LongStringLen:       c.config.LongStringLen,
 		IsAllInsertSameData: c.config.IsAllInsertSameData,
+		NoUint64:            c.config.NoUint64,
 		TableDataCount:      c.config.GetPerformanceTableDataCount(),
 		TableRowsEventCount: c.config.GetPerformanceTableRowsEventCount(),
 		DeleteEventRatio:    c.config.GetPerformanceTableDeleteEventRatio(),

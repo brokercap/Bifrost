@@ -28,6 +28,7 @@ type NormalTable struct {
 	SchemaName    string
 	TableName     string
 	LongStringLen int
+	NoUint64      bool
 	NoMapping     bool
 	NoPks         bool
 	TwoPks        bool
@@ -48,6 +49,7 @@ func (t *NormalTable) Start(ctx context.Context, ch chan *pluginDriver.PluginDat
 	event.SetSchema(t.SchemaName)
 	event.SetTable(t.TableName)
 	event.SetLongStringLen(t.LongStringLen)
+	event.SetNoUint64(t.NoUint64)
 	t.Callback(event.GetTestInsertData())
 	t.Callback(event.GetTestUpdateData(true))
 	t.Callback(event.GetTestDeleteData())
