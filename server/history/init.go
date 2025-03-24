@@ -378,11 +378,24 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection) {
 		return
 	}
 	This.TablePriKey = ""
-	This.TableInfo = GetSchemaTableInfo(db, This.SchemaName, This.CurrentTableName)
+	var isCk bool
+	var err error
+	if isCk, err = IsClickHouse(db); err != nil {
+		log.Println("[ERROR] history check is clickhouse error", This.DbName, This.SchemaName, This.TableName, " Current Select Table:", This.CurrentTableName, err)
+		return
+	}
+	if !isCk {
+		This.TableInfo = GetSchemaTableInfo(db, This.SchemaName, This.CurrentTableName)
+	}
+
 	//修改表记录总数，用于界面显示
 	This.TableNameArr[This.TableCountSuccess].RowsCount = This.TableInfo.TABLE_ROWS
 
-	This.Fields = GetSchemaTableFieldList(db, This.SchemaName, This.CurrentTableName)
+	This.Fields, err = GetSchemaTableFieldList(db, This.SchemaName, This.CurrentTableName, isCk)
+	if err != nil {
+		log.Println("[ERROR] history get schem table fields error", This.DbName, This.SchemaName, This.TableName, " Current Select Table:", This.CurrentTableName, err)
+		return
+	}
 	This.TablePriArr = make([]string, 0)
 	This.ColumnMapping = make(map[string]string, 0)
 	for _, v := range This.Fields {
@@ -429,7 +442,41 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection) {
 			columnMappingType = strings.Replace(*v.COLUMN_TYPE, "numeric", "decimal", 1)
 		case "real":
 			columnMappingType = strings.Replace(*v.COLUMN_TYPE, "real", "double", 1)
+		case "Int8":
+			columnMappingType = "int8"
+		case "UInt8":
+			columnMappingType = "uint8"
+		case "Int16":
+			columnMappingType = "int16"
+		case "UInt16":
+			columnMappingType = "uint16"
+		case "Int32":
+			columnMappingType = "int32"
+		case "UInt32":
+			columnMappingType = "uint32"
+		case "Int64":
+			columnMappingType = "int64"
+		case "UInt64":
+			columnMappingType = "uint64"
+		case "Bool":
+			columnMappingType = "bool"
+		case "Float32":
+			columnMappingType = "float"
+		case "Float64":
+			columnMappingType = "double"
 		default:
+			if strings.Contains(*v.COLUMN_TYPE, "Decimal") {
+				columnMappingType = strings.Replace(*v.COLUMN_TYPE, "Decimal", "decimal", 1)
+				break
+			}
+			if strings.Index(*v.COLUMN_TYPE, "Array") == 0 {
+				columnMappingType = "json"
+				break
+			}
+			if strings.Index(*v.COLUMN_TYPE, "Map") == 0 {
+				columnMappingType = "json"
+				break
+			}
 			columnMappingType = *v.COLUMN_TYPE
 			break
 		}
