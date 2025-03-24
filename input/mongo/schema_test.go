@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 /*
 Copyright [2018] [jc3wish]
 

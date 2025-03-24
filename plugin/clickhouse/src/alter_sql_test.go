@@ -11,8 +11,8 @@ func TestAlterSQL_ChangeColumn(t *testing.T) {
 
 	var destAlterSql string
 	destAlterSql = c.ChangeColumn(sql)
-	if destAlterSql != "MODIFY COLUMN IF EXISTS `number`  Nullable(UInt64) COMMENT  '馆藏数量'"{
-		t.Fatal("err destAlterSql:",destAlterSql)
+	if destAlterSql != "MODIFY COLUMN IF EXISTS `number`  Nullable(UInt64) COMMENT  '馆藏数量'" {
+		t.Fatal("err destAlterSql:", destAlterSql)
 	}
 	t.Log("test success!")
 }
@@ -22,8 +22,8 @@ func TestAlterSQL_AddColumn(t *testing.T) {
 	c := NewAlterSQL("bifrost_test", "table_test", nil)
 	var destAlterSql string
 	destAlterSql = c.AddColumn(sql)
-	if destAlterSql != "add column IF NOT EXISTS `f1`  Nullable(String)"{
-		t.Fatal("err destAlterSql:",destAlterSql)
+	if destAlterSql != "add column IF NOT EXISTS `f1`  Nullable(String)" {
+		t.Fatal("err destAlterSql:", destAlterSql)
 	}
 	t.Log("test success!")
 }
@@ -78,15 +78,15 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	}
 
 	if destLocalAlterSql != mustBeDestLocalAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destLocalAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destLocalAlterSql)
 	}
 
 	if destDisAlterSql != mustBeDestDisAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destDisAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destDisAlterSql)
 	}
 
 	if destViewAlterSql != mustBeDestViewAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destViewAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destViewAlterSql)
 	}
 
 	sql = `ALTER TABLE mytest
@@ -107,15 +107,15 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	}
 
 	if destLocalAlterSql != mustBeDestLocalAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destLocalAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destLocalAlterSql)
 	}
 
 	if destDisAlterSql != mustBeDestDisAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destDisAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destDisAlterSql)
 	}
 
 	if destViewAlterSql != mustBeDestViewAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destViewAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destViewAlterSql)
 	}
 
 	sql = `ALTER TABLE bifrost_test.table_nodata   
@@ -136,17 +136,16 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	}
 
 	if destLocalAlterSql != mustBeDestLocalAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destLocalAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destLocalAlterSql)
 	}
 
 	if destDisAlterSql != mustBeDestDisAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destDisAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destDisAlterSql)
 	}
 
 	if destViewAlterSql != mustBeDestViewAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destViewAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destViewAlterSql)
 	}
-
 
 	sql = `ALTER TABLE /* it is notes */ binlog_field_test 
   CHANGE testtinyint testtinyint INT UNSIGNED DEFAULT -1  NOT NULL,
@@ -173,15 +172,15 @@ func TestAlterSQL_Transfer2CkSQL(t *testing.T) {
 	}
 
 	if destLocalAlterSql != mustBeDestLocalAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destLocalAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destLocalAlterSql)
 	}
 
 	if destDisAlterSql != mustBeDestDisAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destDisAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destDisAlterSql)
 	}
 
 	if destViewAlterSql != mustBeDestViewAlterSql {
-		t.Errorf("err destLocalAlterSql: %s",destViewAlterSql)
+		t.Errorf("err destLocalAlterSql: %s", destViewAlterSql)
 	}
 
 	t.Log("test over!")
@@ -277,18 +276,18 @@ func TestAlterSQL_GetColumnInfo(t *testing.T) {
 
 	if AlterColumnInfo.isUnsigned != false {
 		t.Errorf("isUnsigned must == false")
-}
+	}
 	if AlterColumnInfo.AfterName != "f1" {
-		t.Errorf("AfterName(%s) must == f1",AlterColumnInfo.AfterName)
+		t.Errorf("AfterName(%s) must == f1", AlterColumnInfo.AfterName)
 	}
 	if AlterColumnInfo.Nullable != true {
 		t.Errorf("Nullable must == true")
 	}
-	if strings.Trim(AlterColumnInfo.Comment," ") != "\"it is test\"" {
-		t.Errorf("Comment(%s) must == 'it is test'",AlterColumnInfo.Comment)
+	if strings.Trim(AlterColumnInfo.Comment, " ") != "\"it is test\"" {
+		t.Errorf("Comment(%s) must == 'it is test'", AlterColumnInfo.Comment)
 	}
-	if strings.Trim(*AlterColumnInfo.Default," ") != "'2020-01-12 121:00:00'" {
-		t.Errorf("Default(%s) must == '2020-01-12 121:00:00'",*AlterColumnInfo.Default)
+	if strings.Trim(*AlterColumnInfo.Default, " ") != "'2020-01-12 121:00:00'" {
+		t.Errorf("Default(%s) must == '2020-01-12 121:00:00'", *AlterColumnInfo.Default)
 	}
 
 	t.Log("test over!")
@@ -304,20 +303,20 @@ COMMENT='mytest\'s test,';
 	transferSQL := TransferComma2Other(sourceSql)
 	newSQL := TransferOther2Comma(transferSQL)
 	if sourceSql != newSQL {
-		t.Fatalf("err newSQL: %s ",newSQL)
+		t.Fatalf("err newSQL: %s ", newSQL)
 	}
 	t.Log("test over!")
 
 	sourceSql = "ADD COLUMN decimal_test DECIMAL(18,2) DEFAULT 0.00  NOT NULL AFTER varchartest,"
 	transferSQL = TransferComma2Other(sourceSql)
 	if transferSQL != "ADD COLUMN decimal_test DECIMAL(18#@%2) DEFAULT 0.00  NOT NULL AFTER varchartest," {
-		t.Fatalf("err transferSQL: %s ",transferSQL)
+		t.Fatalf("err transferSQL: %s ", transferSQL)
 	}
 
 	sourceSql = `ADD COLUMN double_test DOUBLE(9#@%2) DEFAULT 0.00  NULL AFTER float_test COMMENT "ffs,ssf", COMMENT='mytest\'s test,';`
 	transferSQL = TransferComma2Other(sourceSql)
 	if transferSQL != `ADD COLUMN double_test DOUBLE(9#@%2) DEFAULT 0.00  NULL AFTER float_test COMMENT "ffs#@%ssf", COMMENT='mytest\'s test#@%';` {
-		t.Fatalf("err transferSQL: %s ",transferSQL)
+		t.Fatalf("err transferSQL: %s ", transferSQL)
 	}
 }
 

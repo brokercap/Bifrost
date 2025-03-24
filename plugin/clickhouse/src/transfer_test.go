@@ -1,30 +1,27 @@
-package src_test
+package src
 
 import (
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
-	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestAllTypeToInt64(t *testing.T) {
 	data := "2019"
-	i64, err := MyPlugin.AllTypeToInt64(data)
+	i64, err := AllTypeToInt64(data)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log(i64)
 
-	ui64, err2 := MyPlugin.AllTypeToUInt64(data)
+	ui64, err2 := AllTypeToUInt64(data)
 	if err2 != nil {
 		t.Fatal(err2)
 	}
@@ -45,100 +42,53 @@ func TestFloat(t *testing.T) {
 }
 
 func TestCkDataTypeTransfer(t *testing.T) {
-	var data string = "132423　"
-	var fieldName string
-	var toDataType string
-	fieldName = "testField"
-	toDataType = "Int64"
-	t.Log("test start")
-	result, err := MyPlugin.CkDataTypeTransfer(data, fieldName, toDataType, false)
-	if err != nil {
-		t.Fatal(err)
+	fieldName := "testField"
+	type testCase struct {
+		Source             interface{}
+		Nullable           bool
+		ToDataType         string
+		Result             interface{}
+		ToDataTypeInMomery string
 	}
-	if reflect.TypeOf(result).String() == "int64" {
-		if result.(int64) == int64(132423) {
-			t.Log("result(int64):", result)
-		} else {
-			t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-		}
-	} else {
-		t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
+	var testCaseList = []testCase{
+		{
+			Source:             "132423　",
+			Nullable:           false,
+			ToDataType:         "Int64",
+			Result:             int64(132423),
+			ToDataTypeInMomery: "int64",
+		},
+		{
+			Source:             "132423　",
+			Nullable:           false,
+			ToDataType:         "UInt32",
+			Result:             uint32(132423),
+			ToDataTypeInMomery: "uint32",
+		},
+		{
+			Source:             "42342.224 ",
+			Nullable:           false,
+			ToDataType:         "Float32",
+			Result:             float32(42342.224),
+			ToDataTypeInMomery: "float32",
+		},
+		{
+			Source:             "42342.224 ",
+			Nullable:           false,
+			ToDataType:         "Float64",
+			Result:             float64(42342.224),
+			ToDataTypeInMomery: "float64",
+		},
 	}
-
-	toDataType = "UInt32"
-	result, err = MyPlugin.CkDataTypeTransfer(data, fieldName, toDataType, false)
-	if err != nil {
-		t.Fatal(err)
+	for _, v := range testCaseList {
+		Convey(fmt.Sprintf("source %+v,toDataType:%s", v.Source, v.ToDataType), t, func() {
+			result, err := CkDataTypeTransfer(v.Source, fieldName, v.ToDataType, v.Nullable)
+			So(err, ShouldBeNil)
+			So(result, ShouldNotBeNil)
+			So(result, ShouldEqual, v.Result)
+			So(reflect.TypeOf(result).String(), ShouldEqual, v.ToDataTypeInMomery)
+		})
 	}
-	if reflect.TypeOf(result).String() == "uint32" {
-		if result.(uint32) == uint32(132423) {
-			t.Log("result(uint32):", result)
-		} else {
-			t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-		}
-	} else {
-		t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-	}
-
-	data = "42342.224 "
-	toDataType = "Float32"
-	result, err = MyPlugin.CkDataTypeTransfer(data, fieldName, toDataType, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float32" {
-		if result.(float32) == float32(42342.224) {
-			t.Log("result(float32):", result)
-		} else {
-			t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-		}
-	} else {
-		t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-	}
-
-	toDataType = "Float64"
-	result, err = MyPlugin.CkDataTypeTransfer(data, fieldName, toDataType, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float64" {
-		if result.(float64) == float64(42342.224) {
-			t.Log("result(float32):", result)
-			os.Exit(0)
-		} else {
-			t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-		}
-	} else {
-		t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-	}
-
-	toDataType = "Decimal(18, 2)"
-	result, err = MyPlugin.CkDataTypeTransfer(data, fieldName, toDataType, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(result).String() == "float64" {
-		if result.(float64) == float64(42342.224) {
-			t.Log("result(float64):", result)
-		} else {
-			t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-		}
-	} else {
-		t.Fatal("result:", result, "(", reflect.TypeOf(result), ")")
-	}
-
-}
-
-func TestTransferToCreateDatabaseSql(t *testing.T) {
-	obj := &MyPlugin.Conn{}
-	sql := obj.TransferToCreateDatabaseSql("mytest2")
-	t.Log(sql)
-	c := MyPlugin.NewClickHouseDBConn(url)
-	err := c.Exec(sql, []driver.Value{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("success")
 }
 
 func TestDateStringTransfer(t *testing.T) {
@@ -260,7 +210,7 @@ func TestConn_TransferToCkTypeByColumnType(t *testing.T) {
 	testArr = append(testArr, result{Val: "decimal( )", Type: "Decimal(18,2)"})
 	testArr = append(testArr, result{Val: "decimal(1)", Type: "Decimal(1,0)"})
 
-	conn := &MyPlugin.Conn{}
+	conn := &Conn{}
 	for _, v := range testArr {
 		TypeName := conn.TransferToCkTypeByColumnType(v.Val, true)
 		if TypeName != v.Type {
@@ -278,12 +228,12 @@ func TestTransferNotes2Space(t *testing.T) {
   CHANGE testvarchar testvarchar VARCHAR(60) CHARSET utf8 COLLATE utf8_general_ci NOT NULL,
   ADD COLUMN testint2 INT(11) DEFAULT 0  NOT NULL   COMMENT 'test ok' AFTER test_json,
   MODIFY COLUMN testint3 int DEFAULT 1 NULL comment 'sdfsdf sdf',`
-	sql = MyPlugin.TransferNotes2Space(sql)
+	sql = TransferNotes2Space(sql)
 	t.Log(sql)
 }
 
 func TestTransferToCkTypeByColumnData(t *testing.T) {
-	c := MyPlugin.Conn{}
+	c := Conn{}
 	type testCase struct {
 		Source   interface{}
 		Nullable bool

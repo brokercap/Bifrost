@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package mysql
 
 import (
@@ -5,31 +8,11 @@ import (
 	"testing"
 )
 
-func TestMysqlInput_GetCurrentPosition(t *testing.T) {
-	 o := NewInputPlugin()
-	 inputInfo := inputDriver.InputInfo{
-		 IsGTID:         false,
-		 ConnectUri:     "root:root@tcp(192.168.220.130:3308)/mysql",
-		 GTID:           "",
-		 BinlogFileName: "",
-		 BinlogPostion:  0,
-		 ServerId:       0,
-		 MaxFileName:    "",
-		 MaxPosition:    0,
-	 }
-	 o.SetOption(inputInfo,nil)
-	 p,err := o.GetCurrentPosition()
-	 if err != nil {
-	 	t.Fatal(err)
-	 }
-	 t.Log(*p)
-}
-
-func TestMysqlInput_GetVersion(t *testing.T) {
+func TestMysqlInput_GetCurrentPosition_Integration(t *testing.T) {
 	o := NewInputPlugin()
 	inputInfo := inputDriver.InputInfo{
 		IsGTID:         false,
-		ConnectUri:     "root:root@tcp(192.168.220.130:3308)/mysql",
+		ConnectUri:     mysql_uri,
 		GTID:           "",
 		BinlogFileName: "",
 		BinlogPostion:  0,
@@ -37,8 +20,28 @@ func TestMysqlInput_GetVersion(t *testing.T) {
 		MaxFileName:    "",
 		MaxPosition:    0,
 	}
-	o.SetOption(inputInfo,nil)
-	p,err := o.GetVersion()
+	o.SetOption(inputInfo, nil)
+	p, err := o.GetCurrentPosition()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(*p)
+}
+
+func TestMysqlInput_GetVersion_Integration(t *testing.T) {
+	o := NewInputPlugin()
+	inputInfo := inputDriver.InputInfo{
+		IsGTID:         false,
+		ConnectUri:     mysql_uri,
+		GTID:           "",
+		BinlogFileName: "",
+		BinlogPostion:  0,
+		ServerId:       0,
+		MaxFileName:    "",
+		MaxPosition:    0,
+	}
+	o.SetOption(inputInfo, nil)
+	p, err := o.GetVersion()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package mysql
 
 import (
@@ -7,9 +10,10 @@ import (
 	"time"
 )
 
+var mysql_uri = "root:root@tcp(bifrost_mysql_test:3306)/mysql?charset=utf8"
+
 func TestMyconn_Exec_Integration(t *testing.T) {
-	uri := "root:root@tcp(127.0.0.1:55001)/bifrost_test"
-	conn := NewConnect(uri)
+	conn := NewConnect(mysql_uri)
 	log.Println("Connect over")
 	//conn.Close()
 	//return
@@ -79,8 +83,7 @@ func TestMyconn_Exec_Integration(t *testing.T) {
 }
 
 func TestMyconn_query_Integration(t *testing.T) {
-	uri := "root:root@tcp(127.0.0.1:55001)/bifrost_test"
-	conn := NewConnect(uri)
+	conn := NewConnect(mysql_uri)
 	log.Println("Connect over")
 	//conn.Close()
 	//return

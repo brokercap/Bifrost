@@ -54,7 +54,7 @@ func (c *WarningController) getParam() *WarningParam {
 func (c *WarningController) Index() {
 	c.SetTitle("Warning Config List")
 	c.SetData("WaringConfigList", warning.GetWarningConfigList())
-	c.AddAdminTemplate("warning.config.list.html","header.html","footer.html")
+	c.AddAdminTemplate("warning.config.list.html", "header.html", "footer.html")
 }
 
 func (c *WarningController) List() {

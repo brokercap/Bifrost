@@ -174,7 +174,7 @@ func (c *MongoInput) StartOnlyReplicate0() error {
 		client,
 		&gtm.Options{
 			After:             after,
-			Filter:            c.OpFitler,
+			NamespaceFilter:   c.OpFitler,
 			MaxAwaitTime:      3 * time.Second,
 			OpLogDisabled:     false,
 			UpdateDataAsDelta: false,
@@ -190,6 +190,11 @@ func (c *MongoInput) GtmAfter(client *mongo.Client, options *gtm.Options) (primi
 }
 
 func (c *MongoInput) OpFitler(op *gtm.Op) bool {
+	// 这里实际是在mongo gtm中回调执行的
+	// 至于需要不需要再在当前Input中返回给server端，后面代码中对于 applyOps 还会继续判断处理
+	if op.IsTransactionApplyOps() {
+		return true
+	}
 	var schemaName = op.GetDatabase()
 	var table string
 	switch op.Operation {
@@ -233,11 +238,22 @@ func (c *MongoInput) ConsumeMongoOpLog(ctx *gtm.OpCtx) {
 		case <-c.ctx.Done():
 			return
 		case op := <-ctx.OpC:
-			c.ToInputCallback(op)
+			if op.IsTransactionApplyOps() {
+				ops := c.GetTransactionApplyOpsList(op)
+				if len(ops) == 0 {
+					break
+				}
+				for _, newOp := range ops {
+					if c.CheckReplicateDb(newOp.GetDatabase(), newOp.GetCollection()) {
+						c.ToInputCallback(newOp)
+					}
+				}
+			} else {
+				c.ToInputCallback(op)
+			}
 			c.setLastOpLog(op)
 			break
 		}
-
 	}
 }
 

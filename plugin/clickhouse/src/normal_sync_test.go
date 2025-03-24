@@ -1,4 +1,7 @@
-package src_test
+//go:build integration
+// +build integration
+
+package src
 
 import "testing"
 

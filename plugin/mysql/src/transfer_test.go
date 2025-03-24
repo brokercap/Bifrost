@@ -181,3 +181,23 @@ func TestTransferToTypeByColumnType_Starrocks(t *testing.T) {
 		}
 	}
 }
+
+func TestConn_GetStarRocksIdsByPriList(t *testing.T) {
+	c := &Conn{}
+	Convey("nil", t, func() {
+		ids := c.GetStarRocksIdsByPriList(nil)
+		So(ids, ShouldEqual, "")
+	})
+	Convey("len == 0", t, func() {
+		ids := c.GetStarRocksIdsByPriList([]string{})
+		So(ids, ShouldEqual, "")
+	})
+	Convey("len == 1", t, func() {
+		ids := c.GetStarRocksIdsByPriList([]string{"id"})
+		So(ids, ShouldEqual, "`id`")
+	})
+	Convey("len > 1", t, func() {
+		ids := c.GetStarRocksIdsByPriList([]string{"id", "name"})
+		So(ids, ShouldEqual, "`id`,`name`")
+	})
+}

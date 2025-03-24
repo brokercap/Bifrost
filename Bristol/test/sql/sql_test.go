@@ -1,13 +1,17 @@
+//go:build integration
+// +build integration
+
 package sql
 
 import (
-	"testing"
-	"log"
-	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"database/sql"
+	"github.com/brokercap/Bifrost/Bristol/mysql"
+	"log"
+	"testing"
 )
+
 /*
 CREATE TABLE `binlog_field_test3` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -44,16 +48,16 @@ CREATE TABLE `binlog_field_test3` (
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8
 */
 
-func TestChekcDataTypeByNull(t *testing.T)  {
+func TestChekcDataTypeByNull(t *testing.T) {
 	SchemaName := "bifrost_test"
 	TableName := "binlog_field_test"
-	Uri:= "root:root@tcp(10.40.2.41:3306)/test"
+	Uri := "root:root@tcp(10.40.2.41:3306)/test"
 	db := mysql.NewConnect(Uri)
 	sql := "select * from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
 	log.Println(sql)
 	stmt, err := db.Prepare(sql)
-	if err != nil{
-		log.Fatal("Prepare err:",err)
+	if err != nil {
+		log.Fatal("Prepare err:", err)
 		stmt.Close()
 		return
 	}
@@ -70,10 +74,10 @@ func TestChekcDataTypeByNull(t *testing.T)  {
 			break
 		}
 		for i, v := range rows.Columns() {
-			if dest[i] == nil{
+			if dest[i] == nil {
 				m[string(v)] = nil
 				continue
-			}else{
+			} else {
 				m[string(v)] = dest[i]
 			}
 		}
@@ -81,59 +85,57 @@ func TestChekcDataTypeByNull(t *testing.T)  {
 	}
 	var noError bool = true
 
-	for k,v := range m{
-		if v == nil{
-			log.Println(k,":","nil")
+	for k, v := range m {
+		if v == nil {
+			log.Println(k, ":", "nil")
 			continue
-		}else{
-			log.Println(k,":",fmt.Sprint(v))
+		} else {
+			log.Println(k, ":", fmt.Sprint(v))
 		}
 		switch k {
-		case "id","testtimestamp":
+		case "id", "testtimestamp":
 			continue
 			break
 		default:
-			if v != nil{
-				log.Println(k,"is not null")
-				noError  = false
-			}else{
+			if v != nil {
+				log.Println(k, "is not null")
+				noError = false
+			} else {
 
 			}
 			break
 		}
 	}
 
-	if noError  == true{
+	if noError == true {
 		log.Println(" type and value is all right ")
 	}
 }
 
-
-
-func TestChekcDataTypeByNull2(t *testing.T)  {
+func TestChekcDataTypeByNull2(t *testing.T) {
 	SchemaName := "bifrost_test"
 	TableName := "binlog_field_test"
-	Uri:= "root:root@tcp(10.40.2.41:3306)/test"
-	db,err := sql.Open("mysql",Uri)
-	if err != nil{
+	Uri := "root:root@tcp(10.40.2.41:3306)/test"
+	db, err := sql.Open("mysql", Uri)
+	if err != nil {
 		t.Fatal(err)
 	}
 	sql := "select id from `" + SchemaName + "`.`" + TableName + "` LIMIT 1"
 	log.Println(sql)
 	stmt, err := db.Prepare(sql)
-	if err != nil{
-		log.Fatal("Prepare err:",err)
+	if err != nil {
+		log.Fatal("Prepare err:", err)
 		stmt.Close()
 		return
 	}
 	//p := make([]driver.Value, 0)
 	rows, err := stmt.Query()
 
-	if err != nil{
+	if err != nil {
 		t.Fatal(err)
 	}
-	columns,err := rows.Columns()
-	if err != nil{
+	columns, err := rows.Columns()
+	if err != nil {
 		t.Fatal(err)
 	}
 	n := len(columns)
@@ -143,39 +145,38 @@ func TestChekcDataTypeByNull2(t *testing.T)  {
 		var id [][]byte
 		rows.Scan(&id)
 		bool := rows.Next()
-		if bool == false{
+		if bool == false {
 			break
 		}
-		log.Println("id:",id)
+		log.Println("id:", id)
 
 		break
 	}
 	var noError bool = true
 
-	for k,v := range m{
-		if v == nil{
-			log.Println(k,":","nil")
+	for k, v := range m {
+		if v == nil {
+			log.Println(k, ":", "nil")
 			continue
-		}else{
-			log.Println(k,":",fmt.Sprint(v))
+		} else {
+			log.Println(k, ":", fmt.Sprint(v))
 		}
 		switch k {
-		case "id","testtimestamp":
+		case "id", "testtimestamp":
 			continue
 			break
 		default:
-			if v != nil{
-				log.Println(k,"is not null")
-				noError  = false
-			}else{
+			if v != nil {
+				log.Println(k, "is not null")
+				noError = false
+			} else {
 
 			}
 			break
 		}
 	}
 
-	if noError  == true{
+	if noError == true {
 		log.Println(" type and value is all right ")
 	}
 }
-

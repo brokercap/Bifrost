@@ -48,6 +48,11 @@ type serverSettings struct {
 	keepalive    int64
 }
 
+func (mc *mysqlConn) initConn(conn net.Conn) {
+	mc.netConn = conn
+	mc.bufReader = bufio.NewReader(mc.netConn)
+}
+
 // Handles parameters set in DSN
 func (mc *mysqlConn) handleParams() (e error) {
 	for param, val := range mc.cfg.params {

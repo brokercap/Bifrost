@@ -1,13 +1,13 @@
 package mysql
 
 import (
-	"bufio"
 	"database/sql/driver"
 	"errors"
 	"net"
 )
 
 type mysqlDriver struct{}
+
 func (d *mysqlDriver) Open(dsn string) (driver.Conn, error) {
 	var e error
 	// New mysqlConn
@@ -20,13 +20,13 @@ func (d *mysqlDriver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	// Connect to Server
-	mc.netConn, e = net.Dial(mc.cfg.net, mc.cfg.addr)
+	netConn, e := net.Dial(mc.cfg.net, mc.cfg.addr)
 	if e != nil {
 		return nil, e
 	}
-	mc.bufReader = bufio.NewReader(mc.netConn)
+	mc.initConn(netConn)
 
-	// Reading Handshake Initialization Packet 
+	// Reading Handshake Initialization Packet
 	e = mc.readInitPacket()
 	if e != nil {
 		return nil, e

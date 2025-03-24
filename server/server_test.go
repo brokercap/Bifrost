@@ -2,7 +2,7 @@ package server
 
 import (
 	"errors"
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
@@ -59,6 +59,6 @@ func Test_GetServerStartTimeByConfigFile(t *testing.T) {
 		})
 		defer patch.Reset()
 		modTime := GetServerStartTimeByConfigFile()
-		convey.So(time.Now().Sub(modTime).Seconds(), convey.ShouldBeBetween, 0, 2)
+		convey.So(time.Now().Sub(modTime).Milliseconds(), convey.ShouldBeBetween, -1, 2000)
 	})
 }

@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package src
 
 import (
@@ -18,7 +21,7 @@ import (
 	"github.com/brokercap/Bifrost/server/history"
 )
 
-var url string = "root:root@tcp(127.0.0.1:55001)/bifrost_test?charset=utf8"
+var url string = "root:root@tcp(bifrost_mysql_test:3306)/bifrost_test?charset=utf8"
 
 var SchemaName string = "bifrost_test"
 var TableName string = "binlog_field_test"

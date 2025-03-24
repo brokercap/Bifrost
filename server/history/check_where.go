@@ -1,35 +1,32 @@
 package history
 
 import (
-	"github.com/brokercap/Bifrost/server"
-	"fmt"
-	"log"
 	"database/sql/driver"
+	"fmt"
+	"github.com/brokercap/Bifrost/server"
+	"log"
 )
 
-func CheckWhere(dbName,SchemaName,TableName,Where string) error {
-	if Where == ""{
+func CheckWhere(dbName, SchemaName, TableName, Where string) error {
+	if Where == "" {
 		return nil
 	}
 	dbObj := server.GetDBObj(dbName)
 	if dbObj == nil {
 		return fmt.Errorf("%s not exist", dbName)
 	}
-	return CheckWhere0(dbObj.ConnectUri,SchemaName,TableName,Where)
+	return CheckWhere0(dbObj.ConnectUri, SchemaName, TableName, Where)
 }
 
-func CheckWhere0(Uri string,SchemaName string,TableName string,Where string) error {
+func CheckWhere0(Uri string, SchemaName string, TableName string, Where string) error {
 	db := DBConnect(Uri)
-	defer db.Close()
-	sql := "SELECT * FROM `" + SchemaName + "`.`" + TableName + "` WHERE "+ Where + " LIMIT 1"
-	stmt, err := db.Prepare(sql)
-	if err != nil{
-		log.Println("CheckWhere:",err,"sql:",sql)
-		return err
+	if db != nil {
+		defer db.Close()
 	}
-	defer stmt.Close()
-	rows, err := stmt.Query([]driver.Value{})
-	if err != nil{
+	sql := "SELECT * FROM `" + SchemaName + "`.`" + TableName + "` WHERE " + Where + " LIMIT 1"
+	rows, err := db.Query(sql, []driver.Value{})
+	if err != nil {
+		log.Println("CheckWhere:", err, "sql:", sql)
 		return err
 	}
 	rows.Close()

@@ -21,12 +21,17 @@ pwd=123456
 #dbType  mysql | mariadb
 dbType=mysql
 dbVerion=
+rmDocker=true
 
 if (( "$#" >= "2" )); then
     dbType=$1
     dbVerion=$2
 else
     dbVerion=$1
+fi
+
+if (( "$#" >= "3" )); then
+  rmDocker=$3
 fi
 
 echo dockerName $dockerName
@@ -44,6 +49,10 @@ function StartMySQLDocker() {
   version=$1
   sleepTime=10
   case "$version" in
+    "latest")
+      docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION --default-authentication-plugin=mysql_native_password --gtid_mode=ON --enforce-gtid-consistency=true
+    ;;
+
     "8"*)
       docker run -P --name $dockerName -e MYSQL_ROOT_PASSWORD=$pwd -e MYSQL_DATABASE=bifrost_test -e TZ=Asia/Shanghai -d mysql:$version --default-time_zone='+8:00' --skip-host-cache --skip-name-resolve --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog_format=ROW --sql-mode=ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION --default-authentication-plugin=mysql_native_password --gtid_mode=ON --enforce-gtid-consistency=true
     ;;
@@ -153,11 +162,10 @@ echo "docker -P" $port
 sleep 15
 
 
-$path/MySQL_Filed_DataCheck -u root -p $pwd -h 127.0.0.1 -P $port -database bifrost_test -table "" -longstring true
+$path/MySQL_Filed_DataCheck -u root -p $pwd -h 127.0.0.1 -P $port -database bifrost_test -table "" -longstring true 
 
-
+if [ "$rmDocker" == "true" ]; then
 docker stop $dockerName
-
 docker rm $dockerName
-
+fi
 echo "over"
