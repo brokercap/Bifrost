@@ -112,6 +112,10 @@
                                         <p>LimitOptimize: {{$v.Property.LimitOptimize}}</p>
                                         <p>Where:</p>
                                         <p>{{$v.Property.Where}}</p>
+                                        <p>Crontab: {{$v.Property.Crontab}}</p>
+                                        {{if .Property.Crontab}}
+                                        <p>NextTime: {{$v.ContabNextTime}}</p>
+                                        {{end}}
                                     </td>
                                     <td>{{$v.NowStartI}}</td>
                                     <td>
@@ -121,7 +125,6 @@
                                             <p>Error:{{$poolInfo.Error}}</p>
                                             <p>&nbsp;</p>
                                         {{end}}
-
                                     </td>
                                     <td>
                                         {{ $len := len $v.ToServerList }}
