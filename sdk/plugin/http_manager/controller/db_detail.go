@@ -1,8 +1,8 @@
 package controller
 
 import (
-	toserver "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/admin/xgo"
+	toserver "github.com/brokercap/Bifrost/plugin/storage"
 	"html/template"
 )
 
@@ -17,13 +17,13 @@ func (c *DBController) Detail() {
 	c.SetData("DbName", DbName)
 	c.SetData("DataBaseList", DataBaseList)
 	c.SetData("ToServerList", toserver.GetToServerMap())
-	c.SetData("ChannelList:", make(map[int]interface{},0))
+	c.SetData("ChannelList:", make(map[int]interface{}, 0))
 	c.SetData("Title", DbName+" - Detail")
 
 	var err error
 	t := template.New("detail_html")
 	t, err = t.Parse(IndexHtml)
-	c.SetTemplate(t,err)
+	c.SetTemplate(t, err)
 }
 
 func (c *DBController) TableList() {
@@ -35,9 +35,9 @@ func (c *DBController) TableList() {
 		IgnoreTable string
 	}
 	var data []ResultType
-	data = make([]ResultType,0)
-	data = append(data,ResultType{TableName:"binlog_field_test",ChannelName:"default",AddStatus:true,TableType: ""})
-	data = append(data,ResultType{TableName:"AllTables",ChannelName:"default",AddStatus:true,TableType: "LIKE"})
+	data = make([]ResultType, 0)
+	data = append(data, ResultType{TableName: "binlog_field_test", ChannelName: "default", AddStatus: true, TableType: ""})
+	data = append(data, ResultType{TableName: "AllTables", ChannelName: "default", AddStatus: true, TableType: "LIKE"})
 	c.SetJsonData(data)
 	c.StopServeJSON()
 }

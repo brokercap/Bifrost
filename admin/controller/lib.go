@@ -20,7 +20,7 @@ import (
 )
 
 func AdminTemplatePath(fileName string) string {
-	return config.BifrostAdminTemplateDir  + fileName
+	return config.BifrostAdminTemplateDir + fileName
 }
 
 func PluginTemplatePath(fileName string) string {

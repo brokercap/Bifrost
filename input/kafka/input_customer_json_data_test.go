@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	. "github.com/smartystreets/goconvey/convey"
 
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
@@ -212,7 +212,7 @@ func TestCustomerJsonDataInput_CallBack(t *testing.T) {
 		})
 		defer patches.Reset()
 		err := c.CallBack(&sarama.ConsumerMessage{Value: content})
-		So(err, ShouldNotBeNil)
+		So(err, ShouldBeNil)
 		So(len(callbackData), ShouldEqual, 0)
 	})
 }

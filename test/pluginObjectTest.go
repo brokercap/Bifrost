@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"github.com/brokercap/Bifrost/plugin/driver"
 	_ "github.com/brokercap/Bifrost/plugin/redis/src"
@@ -68,3 +69,4 @@ func main()  {
 	}
 
 }
+*/

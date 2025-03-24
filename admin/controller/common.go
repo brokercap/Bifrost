@@ -35,7 +35,7 @@ var skipCheckAuthUriMap = map[string]bool{
 	"/logout":      true,
 }
 
-//判断是否为写操作
+// 判断是否为写操作
 func (c *CommonController) checkWriteRequest(uri string) bool {
 	for _, v := range writeRequestOp {
 		if strings.Contains(uri, v) {

@@ -33,6 +33,7 @@ func (c *InputMock) GetNormalTableObjlist() (tableList []*NormalTable) {
 	normalTableNoMapping := &NormalTable{
 		SchemaName:    DefaultNormalSchemaName,
 		TableName:     "no_mapping",
+		NoMapping:     true,
 		LongStringLen: c.config.LongStringLen,
 	}
 	normalTableNoPks := &NormalTable{
@@ -41,9 +42,17 @@ func (c *InputMock) GetNormalTableObjlist() (tableList []*NormalTable) {
 		NoPks:         true,
 		LongStringLen: c.config.LongStringLen,
 	}
+	normalTableTwoPks := &NormalTable{
+		SchemaName:    DefaultNormalSchemaName,
+		TableName:     "two_pks",
+		NoPks:         false,
+		TwoPks:        true,
+		LongStringLen: c.config.LongStringLen,
+	}
 	tableList = append(tableList, normalTable)
 	tableList = append(tableList, normalTableNoMapping)
 	tableList = append(tableList, normalTableNoPks)
+	tableList = append(tableList, normalTableTwoPks)
 	return
 }
 

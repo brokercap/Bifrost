@@ -84,11 +84,11 @@ func (c *FileQueueController) GetInfo() {
 	TableName := c.Ctx.Get("TableName")
 	SchemaName = tansferSchemaName(SchemaName)
 	TableName = tansferTableName(TableName)
-	Index,_ := c.Ctx.GetParamInt64("Index",0)
-	ToServerId,_ := c.Ctx.GetParamInt64("ToServerId",-1)
+	Index, _ := c.Ctx.GetParamInt64("Index", 0)
+	ToServerId, _ := c.Ctx.GetParamInt64("ToServerId", -1)
 	if DbName == "" || SchemaName == "" || TableName == "" || ToServerId < 0 {
 		result.Msg = "param error!"
-		return 
+		return
 	}
 	ToServerInfo := server.GetDBObj(DbName).GetTable(SchemaName, TableName).ToServerList[int(Index)]
 	if ToServerInfo.ToServerID != int(ToServerId) {

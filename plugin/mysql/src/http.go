@@ -1,15 +1,15 @@
 package src
 
 import (
-	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 	"github.com/brokercap/Bifrost/admin/controller"
 	"github.com/brokercap/Bifrost/admin/xgo"
+	pluginStorage "github.com/brokercap/Bifrost/plugin/storage"
 )
 
-func init()  {
-	xgo.Router("/bifrost/plugin/mysql/schemalist",&PluginMySQLController{},"*:GetMysqlSchemaList")
-	xgo.Router("/bifrost/plugin/mysql/tablelist",&PluginMySQLController{},"*:GetMysqlSchemaTableList")
-	xgo.Router("/bifrost/plugin/mysql/tableinfo",&PluginMySQLController{},"*:GetMysqlTableFields")
+func init() {
+	xgo.Router("/bifrost/plugin/mysql/schemalist", &PluginMySQLController{}, "*:GetMysqlSchemaList")
+	xgo.Router("/bifrost/plugin/mysql/tablelist", &PluginMySQLController{}, "*:GetMysqlSchemaTableList")
+	xgo.Router("/bifrost/plugin/mysql/tableinfo", &PluginMySQLController{}, "*:GetMysqlTableFields")
 }
 
 type PluginMySQLController struct {
@@ -20,14 +20,14 @@ func (c *PluginMySQLController) getToServerInfo() *pluginStorage.ToServer {
 	ToServerKey := c.Ctx.Get("ToServerKey")
 	toServerInfo := pluginStorage.GetToServerInfo(ToServerKey)
 	if toServerInfo == nil {
-		c.SetJsonData(ToServerKey+" no found")
+		c.SetJsonData(ToServerKey + " no found")
 		c.StopServeJSON()
 		return nil
 	}
 	return toServerInfo
 }
 
-func (c *PluginMySQLController) GetMysqlSchemaList()  {
+func (c *PluginMySQLController) GetMysqlSchemaList() {
 	toServerInfo := c.getToServerInfo()
 	conn := NewMysqlDBConn(toServerInfo.ConnUri)
 	defer conn.Close()
@@ -37,7 +37,7 @@ func (c *PluginMySQLController) GetMysqlSchemaList()  {
 	return
 }
 
-func (c *PluginMySQLController) GetMysqlSchemaTableList()  {
+func (c *PluginMySQLController) GetMysqlSchemaTableList() {
 	toServerInfo := c.getToServerInfo()
 	SchemaName := c.Ctx.Get("SchemaName")
 	conn := NewMysqlDBConn(toServerInfo.ConnUri)
@@ -48,14 +48,13 @@ func (c *PluginMySQLController) GetMysqlSchemaTableList()  {
 	return
 }
 
-
-func (c *PluginMySQLController) GetMysqlTableFields()  {
+func (c *PluginMySQLController) GetMysqlTableFields() {
 	toServerInfo := c.getToServerInfo()
 	SchemaName := c.Ctx.Get("SchemaName")
 	TableName := c.Ctx.Get("TableName")
 	conn := NewMysqlDBConn(toServerInfo.ConnUri)
 	defer conn.Close()
-	TableFieldMap := conn.GetTableFields(SchemaName,TableName)
+	TableFieldMap := conn.GetTableFields(SchemaName, TableName)
 	c.SetJsonData(TableFieldMap)
 	c.StopServeJSON()
 	return

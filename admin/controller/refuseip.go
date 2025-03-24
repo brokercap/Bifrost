@@ -36,7 +36,7 @@ func (c *RefuseIpController) Index() {
 	RefuseIpMap := user.GetRefuseIpMap()
 	c.SetData("RefuseIpMap", RefuseIpMap)
 	c.SetTitle("Refuse Ip Manager")
-	c.AddAdminTemplate("refuse.ip.list.html","header.html","footer.html")
+	c.AddAdminTemplate("refuse.ip.list.html", "header.html", "footer.html")
 }
 
 func (c *RefuseIpController) Del() {

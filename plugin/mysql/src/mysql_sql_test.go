@@ -6,7 +6,7 @@ import "github.com/brokercap/Bifrost/sdk/pluginTestData"
 
 func TestConn_TranferQuerySql(t *testing.T) {
 	p := &PluginParam{
-		AutoTable:true,
+		AutoTable: true,
 	}
 
 	e := pluginTestData.NewEvent()
@@ -22,7 +22,6 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
-
 	queryEvent.Query = " INSERT     INTO   TableName (id,val) values (1,'2'),( 2,'3');"
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
@@ -30,7 +29,6 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	queryEvent.Query = " UPDATE　　　  TableName SET val = '2' where id = 1 ;"
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
-
 
 	queryEvent.Query = " DELETE    FROM             TableName where id = 1 ;"
 	newSql = conn.TranferQuerySql(queryEvent)
@@ -44,7 +42,7 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
-	queryEvent.Query =  `ALTER TABLE tableTestName
+	queryEvent.Query = `ALTER TABLE tableTestName
   ADD PRIMARY KEY (id),
   ADD UNIQUE KEY unique_code (unique_code) USING BTREE,
   ADD KEY gate_id (gate_id) USING BTREE,
@@ -52,11 +50,11 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
-	queryEvent.Query =  `CREATE UNIQUE INDEX index_name ON tableTestName (column_name)`
+	queryEvent.Query = `CREATE UNIQUE INDEX index_name ON tableTestName (column_name)`
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
-	queryEvent.Query =  `CREATE  INDEX index_name ON tableTestName(column_name)`
+	queryEvent.Query = `CREATE  INDEX index_name ON tableTestName(column_name)`
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
@@ -68,14 +66,13 @@ func TestConn_TranferQuerySql(t *testing.T) {
 	newSql = conn.TranferQuerySql(queryEvent)
 	t.Log(newSql)
 
-
 }
 
 func TestConn_TranferDMLSql(t *testing.T) {
 	var newSql []string
 
 	p := &PluginParam{
-		AutoTable:true,
+		AutoTable: true,
 	}
 	conn := &Conn{}
 	conn.p = p
@@ -94,7 +91,6 @@ func TestConn_TranferDMLSql(t *testing.T) {
 	newSql = conn.TranferDMLSql(queryEvent)
 	t.Log(newSql)
 
-
 	queryEvent.Query = "insert    /*its is nots*/  into tab values (1,2,3)"
 	newSql = conn.TranferDMLSql(queryEvent)
 	t.Log(newSql)
@@ -103,7 +99,7 @@ func TestConn_TranferDMLSql(t *testing.T) {
 
 func TestConn_TranferSql_Rename(t *testing.T) {
 	p := &PluginParam{
-		AutoTable:true,
+		AutoTable: true,
 	}
 
 	e := pluginTestData.NewEvent()
@@ -119,7 +115,7 @@ func TestConn_TranferSql_Rename(t *testing.T) {
 
 	conn.isTiDB = true
 	newSql = conn.TranferQuerySql(queryEvent)
-	for _,sql := range newSql {
+	for _, sql := range newSql {
 		t.Log(sql)
 	}
 }

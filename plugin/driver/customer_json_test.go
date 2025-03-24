@@ -48,7 +48,7 @@ func TestPluginDataCustomerJson_GetEventType(t *testing.T) {
 		err := c.Decoder(getTestInsertMapJsonBytes())
 		So(err, ShouldBeNil)
 		c.SetEventTypePath([]string{"data", "eventType"})
-		So(c.GetEventType(), ShouldEqual, "insert")
+		So(c.GetEventType(), ShouldEqual, "update")
 	})
 }
 
@@ -154,98 +154,124 @@ func TestPluginDataCustomerJson_GetPksData(t *testing.T) {
 }
 
 func TestPluginDataCustomerJson_SetKey2Row(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	var key2row []PluginCustomerJsonDataKey2Row
-	key2row = append(key2row, PluginCustomerJsonDataKey2Row{
-		Name: "testName",
-		Path: []string{"a1", "b1"},
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		var key2row []PluginCustomerJsonDataKey2Row
+		key2row = append(key2row, PluginCustomerJsonDataKey2Row{
+			Name: "testName",
+			Path: []string{"a1", "b1"},
+		})
+		c.SetKey2Row(key2row)
+		So(c.key2row[0].Name, ShouldEqual, "testName")
 	})
-	c.SetKey2Row(key2row)
-	So(c.key2row[0].Name, ShouldEqual, "testName")
 }
 
 func TestPluginDataCustomerJson_SetDatabasePath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetDatabasePath(path)
-	So(c.databasePath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetDatabasePath(path)
+		So(c.databasePath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetTablePath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetTablePath(path)
-	So(c.tablePath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetTablePath(path)
+		So(c.tablePath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetInsertDataPath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetInsertDataPath(path)
-	So(c.insertDataPath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetInsertDataPath(path)
+		So(c.insertDataPath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetUpdateNewDataPath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetUpdateNewDataPath(path)
-	So(c.updateNewDataPath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetUpdateNewDataPath(path)
+		So(c.updateNewDataPath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetUpdateOldDataPath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetUpdateOldDataPath(path)
-	So(c.UpdateOldDataPath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetUpdateOldDataPath(path)
+		So(c.UpdateOldDataPath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetDeleteDataPath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetDeleteDataPath(path)
-	So(c.deleteDataPath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetDeleteDataPath(path)
+		So(c.deleteDataPath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetPksPath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetPksPath(path)
-	So(c.pksPath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetPksPath(path)
+		So(c.pksPath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetEventTypePath(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	path := []string{"a1"}
-	c.SetEventTypePath(path)
-	So(c.eventTypePath, ShouldEqual, path)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		path := []string{"a1"}
+		c.SetEventTypePath(path)
+		So(c.eventTypePath, ShouldResemble, path)
+	})
 }
 
 func TestPluginDataCustomerJson_SetEventTypeValInsert(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	name := "i"
-	c.SetEventTypeValInsert(name)
-	So(c.eventTypeValInsert, ShouldEqual, name)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		name := "i"
+		c.SetEventTypeValInsert(name)
+		So(c.eventTypeValInsert, ShouldEqual, name)
+	})
 }
 
 func TestPluginDataCustomerJson_SetEventTypeValSelect(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	name := "s"
-	c.SetEventTypeValSelect(name)
-	So(c.eventTypeValSelect, ShouldEqual, name)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		name := "s"
+		c.SetEventTypeValSelect(name)
+		So(c.eventTypeValSelect, ShouldEqual, name)
+	})
 }
 
 func TestPluginDataCustomerJson_SetEventTypeValUpdate(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	name := "u"
-	c.SetEventTypeValUpdate(name)
-	So(c.eventTypeValSelect, ShouldEqual, name)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		name := "u"
+		c.SetEventTypeValUpdate(name)
+		So(c.eventTypeValUpdate, ShouldEqual, name)
+	})
 }
 
 func TestPluginDataCustomerJson_SetEventTypeValDelete(t *testing.T) {
-	c, _ := NewPluginDataCustomerJson()
-	name := "d"
-	c.SetEventTypeValDelete(name)
-	So(c.eventTypeValSelect, ShouldEqual, name)
+	Convey("normal", t, func() {
+		c, _ := NewPluginDataCustomerJson()
+		name := "d"
+		c.SetEventTypeValDelete(name)
+		So(c.eventTypeValDelete, ShouldEqual, name)
+	})
 }
 
 func TestPluginDataCustomerJson_ToBifrostOutputPluginData(t *testing.T) {

@@ -29,6 +29,7 @@ type PerformanceTable struct {
 	TableName           string
 	LongStringLen       int
 	IsAllInsertSameData bool
+	NoUint64            bool
 	TableDataCount      int
 	InterVal            time.Duration
 	TableRowsEventCount int

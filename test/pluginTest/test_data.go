@@ -1,9 +1,9 @@
 package pluginTest
 
 import (
+	"encoding/json"
 	pluginDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"time"
-	"encoding/json"
 )
 
 var TestInsertDataJson = `[{"id":1,"test_unsinged_bigint":5,"test_unsinged_int":4,"test_unsinged_mediumint":3,"test_unsinged_smallint":2,"test_unsinged_tinyint":1,"testbigint":-5,"testbit":8,"testblob":"testblob","testbool":true,"testchar":"te","testdate":"2018-05-08","testdatetime":"2018-05-08 15:30:21","testdecimal":"9.39","testdouble":9.39,"testenum":"en2","testfloat":9.39,"testint":-4,"testlongblob":"testlongblob","testmediumblob":"testmediumblob","testmediumint":-3,"testset":["set1","set3"],"testsmallint":-2,"testtext":"testtext","testtime":"15:39:59","testtimestamp":"2018-05-08 15:30:21","testtinyblob":"testtinyblob","testtinyint":-1,"testvarchar":"testvarcha","testyear":"2018"}]`
@@ -12,54 +12,54 @@ var TestDeleteDataJson = `[{"id":1,"test_unsinged_bigint":5,"test_unsinged_int":
 var TestQueryData = "ALTER TABLE `bifrost_test`.`binlog_field_http_plugin_test` CHANGE COLUMN `testvarchar` `testvarchar` varchar(20) NOT NULL"
 
 type dataStruct struct {
-	Id 							uint32 `json:"id"`
-	Test_unsinged_bigint		uint64 `json:"test_unsinged_bigint"`
-	Test_unsinged_int			uint32 `json:"test_unsinged_int"`
-	Test_unsinged_mediumint		uint32 `json:"test_unsinged_mediumint"`
-	Test_unsinged_smallint		uint16 `json:"test_unsinged_smallint"`
-	Test_unsinged_tinyint		uint8  `json:"test_unsinged_tinyint"`
+	Id                      uint32 `json:"id"`
+	Test_unsinged_bigint    uint64 `json:"test_unsinged_bigint"`
+	Test_unsinged_int       uint32 `json:"test_unsinged_int"`
+	Test_unsinged_mediumint uint32 `json:"test_unsinged_mediumint"`
+	Test_unsinged_smallint  uint16 `json:"test_unsinged_smallint"`
+	Test_unsinged_tinyint   uint8  `json:"test_unsinged_tinyint"`
 
-	Testtinyint					int8  `json:"testtinyint"`
-	Testsmallint				int16  `json:"testsmallint"`
-	Testmediumint				int32  `json:"testmediumint"`
-	Testint						int32  `json:"testint"`
-	Testbigint					int64  `json:"testbigint"`
+	Testtinyint   int8  `json:"testtinyint"`
+	Testsmallint  int16 `json:"testsmallint"`
+	Testmediumint int32 `json:"testmediumint"`
+	Testint       int32 `json:"testint"`
+	Testbigint    int64 `json:"testbigint"`
 
-	Testbit						int64  `json:"testbit"`
-	Testbool					bool   `json:"testbool"`
+	Testbit  int64 `json:"testbit"`
+	Testbool bool  `json:"testbool"`
 
-	Testvarchar					string  `json:"testvarchar"`
-	Testchar					string  `json:"testchar"`
+	Testvarchar string `json:"testvarchar"`
+	Testchar    string `json:"testchar"`
 
-	Testtime					string  `json:"testtime"`
-	Testdate					string  `json:"testdate"`
-	Testyear					string  `json:"testyear"`
-	Testtimestamp				string  `json:"testtimestamp"`
-	Testdatetime				string  `json:"testdatetime"`
+	Testtime      string `json:"testtime"`
+	Testdate      string `json:"testdate"`
+	Testyear      string `json:"testyear"`
+	Testtimestamp string `json:"testtimestamp"`
+	Testdatetime  string `json:"testdatetime"`
 
-	Testfloat					float64 `json:"testfloat"`
-	Testdouble					float64 `json:"testdouble"`
-	Testdecimal					string  `json:"testdecimal"`
+	Testfloat   float64 `json:"testfloat"`
+	Testdouble  float64 `json:"testdouble"`
+	Testdecimal string  `json:"testdecimal"`
 
-	Testtext					string  `json:"testtext"`
-	Testblob					string  `json:"testblob"`
-	Testmediumblob				string  `json:"testmediumblob"`
-	Testlongblob				string  `json:"testlongblob"`
-	Testtinyblob				string  `json:"testtinyblob"`
+	Testtext       string `json:"testtext"`
+	Testblob       string `json:"testblob"`
+	Testmediumblob string `json:"testmediumblob"`
+	Testlongblob   string `json:"testlongblob"`
+	Testtinyblob   string `json:"testtinyblob"`
 
-	Testenum					string  `json:"testenum"`
-	Testset						[]string `json:"testset"`
+	Testenum string   `json:"testenum"`
+	Testset  []string `json:"testset"`
 }
 
-func GetTestInsertData() *pluginDriver.PluginDataType{
+func GetTestInsertData() *pluginDriver.PluginDataType {
 	var Rows []map[string]interface{}
 
 	var data []dataStruct
-	json.Unmarshal([]byte(TestInsertDataJson),&data)
+	json.Unmarshal([]byte(TestInsertDataJson), &data)
 
-	Rows = make([]map[string]interface{},1)
+	Rows = make([]map[string]interface{}, 1)
 
-	m := make(map[string]interface{},0)
+	m := make(map[string]interface{}, 0)
 	m["id"] = data[0].Id
 	m["test_unsinged_bigint"] = data[0].Test_unsinged_bigint
 	m["test_unsinged_int"] = data[0].Test_unsinged_int
@@ -96,28 +96,27 @@ func GetTestInsertData() *pluginDriver.PluginDataType{
 
 	Rows[0] = m
 
-
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "insert",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: "bifrost_test",
-		TableName      	: "bifrost_field_test",
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: 100,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "insert",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     "bifrost_test",
+		TableName:      "bifrost_field_test",
+		BinlogFileNum:  10,
+		BinlogPosition: 100,
 	}
 }
 
-func GetTestUpdateData() *pluginDriver.PluginDataType{
+func GetTestUpdateData() *pluginDriver.PluginDataType {
 	var Rows []map[string]interface{}
 
 	var data []dataStruct
-	json.Unmarshal([]byte(TestUpdateDataJson),&data)
+	json.Unmarshal([]byte(TestUpdateDataJson), &data)
 
-	Rows = make([]map[string]interface{},2)
+	Rows = make([]map[string]interface{}, 2)
 
-	m := make(map[string]interface{},0)
+	m := make(map[string]interface{}, 0)
 	m["id"] = data[0].Id
 	m["test_unsinged_bigint"] = data[0].Test_unsinged_bigint
 	m["test_unsinged_int"] = data[0].Test_unsinged_int
@@ -151,7 +150,7 @@ func GetTestUpdateData() *pluginDriver.PluginDataType{
 	m["testenum"] = data[0].Testenum
 	m["testset"] = data[0].Testset
 
-	m1 := make(map[string]interface{},0)
+	m1 := make(map[string]interface{}, 0)
 
 	m1["id"] = data[1].Id
 	m1["test_unsinged_bigint"] = data[1].Test_unsinged_bigint
@@ -190,27 +189,26 @@ func GetTestUpdateData() *pluginDriver.PluginDataType{
 	Rows[1] = m1
 
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "update",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: "bifrost_test",
-		TableName      	: "bifrost_field_test",
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: 100,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "update",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     "bifrost_test",
+		TableName:      "bifrost_field_test",
+		BinlogFileNum:  10,
+		BinlogPosition: 100,
 	}
 }
 
-
-func GetTestDeleteData() *pluginDriver.PluginDataType{
+func GetTestDeleteData() *pluginDriver.PluginDataType {
 	var Rows []map[string]interface{}
 
 	var data []dataStruct
-	json.Unmarshal([]byte(TestDeleteDataJson),&data)
+	json.Unmarshal([]byte(TestDeleteDataJson), &data)
 
-	Rows = make([]map[string]interface{},1)
+	Rows = make([]map[string]interface{}, 1)
 
-	m := make(map[string]interface{},0)
+	m := make(map[string]interface{}, 0)
 	m["id"] = data[0].Id
 	m["test_unsinged_bigint"] = data[0].Test_unsinged_bigint
 	m["test_unsinged_int"] = data[0].Test_unsinged_int
@@ -246,29 +244,28 @@ func GetTestDeleteData() *pluginDriver.PluginDataType{
 
 	Rows[0] = m
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "delete",
-		Rows            : Rows,
-		Query          	: "",
-		SchemaName     	: "bifrost_test",
-		TableName      	: "bifrost_field_test",
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: 100,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "delete",
+		Rows:           Rows,
+		Query:          "",
+		SchemaName:     "bifrost_test",
+		TableName:      "bifrost_field_test",
+		BinlogFileNum:  10,
+		BinlogPosition: 100,
 	}
 }
 
-func GetTestQueryData() *pluginDriver.PluginDataType{
+func GetTestQueryData() *pluginDriver.PluginDataType {
 	var Rows []map[string]interface{}
-	Rows = make([]map[string]interface{},0)
+	Rows = make([]map[string]interface{}, 0)
 	return &pluginDriver.PluginDataType{
-		Timestamp 		: uint32(time.Now().Unix()),
-		EventType 		: "sql",
-		Rows            : Rows,
-		Query          	: TestQueryData,
-		SchemaName     	: "bifrost_test",
-		TableName      	: "bifrost_field_test",
-		BinlogFileNum 	: 10,
-		BinlogPosition 	: 100,
+		Timestamp:      uint32(time.Now().Unix()),
+		EventType:      "sql",
+		Rows:           Rows,
+		Query:          TestQueryData,
+		SchemaName:     "bifrost_test",
+		TableName:      "bifrost_field_test",
+		BinlogFileNum:  10,
+		BinlogPosition: 100,
 	}
 }
-

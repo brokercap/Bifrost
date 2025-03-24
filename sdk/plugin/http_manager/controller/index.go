@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-
 type IndexController struct {
 	xgo.Controller
 }

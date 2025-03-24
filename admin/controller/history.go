@@ -37,6 +37,7 @@ type HistoryParam struct {
 	Property    history.HistoryProperty
 	ToserverIds []int
 	Id          int
+	Crontab     string // 定时任务表达式
 }
 
 func (c *HistoryController) getParam() *HistoryParam {
@@ -111,7 +112,7 @@ func (c *HistoryController) Index() {
 	c.SetData("DbName", DbName)
 
 	c.SetTitle("History List")
-	c.AddAdminTemplate("history.list.html","header.html","footer.html")
+	c.AddAdminTemplate("history.list.html", "header.html", "footer.html")
 }
 
 func (c *HistoryController) List() {
@@ -159,16 +160,16 @@ func (c *HistoryController) Add() {
 	}()
 	db := server.GetDbInfo(param.DbName)
 	if db == nil {
-		result.Msg = fmt.Sprintf("DbName: %s not esxit",param.DbName)
+		result.Msg = fmt.Sprintf("DbName: %s not esxit", param.DbName)
 		return
 	}
 	o := inputDriver.Open(db.InputType, inputDriver.InputInfo{})
 	if o == nil {
-		result.Msg = fmt.Sprintf("DbName: %s Input: %s not esxit",db.Name,db.InputType)
+		result.Msg = fmt.Sprintf("DbName: %s Input: %s not esxit", db.Name, db.InputType)
 		return
 	}
 	if !o.IsSupported(inputDriver.SupportFull) {
-		result.Msg = fmt.Sprintf("DbName: %s Input: %s Full is not supported",db.Name,db.InputType)
+		result.Msg = fmt.Sprintf("DbName: %s Input: %s Full is not supported", db.Name, db.InputType)
 		return
 	}
 	if tansferTableName(param.SchemaName) == "*" {

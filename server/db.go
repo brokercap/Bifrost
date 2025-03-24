@@ -18,6 +18,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -427,24 +428,22 @@ func (db *db) getReplicateDoDbMap() map[string]map[string]uint8 {
 	return replicateDoDb
 }
 
-func (db *db) Start() (b bool) {
+func (db *db) Start() error {
 	db.statusCtx.ctx, db.statusCtx.cancelFun = context.WithCancel(context.Background())
 	db.Lock()
 	if db.ConnStatus != CLOSED && db.ConnStatus != STOPPED {
 		db.Unlock()
-		return false
+		return errors.New("not be close or stop")
 	}
 	db.Unlock()
-	b = false
 	if db.maxBinlogDumpFileName == db.binlogDumpFileName && db.binlogDumpPosition >= db.maxBinlogDumpPosition {
-		return
+		return nil
 	}
 	if len(db.tableMap) == 0 {
-		return
+		return errors.New("no table sync config")
 	}
 	switch db.ConnStatus {
 	case CLOSED:
-		db.ConnStatus = STARTING
 		// 这里加一个加一个方法里再去执行初始化input,是为防止初始化有空指针等异常导致，不释放锁
 		// 不放到 InitInputDriver 中去加锁，因为 GetCurrentPosition 中也会去获取Input，不存在的情况下，也会去初始化一次
 		func() {
@@ -452,19 +451,24 @@ func (db *db) Start() (b bool) {
 			defer db.Unlock()
 			db.InitInputDriver()
 		}()
+		if !db.inputDriverObj.IsSupported(inputDriver.SupportIncre) {
+			return fmt.Errorf("DbName: %s Input: %s Incr data is not supported", db.Name, db.InputType)
+		}
+		db.ConnStatus = STARTING
 		go db.inputDriverObj.Start(db.inputStatusChan)
 		go db.monitorDump()
 		break
 	case STOPPED:
 		db.ConnStatus = RUNNING
 		log.Println(db.Name+" monitor:", "running")
-		db.inputDriverObj.Start(db.inputStatusChan)
+		// 这里不需要判断 是否支持 增量，因为正常逻辑不会直接stop判断，最开始只会是close状态
+		go db.inputDriverObj.Start(db.inputStatusChan)
 		break
 	default:
-		return
+		return nil
 	}
 	go db.CronCalcMinPosition()
-	return true
+	return nil
 }
 
 /*

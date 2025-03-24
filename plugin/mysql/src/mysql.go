@@ -647,11 +647,15 @@ func (This *Conn) AutoCommit() (LastSuccessCommitData *pluginDriver.PluginDataTy
 	}
 	if e != nil {
 		log.Println("e:", e)
-		return
+		if This.p.BifrostMustBeSuccess {
+			return nil, ErrData, e
+		}
 	}
 	var binlogEvent *pluginDriver.PluginDataType
 	if len(This.p.Data.Data) <= int(This.p.BatchSize) {
-		binlogEvent = This.p.Data.CommitData[0]
+		if len(This.p.Data.CommitData) > 1 {
+			binlogEvent = This.p.Data.CommitData[0]
+		}
 		This.p.Data = NewTableData()
 	} else {
 		This.p.Data.Data = This.p.Data.Data[n:]
@@ -882,6 +886,8 @@ func (This *Conn) dataTypeTransfer(data interface{}, fieldName string, toDataTyp
 			}
 			v = string(c)
 			break
+		case reflect.String:
+			v = data
 		default:
 			e = fmt.Errorf("field:%s ,data source type: %s, is not object or array, s ", fieldName, reflect.TypeOf(data).Kind().String())
 		}

@@ -84,13 +84,13 @@ func (c *TableToServerController) Add() {
 		return
 	}
 	toServer := &server.ToServer{
-		MustBeSuccess:  param.MustBeSuccess,
-		FilterQuery:    param.FilterQuery,
-		FilterUpdate:   param.FilterUpdate,
-		ToServerKey:    param.ToServerKey,
-		PluginName:     param.PluginName,
-		FieldList:      param.FieldList,
-		PluginParam:    param.PluginParam,
+		MustBeSuccess: param.MustBeSuccess,
+		FilterQuery:   param.FilterQuery,
+		FilterUpdate:  param.FilterUpdate,
+		ToServerKey:   param.ToServerKey,
+		PluginName:    param.PluginName,
+		FieldList:     param.FieldList,
+		PluginParam:   param.PluginParam,
 	}
 	SchemaName := tansferSchemaName(param.SchemaName)
 	TableName := tansferTableName(param.TableName)

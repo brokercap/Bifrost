@@ -1,5 +1,5 @@
 // documentation:
-//https://dev.mysql.com/doc/internals/en/xid-event.html
+// https://dev.mysql.com/doc/internals/en/xid-event.html
 package mysql
 
 import (
@@ -8,8 +8,8 @@ import (
 )
 
 type XIdEvent struct {
-	header        EventHeader
-	xid  		  int64
+	header EventHeader
+	xid    int64
 }
 
 func (parser *eventParser) parseXidEvent(buf *bytes.Buffer) (event *XIdEvent, err error) {

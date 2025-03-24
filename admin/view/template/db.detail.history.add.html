@@ -77,6 +77,16 @@
                         </td>
                     </tr>
                     <tr>
+                        <td align="right" valign="top" height="50" width="20%">Crontab : </td>
+                        <td style="text-indent:10px" >
+                            <input type="text" name="historyCrontab" class="form-control" placeholder="" value="" id="historyCrontab">
+                            <p>定时任务配置</p>
+                            <p>分 时 日 月 周</p>
+                            <p>minute hour dayofmonth month dayofweek</p>
+                            <p>每小时运行一次(hourly)： 0 * * * * </p>
+                        </td>
+                    </tr>
+                    <tr>
                         <td align="right" height="50">ToServer :  </td>
                         <td style="text-indent:10px" id="addHisotryToServer">
 
@@ -150,6 +160,7 @@
                 var where           = $("#addHisotryWhere").val();
                 var LimitOptimize   = $("#addHisotryLimitOptimize").val();
                 var SyncThreadNum   = $("#addHisotrySyncThreadNum").val();
+                var Crontab         = $("#historyCrontab").val();
 
                 var ToServerIds = [];
                 $.each($("#addHisotryToServer input:checkbox:checked"),function(){
@@ -206,6 +217,7 @@
                 Property["Where"]           = $.trim(where);
                 Property["LimitOptimize"]   = parseInt(LimitOptimize);
                 Property["SyncThreadNum"]   = parseInt(SyncThreadNum);
+                Property["Crontab"]         = $.trim(Crontab);
 
                 var url = "/history/add";
 

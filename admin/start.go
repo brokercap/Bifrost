@@ -16,12 +16,12 @@ limitations under the License.
 package admin
 
 import (
+	"github.com/brokercap/Bifrost/admin/controller"
+	_ "github.com/brokercap/Bifrost/admin/router"
 	"github.com/brokercap/Bifrost/admin/xgo"
 	"github.com/brokercap/Bifrost/config"
-	"github.com/brokercap/Bifrost/admin/controller"
 	"log"
 	"runtime/debug"
-	_ "github.com/brokercap/Bifrost/admin/router"
 )
 
 func Start() {

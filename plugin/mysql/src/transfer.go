@@ -92,14 +92,11 @@ func (This *Conn) GetCreateTableEngineByMysql(data *pluginDriver.PluginDataType)
 
 func (This *Conn) GetCreateTableEngineByStarRocks(data *pluginDriver.PluginDataType) (engineSQL string, err error) {
 	engineSQL = " ENGINE=OLAP "
-	var ids string
 	if This.p.SyncMode != SYNCMODE_LOG_APPEND && len(data.Pri) == 0 {
 		err = errors.New("no pri ,not supported")
 		return
 	}
-	if len(data.Pri) > 0 {
-		ids = strings.Replace(strings.Trim(fmt.Sprint(data.Pri), "[]"), " ", "','", -1)
-	}
+	var ids = This.GetStarRocksIdsByPriList(data.Pri)
 	if This.p.SyncMode == SYNCMODE_LOG_APPEND {
 		if ids != "" {
 			ids = "binlog_datetime,binlog_event_type," + ids
@@ -114,6 +111,13 @@ func (This *Conn) GetCreateTableEngineByStarRocks(data *pluginDriver.PluginDataT
 		engineSQL += fmt.Sprintf(" PROPERTIES ('replication_num' = '%d' )", 1)
 	}
 	return
+}
+
+func (This *Conn) GetStarRocksIdsByPriList(pri []string) string {
+	if len(pri) > 0 {
+		return fmt.Sprintf("`%s`", strings.Replace(strings.Trim(fmt.Sprint(pri), "[]"), " ", "`,`", -1))
+	}
+	return ""
 }
 
 // 在自动建表的情况下,并且是追加模式的时候 ,需要自动添加一个自增ID的主键

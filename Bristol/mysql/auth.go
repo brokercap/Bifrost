@@ -1,26 +1,27 @@
 package mysql
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"log"
-	"bytes"
 	"fmt"
+	"log"
 )
 
 /* get auth password
  */
-func (mc *mysqlConn) getAuthPasswordScrambleBuff() (result []byte,addPasswordIsNull bool,e error) {
+func (mc *mysqlConn) getAuthPasswordScrambleBuff() (result []byte, addPasswordIsNull bool, e error) {
 	switch mc.cfg.authPluginName {
 	case AUTH_NATIVE_PASSWORD:
-		return AuthNavtivePassword(mc.server.scrambleBuff,[]byte(mc.cfg.passwd)),false,nil
+		return AuthNavtivePassword(mc.server.scrambleBuff, []byte(mc.cfg.passwd)), false, nil
 	case AUTH_CACHING_SHA2_PASSWORD:
-		return AuthCachingSha2Password(mc.server.scrambleBuff,[]byte(mc.cfg.passwd)),false,nil
+		return AuthCachingSha2Password(mc.server.scrambleBuff, []byte(mc.cfg.passwd)), false, nil
 	case AUTH_SHA256_PASSWORD:
 		if len(mc.cfg.passwd) == 0 {
 			return nil, true, nil
@@ -35,7 +36,7 @@ func (mc *mysqlConn) getAuthPasswordScrambleBuff() (result []byte,addPasswordIsN
 			return []byte{1}, false, nil
 		}
 	default:
-		return nil,false,errors.New(mc.cfg.authPluginName + " not supported yet!")
+		return nil, false, errors.New(mc.cfg.authPluginName + " not supported yet!")
 	}
 	return
 }
@@ -74,7 +75,7 @@ func AuthNavtivePassword(scramble, password []byte) (result []byte) {
 }
 
 // CalcCachingSha2Password: Hash password using MySQL 8+ method (SHA256)
-func AuthCachingSha2Password(scramble , password []byte ) []byte {
+func AuthCachingSha2Password(scramble, password []byte) []byte {
 	if len(password) == 0 {
 		return nil
 	}
@@ -101,27 +102,29 @@ func AuthCachingSha2Password(scramble , password []byte ) []byte {
 	return message1
 }
 
-
 /******************************************************************************
 *                           Initialisation Process                            *
 ******************************************************************************/
 
-/* Handshake Initialization Packet
- Bytes                        Name
- -----                        ----
- 1                            protocol_version
- n (Null-Terminated String)   server_version
- 4                            thread_id
- 8                            scramble_buff
- 1                            (filler) always 0x00
- 2                            server_capabilities
- 1                            server_language
- 2                            server_status
- 2                            server capabilities (two upper bytes)
- 1                            length of the scramble
+/*
+	Handshake Initialization Packet
+	Bytes                        Name
+	-----                        ----
+	1                            protocol_version
+	n (Null-Terminated String)   server_version
+	4                            thread_id
+	8                            scramble_buff
+	1                            (filler) always 0x00
+	2                            server_capabilities
+	1                            server_language
+	2                            server_status
+	2                            server capabilities (two upper bytes)
+	1                            length of the scramble
+
 10                            (filler)  always 0
- n                            rest of the plugin provided data (at least 12 bytes)
- 1                            \0 byte, terminating the second part of a scramble
+
+	n                            rest of the plugin provided data (at least 12 bytes)
+	1                            \0 byte, terminating the second part of a scramble
 */
 func (mc *mysqlConn) readInitPacket() (e error) {
 	data, e := mc.readPacket()
@@ -178,18 +181,18 @@ func (mc *mysqlConn) readInitPacket() (e error) {
 		pos++
 
 		//Server status
-		mc.status = bytesToUint16(data[pos: pos+2])
+		mc.status = bytesToUint16(data[pos : pos+2])
 		pos += 2
 
 		// capability flags (upper 2 bytes)
 		mc.server.flags = ClientFlag(uint32(bytesToUint16(data[pos:pos+2]))<<16 | uint32(mc.server.flags))
 		pos += 2
 		var authPluginDataPartLen int
-		if (mc.server.flags&CLIENT_PLUGIN_AUTH) != 0 {
+		if (mc.server.flags & CLIENT_PLUGIN_AUTH) != 0 {
 			authPluginDataPartLen = int(data[pos])
 		}
 		// auth data len or [00]
-		pos ++
+		pos++
 
 		// skip reserved (all [00])
 		pos += 10
@@ -203,7 +206,7 @@ func (mc *mysqlConn) readInitPacket() (e error) {
 		pos += authPluginDataPart2Len
 		// auth plugin
 		if end := bytes.IndexByte(data[pos:], 0x00); end != -1 {
-			mc.cfg.authPluginName = string(data[pos: pos+end])
+			mc.cfg.authPluginName = string(data[pos : pos+end])
 		} else {
 			mc.cfg.authPluginName = string(data[pos:])
 		}
@@ -215,7 +218,9 @@ func (mc *mysqlConn) readInitPacket() (e error) {
 	return
 }
 
-/* Client Authentication Packet
+/*
+	Client Authentication Packet
+
 Bytes                        Name
 -----                        ----
 4                            client_flags
@@ -228,18 +233,17 @@ n (Null-Terminated String)   databasename (optional)
 */
 func (mc *mysqlConn) writeAuthPacket() (e error) {
 	// Adjust client flags based on server support
-		clientFlags := uint32(CLIENT_MULTI_STATEMENTS |
-			// CLIENT_MULTI_RESULTS |
-			CLIENT_PROTOCOL_41 |
-			CLIENT_SECURE_CONN |
-			CLIENT_LONG_PASSWORD |
-			CLIENT_TRANSACTIONS | CLIENT_PLUGIN_AUTH | mc.server.flags&CLIENT_LONG_FLAG )
-
+	clientFlags := uint32(CLIENT_MULTI_STATEMENTS |
+		// CLIENT_MULTI_RESULTS |
+		CLIENT_PROTOCOL_41 |
+		CLIENT_SECURE_CONN |
+		CLIENT_LONG_PASSWORD |
+		CLIENT_TRANSACTIONS | CLIENT_PLUGIN_AUTH | mc.server.flags&CLIENT_LONG_FLAG)
 
 	// User Password
 	var scrambleBuff []byte
 	var addPasswordIsNull bool
-	scrambleBuff,addPasswordIsNull,e = mc.getAuthPasswordScrambleBuff()
+	scrambleBuff, addPasswordIsNull, e = mc.getAuthPasswordScrambleBuff()
 	if e != nil {
 		return
 	}
@@ -264,14 +268,14 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 	}
 	// Calculate packet length and make buffer with that size
 	pktLen := 4 + 4 + 1 + 23 + len(mc.cfg.user) + 1 + len(authRespLEI) + len(scrambleBuff) + len([]byte(mc.cfg.authPluginName)) + 1
-	if n := len(mc.cfg.dbname);n > 0 {
+	if n := len(mc.cfg.dbname); n > 0 {
 		pktLen += n + 1
 	}
 	// sha256 password 是不会传输密码的
 	if addPasswordIsNull {
 		pktLen++
 	}
-	data := make([]byte, 0,pktLen)
+	data := make([]byte, 0, pktLen)
 
 	// ClientFlags
 	data = append(data, uint32ToBytes(clientFlags)...)
@@ -285,6 +289,23 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 	// Filler
 	data = append(data, make([]byte, 23)...)
 
+	if mc.cfg.tlsConfig != nil {
+		tlsPacketHeaderLen := 4 + 4 + 1 + 23
+		tlsPacketHeader := make([]byte, 0, tlsPacketHeaderLen+4)
+		tlsPacketHeader = append(tlsPacketHeader, uint24ToBytes(uint32(tlsPacketHeaderLen))...)
+		tlsPacketHeader = append(tlsPacketHeader, mc.sequence)
+		tlsPacketHeader = append(tlsPacketHeader, data[:tlsPacketHeaderLen]...)
+		if err := mc.writePacket(&tlsPacketHeader); err != nil {
+			return err
+		}
+		// Switch to TLS
+		tlsConn := tls.Client(mc.netConn, mc.cfg.tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			return err
+		}
+		mc.initConn(tlsConn)
+	}
+
 	// User
 	if len(mc.cfg.user) > 0 {
 		data = append(data, []byte(mc.cfg.user)...)
@@ -293,7 +314,7 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 	// Null-Terminator
 	data = append(data, 0x0)
 
-	data = append(data,authRespLEI...)
+	data = append(data, authRespLEI...)
 	data = append(data, scrambleBuff...)
 	// sha256 password 等加密模式,是不传输的
 	if addPasswordIsNull {
@@ -310,7 +331,7 @@ func (mc *mysqlConn) writeAuthPacket() (e error) {
 	data = append(data, []byte(mc.cfg.authPluginName)...)
 	data = append(data, 0x00)
 
-	data0 := make([]byte,0,len(data)+4)
+	data0 := make([]byte, 0, len(data)+4)
 	//Add the packet header
 	data0 = append(data0, uint24ToBytes(uint32(len(data)))...)
 	data0 = append(data0, mc.sequence)
@@ -337,7 +358,7 @@ func (mc *mysqlConn) handleAuthResult() error {
 			mc.server.scrambleBuff = data[:len(data)-1]
 		}
 		mc.cfg.authPluginName = switchToPlugin
-		scrambleBuff, addPasswordIsNull,err := mc.getAuthPasswordScrambleBuff()
+		scrambleBuff, addPasswordIsNull, err := mc.getAuthPasswordScrambleBuff()
 		if err != nil {
 			return err
 		}
@@ -371,7 +392,7 @@ func (mc *mysqlConn) handleAuthResult() error {
 				return errors.New("Invalid packet tls and unix socket")
 			} else {
 				if err = mc.WritePublicKeyAuthPacket(); err != nil {
-					log.Printf("WritePublicKeyAuthPacket err:%v",err)
+					log.Printf("WritePublicKeyAuthPacket err:%v", err)
 					return err
 				}
 			}
@@ -384,7 +405,7 @@ func (mc *mysqlConn) handleAuthResult() error {
 		}
 		if err = mc.readResultOK(); err == nil {
 			return nil // auth successful
-		}else{
+		} else {
 			return err
 		}
 	case AUTH_SHA256_PASSWORD:
@@ -404,7 +425,7 @@ func (mc *mysqlConn) handleAuthResult() error {
 		err = mc.readResultOK()
 		return err
 	default:
-		return errors.New("not support "+mc.cfg.authPluginName)
+		return errors.New("not support " + mc.cfg.authPluginName)
 	}
 	return nil
 }
@@ -453,7 +474,7 @@ func (mc *mysqlConn) EncryptPasswordByPublicKey(password string, seed []byte, pu
 	return rsa.EncryptOAEP(sha1v, rand.Reader, pub, plain, nil)
 }
 
-func (mc *mysqlConn) WriteEncryptedByPublicKey(publicKey *rsa.PublicKey ) error {
+func (mc *mysqlConn) WriteEncryptedByPublicKey(publicKey *rsa.PublicKey) error {
 	EncryptData, err := mc.EncryptPasswordByPublicKey(mc.cfg.passwd, mc.server.scrambleBuff, publicKey)
 	if err != nil {
 		return err
@@ -462,17 +483,17 @@ func (mc *mysqlConn) WriteEncryptedByPublicKey(publicKey *rsa.PublicKey ) error 
 	return err
 }
 
-func (mc *mysqlConn) WriteAuthSwitchPacket(packetData []byte,addPasswordIsNull bool) error {
-	var dataLen int = len(packetData)+4
+func (mc *mysqlConn) WriteAuthSwitchPacket(packetData []byte, addPasswordIsNull bool) error {
+	var dataLen int = len(packetData) + 4
 	if addPasswordIsNull {
 		dataLen++
 	}
-	data0 := make([]byte,0,dataLen)
-	data0 = append(data0,uint24ToBytes(uint32(len(packetData)))...)
-	data0 = append(data0,mc.sequence)
-	data0 = append(data0,packetData...)
+	data0 := make([]byte, 0, dataLen)
+	data0 = append(data0, uint24ToBytes(uint32(len(packetData)))...)
+	data0 = append(data0, mc.sequence)
+	data0 = append(data0, packetData...)
 	if addPasswordIsNull {
-		data0 = append(data0,0x0)
+		data0 = append(data0, 0x0)
 	}
 	err := mc.writePacket(&data0)
 	return err
@@ -481,16 +502,16 @@ func (mc *mysqlConn) WriteAuthSwitchPacket(packetData []byte,addPasswordIsNull b
 func (mc *mysqlConn) WritePublicKeyAuthPacket() error {
 	// request public key
 	data0 := make([]byte, 0)
-	data0 = append(data0,uint24ToBytes(1)...)
-	data0 = append(data0,mc.sequence)
-	data0 = append(data0,byte(2))
+	data0 = append(data0, uint24ToBytes(1)...)
+	data0 = append(data0, mc.sequence)
+	data0 = append(data0, byte(2))
 	if err := mc.writePacket(&data0); err != nil {
-		return fmt.Errorf("WritePacket(single byte) failed. err: %v",err)
+		return fmt.Errorf("WritePacket(single byte) failed. err: %v", err)
 	}
 	data, err := mc.readPacket()
 	//log.Fatal("ssssssss")
 	if err != nil {
-		return fmt.Errorf("ReadPacket failed. err: %v",err)
+		return fmt.Errorf("ReadPacket failed. err: %v", err)
 	}
 	block, _ := pem.Decode(data[1:])
 	if block == nil {
@@ -498,7 +519,7 @@ func (mc *mysqlConn) WritePublicKeyAuthPacket() error {
 	}
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return fmt.Errorf("x509.ParsePKIXPublicKey failed, err:%v",err)
+		return fmt.Errorf("x509.ParsePKIXPublicKey failed, err:%v", err)
 	}
 
 	plain := make([]byte, len(mc.cfg.passwd)+1)
@@ -509,10 +530,10 @@ func (mc *mysqlConn) WritePublicKeyAuthPacket() error {
 	}
 	sha1v := sha1.New()
 	enc, _ := rsa.EncryptOAEP(sha1v, rand.Reader, pub.(*rsa.PublicKey), plain, nil)
-	data2 := make([]byte,0,4+len(enc))
-	data2 = append(data2,uint24ToBytes(uint32(len(enc)))...)
-	data2 = append(data2,mc.sequence)
-	data2 = append(data2,enc...)
+	data2 := make([]byte, 0, 4+len(enc))
+	data2 = append(data2, uint24ToBytes(uint32(len(enc)))...)
+	data2 = append(data2, mc.sequence)
+	data2 = append(data2, enc...)
 
 	err = mc.writePacket(&data2)
 	return err

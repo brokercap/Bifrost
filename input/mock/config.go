@@ -30,6 +30,7 @@ type Config struct {
 	PerformanceTableRowsEventBatchInterval int    `json:"PerformanceTableRowsEventBatchInterval,string"`
 	LongStringLen                          int    `json:"LongStringLen,string"`
 	IsAllInsertSameData                    bool   `json:"IsAllInsertSameData,string"`
+	NoUint64                               bool   `json:"NoUint64,string"`
 }
 
 func NewConfig(configMap map[string]string) *Config {

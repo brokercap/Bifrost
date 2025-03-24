@@ -2,7 +2,7 @@ package mongo
 
 import (
 	"fmt"
-	"github.com/agiledragon/gomonkey"
+	"github.com/agiledragon/gomonkey/v2"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"github.com/rwynn/gtm/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -194,6 +194,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -216,6 +217,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -239,6 +241,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -262,6 +265,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 		patches.ApplyMethod(reflect.TypeOf(c), "TransferDataAndColumnMapping", func(c *MongoInput, row map[string]interface{}) (columnMapping map[string]string) {
 			return
 		})
+		defer patches.Reset()
 		data := c.BuildRowEvent(op)
 		So(data, ShouldNotBeNil)
 		So(data.SchemaName, ShouldEqual, "database")
@@ -282,7 +286,7 @@ func TestMongoInput_BuildRowEvent(t *testing.T) {
 	})
 }
 
-func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
+func TestMongoInput_TransferDataAndColumnMapping(t *testing.T) {
 	Convey("row is nil", t, func() {
 		c := new(MongoInput)
 		data := c.TransferDataAndColumnMapping(nil)
@@ -330,7 +334,6 @@ func TestMongoInput_TransferDataAndColumnMappingt(t *testing.T) {
 		row["struct_pointer"] = &TypeStruct{Key: "22", Val: "20000"}
 
 		data := c.TransferDataAndColumnMapping(row)
-		So(data, ShouldNotBeNil)
 
 		So(len(data), ShouldEqual, len(row))
 		for name, _ := range row {

@@ -1,19 +1,18 @@
-package src_test
+//go:build integration
+// +build integration
+
+package src
 
 import (
+	"database/sql/driver"
 	"strings"
 	"testing"
 )
 
-import (
-	"database/sql/driver"
-	MyPlugin "github.com/brokercap/Bifrost/plugin/clickhouse/src"
-)
-
-func TestClickhouseDB_Exec(t *testing.T) {
+func TestClickhouseDB_Exec_Integration(t *testing.T) {
 	SchemaName = "bifrost_test"
 	TableName = "write_test"
-	c := MyPlugin.NewClickHouseDBConn(url)
+	c := NewClickHouseDBConn(url)
 	sql1 := "CREATE DATABASE IF NOT EXISTS  `" + SchemaName + "`"
 	var err error
 	err = c.Exec(sql1, []driver.Value{})
@@ -56,10 +55,10 @@ func TestClickhouseDB_Exec(t *testing.T) {
 	t.Log(Result)
 }
 
-func TestClickhouseDB_DateTime64_Exec(t *testing.T) {
+func TestClickhouseDB_DateTime64_Exec_Integration(t *testing.T) {
 	SchemaName = "bifrost_test"
 	TableName = "write_datetime_test"
-	c := MyPlugin.NewClickHouseDBConn(url)
+	c := NewClickHouseDBConn(url)
 	sql1 := "CREATE DATABASE IF NOT EXISTS  `" + SchemaName + "`"
 	var err error
 	err = c.Exec(sql1, []driver.Value{})
@@ -97,8 +96,8 @@ func TestClickhouseDB_DateTime64_Exec(t *testing.T) {
 	t.Log(Result)
 }
 
-func TestClickhouseDB_Conn(t *testing.T) {
-	c := MyPlugin.NewClickHouseDBConn(url)
+func TestClickhouseDB_Conn_Integration(t *testing.T) {
+	c := NewClickHouseDBConn(url)
 	c.GetConn().Begin()
 	err := c.GetConn().Rollback()
 	if err != nil {

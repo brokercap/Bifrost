@@ -52,16 +52,15 @@ func (c *ChannelController) getParam() *ChannelParam {
 	return &data
 }
 
-
 func (c *ChannelController) Index() {
 	DbName := c.Ctx.Request.Form.Get("DbName")
 	c.SetData("Title", "Channel")
 	c.SetData("ChannelList", server.GetDBObj(DbName).ListChannel())
 	c.SetData("DbName", DbName)
-	op := make([]string,0)
-	op = append(op,"/template/channel.list.html")
-	template.ParseFiles(op ...)
-	c.AddAdminTemplate("channel.list.html","header.html","footer.html")
+	op := make([]string, 0)
+	op = append(op, "/template/channel.list.html")
+	template.ParseFiles(op...)
+	c.AddAdminTemplate("channel.list.html", "header.html", "footer.html")
 }
 
 func (c *ChannelController) List() {
@@ -178,7 +177,7 @@ func (c *ChannelController) TableListIndex() {
 	c.SetData("ChannelName", channelInfo.Name)
 	c.SetData("ChannelID", channelID)
 	c.SetData("Title", DbName+" - Table List - Channel")
-	c.AddAdminTemplate("channel.table.list.html","header.html","footer.html")
+	c.AddAdminTemplate("channel.table.list.html", "header.html", "footer.html")
 }
 
 func (c *ChannelController) TableList() {

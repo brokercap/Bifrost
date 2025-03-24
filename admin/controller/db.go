@@ -223,7 +223,11 @@ func (c *DBController) Start() {
 		return
 	}
 	defer server.SaveDBConfigInfo()
-	server.GetDB(data.DbName).Start()
+	err := server.GetDB(data.DbName).Start()
+	if err != nil {
+		result.Msg = err.Error()
+		return
+	}
 	result = ResultDataStruct{Status: 1, Msg: "success", Data: nil}
 	return
 }
