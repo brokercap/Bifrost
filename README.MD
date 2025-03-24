@@ -33,18 +33,20 @@
 
 ##### 源端支持
 
-| 源端      | 全量  | 增量  | 格式               | 备注                                         |
-|---------|-----|-----|------------------|--------------------------------------------|
-| MySQL   | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
-| MariaDB | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
-| Percona | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
-| Kafka   | NO  | YES | string           | 将kafka数据作为一个queue_data字段进行处理               |
-| Kafka   | NO  | YES | canal            | 将canal的格式自动转成biforst格式进行处理                 |
-| kafka   | NO  | YES | bifrost          | Bifrost可以作为源写入到kafka,再由Bifrost消费kafka的数据   |
-| kafka   | NO  | YES | debezium         | debezium将数据写入kafka，Bifrost消费kafka的数据自动转换处理 |
-| Mongo   | NO  | YES | oplog            |                                            |
-| kafka   | NO  | YES | customer json    | 支持自定义JSON格式数据转换Bifrost格式的功能                |
-| Mock    | NO  | YES | MySQL Binlog     | 对于OutPut插件开发的时候 ,不再需要部署MySQL等源端进行开发阶段的测试了  |
+| 源端           | 全量  | 增量  | 格式               | 备注                                         |
+|--------------|-----|-----|------------------|--------------------------------------------|
+| MySQL        | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| MariaDB      | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| Percona      | YES | YES | Binglog & Select | 模式MySQL Slave&全版本                          |
+| Kafka        | NO  | YES | string           | 将kafka数据作为一个queue_data字段进行处理               |
+| Kafka        | NO  | YES | canal            | 将canal的格式自动转成biforst格式进行处理                 |
+| kafka        | NO  | YES | bifrost          | Bifrost可以作为源写入到kafka,再由Bifrost消费kafka的数据   |
+| kafka        | NO  | YES | debezium         | debezium将数据写入kafka，Bifrost消费kafka的数据自动转换处理 |
+| Mongo        | NO  | YES | oplog            |                                            |
+| kafka        | NO  | YES | customer json    | 支持自定义JSON格式数据转换Bifrost格式的功能                |
+| Mock         | NO  | YES | MySQL Binlog     | 对于OutPut插件开发的时候 ,不再需要部署MySQL等源端进行开发阶段的测试了  |
+| MySQL(Other) | YES | NO  | SELECT           | Doris/StarRocks/ClickHouse/TiDB            |
+
 
 ---
 
@@ -124,11 +126,11 @@ make install prefix=./target
 ##### 二进制文件安装
 `````sh
 
-wget https://github.com/brokercap/Bifrost/releases/download/v2.3.12-beta/bifrost_v2.3.12-beta_Linux-amd64-bin.tar.gz
+wget https://github.com/brokercap/Bifrost/releases/download/v2.4.0-beta/bifrost_v2.4.0-beta_Linux-amd64-bin.tar.gz
 
-tar -zxvf bifrost_v2.3.12-beta_Linux-amd64-bin.tar.gz
+tar -zxvf bifrost_v2.4.0-beta_Linux-amd64-bin.tar.gz
 
-cd bifrost_v2.3.12-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
+cd bifrost_v2.4.0-beta_Linux-amd64-bin/bin && chmod a+x ./Bifrost*
 
 `````
 

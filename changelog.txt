@@ -1,3 +1,17 @@
+v2.4.0-beta   2025-03-24
+=========================
+1. 支持TLS方式连接mysql
+2. 修复input mysql 连接断开，但可能未被发现的bug
+3. 输出为canal类型的时候，支持canal类型字段的Type 字段
+4. input mysql geometry 类型采用按blob的方式解析，主要解决不影响其他表同步解决的bug
+5. 修复output mysql，doris/starrocks多主键情况建表语句失败的bug
+6. input mock 支持设置JSON类型字段不采用UInt64类型值，以及支持生成多主键的数据
+7. 支持mysql(other) input插件，解决支持mysql连接协议的其他数据库（Doris/StarRocks/CK/TiDB等）作为全量数据源功能
+8. 全量功能支持配置Crontab定时表达式作为定时全量
+9. 同步到mysql目标端json类型字段，支持源端为string类型
+10. 支持 input Mongo oplog 事务日志的功能
+11. 修复部分其他已知BUG
+
 v2.3.12-beta   2025-03-18
 =========================
 1. 修复input mysql 查询数据库表等功能存在句柄泄漏的bug，及代码妆容优化
