@@ -4,6 +4,7 @@ import (
 	"context"
 	outputDriver "github.com/brokercap/Bifrost/plugin/driver"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
@@ -86,14 +87,17 @@ func (c *MongoInput) TableBatchStart(collection *mongo.Collection, perBatchLimit
 		if len(batchResult) == 0 {
 			break
 		}
+		nextMinId = batchResult[len(batchResult)-1]["_id"]
 		for _, batchInfo := range batchResult {
+			if docId, ok := batchInfo["_id"].(primitive.ObjectID); ok {
+				batchInfo["_id"] = docId.Hex()
+			}
 			eventData := c.BatchResult2RowEvent(schemaName, tableName, batchInfo)
 			c.callback(eventData)
 		}
 		if len(batchResult) < perBatchLimit {
 			break
 		}
-		nextMinId = batchResult[len(batchResult)-1]["_id"]
 	}
 	return nil
 }
