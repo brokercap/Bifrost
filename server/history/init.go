@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/brokercap/Bifrost/Bristol/mysql"
 	"github.com/brokercap/Bifrost/server"
+	"github.com/robfig/cron/v3"
 	"log"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -61,7 +63,7 @@ func AddHistory(dbName string, SchemaName string, TableName string, TableNames s
 		}
 		TableNameArr = append(TableNameArr, &TableStatus{RowsCount: 0, SelectCount: 0, TableName: strings.Trim(v, "")})
 	}
-	historyMap[dbName][ID] = &History{
+	historyJob := &History{
 		ID:                ID,
 		DbName:            dbName,
 		SchemaName:        SchemaName,
@@ -79,6 +81,13 @@ func AddHistory(dbName string, SchemaName string, TableName string, TableNames s
 		Uri:               db.ConnectUri,
 	}
 	lastHistoryID = ID
+	if Property.Crontab != "" {
+		err := startCrond(historyJob)
+		if err != nil {
+			return 0, err
+		}
+	}
+	historyMap[dbName][ID] = historyJob
 	return ID, nil
 }
 
@@ -88,6 +97,7 @@ func DelHistory(dbName string, ID int) bool {
 	if _, ok := historyMap[dbName]; !ok {
 		return true
 	}
+	_ = deleteCrond(historyMap[dbName][ID])
 	delete(historyMap[dbName], ID)
 	if len(historyMap[dbName]) == 0 {
 		delete(historyMap, dbName)
@@ -151,10 +161,43 @@ func GetHistoryList(dbName, SchemaName, TableName string, status HisotryStatus) 
 					continue
 				}
 			}
+			if historyInfo.cronEntryID > 0 {
+				historyInfo.ContabNextTime = crodObj.Entry(historyInfo.cronEntryID).Next
+			}
 			data = append(data, *historyInfo)
 		}
 	}
 	return data
+}
+
+func startCrond(job *History) error {
+	if job == nil {
+		return nil
+	}
+	job.Lock()
+	defer job.Unlock()
+	EntryID, err := crodObj.AddJob(job.Property.Crontab, job)
+	if err != nil {
+		log.Printf("[ERROR] history add crontab job DbName:%s SchemaName:%s ID:%d Crontab  err:%+v \n", job.DbName, job.SchemaName, job.ID, job.Property.Crontab, err)
+		return err
+	}
+	job.cronEntryID = EntryID
+	job.cronStatus = HISTORY_STATUS_RUNNING
+	return nil
+}
+
+func deleteCrond(job *History) error {
+	if job == nil {
+		return nil
+	}
+	job.Lock()
+	defer job.Unlock()
+	if job.cronEntryID != 0 {
+		crodObj.Remove(job.cronEntryID)
+		job.cronEntryID = 0
+		job.cronStatus = HISTORY_STATUS_CLOSE
+	}
+	return nil
 }
 
 type HistoryProperty struct {
@@ -164,6 +207,7 @@ type HistoryProperty struct {
 	LimitOptimize      int8   // 是否自动分页优化, 1 采用 between 方式优化 0 不启动优化
 	SyncThreadNum      int    // 同步协程数
 	FirstLimitOptimize int8   // 被添加的时候 LimitOptimize 的值，因为计算的时候，LimitOptimize 是可能被修改掉值
+	Crontab            string // 定时表达式，如果为空，则说明没有定时
 }
 
 type ThreadStatus struct {
@@ -255,6 +299,11 @@ type History struct {
 	selectStatus       bool              // 拉数据协程状态，true 为已拉完
 	SelectRowsCount    uint64            // 成功拉取多少条数据
 	ColumnMapping      map[string]string // 表字段类型
+
+	cronEntryID    cron.EntryID  // 定时任务模块返回的ID
+	cronStatus     HisotryStatus // 定时任务是否启动
+	ContabNextTime time.Time     // 定时任务下一次运行时间
+
 }
 
 func Start(dbName string, ID int) error {
@@ -267,17 +316,44 @@ func Start(dbName string, ID int) error {
 	return historyMap[dbName][ID].Start()
 }
 
-func (This *History) Start() error {
-	log.Println("history start", This.DbName, This.SchemaName, This.TableName)
+func (This *History) Run() {
+	defer func() {
+		if err := recover(); err != nil {
+			debug.PrintStack()
+		}
+	}()
+	// 这里判断一次任务是否存在定时任务ID
+	// 主要是防止在删除任务的时候，停掉定时任务时候因为异常导致，任务没被真实停掉，但是任务已经从界面上删除，导致任务还在后台运行等情况
 	This.Lock()
+	if This.cronEntryID == 0 {
+		This.Unlock()
+		return
+	}
+	This.Unlock()
+	_ = This.Start()
+}
+
+func (This *History) LogError(errContent string) {
+	log.Printf("[ERROR] history task ID:%d DbName:%s SchemaName:%s Table:%s ToServerIDList:%+v %s \n", This.ID, This.DbName, This.SchemaName, This.TableNames, This.ToServerIDList, errContent)
+}
+
+func (This *History) LogInfo(infoContent string) {
+	log.Printf("[ERROR] history task ID:%d DbName:%s SchemaName:%s Table:%s ToServerIDList:%+v %s \n", This.ID, This.DbName, This.SchemaName, This.TableNames, This.ToServerIDList, infoContent)
+}
+
+func (This *History) Start() error {
+	This.Lock()
+	This.LogInfo("start")
 	This.selectStatus = false
 	switch This.Status {
 	case HISTORY_STATUS_SELECT_STOPING:
-		return fmt.Errorf("stoping now")
+		This.LogError("is stoping")
+		return fmt.Errorf("is stoping")
 		break
 	case HISTORY_STATUS_RUNNING:
 		This.Unlock()
-		return fmt.Errorf("running had")
+		This.LogError("is running")
+		return fmt.Errorf("is running")
 		break
 	case HISTORY_STATUS_SELECT_STOPED:
 		break
@@ -381,7 +457,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection) {
 	var isCk bool
 	var err error
 	if isCk, err = IsClickHouse(db); err != nil {
-		log.Println("[ERROR] history check is clickhouse error", This.DbName, This.SchemaName, This.TableName, " Current Select Table:", This.CurrentTableName, err)
+		This.LogError("check is clickhouse error")
 		return
 	}
 	if !isCk {
@@ -393,7 +469,7 @@ func (This *History) initMetaInfo(db mysql.MysqlConnection) {
 
 	This.Fields, err = GetSchemaTableFieldList(db, This.SchemaName, This.CurrentTableName, isCk)
 	if err != nil {
-		log.Println("[ERROR] history get schem table fields error", This.DbName, This.SchemaName, This.TableName, " Current Select Table:", This.CurrentTableName, err)
+		This.LogError(fmt.Sprintf("CurrentTableName:%s get schema table fields error:%+v ", This.CurrentTableName, err))
 		return
 	}
 	This.TablePriArr = make([]string, 0)

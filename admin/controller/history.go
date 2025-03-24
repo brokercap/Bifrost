@@ -37,6 +37,7 @@ type HistoryParam struct {
 	Property    history.HistoryProperty
 	ToserverIds []int
 	Id          int
+	Crontab     string // 定时任务表达式
 }
 
 func (c *HistoryController) getParam() *HistoryParam {
