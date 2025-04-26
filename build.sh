@@ -4,6 +4,7 @@ if [[ "$1" == "all" ]];then
   $0 linux amd64
   $0 linux arm64
   $0 windows amd64
+  $0 windows arm64
   $0 darwin amd64
   $0 freebsd amd64
   $0 darwin arm64
