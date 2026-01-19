@@ -7,6 +7,7 @@ import (
 	_ "github.com/brokercap/Bifrost/plugin/TableCount/src"
 	_ "github.com/brokercap/Bifrost/plugin/blackhole/src"
 	_ "github.com/brokercap/Bifrost/plugin/clickhouse/src"
+	_ "github.com/brokercap/Bifrost/plugin/hana/src"
 	_ "github.com/brokercap/Bifrost/plugin/hprose/src"
 	_ "github.com/brokercap/Bifrost/plugin/http/src"
 	_ "github.com/brokercap/Bifrost/plugin/kafka/src"

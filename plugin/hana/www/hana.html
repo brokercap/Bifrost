@@ -1,0 +1,21 @@
+<div class="form-group">
+    <label class="col-sm-3 control-label">Schema：</label>
+    <div class="col-sm-9">
+        <input type="text" name="schema" id="hana_schema" class="form-control" placeholder="Target Schema Name (Optional)">
+        <span class="help-block m-b-none">Leave empty to use source schema name</span>
+    </div>
+</div>
+<div class="form-group">
+    <label class="col-sm-3 control-label">Table：</label>
+    <div class="col-sm-9">
+        <input type="text" name="table" id="hana_table" class="form-control" placeholder="Target Table Name (Optional)">
+        <span class="help-block m-b-none">Leave empty to use source table name</span>
+    </div>
+</div>
+<div class="form-group">
+    <label class="col-sm-3 control-label">BatchSize：</label>
+    <div class="col-sm-9">
+        <input type="text" name="BatchSize" id="hana_BatchSize" value="500" class="form-control" placeholder="">
+        <span class="help-block m-b-none">How many rows to commit in one batch</span>
+    </div>
+</div>
