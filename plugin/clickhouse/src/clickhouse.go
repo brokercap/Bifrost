@@ -600,6 +600,16 @@ func (This *Conn) Query(data *pluginDriver.PluginDataType, retry bool) (LastSucc
 	default:
 		break
 	}
+	// Skip non-DDL queries (DML and transaction control statements) without
+	// triggering AutoCommit. When MySQL tables have triggers and binlog_format
+	// is STATEMENT or MIXED, DML operations appear as QUERY_EVENT. These cannot
+	// be converted to ClickHouse row operations. Transaction control statements
+	// (SAVEPOINT, RELEASE SAVEPOINT, ROLLBACK TO) may also appear mid-transaction
+	// when triggers are involved. Skipping them preserves pending row data in the
+	// buffer for the eventual COMMIT to flush.
+	if IsNonDDLQuery(data.Query) {
+		return nil, nil, nil
+	}
 	for {
 		LastSuccessCommitData, ErrData, err = This.AutoCommit()
 		if err != nil {

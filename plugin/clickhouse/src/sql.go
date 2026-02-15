@@ -29,6 +29,32 @@ func (This *Conn) getAutoTableSqlSchemaAndTable(name string, DefaultSchemaName s
 	return
 }
 
+// IsNonDDLQuery returns true if the query is a DML statement or transaction
+// control statement that should NOT be processed as DDL by the ClickHouse plugin.
+// This prevents data loss when MySQL tables have triggers and binlog_format is
+// STATEMENT or MIXED, causing DML to be logged as QUERY_EVENT.
+func IsNonDDLQuery(query string) bool {
+	query = strings.TrimSpace(query)
+	if len(query) < 4 {
+		return false
+	}
+	upper := strings.ToUpper(query)
+	// Transaction control statements (may appear with triggers)
+	if strings.HasPrefix(upper, "SAVEPOINT") ||
+		strings.HasPrefix(upper, "RELEASE SAVEPOINT") ||
+		strings.HasPrefix(upper, "ROLLBACK TO") {
+		return true
+	}
+	// DML statements from STATEMENT/MIXED binlog format
+	if strings.HasPrefix(upper, "INSERT") ||
+		strings.HasPrefix(upper, "UPDATE") ||
+		strings.HasPrefix(upper, "DELETE") ||
+		strings.HasPrefix(upper, "REPLACE") {
+		return true
+	}
+	return false
+}
+
 func (This *Conn) TranferQuerySql(data *pluginDriver.PluginDataType) (SchemaName, TableName, newSql, newLocalSql, newDisSql, newViewSql string) {
 	Query := strings.Trim(data.Query, " ")
 	// 非 DDL ALTER 语句，直接过滤掉

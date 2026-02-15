@@ -282,6 +282,18 @@ func (mc *mysqlConn) DumpBinlog0(parser *eventParser, callbackFun callback) (dri
 				case WRITE_ROWS_EVENTv0, WRITE_ROWS_EVENTv1, WRITE_ROWS_EVENTv2, UPDATE_ROWS_EVENTv0, UPDATE_ROWS_EVENTv1, UPDATE_ROWS_EVENTv2, DELETE_ROWS_EVENTv0, DELETE_ROWS_EVENTv1, DELETE_ROWS_EVENTv2:
 					commitEventOk = true
 					break
+				case QUERY_EVENT:
+					// When a DML QUERY_EVENT (from STATEMENT/MIXED binlog format, e.g.
+					// on tables with triggers) has a table name, it contains data that
+					// needs to be committed. Keep commitEventOk = true so the
+					// subsequent COMMIT/XID event is properly propagated.
+					// For BEGIN, COMMIT, and other queries without a table name,
+					// reset commitEventOk.
+					if event.TableName != "" {
+						commitEventOk = true
+					} else {
+						commitEventOk = false
+					}
 				default:
 					commitEventOk = false
 				}
