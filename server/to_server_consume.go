@@ -579,6 +579,12 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 	}
 	This.Lock()
 	defer This.Unlock()
+
+	// 防止 cosumerPluginParamArr 未初始化或并发扩容期间的越界访问
+	if This.cosumerPluginParamArr == nil || MyConsumerId >= len(This.cosumerPluginParamArr) {
+		return nil, fmt.Errorf("cosumerPluginParamArr not ready, MyConsumerId:%d", MyConsumerId)
+	}
+
 	if This.cosumerPluginParamArr[MyConsumerId] == nil {
 		This.cosumerPluginParamArr[MyConsumerId], err = PluginConn.GetConn().SetParam(This.PluginParam)
 	} else {

@@ -585,7 +585,9 @@ func (parser *eventParser) parseEventRow(buf *bytes.Buffer, tableMap *TableMapEv
 			var length uint64
 			length, e = readFixedLengthInteger(buf, int(tableMap.columnMetaData[i].length_size))
 			data := buf.Next(int(length))
-			row[column_name], e = get_field_json_data(data, int64(length))
+			// Next() returns at most remaining bytes; declared length may be corrupt/larger than payload.
+			// Parser must use actual slice length or it will allow huge element counts and OOM.
+			row[column_name], e = get_field_json_data(data, int64(len(data)))
 			break
 		default:
 			return nil, fmt.Errorf("schemaName:%s tableName:%s columnName:%s Unknown FieldType %d", tableMap.schemaName, tableMap.tableName, column_name, tableMap.columnTypes[i])
