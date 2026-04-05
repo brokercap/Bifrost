@@ -589,6 +589,27 @@ func (This *ToServer) getPluginAndSetParam(MyConsumerId int) (PluginConn *plugin
 	return
 }
 
+func (This *ToServer) applyPluginFilter(conn pluginDriver.Driver, data *pluginDriver.PluginDataType, retry bool) (newData *pluginDriver.PluginDataType, keep bool, err error) {
+	if data == nil {
+		return data, true, nil
+	}
+	filterPlugin, ok := conn.(pluginDriver.FilterPluginDriver)
+	if !ok {
+		return data, true, nil
+	}
+	newData, keep, err = filterPlugin.Filter(data, retry)
+	if err != nil {
+		return data, keep, err
+	}
+	if keep == false {
+		return data, false, nil
+	}
+	if newData == nil {
+		return data, false, fmt.Errorf("filter plugin return nil data while keep=true")
+	}
+	return newData, true, nil
+}
+
 func (This *ToServer) timeOutCommit(MyConsumerId int) (LastSuccessCommitData *pluginDriver.PluginDataType, ErrData *pluginDriver.PluginDataType, err error) {
 	defer func() {
 		if err2 := recover(); err2 != nil {
@@ -644,6 +665,13 @@ func (This *ToServer) sendToServer(paramData *pluginDriver.PluginDataType, MyCon
 		return lastSuccessCommitData, data, err
 	}
 	defer plugin.BackPlugin(PluginConn)
+	data, b, err = This.applyPluginFilter(PluginConn.GetConn(), data, retry)
+	if err != nil {
+		return lastSuccessCommitData, data, err
+	}
+	if b == false {
+		return paramData, nil, nil
+	}
 
 	switch data.EventType {
 	case "insert":

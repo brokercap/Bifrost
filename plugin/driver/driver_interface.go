@@ -62,3 +62,9 @@ func (c *PluginDriverInterface) TimeOutCommit() (LastSuccessCommitData *PluginDa
 func (c *PluginDriverInterface) Skip(SkipData *PluginDataType) error {
 	return nil
 }
+
+// Filter 是可选过滤钩子，插件可按需实现字段动态增删等逻辑。
+// keep=false 表示过滤掉当前事件；keep=true 且返回非nil data 表示继续同步。
+func (c *PluginDriverInterface) Filter(data *PluginDataType, retry bool) (newData *PluginDataType, keep bool, err error) {
+	return data, true, nil
+}
