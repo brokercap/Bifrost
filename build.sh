@@ -308,7 +308,7 @@ build()
     if [[ $goarch == "none" ]];then
         goarch=amd64
     fi
-    CGO_ENABLED=0 GOOS=$mode GOARCH=$goarch go build -gcflags=-trimpath=$GOPATH -asmflags=-trimpath=$GOPATH -ldflags "-w -s" ./Bifrost.go
+    CGO_ENABLED=0 GOOS=$mode GOARCH=$goarch go build -trimpath -ldflags "-w -s" ./Bifrost.go
 
     echo "$mode build over "
 
