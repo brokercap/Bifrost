@@ -221,11 +221,11 @@ func (This *History) sendToServerResult(pluginData *pluginDriver.PluginDataType)
 			// 假如最开始初始化就启动了一个协程,但是假如拉取数据的协程,压根就没拉到数据,那等待同步协程结束 的 协程 不就是一直阻塞在那吗?
 			for i := 0; i < This.Property.SyncThreadNum-int(ToServerInfo.ThreadCount); i++ {
 				//每启用一个同步协程,就 +1 每个协程结束,就相对 -1
+				ToServerInfo.ThreadCount++
 				This.SyncWaitToServerOver(1)
 				go func() {
 					//这里要用 defer 是因为 ConsumeToServer 里 直接用了  runtime.Goexit()
 					defer This.ToServerTheadGroup.Done()
-					ToServerInfo.ThreadCount++
 					ToServerInfo.ConsumeToServer(server.GetDBObj(This.DbName), This.SchemaName, This.TableName)
 				}()
 			}
